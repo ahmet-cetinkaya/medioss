@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# Editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Project Tools
+.claude/
+.serena/
+.specify/
+AGENTS.md
+CLAUDE.md
+graphify-out/
+
+# Docker
+docker-compose.override.yml
