@@ -95,6 +95,7 @@ Goal: multi-user instances become pleasant to run and richer to use.
 ### M6 — Multi-User & Admin
 
 - Admin dashboard: list/disable/remove users, instance user limit
+- Aggregate, non-content instance usage view for the admin (active user counts, storage use — never another user's content, per PRD: Instance Insight)
 - Account and data deletion: user-initiated and admin-initiated, wiping all database records and `media/{user_id}/` (PRD: Account & Data Deletion)
 - Per-user storage quotas
 - Profile settings: display name, password change, preferences
