@@ -129,11 +129,7 @@ BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
 BACKUP_PATH=/data/backups
 ```
 
-`MEDIOSS_DATA_DIR` and `JWT_SECRET` have no defaults. The application
-refuses to start without either — generate the secret with `openssl rand
--base64 32`. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are
-derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single
-directory to mount and back up.
+`MEDIOSS_DATA_DIR` and `JWT_SECRET` have no defaults. The application refuses to start without either — generate the secret with `openssl rand -base64 32`. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
 
 ### Docker Configuration
 
@@ -160,8 +156,7 @@ EXPOSE 3000
 CMD ["medioss"]
 ```
 
-The Astro build output is embedded into the binary's static directory, so the runtime
-image serves both the API and the UI from a single process.
+The Astro build output is embedded into the binary's static directory, so the runtime image serves both the API and the UI from a single process.
 
 ### Docker Compose Setup
 
@@ -190,10 +185,7 @@ volumes:
     driver: local
 ```
 
-`/data` is the single read-write mount for everything mutable: the
-`medioss.db` SQLite file and the `media/` directory where users' own
-meditation and white noise audio is stored. There is no separate media
-volume.
+`/data` is the single read-write mount for everything mutable: the `medioss.db` SQLite file and the `media/` directory where users' own meditation and white noise audio is stored. There is no separate media volume.
 
 ## Resource Requirements
 

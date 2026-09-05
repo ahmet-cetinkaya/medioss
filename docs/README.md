@@ -18,6 +18,10 @@ Welcome to the MediOSS wellness application documentation. This guide will help 
   - Content strategy for meditation and audio libraries
   - Implementation phases and roadmap
   - Success criteria and metrics
+- **[Roadmap](./ROADMAP.md)** - Milestone plan with exit criteria
+  - Phase 1 MVP milestones (M0-M5)
+  - Phase 2 enhanced features (M6-M8)
+  - Phase 3 candidates and working agreements
 
 ### 🏗️ Technical Documentation
 

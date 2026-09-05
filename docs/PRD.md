@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-MediOSS is a self-hosted wellness application designed to support human mood regulation through four integrated pillars: authentication and user management, a meditation library, white noise player, and mood tracking. The application prioritizes user privacy, data sovereignty, and accessibility while providing evidence-based tools for mental wellness.
+MediOSS is a self-hosted wellness application designed to support human mood regulation through four integrated pillars: authentication and user management, a meditation library, white noise player, and mood tracking. The application prioritizes user privacy, data sovereignty, and accessibility while providing practical, self-directed tools for mental wellness.
 
 ### Key Differentiators
 
@@ -19,10 +19,13 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 ### Success Metrics
 
-- **User Engagement:** 70% of users engage with all content pillars weekly
-- **Privacy Trust:** 100% data locality (no external service dependencies)
-- **Accessibility:** WCAG 2.1 AA compliance for all interfaces
-- **Reliability:** 99.5% uptime for self-hosted instances
+Because MediOSS collects no telemetry (see Non-Goals), success is measured only through what is verifiable locally or at the project level:
+
+- **Privacy Trust:** 100% data locality (no external service dependencies), verifiable by network inspection of a running instance
+- **Accessibility:** WCAG 2.1 AA compliance for all interfaces, verified by audit
+- **Deployability:** A first-time operator reaches a working instance from the docs alone in under 5 minutes
+- **Instance Insight:** Operators can see aggregate, non-content usage of their own instance locally (active user counts, storage use); admins never see another user's content, mood data, or journal entries, and nothing is reported outward
+- **Project Health:** Community adoption signals (stars, forks, deployment reports, contributions) on the public repository
 
 ---
 
@@ -43,8 +46,8 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 ### Secondary Users
 
 1. **Mental Health Professionals**
-   - Therapists recommending tools to clients
-   - Need privacy-compliant solutions for clinical practice
+   - Therapists recommending a private, self-hosted tool for clients' personal use outside of treatment
+   - Need recommendations that respect client privacy (no vendor accounts, no data sharing)
 
 2. **Digital Minimalists**
    - Prefer local applications over cloud services
@@ -67,8 +70,8 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 - **Registration & Login**
   - Email/password registration with validation
   - Secure login with session management
-  - Password reset flow via email
-  - Optional: social login (Google, GitHub) for convenience
+  - Admin-driven password reset (admin issues a temporary password; no email infrastructure required)
+  - Optional: SMTP-based password reset flow, only when an operator explicitly configures an outgoing mail server
 - **User Profiles**
   - Display name and avatar
   - Personal preferences (theme, notification settings)
@@ -78,11 +81,19 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
   - Role-based access: admin, regular user
   - Admin dashboard for user management (list, disable, remove users)
   - Per-user data isolation (each user sees only their own content)
+- **Account & Data Deletion**
+  - User-initiated account deletion with explicit confirmation
+  - Deletion removes all database records and all uploaded media files for that user (`media/{user_id}/` is wiped)
+  - Admin can delete any non-admin account with the same guarantees
+  - Deletion is immediate and irreversible; no soft-delete retention of personal data
 - **Security**
   - Password hashing with bcrypt/scrypt
   - Session token management with expiry
   - Rate limiting on login attempts
   - Optional: two-factor authentication (TOTP)
+- **Operator Recovery**
+  - CLI recovery command runnable by whoever has host access (for example `medioss admin reset-password <email>`), covering the case where the only admin loses their password on a single-user instance
+  - Works offline against the local database; requires no running web server and no email infrastructure
 
 #### Technical Requirements
 
@@ -97,9 +108,7 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 1. Admin deploys instance and creates admin account
 2. New user navigates to instance URL
 3. User registers with email and password
-4. System sends verification email (optional, configurable)
-5. User verifies email and logs in
-6. User is guided through initial preferences setup
+4. User logs in and is guided through initial preferences setup
 
 ---
 
@@ -121,6 +130,7 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
   - Search and filter by title, category, tags, duration
 - **Playback Features**
   - Play/pause/seek controls
+  - Resume from last position (a partially played meditation continues where it left off, per user per meditation)
   - Background playback support
   - Sleep timer with fade-out option
   - Playback speed adjustment (0.5x - 2.0x)
@@ -203,6 +213,9 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
   - Optional journal text for additional context
   - Optional activity tagging (meditation, exercise, social, work)
   - Timestamped entries with timezone awareness
+- **Reminders**
+  - Optional daily mood check-in reminder at a user-chosen time
+  - Delivered as in-app/PWA local notifications only; no external push services
 - **Mood History**
   - Calendar view of mood entries
   - List view with search and filter by date, mood score, emotions
@@ -214,6 +227,7 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
   - Streak tracking for consistent mood logging
 - **Data Management**
   - Data export in standard formats (CSV, JSON)
+  - Data import of previously exported files, enabling instance migration and restore (export/import round-trips losslessly)
   - Per-user data isolation
 
 #### Technical Requirements
@@ -244,7 +258,6 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 ### Security
 
 - All data stored locally by default
-- Optional encryption for sensitive diary entries
 - No third-party analytics or tracking
 - Regular security updates for dependencies
 
@@ -271,21 +284,36 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 ---
 
+## Non-Goals
+
+Explicit boundaries that protect the privacy-first, self-hosted vision. These are decisions, not omissions:
+
+- **No third-party authentication.** No social login (Google, GitHub, etc.); identity never leaves the instance.
+- **No cloud sync or vendor accounts.** There is no hosted MediOSS service; data moves between instances only via user-controlled export/import.
+- **No third-party integrations for core features.** No Fitbit, Apple Health, or similar cloud-API integrations; nothing in the product depends on an external service being reachable.
+- **No external push notification services.** Reminders are in-app/PWA local notifications only.
+- **No telemetry, analytics, or crash reporting** that leaves the instance.
+- **No social feed or cross-user sharing.** Wellness data is private to each user; there is no content feed, follower model, or public profile.
+- **No AI-generated content or recommendations** in scope for this product.
+- **Not a medical device.** See the disclaimer below.
+
+### Medical Disclaimer
+
+MediOSS is a general wellness tool. It is not a medical device, does not diagnose or treat any condition, and is not a substitute for professional mental health care. The UI must present mood data as self-reflection, never as clinical assessment, and the documentation must carry this disclaimer.
+
+---
+
 ## Technical Architecture
 
 ### Self-Hosted Deployment Options
 
-Three deployment sizes are supported, distinguished by expected concurrent
-users and network exposure. See
-[Deployment Guide: Resource Scaling](./DEPLOYMENT.md#resource-scaling) for
-the authoritative RAM, storage, and CPU figures per size — the Rust backend
-keeps actual memory use well under typical container limits.
+Three deployment sizes are supported, distinguished by expected concurrent users and network exposure. See [Deployment Guide: Resource Scaling](./DEPLOYMENT.md#resource-scaling) for the authoritative RAM, storage, and CPU figures per size — the Rust backend keeps actual memory use well under typical container limits.
 
-| Option             | Recommended for | Networking                             |
-| ------------------ | --------------- | -------------------------------------- |
-| Single-User Docker | Personal use    | Local access only (localhost)          |
-| Family/Home Server | 2-5 users       | Local network + optional remote access |
-| Community Instance | 5-20 users      | Remote access with authentication      |
+| Option | Recommended for | Networking |
+| --- | --- | --- |
+| Single-User Docker | Personal use | Local access only (localhost) |
+| Family/Home Server | 2-5 users | Local network + optional remote access |
+| Community Instance | 5-20 users | Remote access with authentication |
 
 ### Technology Stack Recommendations
 
@@ -356,7 +384,7 @@ For layer boundaries, crate layout, and the dependency rule, see [Technical Arch
 #### First-Time User Onboarding Flow
 
 1. Deploy instance → Admin creates first account
-2. Admin configures instance settings (user limit, optional email verification)
+2. Admin configures instance settings (user limit)
 3. New users can register with email/password
 4. User completes profile setup (display name, preferences)
 5. User guided through initial feature tour
@@ -381,10 +409,7 @@ For layer boundaries, crate layout, and the dependency rule, see [Technical Arch
 
 ## Content Strategy
 
-All content in MediOSS is user-owned: users upload their own meditation audio and
-white noise loops. Instance operators may optionally provide seed content to make a
-fresh instance usable on day one, but no bundled library is required for any feature
-to work.
+All content in MediOSS is user-owned: users upload their own meditation audio and white noise loops. Instance operators may optionally provide seed content to make a fresh instance usable on day one, but no bundled library is required for any feature to work.
 
 ### Optional Seed Meditation Content
 
@@ -414,13 +439,12 @@ to work.
 
 - **Local-First:** All data stored on user's infrastructure
 - **No Telemetry:** Zero analytics or usage tracking
-- **Encryption:** Optional encryption for diary entries
 - **Backup:** User-controlled backup options
 
 ### Compliance Considerations
 
-- GDPR-compatible data handling
-- HIPAA readiness (for clinical use cases)
+- GDPR-compatible data handling (data locality, user-initiated export and deletion)
+- Clinical use is out of scope: MediOSS is a personal wellness tool, not a system for processing patient data (see Non-Goals: Medical Disclaimer)
 - Clear data retention policies
 - Easy data export/deletion
 
@@ -443,13 +467,15 @@ to work.
 - [ ] Advanced white noise mixing
 - [ ] Mood analytics and visualizations
 - [ ] Multi-user support (admin dashboard for user management)
+- [ ] Account and data deletion flows
+- [ ] Mood data export and import
 - [ ] Offline mode improvements
 
 ### Phase 3: Polish & Expansion (8 weeks)
 
 - [ ] Advanced analytics and insights
-- [ ] Community features (optional sharing)
-- [ ] Integration capabilities (Fitbit, Apple Health)
+- [ ] Daily reminder notifications (local only)
+- [ ] Two-factor authentication (TOTP)
 - [ ] Accessibility audit and improvements
 
 ---
@@ -474,7 +500,7 @@ to work.
 
 - ✅ Zero external service dependencies for core functionality
 - ✅ Clear documentation for self-hosting
-- ✅ Active community engagement (if open-sourced)
+- ✅ Active community engagement around the open-source repository
 - ✅ Low barrier to entry for non-technical users
 
 ---
@@ -492,6 +518,10 @@ to work.
 - **Content Sourcing:** Users must supply their own audio to get started
 - **User Adoption:** Self-hosting complexity barrier for non-technical users
 - **Maintenance:** Long-term support and update commitment
+
+### Open Questions
+
+- **Diary encryption at rest:** Should journal text be encrypted at rest (for example SQLCipher or per-field encryption)? Deferred until the threat model justifies the key-management complexity; disk-level encryption of the host is the current recommendation.
 
 ### Mitigation Strategies
 
