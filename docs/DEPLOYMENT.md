@@ -1,6 +1,6 @@
 # Deployment Guide: MediOSS Wellness App
 
-This guide covers deploying the MediOSS wellness app with Rust backend and React frontend.
+This guide covers deploying the MediOSS wellness app with its Rust backend and Astro frontend.
 
 ## Prerequisites
 
@@ -118,11 +118,11 @@ DATABASE_URL=sqlite:///data/wellness.db
 
 # Media Storage
 MEDIA_PATH=/media
-MAX_UPLOAD_SIZE=50MB
+MAX_UPLOAD_SIZE=100MB
 
-# Optional Authentication
-ENABLE_AUTH=false
-JWT_SECRET=your-secret-key-here
+# Authentication (required)
+JWT_SECRET=<strong-random-secret>
+SESSION_TIMEOUT=7d
 
 # Backup Configuration
 BACKUP_ENABLED=true
@@ -130,25 +130,36 @@ BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
 BACKUP_PATH=/data/backups
 ```
 
+`JWT_SECRET` has no default. The application refuses to start without it — generate one
+with `openssl rand -base64 32`.
+
 ### Docker Configuration
 
 ```dockerfile
-# Dockerfile for Rust backend
+# Stage 1: Build the Astro frontend
+FROM node:22-slim as frontend
+WORKDIR /app
+COPY src/presentation/web-ui .
+RUN npm ci && npm run build
+
+# Stage 2: Build the Rust workspace
 FROM rust:1.75 as builder
 WORKDIR /app
 COPY . .
+COPY --from=frontend /app/dist src/presentation/web-api/static
 RUN cargo build --release
 
-# Runtime image
+# Stage 3: Runtime image
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates curl
 COPY --from=builder /app/target/release/medioss /usr/local/bin/
-COPY --from=builder /app/media /media
-COPY --from=builder /app/migrations /migrations
 WORKDIR /data
 EXPOSE 3000
 CMD ["medioss"]
 ```
+
+The Astro build output is embedded into the binary's static directory, so the runtime
+image serves both the API and the UI from a single process.
 
 ### Docker Compose Setup
 
@@ -161,11 +172,12 @@ services:
     ports: ["3000:3000"]
     volumes:
       - app_data:/data
-      - ./media:/media:ro
+      - ./media:/media
     environment:
       - RUST_LOG=info
       - DATABASE_URL=sqlite:///data/wellness.db
       - MEDIA_PATH=/media
+      - JWT_SECRET=${JWT_SECRET}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
@@ -177,6 +189,9 @@ volumes:
   app_data:
     driver: local
 ```
+
+The `/media` mount is read-write because users upload their own meditation and white
+noise audio through the web interface.
 
 ## Resource Requirements
 
@@ -323,18 +338,13 @@ docker stats medioss-backend
 ### Rust Security Features
 
 - **Memory Safety**: Compile-time guarantees
-- **SQL Injection Prevention**: SQLx compile-time verification
+- **SQL Injection Prevention**: SeaORM parameterizes all generated queries
 - **Type Safety**: Strong type system prevents vulnerabilities
 - **No Runtime**: Fewer attack surfaces than interpreted languages
 
 ### Advanced Security
 
 ```bash
-# Enable authentication (coming in Phase 2)
-# Add to .env:
-ENABLE_AUTH=true
-JWT_SECRET=<strong-random-secret>
-
 # Restrict network access
 # Add to docker-compose.yml:
 networks:

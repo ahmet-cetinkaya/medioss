@@ -8,8 +8,10 @@ Provide individuals with a private, self-hosted sanctuary for mental wellness th
 
 ## ✨ Features
 
-- **🧘 Meditation Library** - Guided sessions with progress tracking
+- **🧘 Meditation Library** - Upload your own guided sessions with progress tracking
 - **🎵 White Noise Player** - Customizable ambient soundscapes
+- **📊 Mood Tracking** - Daily mood logs with trends and insights
+- **🔐 Multi-User** - Accounts with per-user data isolation
 - **🔒 Privacy First** - 100% self-hosted, no third-party dependencies
 - **📱 Offline Ready** - Core features work without internet
 
@@ -27,14 +29,14 @@ Visit `http://localhost:3000` to access your wellness app.
 ## 📋 Documentation
 
 - [Product Requirements Document](docs/PRD.md) - Comprehensive product specification
-- [Technical Architecture](docs/ARCHITECTURE.md) - Rust + React system design
+- [Technical Architecture](docs/ARCHITECTURE.md) - Rust + Astro system design
 - [Deployment Guide](docs/DEPLOYMENT.md) - Self-hosting instructions
 
 ## 🛠️ Tech Stack
 
 - **Backend:** Rust with Axum web framework (performance & safety)
-- **Database:** SQLite with SQLx (compile-time query verification)
-- **Frontend:** React with TypeScript
+- **Database:** SQLite with SeaORM (type-safe query builder & migrations)
+- **Frontend:** Astro with TypeScript
 - **Styling:** Tailwind CSS
 - **Audio:** Web Audio API with Howler.js
 - **Deployment:** Docker & docker-compose (single binary)
@@ -49,7 +51,7 @@ Visit `http://localhost:3000` to access your wellness app.
 ## 🚀 Rust Backend Benefits
 
 - **Performance:** Memory-safe with zero-cost abstractions
-- **Safety:** Compile-time SQL injection prevention with SQLx
+- **Safety:** Type-safe queries with SeaORM prevent SQL injection
 - **Deployment:** Single binary, minimal dependencies
 - **Efficiency:** 64-128MB RAM vs 512MB+ for Node.js
 - **Concurrency:** Fearless parallel audio processing
@@ -59,9 +61,10 @@ Visit `http://localhost:3000` to access your wellness app.
 🚧 **Development Status:** Early Planning Phase
 
 - [x] Product requirements defined
-- [x] Technical architecture designed (Rust + React)
+- [x] Technical architecture designed (Rust + Astro)
 - [ ] Core Rust backend implementation
-- [ ] React frontend development
+- [ ] Astro frontend development
+- [ ] Authentication and user management
 - [ ] File upload functionality
 
 ## 🤝 Contributing
@@ -79,16 +82,15 @@ Built for individuals seeking private, comprehensive wellness tools without subs
 ## 🔧 Development
 
 ```bash
-# Backend development (Rust)
-cd backend
-cargo run
+# Backend development (Rust workspace)
+cargo run -p web-api
 
-# Frontend development (React)
-cd frontend
+# Frontend development (Astro)
+cd src/presentation/web-ui
 npm run dev
 
 # Production build
+cd src/presentation/web-ui && npm run build && cd -
 cargo build --release
-npm run build
 docker-compose up
 ```

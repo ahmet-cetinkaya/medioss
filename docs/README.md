@@ -14,26 +14,18 @@ Welcome to the MediOSS wellness application documentation. This guide will help 
 - **[Product Requirements Document](./PRD.md)** - Comprehensive product specification
   - Executive summary and vision
   - Target audience analysis
-  - Three core functional pillars
+  - Four core functional pillars
+  - Content strategy for meditation and audio libraries
   - Implementation phases and roadmap
   - Success criteria and metrics
 
 ### 🏗️ Technical Documentation
 
-- **[Technical Architecture](./ARCHITECTURE.md)** - Rust + React system design and specifications
-  - Component architecture
-  - Database schema with SQLx
-  - API endpoints with Axum
+- **[Technical Architecture](./ARCHITECTURE.md)** - Rust + Astro system design and specifications
+  - Clean Architecture layers and dependency rule
+  - Workspace and directory structure
+  - Composition root wiring
   - Security architecture
-  - Performance considerations
-
-### 📚 Content Documentation
-
-- **[Content Strategy](./CONTENT_STRATEGY.md)** - Meditation and audio content planning
-  - Meditation library categories
-  - White noise sound library
-  - Mood tracking system
-  - Content quality standards
 
 ## Documentation Overview
 

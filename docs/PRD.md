@@ -2,12 +2,12 @@
 
 ## Executive Summary
 
-MediOSS is a self-hosted wellness application designed to support human mood regulation through two integrated functional pillars: a meditation library and white noise player. The application prioritizes user privacy, data sovereignty, and accessibility while providing evidence-based tools for mental wellness.
+MediOSS is a self-hosted wellness application designed to support human mood regulation through four integrated pillars: authentication and user management, a meditation library, white noise player, and mood tracking. The application prioritizes user privacy, data sovereignty, and accessibility while providing evidence-based tools for mental wellness.
 
 ### Key Differentiators
 
 - **Self-hosted architecture** - Complete user control over data
-- **Integrated wellness ecosystem** - Two complementary mood regulation tools
+- **Integrated wellness ecosystem** - Three complementary mood regulation tools (meditation, white noise, mood tracking) behind a single account
 - **Privacy-first design** - No third-party tracking or data sharing
 - **Offline functionality** - Core features work without internet connectivity
 
@@ -15,11 +15,11 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 ## Product Vision
 
-> To provide individuals with a private, self-hosted sanctuary for mental wellness through accessible meditation and ambient soundscapes.
+> To provide individuals with a private, self-hosted sanctuary for mental wellness through accessible meditation, ambient soundscapes, and mood tracking.
 
 ### Success Metrics
 
-- **User Engagement:** 70% of users engage with both functional pillars weekly
+- **User Engagement:** 70% of users engage with all content pillars weekly
 - **Privacy Trust:** 100% data locality (no external service dependencies)
 - **Accessibility:** WCAG 2.1 AA compliance for all interfaces
 - **Reliability:** 99.5% uptime for self-hosted instances
@@ -48,14 +48,62 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 2. **Digital Minimalists**
    - Prefer local applications over cloud services
-
-- Value simplicity and focused functionality
+   - Value simplicity and focused functionality
 
 ---
 
 ## Core Functional Pillars
 
-### 1. Meditation Library
+### 1. Authentication & User Management
+
+#### User Stories
+
+- As a user, I want to create an account so I can have a personal wellness space
+- As a user, I want to log in securely so my data is protected
+- As an admin, I want to manage user accounts so I can control access to the instance
+
+#### Functional Requirements
+
+- **Registration & Login**
+  - Email/password registration with validation
+  - Secure login with session management
+  - Password reset flow via email
+  - Optional: social login (Google, GitHub) for convenience
+- **User Profiles**
+  - Display name and avatar
+  - Personal preferences (theme, notification settings)
+  - Account settings (change password, update email)
+- **Multi-User Support**
+  - Instance-level user limit configuration
+  - Role-based access: admin, regular user
+  - Admin dashboard for user management (list, disable, remove users)
+  - Per-user data isolation (each user sees only their own content)
+- **Security**
+  - Password hashing with bcrypt/scrypt
+  - Session token management with expiry
+  - Rate limiting on login attempts
+  - Optional: two-factor authentication (TOTP)
+
+#### Technical Requirements
+
+- Secure password storage (never plaintext)
+- JWT or session-based authentication
+- CSRF protection on state-changing requests
+- Secure HTTP-only cookies for session tokens
+- Configurable session timeout
+
+#### User Onboarding Workflow
+
+1. Admin deploys instance and creates admin account
+2. New user navigates to instance URL
+3. User registers with email and password
+4. System sends verification email (optional, configurable)
+5. User verifies email and logs in
+6. User is guided through initial preferences setup
+
+---
+
+### 2. Meditation Library
 
 #### User Stories
 
@@ -104,7 +152,7 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 ---
 
-### 2. White Noise Player
+### 3. White Noise Player
 
 #### User Stories
 
@@ -139,13 +187,58 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 ---
 
+### 4. Mood Tracking
+
+#### User Stories
+
+- As a user, I want to log my mood so I can build emotional self-awareness
+- As a user, I want to add context and journal entries with my mood so I can understand what influences it
+- As a user, I want to view my mood history over time so I can identify patterns and trends
+
+#### Functional Requirements
+
+- **Mood Logging**
+  - Quick mood entry with a 1-10 scale
+  - Optional emotion tags (happy, anxious, calm, stressed, etc.)
+  - Optional journal text for additional context
+  - Optional activity tagging (meditation, exercise, social, work)
+  - Timestamped entries with timezone awareness
+- **Mood History**
+  - Calendar view of mood entries
+  - List view with search and filter by date, mood score, emotions
+  - Edit and delete existing entries
+- **Analytics & Insights**
+  - Mood trend charts (daily, weekly, monthly averages)
+  - Emotion frequency breakdown
+  - Correlation view between activities and mood scores
+  - Streak tracking for consistent mood logging
+- **Data Management**
+  - Data export in standard formats (CSV, JSON)
+  - Per-user data isolation
+
+#### Technical Requirements
+
+- Efficient querying for date-range mood history
+- Responsive charts and visualizations on mobile and desktop
+- Offline mood entry with sync on reconnect
+
+#### Mood Logging Workflow
+
+1. User opens mood tracker or is prompted after a meditation/white noise session
+2. User selects mood score on a 1-10 scale
+3. User optionally adds emotion tags, journal text, and activity tags
+4. Entry is saved with timestamp
+5. User can view updated mood history and trends
+
+---
+
 ## Non-Functional Requirements
 
 ### Performance
 
 - Meditation playback starts within 2 seconds
 - Sound mixing supports real-time adjustments (<100ms latency)
-- Mood diary loads within 1 second for up to 1000 entries
+- Mood tracker loads within 1 second for up to 1000 entries
 - Application startup time <3 seconds
 
 ### Security
@@ -210,16 +303,16 @@ Networking: Remote access with authentication
 
 #### Frontend
 
-- **Framework:** React with TypeScript for type safety
-- **Styling:** Tailwind CSS or component library (Material-UI, Chakra)
-- **State Management:** Zustand or Pinia
+- **Framework:** Astro with TypeScript for type safety
+- **Styling:** Tailwind CSS
+- **Interactivity:** Astro islands with client-side stores
 - **Audio:** Howler.js or Web Audio API
 
 #### Backend
 
 - **Runtime:** Rust with Axum web framework (performance and safety)
-- **Database:** SQLite with SQLx (compile-time query verification)
-- **Authentication:** Optional JWT-based auth for multi-user setups
+- **Database:** SQLite with SeaORM (type-safe query builder and migrations)
+- **Authentication:** JWT-based authentication with role-based access control
 - **Async Runtime:** Tokio for efficient concurrent operations
 
 #### Infrastructure
@@ -239,10 +332,12 @@ Networking: Remote access with authentication
 
 **Development Benefits:**
 
-- SQLx provides compile-time SQL query verification
+- SeaORM provides a type-safe query builder with generated entities
 - Strong type system prevents runtime errors
 - Excellent error handling with Result types
 - Modern async/await syntax with Tokio
+
+For layer boundaries, crate layout, and the dependency rule, see [Technical Architecture](./ARCHITECTURE.md).
 
 ---
 
@@ -270,6 +365,14 @@ Networking: Remote access with authentication
 
 ### Key User Flows
 
+#### First-Time User Onboarding Flow
+
+1. Deploy instance → Admin creates first account
+2. Admin configures instance settings (user limit, optional email verification)
+3. New users can register with email/password
+4. User completes profile setup (display name, preferences)
+5. User guided through initial feature tour
+
 #### Morning Routine Flow
 
 1. Open app → Quick mood check-in
@@ -288,71 +391,32 @@ Networking: Remote access with authentication
 
 ---
 
-## Data Model
-
-### Meditation Content
-
-```json
-{
-  "id": "uuid",
-  "title": "string",
-  "description": "text",
-  "duration": "seconds",
-  "audio_file": "path",
-  "category": "mindfulness|breathing|body_scan|loving_kindness",
-  "tags": ["morning", "stress", "beginner"],
-  "created_at": "timestamp"
-}
-```
-
-### Sound Mix Preset
-
-```json
-{
-  "id": "uuid",
-  "name": "string",
-  "sounds": [
-    {
-      "sound_id": "uuid",
-      "volume": 0.7
-    }
-  ],
-  "fade_duration": "seconds",
-  "user_created": boolean
-}
-```
-
-### Mood Entry
-
-```json
-{
-  "id": "uuid",
-  "timestamp": "datetime",
-  "mood_score": "integer (1-10)",
-  "emotions": ["string tags"],
-  "journal_entry": "text",
-  "activities": ["meditation", "exercise", "social"],
-  "context": "string"
-}
-```
-
----
-
 ## Content Strategy
 
-### Initial Meditation Library
+All content in MediOSS is user-owned: users upload their own meditation audio and
+white noise loops. Instance operators may optionally provide seed content to make a
+fresh instance usable on day one, but no bundled library is required for any feature
+to work.
 
-- **Minimum Viable Content:** 10 sessions (5-15 min each)
+### Optional Seed Meditation Content
+
+- **Suggested starter set:** 10 sessions (5-15 min each)
 - **Categories:** 2 sessions per category
 - **Source:** Public domain or CC-licensed content
-- **Future:** Support for user-uploaded content
+- **Status:** Optional — the library is fully functional with user uploads alone
 
-### White Noise Library
+### Optional Seed White Noise Content
 
-- **Initial Sounds:** 15 high-quality loops
+- **Suggested starter set:** 15 high-quality loops
 - **Categories:** Nature (5), Mechanical (5), Ambient (5)
 - **Quality:** 44.1kHz, stereo, seamless loops
-- **Future:** Community-contributed sounds
+- **Status:** Optional — users can upload custom sounds
+
+### Mood Tracking Seed Data
+
+- **Emotion Tags**: 20-30 predefined emotions (happy, anxious, calm, stressed, energized, tired, focused, etc.)
+- **Activity Tags**: Common activities (meditation, exercise, social, work, sleep, reading)
+- **Future**: User-customizable emotion and activity tags
 
 ---
 
@@ -378,8 +442,9 @@ Networking: Remote access with authentication
 
 ### Phase 1: MVP (8-12 weeks)
 
-- [ ] Basic meditation library with 5 sessions
-- [ ] Simple white noise player (3 sounds)
+- [ ] Authentication and user management (admin account, registration, login)
+- [ ] Meditation library with audio upload and playback
+- [ ] Simple white noise player (3 simultaneous sounds)
 - [ ] Mood logging with basic tracking
 - [ ] Single-user self-hosted deployment
 - [ ] Mobile-responsive interface
@@ -389,12 +454,11 @@ Networking: Remote access with authentication
 - [ ] Full meditation categorization and search
 - [ ] Advanced white noise mixing
 - [ ] Mood analytics and visualizations
-- [ ] Multi-user support with authentication
+- [ ] Multi-user support (admin dashboard for user management)
 - [ ] Offline mode improvements
 
 ### Phase 3: Polish & Expansion (8 weeks)
 
-- [ ] Custom content upload support
 - [ ] Advanced analytics and insights
 - [ ] Community features (optional sharing)
 - [ ] Integration capabilities (Fitbit, Apple Health)
@@ -437,7 +501,7 @@ Networking: Remote access with authentication
 
 ### Product Risks
 
-- **Content Sourcing:** Quality meditation content without licensing costs
+- **Content Sourcing:** Users must supply their own audio to get started
 - **User Adoption:** Self-hosting complexity barrier for non-technical users
 - **Maintenance:** Long-term support and update commitment
 
@@ -446,7 +510,7 @@ Networking: Remote access with authentication
 - Progressive enhancement for audio features
 - Compression and streaming for media management
 - Comprehensive deployment documentation
-- Community-driven content contributions
+- Documented sources of public domain and CC-licensed audio for new instances
 
 ---
 
