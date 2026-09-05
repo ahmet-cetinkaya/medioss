@@ -113,11 +113,10 @@ Create a `.env` file in the project root:
 RUST_LOG=info
 PORT=3000
 
-# Database (default: SQLite)
-DATABASE_URL=sqlite:///data/wellness.db
-
-# Media Storage
-MEDIA_PATH=/media
+# Runtime data (see ARCHITECTURE.md: Runtime Data and Media Security).
+# Everything mutable — the SQLite file and uploaded media — lives under
+# this one directory: $MEDIOSS_DATA_DIR/medioss.db and $MEDIOSS_DATA_DIR/media/
+MEDIOSS_DATA_DIR=/data
 MAX_UPLOAD_SIZE=100MB
 
 # Authentication (required)
@@ -130,8 +129,11 @@ BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
 BACKUP_PATH=/data/backups
 ```
 
-`JWT_SECRET` has no default. The application refuses to start without it — generate one
-with `openssl rand -base64 32`.
+`MEDIOSS_DATA_DIR` and `JWT_SECRET` have no defaults. The application
+refuses to start without either — generate the secret with `openssl rand
+-base64 32`. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are
+derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single
+directory to mount and back up.
 
 ### Docker Configuration
 
@@ -139,14 +141,14 @@ with `openssl rand -base64 32`.
 # Stage 1: Build the Astro frontend
 FROM node:22-slim as frontend
 WORKDIR /app
-COPY src/presentation/web-ui .
+COPY src/apps/web-ui .
 RUN npm ci && npm run build
 
 # Stage 2: Build the Rust workspace
-FROM rust:1.75 as builder
+FROM rust:1.81 as builder
 WORKDIR /app
 COPY . .
-COPY --from=frontend /app/dist src/presentation/web-api/static
+COPY --from=frontend /app/dist src/apps/web-api/static
 RUN cargo build --release
 
 # Stage 3: Runtime image
@@ -172,11 +174,9 @@ services:
     ports: ["3000:3000"]
     volumes:
       - app_data:/data
-      - ./media:/media
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=sqlite:///data/wellness.db
-      - MEDIA_PATH=/media
+      - MEDIOSS_DATA_DIR=/data
       - JWT_SECRET=${JWT_SECRET}
     restart: unless-stopped
     healthcheck:
@@ -190,8 +190,10 @@ volumes:
     driver: local
 ```
 
-The `/media` mount is read-write because users upload their own meditation and white
-noise audio through the web interface.
+`/data` is the single read-write mount for everything mutable: the
+`medioss.db` SQLite file and the `media/` directory where users' own
+meditation and white noise audio is stored. There is no separate media
+volume.
 
 ## Resource Requirements
 
@@ -219,12 +221,12 @@ noise audio through the web interface.
 docker volume ls
 
 # Backup data volume
-docker run --rm -v medioss_app_data:/data -v $(pwd):/backup \
-  alpine tar czf /backup/wellness-data-backup.tar.gz /data
+docker run --rm -v medioss_data:/data -v $(pwd):/backup \
+  alpine tar czf /backup/medioss-data-backup.tar.gz /data
 
 # Restore from backup
-docker run --rm -v medioss_app_data:/data -v $(pwd):/backup \
-  alpine tar xzf /backup/wellness-data-backup.tar.gz -C /
+docker run --rm -v medioss_data:/data -v $(pwd):/backup \
+  alpine tar xzf /backup/medioss-data-backup.tar.gz -C /
 ```
 
 ## Backup Strategy
@@ -242,7 +244,7 @@ docker run --rm -v medioss_app_data:/data -v $(pwd):/backup \
 #!/bin/bash
 BACKUP_DIR="/var/backups/wellness"
 DATE=$(date +%Y%m%d)
-docker exec medioss-backend sqlite3 /data/wellness.db ".backup /tmp/backup_$DATE.db"
+docker exec medioss-backend sqlite3 /data/medioss.db ".backup /tmp/backup_$DATE.db"
 docker cp medioss-backend:/tmp/backup_$DATE.db $BACKUP_DIR/
 find $BACKUP_DIR -name "backup_*.db" -mtime +30 -delete
 ```
@@ -279,7 +281,7 @@ docker stats --no-stream medioss-backend
 docker-compose logs -f backend | grep "INFO"
 
 # Monitor database performance
-docker exec medioss-backend sqlite3 /data/wellness.db "PRAGMA integrity_check;"
+docker exec medioss-backend sqlite3 /data/medioss.db "PRAGMA integrity_check;"
 ```
 
 ## Troubleshooting
@@ -320,7 +322,7 @@ docker-compose up -d
 export RUST_LOG=warn  # Reduce logging overhead
 
 # Optimize SQLite performance
-docker exec medioss-backend sqlite3 /data/wellness.db "PRAGMA optimize;"
+docker exec medioss-backend sqlite3 /data/medioss.db "PRAGMA optimize;"
 
 # Monitor memory usage (should be very low)
 docker stats medioss-backend
@@ -390,7 +392,7 @@ valgrind --tool=massif ./target/release/medioss
 
 ```bash
 # Run SQLite optimization
-docker exec medioss-backend sqlite3 /data/wellness.db "
+docker exec medioss-backend sqlite3 /data/medioss.db "
 PRAGMA optimize;
 ANALYZE;
 VACUUM;

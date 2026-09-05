@@ -275,29 +275,17 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 
 ### Self-Hosted Deployment Options
 
-#### Option 1: Single-User Docker Container
+Three deployment sizes are supported, distinguished by expected concurrent
+users and network exposure. See
+[Deployment Guide: Resource Scaling](./DEPLOYMENT.md#resource-scaling) for
+the authoritative RAM, storage, and CPU figures per size — the Rust backend
+keeps actual memory use well under typical container limits.
 
-```yaml
-Recommended for: Personal use
-Resources: 1 CPU, 512MB RAM, 5GB storage
-Networking: Local access only (localhost)
-```
-
-#### Option 2: Family/Home Server
-
-```yaml
-Recommended for: 2-5 users
-Resources: 2 CPU, 1GB RAM, 10GB storage
-Networking: Local network + optional remote access
-```
-
-#### Option 3: Community Instance
-
-```yaml
-Recommended for: 5-20 users
-Resources: 4 CPU, 2GB RAM, 20GB storage
-Networking: Remote access with authentication
-```
+| Option             | Recommended for | Networking                             |
+| ------------------ | --------------- | -------------------------------------- |
+| Single-User Docker | Personal use    | Local access only (localhost)          |
+| Family/Home Server | 2-5 users       | Local network + optional remote access |
+| Community Instance | 5-20 users      | Remote access with authentication      |
 
 ### Technology Stack Recommendations
 

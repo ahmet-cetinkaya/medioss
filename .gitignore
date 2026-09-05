@@ -22,3 +22,15 @@ graphify-out/
 
 # Docker
 docker-compose.override.yml
+.omo/
+
+# Rust
+/target/
+
+# Astro build output embedded into the API binary (see docs/ARCHITECTURE.md)
+src/apps/web-api/static/
+
+# Local environment secrets (see docs/DEPLOYMENT.md)
+.env
+.env.*
+!.env.example

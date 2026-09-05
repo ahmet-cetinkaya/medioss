@@ -86,11 +86,11 @@ Built for individuals seeking private, comprehensive wellness tools without subs
 cargo run -p web-api
 
 # Frontend development (Astro)
-cd src/presentation/web-ui
+cd src/apps/web-ui
 npm run dev
 
 # Production build
-cd src/presentation/web-ui && npm run build && cd -
+cd src/apps/web-ui && npm run build && cd -
 cargo build --release
 docker-compose up
 ```
