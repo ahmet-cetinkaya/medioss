@@ -61,7 +61,7 @@ fn invalid_port_names_the_variable() {
 #[test]
 fn static_dir_defaults_into_the_source_tree_and_is_overridable() {
     let default = from_vars(&vars(&[("MEDIOSS_DATA_DIR", "/data")])).unwrap();
-    assert_eq!(default.static_dir, PathBuf::from("src/apps/web-api/static"));
+    assert_eq!(default.static_dir, PathBuf::from(DEFAULT_STATIC_DIR));
 
     let overridden = from_vars(&vars(&[
         ("MEDIOSS_DATA_DIR", "/data"),

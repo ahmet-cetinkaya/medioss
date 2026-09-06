@@ -18,6 +18,8 @@ const PORT_VAR: &str = "PORT";
 const STATIC_DIR_VAR: &str = "MEDIOSS_STATIC_DIR";
 
 const DEFAULT_PORT: u16 = 3000;
+// Source-relative so `cargo run` from the repo root works without extra setup;
+// the container ships its assets elsewhere and overrides MEDIOSS_STATIC_DIR.
 const DEFAULT_STATIC_DIR: &str = "src/apps/web-api/static";
 
 /// Reads configuration from the process environment.
