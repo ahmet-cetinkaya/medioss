@@ -5,24 +5,9 @@
 
 use std::path::Path;
 
+pub use crate::bootstrap_error::BootstrapError;
+
 const WRITE_CHECK_FILE: &str = ".medioss-write-check";
-
-#[derive(Debug, thiserror::Error)]
-pub enum BootstrapError {
-    #[error("MEDIOSS_DATA_DIR `{dir}` could not be created: {source}")]
-    NotCreatable {
-        dir: String,
-        #[source]
-        source: std::io::Error,
-    },
-
-    #[error("MEDIOSS_DATA_DIR `{dir}` is not writable: {source}")]
-    NotWritable {
-        dir: String,
-        #[source]
-        source: std::io::Error,
-    },
-}
 
 /// Creates the data directory if missing and proves it is writable.
 pub fn ensure_data_dir(dir: &Path) -> Result<(), BootstrapError> {
