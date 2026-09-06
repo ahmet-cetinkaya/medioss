@@ -23,7 +23,7 @@ jobs:
         run: cargo test --workspace
 
       - name: Dependency boundaries
-        run: ./scripts/check-boundaries.sh && ./scripts/check-boundaries.sh --self-test
+        run: ./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
 
   web-ui:
     runs-on: ubuntu-latest
