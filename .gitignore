@@ -30,6 +30,9 @@ docker-compose.override.yml
 # Astro build output embedded into the API binary (see docs/ARCHITECTURE.md)
 src/apps/web-api/static/
 
+# Local runtime data root used by `make run` ($MEDIOSS_DATA_DIR)
+/.data/
+
 # Local environment secrets (see docs/DEPLOYMENT.md)
 .env
 .env.*
