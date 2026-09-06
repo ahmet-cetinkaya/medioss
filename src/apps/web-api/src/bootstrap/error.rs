@@ -4,14 +4,14 @@
 
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
-    #[error("MEDIOSS_DATA_DIR `{dir}` could not be created: {source}")]
+    #[error("MEDIOSS_DATA_DIR `{dir}` could not be created")]
     NotCreatable {
         dir: String,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("MEDIOSS_DATA_DIR `{dir}` is not writable: {source}")]
+    #[error("MEDIOSS_DATA_DIR `{dir}` is not writable")]
     NotWritable {
         dir: String,
         #[source]
