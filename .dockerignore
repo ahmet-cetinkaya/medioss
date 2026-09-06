@@ -5,3 +5,9 @@ src/apps/web-ui/dist/
 .omo/
 docs/
 src/apps/web-api/static/
+
+# Local environment secrets (see docs/DEPLOYMENT.md) must never reach the
+# builder layer or an exported build cache.
+.env
+.env.*
+!.env.example
