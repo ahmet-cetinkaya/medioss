@@ -10,6 +10,11 @@ services:
       # Refuse to start rather than sign M1 session tokens with an empty HMAC key.
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
     restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s

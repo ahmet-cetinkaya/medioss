@@ -20,6 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY --from=builder /app/target/release/medioss /usr/local/bin/
 COPY --from=builder /app/src/apps/web-api/static /srv/medioss/static
 ENV MEDIOSS_STATIC_DIR=/srv/medioss/static
+RUN useradd --system --create-home --uid 10001 medioss
 WORKDIR /data
+# A fresh named volume inherits this ownership, so the startup writability probe
+# in $MEDIOSS_DATA_DIR succeeds without the process holding uid 0.
+RUN chown medioss:medioss /data
+USER medioss
 EXPOSE 3000
 CMD ["medioss"]
