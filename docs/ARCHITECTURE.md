@@ -129,15 +129,8 @@ medioss/
         │   ├── Cargo.toml                  # package "web-api", binary "medioss"
         │   └── src/
         │       ├── main.rs                 # composition root, thin
-        │       ├── lib.rs                  # module declarations
         │       ├── config/                 # env parsing and validation
-        │       │   ├── mod.rs              # from_env/from_vars + re-exports
-        │       │   ├── config.rs           # Config
-        │       │   ├── error.rs            # ConfigError
-        │       │   └── config.tests.rs     # tests for this topic
         │       ├── bootstrap/              # db, migrations, media-store
-        │       │   ├── mod.rs              # ensure_data_dir + re-exports
-        │       │   └── error.rs            # BootstrapError
         │       ├── state.rs                # AppState of module services
         │       ├── middleware.rs           # session -> Actor
         │       ├── router.rs               # mounts module routers + static
@@ -154,21 +147,13 @@ medioss/
 
 Layer boundaries are enforced by the Cargo graph; these rules govern the files _within_ one crate. They apply to every crate in the workspace, including each new module's four layer crates.
 
-**Group by domain topic.** A crate's `src/` contains folders named after the concern they own, not after the kind of construct they hold. Everything belonging to one topic — its type, its error, the functions that operate on it, and its tests — lives in that topic's folder behind a `mod.rs`. There are no `models/`, `types/`, `errors/`, or `utils/` buckets: splitting one concern across three category folders is what this convention exists to prevent.
+**Group by domain topic.** A crate's `src/` is organized into folders named after the concern they own, not the kind of construct they hold. A topic's type, its error, the functions operating on it, and its tests live together. There are no `models/`, `types/`, `errors/`, or `utils/` buckets — splitting one concern across category folders is what this rule exists to prevent.
 
-**One type per file.** A file defines a single `struct` or `enum`. `Config` and `ConfigError` are two files in the same `config/` folder, never one file with both. The file name is the type's name in snake_case.
+**One type per file**, named after the type in snake_case. A type and its error are separate files in the same topic folder.
 
-**Tests live beside the code, in their own file.** A topic's tests go in `<name>.tests.rs` next to the implementation, wired from the implementation module:
+**Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory.
 
-```rust
-#[cfg(test)]
-#[path = "config.tests.rs"]
-mod tests;
-```
-
-Inline `#[cfg(test)] mod tests { ... }` blocks are not used — a file should show implementation, not implementation plus fixtures. Cross-cutting tests that exercise the crate from outside still belong in the crate's `tests/` directory.
-
-**`mod.rs` declares and re-exports.** Each topic's `mod.rs` holds the topic's own functions and constants, declares its child files, and re-exports their types so consumers import from the topic rather than from an internal file path (`web_api::config::Config`, not `web_api::config::config::Config`). The crate root re-exports in turn where a flat public surface reads better (`kernel::Actor`). Moving a type between files inside a topic is therefore never a breaking change.
+**A topic's `mod.rs` is its public face** — it holds the topic's own functions and constants and re-exports its types, so consumers import from the topic rather than an internal file path (`web_api::config::Config`). Moving a type between files inside a topic is therefore not a breaking change.
 
 ---
 
