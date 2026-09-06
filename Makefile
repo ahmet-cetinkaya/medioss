@@ -3,6 +3,11 @@ DATA_DIR ?= $(CURDIR)/.data
 UI_DIR := src/apps/web-ui
 STATIC_DIR := src/apps/web-api/static
 
+# `cargo fmt`/`cargo clippy` ship with rustup on CI runners but are separate
+# packages on Nix, so run them directly when present and pull them in otherwise.
+# $(1) = cargo subcommand line, $(2) = package providing it
+cargo-gate = if cargo $(firstword $(1)) --version >/dev/null 2>&1; then cargo $(1); else nix-shell -p $(2) --run "cargo $(1)"; fi
+
 .PHONY: format ui run dev up down logs test
 
 # Format all supported files in-place
@@ -34,6 +39,9 @@ down:
 logs:
 	docker compose logs -f
 
+# Run the same gates as CI, in the same order
 test:
+	@$(call cargo-gate,fmt --all --check,rustfmt)
+	@$(call cargo-gate,clippy --workspace --all-targets -- -D warnings,clippy)
 	cargo test --workspace
-	./scripts/check-boundaries.sh
+	./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
