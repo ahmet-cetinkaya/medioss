@@ -119,7 +119,7 @@ PORT=3000
 MEDIOSS_DATA_DIR=/data
 MAX_UPLOAD_SIZE=100MB
 
-# Authentication (required)
+# Authentication (reserved for M1; not read by the binary yet)
 JWT_SECRET=<strong-random-secret>
 SESSION_TIMEOUT=7d
 
@@ -129,7 +129,9 @@ BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
 BACKUP_PATH=/data/backups
 ```
 
-`MEDIOSS_DATA_DIR` and `JWT_SECRET` have no defaults. The application refuses to start without either — generate the secret with `openssl rand -base64 32`. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
+`MEDIOSS_DATA_DIR` has no default and the application refuses to start without it. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
+
+`JWT_SECRET` is reserved for M1 (authentication) and is not yet read by the binary, so setting it today has no effect on startup. Set it anyway if you deploy from this branch: the compose file already requires it, and rotating a placeholder later is more disruptive than generating a real one up front with `openssl rand -base64 32`.
 
 ### Docker Configuration
 
