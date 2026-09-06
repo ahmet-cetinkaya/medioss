@@ -11,8 +11,7 @@ pub struct AppState {
     pub config: Arc<Config>,
 }
 
-// M0: proves workspace crates link into the binary (removed in M1 when real wiring lands)
-#[allow(dead_code)]
-pub type KernelWiring = kernel::Actor;
-#[allow(dead_code)]
-pub type MediaStoreWiring = media_store::MediaStore;
+// M0: proves workspace crates link into the binary without exposing them
+// (removed in M1 when real wiring lands and these become genuine fields).
+use kernel as _;
+use media_store as _;
