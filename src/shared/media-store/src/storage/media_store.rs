@@ -16,7 +16,7 @@ impl MediaStore {
 
     pub async fn put(
         &self,
-        _ns: &StorageNamespace,
+        _ns: StorageNamespace,
         _bytes: &[u8],
     ) -> Result<StorageKey, MediaStoreError> {
         todo!()
@@ -24,7 +24,7 @@ impl MediaStore {
 
     pub async fn open(
         &self,
-        _ns: &StorageNamespace,
+        _ns: StorageNamespace,
         _key: &StorageKey,
     ) -> Result<tokio::fs::File, MediaStoreError> {
         todo!()
@@ -32,7 +32,7 @@ impl MediaStore {
 
     pub async fn delete(
         &self,
-        _ns: &StorageNamespace,
+        _ns: StorageNamespace,
         _key: &StorageKey,
     ) -> Result<(), MediaStoreError> {
         todo!()
