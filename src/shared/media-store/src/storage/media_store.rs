@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use crate::storage::{
-    error::MediaStoreError, storage_key::StorageKey, storage_namespace::StorageNamespace,
+    error::MediaStoreError, media_stream::MediaStream, storage_key::StorageKey,
+    storage_namespace::StorageNamespace,
 };
 
 pub struct MediaStore {
@@ -26,7 +27,7 @@ impl MediaStore {
         &self,
         _ns: StorageNamespace,
         _key: &StorageKey,
-    ) -> Result<tokio::fs::File, MediaStoreError> {
+    ) -> Result<MediaStream, MediaStoreError> {
         todo!()
     }
 
