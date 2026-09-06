@@ -3,5 +3,3 @@ name = "kernel"
 edition.workspace = true
 
 [dependencies]
-serde = { workspace = true }
-thiserror = { workspace = true }
