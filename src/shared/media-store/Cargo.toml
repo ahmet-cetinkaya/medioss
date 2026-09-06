@@ -1,0 +1,3 @@
+[package]
+name = "media-store"
+edition.workspace = true

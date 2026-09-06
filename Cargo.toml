@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+    "src/kernel",
+    # "src/modules/*/domain",
+    # "src/modules/*/application",
+    # "src/modules/*/infrastructure",
+    # "src/modules/*/presentation",
+    "src/shared/media-store",
+    "src/apps/web-api",
+]
+# M1: restore module globs (Cargo errors on zero-match globs, see plan m0-workspace-skeleton)
+default-members = ["src/apps/web-api"]
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+sea-orm = { version = "1", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+async-trait = "0.1"
+serde_json = "1"
+tower-http = { version = "0.6", features = ["fs"] }
+tower = "0.5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3"
