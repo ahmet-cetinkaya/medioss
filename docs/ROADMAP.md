@@ -25,7 +25,7 @@ The empty workspace that proves the architecture compiles before any feature exi
 - Root `Cargo.toml` workspace with member globs from [ARCHITECTURE.md: Workspace Configuration](./ARCHITECTURE.md#workspace-configuration)
 - `src/kernel` crate (empty placeholder types)
 - `src/apps/web-api` binary (`medioss`) serving `GET /api/health`
-- `src/apps/web-ui` Astro scaffold with one page
+- `src/apps/web-ui` Astro scaffold with one page, with `@astrojs/svelte`, Tailwind, and shadcn-svelte initialized ([ARCHITECTURE.md: Frontend Stack](./ARCHITECTURE.md#frontend-stack))
 - `$MEDIOSS_DATA_DIR` config loading that fails fast when missing
 - Dockerfile (3-stage) and `docker-compose.yml` matching [DEPLOYMENT.md](./DEPLOYMENT.md)
 - CI: `cargo test --workspace`, `cargo clippy`, the dependency-boundary check from [ARCHITECTURE.md: Testing Strategy](./ARCHITECTURE.md#testing-strategy-and-boundary-enforcement), and an Astro build

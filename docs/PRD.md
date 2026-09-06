@@ -320,8 +320,9 @@ Three deployment sizes are supported, distinguished by expected concurrent users
 #### Frontend
 
 - **Framework:** Astro with TypeScript for type safety
+- **Interactivity:** Svelte 5 islands (via `@astrojs/svelte`) with shared runes/nanostores for cross-island state
 - **Styling:** Tailwind CSS
-- **Interactivity:** Astro islands with client-side stores
+- **UI Components:** shadcn-svelte (copy-in, accessible component primitives)
 - **Audio:** Howler.js or Web Audio API
 
 #### Backend

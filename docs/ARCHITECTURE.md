@@ -2,14 +2,14 @@
 
 ## System Overview
 
-MediOSS is a **modular monolith**: a single Cargo workspace of small, independent Rust crates that compile into one Axum binary, paired with one Astro/TypeScript frontend. There is one process, one SQLite database, and one deployment artifact.
+MediOSS is a **modular monolith**: a single Cargo workspace of small, independent Rust crates that compile into one Axum binary, paired with one Astro/TypeScript frontend using Svelte 5 islands for interactivity. There is one process, one SQLite database, and one deployment artifact.
 
 The workspace is split by **business module first**, then by Clean Architecture layer inside each module. A module owns its domain, its use cases, its persistence, and its HTTP surface. Nothing is shared across modules except a deliberately tiny kernel and narrowly scoped technical crates under `shared/`.
 
 All source components live under the top-level `src/` directory. There is no top-level `crates/` directory; deployable entry points live in `src/apps/`.
 
 ```text
-        web-ui (Astro/TypeScript)
+        web-ui (Astro/TypeScript + Svelte islands)
                   │ HTTP / static assets
         web-api (Axum binary, composition root)
                   │ mounts module routers
@@ -136,7 +136,7 @@ medioss/
         │       ├── router.rs               # mounts module routers + static
         │       └── static/                 # Astro build output (gitignored)
         │
-        └── web-ui/                         # Astro/TypeScript, not a Cargo member
+        └── web-ui/                         # Astro/TypeScript + Svelte 5, not a Cargo member
             ├── package.json
             └── src/{pages,shared,features}/
 ```
@@ -392,6 +392,16 @@ Ownership is checked against database metadata on every request, so a leaked or 
 **Upload hardening.** Enforce the body size limit **before** buffering (Axum's `DefaultBodyLimit`, so an oversized request is rejected without being read into memory or written to disk), validate the **actual** media type from decoded content rather than the declared `Content-Type` or filename extension, write to a temporary path and move into place only after validation succeeds, and store the verified content type and duration as metadata.
 
 **Static assets are a separate concern.** The Astro build output is copied to `src/apps/web-api/static/`. That directory is excluded from version control by `.gitignore` as a **build artifact**, not runtime state. It may be embedded in the binary or served publicly; it never contains user uploads.
+
+---
+
+## Frontend Stack
+
+The `web-ui` app is **Astro with TypeScript**, using **Svelte 5** (via `@astrojs/svelte`) for interactive islands and **Tailwind CSS** with **shadcn-svelte** for UI components.
+
+Astro renders every page as static HTML; only genuinely interactive components — the meditation audio player, the soundscape mixer, mood forms and charts, admin controls — hydrate as Svelte islands with `client:*` directives. Cross-island state (e.g. a globally visible player) lives in shared `.svelte.ts` rune modules or nanostores, not in a top-level framework app.
+
+Svelte was chosen over SolidJS deliberately: its compiler emits the smallest per-island runtime (roughly 2 KB gzip versus 8 KB), Svelte 5 with runes is stable while Solid 2.0 is still pre-release, and the ecosystem covers this project's needs directly (shadcn-svelte for accessible components, chart libraries for mood analytics). shadcn-svelte components are copied into the repository rather than installed as a dependency, which fits the self-hosted, no-external-runtime-dependency posture.
 
 ---
 

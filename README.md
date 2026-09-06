@@ -36,8 +36,8 @@ Visit `http://localhost:3000` to access your wellness app.
 
 - **Backend:** Rust with Axum web framework (performance & safety)
 - **Database:** SQLite with SeaORM (type-safe query builder & migrations)
-- **Frontend:** Astro with TypeScript
-- **Styling:** Tailwind CSS
+- **Frontend:** Astro with TypeScript, Svelte 5 islands for interactivity
+- **Styling:** Tailwind CSS with shadcn-svelte components
 - **Audio:** Web Audio API with Howler.js
 - **Deployment:** Docker & docker-compose (single binary)
 
@@ -61,7 +61,7 @@ Visit `http://localhost:3000` to access your wellness app.
 🚧 **Development Status:** Early Planning Phase
 
 - [x] Product requirements defined
-- [x] Technical architecture designed (Rust + Astro)
+- [x] Technical architecture designed (Rust + Astro/Svelte)
 - [ ] Core Rust backend implementation
 - [ ] Astro frontend development
 - [ ] Authentication and user management
