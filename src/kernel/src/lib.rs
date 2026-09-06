@@ -1,14 +1,7 @@
-#[derive(Debug, Clone, PartialEq)]
-pub struct UserId(pub i64);
+pub mod actor;
+pub mod role;
+pub mod user_id;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Actor {
-    pub user_id: UserId,
-    pub role: Role,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Role {
-    Admin,
-    Member,
-}
+pub use actor::Actor;
+pub use role::Role;
+pub use user_id::UserId;
