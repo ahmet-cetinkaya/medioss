@@ -29,6 +29,14 @@ fn empty_data_dir_is_an_error_with_the_documented_message() {
 }
 
 #[test]
+fn whitespace_only_data_dir_is_an_error_with_the_documented_message() {
+    let error = from_vars(&vars(&[("MEDIOSS_DATA_DIR", "   ")])).unwrap_err();
+
+    assert_eq!(error, ConfigError::MissingDataDir);
+    assert_eq!(error.to_string(), MISSING_DATA_DIR_MESSAGE);
+}
+
+#[test]
 fn port_defaults_to_3000() {
     let config = from_vars(&vars(&[("MEDIOSS_DATA_DIR", "/data")])).unwrap();
 

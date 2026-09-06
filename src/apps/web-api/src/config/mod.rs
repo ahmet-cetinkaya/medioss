@@ -28,6 +28,7 @@ pub fn from_env() -> Result<Config, ConfigError> {
 /// Pure configuration parsing: no filesystem access, no directory creation.
 pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, ConfigError> {
     let data_dir = vars(DATA_DIR_VAR)
+        .map(|value| value.trim().to_owned())
         .filter(|value| !value.is_empty())
         .ok_or(ConfigError::MissingDataDir)?;
 
