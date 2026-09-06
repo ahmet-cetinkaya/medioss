@@ -19,7 +19,14 @@ fn with_causes(err: &dyn std::error::Error) -> String {
 
 #[tokio::main]
 async fn main() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = match std::env::var(EnvFilter::DEFAULT_ENV) {
+        // The subscriber does not exist yet, so this one report cannot use tracing.
+        Ok(directives) => EnvFilter::try_new(directives).unwrap_or_else(|err| {
+            eprintln!("ignoring malformed RUST_LOG, defaulting to `info`: {err}");
+            EnvFilter::new("info")
+        }),
+        Err(_) => EnvFilter::new("info"),
+    };
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     let config = config::from_env().unwrap_or_else(|err| fail(with_causes(&err)));
