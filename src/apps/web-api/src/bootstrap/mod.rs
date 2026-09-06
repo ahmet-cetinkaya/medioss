@@ -5,7 +5,9 @@
 
 use std::path::Path;
 
-pub use crate::bootstrap_error::BootstrapError;
+pub mod error;
+
+pub use error::BootstrapError;
 
 const WRITE_CHECK_FILE: &str = ".medioss-write-check";
 

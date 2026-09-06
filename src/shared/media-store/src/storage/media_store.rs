@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use crate::{error::MediaStoreError, storage_key::StorageKey, storage_namespace::StorageNamespace};
+use crate::storage::{
+    error::MediaStoreError, storage_key::StorageKey, storage_namespace::StorageNamespace,
+};
 
 pub struct MediaStore {
     #[allow(dead_code)]

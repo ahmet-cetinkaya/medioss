@@ -5,8 +5,13 @@
 
 use std::path::PathBuf;
 
-pub use crate::config_error::ConfigError;
-pub use crate::config_struct::Config;
+// The file name mirrors the domain topic; splitting it out keeps one type per file.
+#[allow(clippy::module_inception)]
+pub mod config;
+pub mod error;
+
+pub use config::Config;
+pub use error::ConfigError;
 
 const DATA_DIR_VAR: &str = "MEDIOSS_DATA_DIR";
 const PORT_VAR: &str = "PORT";

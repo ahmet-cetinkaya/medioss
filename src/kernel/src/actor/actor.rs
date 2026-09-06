@@ -1,5 +1,5 @@
-use crate::role::Role;
-use crate::user_id::UserId;
+use crate::actor::role::Role;
+use crate::actor::user_id::UserId;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Actor {
