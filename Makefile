@@ -8,11 +8,14 @@ STATIC_DIR := src/apps/web-api/static
 # $(1) = cargo subcommand line, $(2) = package providing it
 cargo-gate = if cargo $(firstword $(1)) --version >/dev/null 2>&1; then cargo $(1); else nix-shell -p $(2) --run "cargo $(1)"; fi
 
-.PHONY: format ui run dev up down logs test
+.PHONY: format ui build run dev up down logs test
 
 # Format all supported files in-place
+# The pattern stays quoted so prettier expands `**` itself; /bin/sh has no
+# globstar and would silently degrade it to `*/*.md`, skipping README.md.
 format:
-	prettier --write **/*.md
+	prettier --write '**/*.md'
+	@$(call cargo-gate,fmt --all,rustfmt)
 
 # Build the Astro bundle into the API's static directory
 ui:
@@ -20,6 +23,10 @@ ui:
 	rm -rf $(STATIC_DIR)
 	mkdir -p $(STATIC_DIR)
 	cp -r $(UI_DIR)/dist/. $(STATIC_DIR)/
+
+# Build the release binary with the UI bundle baked into static/
+build: ui
+	cargo build --release
 
 # Start the whole app locally from one process (http://localhost:3000)
 run: ui
