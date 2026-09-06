@@ -19,10 +19,16 @@ pub fn ensure_data_dir(dir: &Path) -> Result<(), BootstrapError> {
     })?;
 
     let probe = dir.join(WRITE_CHECK_FILE);
-    std::fs::write(&probe, b"")
-        .and_then(|()| std::fs::remove_file(&probe))
-        .map_err(|source| BootstrapError::NotWritable {
-            dir: dir.display().to_string(),
-            source,
-        })
+    std::fs::write(&probe, b"").map_err(|source| BootstrapError::NotWritable {
+        dir: dir.display().to_string(),
+        source,
+    })?;
+
+    // The write proved the directory usable, so a failed cleanup is not fatal --
+    // reporting it as "not writable" would be a false diagnosis.
+    if let Err(err) = std::fs::remove_file(&probe) {
+        tracing::warn!("could not remove write probe {}: {err}", probe.display());
+    }
+
+    Ok(())
 }
