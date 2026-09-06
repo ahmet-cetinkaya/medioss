@@ -134,35 +134,39 @@ BACKUP_PATH=/data/backups
 ### Docker Configuration
 
 ```dockerfile
-# Stage 1: Build the Astro frontend
-FROM node:22-slim as frontend
+# Stage 1: Build the Astro + Svelte frontend
+FROM node:22-slim AS frontend
 WORKDIR /app
+COPY src/apps/web-ui/package*.json ./
+RUN npm ci
 COPY src/apps/web-ui .
-RUN npm ci && npm run build
+RUN npm run build
 
-# Stage 2: Build the Rust workspace
-FROM rust:1.81 as builder
+# Stage 2: Build the Rust workspace with the frontend output embedded as static assets
+# The -bookworm suffix matches the runtime image's glibc (2.36); default tags are trixie-based (2.41).
+FROM rust:1.98.0-bookworm AS builder
 WORKDIR /app
 COPY . .
 COPY --from=frontend /app/dist src/apps/web-api/static
-RUN cargo build --release
+RUN cargo build --release --workspace
 
-# Stage 3: Runtime image
+# Stage 3: Runtime image serving both the API and the UI from a single process
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates curl
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/medioss /usr/local/bin/
+COPY --from=builder /app/src/apps/web-api/static /srv/medioss/static
+ENV MEDIOSS_STATIC_DIR=/srv/medioss/static
 WORKDIR /data
 EXPOSE 3000
 CMD ["medioss"]
 ```
 
-The Astro build output is embedded into the binary's static directory, so the runtime image serves both the API and the UI from a single process.
+The builder tag is pinned to the `rust-toolchain.toml` channel. The Astro build output is copied into the runtime image at `MEDIOSS_STATIC_DIR`, so a single process serves both the API and the UI.
 
 ### Docker Compose Setup
 
 ```yaml
 # docker-compose.yml
-version: "3.8"
 services:
   backend:
     build: .
@@ -179,6 +183,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 5s
 
 volumes:
   app_data:

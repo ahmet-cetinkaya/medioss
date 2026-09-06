@@ -171,6 +171,8 @@ thiserror = "2"
 async-trait = "0.1"
 ```
 
+At M0 the four `src/modules/*/...` glob lines are commented out in the real `Cargo.toml`, because Cargo rejects a member glob that matches zero directories; they activate at M1 once the first module crate exists.
+
 `default-members` makes a bare `cargo build` or `cargo run` target the binary and its real dependency graph. Because of that, use **`cargo test --workspace`** in CI and before a push: a plain `cargo test` would only cover the default member and silently skip module tests. The Astro `web-ui` is a Node package and stays outside the Cargo workspace.
 
 **Binary name.** `src/apps/web-api/Cargo.toml` keeps the Cargo **package** name `web-api` (so `cargo run -p web-api` and `cargo test -p web-api` keep working), but overrides the produced **binary** name to `medioss`:
