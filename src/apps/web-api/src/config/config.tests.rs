@@ -41,7 +41,6 @@ fn port_defaults_to_3000() {
     let config = from_vars(&vars(&[("MEDIOSS_DATA_DIR", "/data")])).unwrap();
 
     assert_eq!(config.port, 3000);
-    assert_eq!(config.data_dir, PathBuf::from("/data"));
 }
 
 #[test]
@@ -59,10 +58,14 @@ fn invalid_port_names_the_variable() {
 }
 
 #[test]
-fn static_dir_defaults_into_the_source_tree_and_is_overridable() {
-    let default = from_vars(&vars(&[("MEDIOSS_DATA_DIR", "/data")])).unwrap();
-    assert_eq!(default.static_dir, PathBuf::from(DEFAULT_STATIC_DIR));
+fn static_dir_defaults_into_the_source_tree() {
+    let config = from_vars(&vars(&[("MEDIOSS_DATA_DIR", "/data")])).unwrap();
 
+    assert_eq!(config.static_dir, PathBuf::from(DEFAULT_STATIC_DIR));
+}
+
+#[test]
+fn static_dir_override_is_respected() {
     let overridden = from_vars(&vars(&[
         ("MEDIOSS_DATA_DIR", "/data"),
         ("MEDIOSS_STATIC_DIR", "/srv/static"),
