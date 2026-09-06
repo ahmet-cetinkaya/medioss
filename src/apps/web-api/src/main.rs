@@ -38,7 +38,11 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap_or_else(|err| fail(format!("could not bind {addr}: {err}")));
-    tracing::info!("medioss listening on {addr}");
+    // Port 0 binds an ephemeral port, so only the bound address is informative.
+    match listener.local_addr() {
+        Ok(bound) => tracing::info!("medioss listening on {bound}"),
+        Err(err) => tracing::warn!("medioss listening on {addr}, bound address unavailable: {err}"),
+    }
 
     let state = AppState {
         config: Arc::new(config),
