@@ -1,0 +1,21 @@
+{
+  "name": "web-ui",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/svelte": "^7",
+    "@tailwindcss/vite": "^4",
+    "astro": "^5",
+    "clsx": "^2",
+    "svelte": "^5",
+    "tailwind-merge": "^3",
+    "tailwind-variants": "^3.3.1",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1",
+    "typescript": "^5"
+  }
+}

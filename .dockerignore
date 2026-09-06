@@ -1,0 +1,13 @@
+target/
+src/apps/web-ui/node_modules/
+src/apps/web-ui/dist/
+.git/
+.omo/
+docs/
+src/apps/web-api/static/
+
+# Local environment secrets (see docs/DEPLOYMENT.md) must never reach the
+# builder layer or an exported build cache.
+.env
+.env.*
+!.env.example

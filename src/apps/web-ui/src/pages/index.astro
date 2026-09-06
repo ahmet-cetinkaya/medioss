@@ -1,0 +1,24 @@
+---
+import "../styles/global.css";
+import { Button } from "$lib/components/ui/button/index.js";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MediOSS</title>
+  </head>
+  <body class="min-h-screen">
+    <main class="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 px-6">
+      <h1 class="text-4xl font-semibold tracking-tight">MediOSS</h1>
+      <p class="text-lg">
+        A private, self-hosted space for meditation and rest.
+      </p>
+      <div>
+        <Button client:load>Begin</Button>
+      </div>
+    </main>
+  </body>
+</html>

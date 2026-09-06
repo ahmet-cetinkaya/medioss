@@ -129,8 +129,8 @@ medioss/
         │   ├── Cargo.toml                  # package "web-api", binary "medioss"
         │   └── src/
         │       ├── main.rs                 # composition root, thin
-        │       ├── config.rs               # env parsing and validation
-        │       ├── bootstrap.rs            # db, migrations, media-store
+        │       ├── config/                 # env parsing and validation
+        │       ├── bootstrap/              # db, migrations, media-store
         │       ├── state.rs                # AppState of module services
         │       ├── middleware.rs           # session -> Actor
         │       ├── router.rs               # mounts module routers + static
@@ -140,6 +140,20 @@ medioss/
             ├── package.json
             └── src/{pages,shared,features}/
 ```
+
+---
+
+## File Organization Inside a Crate
+
+Layer boundaries are enforced by the Cargo graph; these rules govern the files _within_ one crate. They apply to every crate in the workspace, including each new module's four layer crates.
+
+**Group by domain topic.** A crate's `src/` is organized into folders named after the concern they own, not the kind of construct they hold. A topic's type, its error, the functions operating on it, and its tests live together. There are no `models/`, `types/`, `errors/`, or `utils/` buckets — splitting one concern across category folders is what this rule exists to prevent.
+
+**One type per file**, named after the type in snake_case. A type and its error are separate files in the same topic folder.
+
+**Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory.
+
+**A topic's `mod.rs` is its public face** — it holds the topic's own functions and constants and re-exports its types, so consumers import from the topic rather than an internal file path (`web_api::config::Config`). Moving a type between files inside a topic is therefore not a breaking change.
 
 ---
 
@@ -170,6 +184,8 @@ serde = { version = "1", features = ["derive"] }
 thiserror = "2"
 async-trait = "0.1"
 ```
+
+At M0 the four `src/modules/*/...` glob lines are commented out in the real `Cargo.toml`, because Cargo rejects a member glob that matches zero directories; they activate at M1 once the first module crate exists.
 
 `default-members` makes a bare `cargo build` or `cargo run` target the binary and its real dependency graph. Because of that, use **`cargo test --workspace`** in CI and before a push: a plain `cargo test` would only cover the default member and silently skip module tests. The Astro `web-ui` is a Node package and stays outside the Cargo workspace.
 

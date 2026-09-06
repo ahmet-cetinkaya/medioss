@@ -1,0 +1,82 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Activate pinned toolchain
+        run: rustup show active-toolchain
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Dependency boundaries
+        run: ./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
+
+  web-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/apps/web-ui/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: src/apps/web-ui
+
+      - name: Build
+        run: npm run build
+        working-directory: src/apps/web-ui
+
+      - name: Assert island hydration marker
+        run: grep -q astro-island dist/index.html
+        working-directory: src/apps/web-ui
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    needs: [rust, web-ui]
+    # compose requires JWT_SECRET so a real deployment cannot sign sessions with
+    # an empty key; M0 never reads it, so any throwaway value works here.
+    env:
+      JWT_SECRET: ci-smoke-test-not-a-real-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose up -d --build
+
+      - name: Wait for health endpoint
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf localhost:3000/api/health; then exit 0; fi
+            sleep 1
+          done
+          echo "health endpoint did not come up within 60s"
+          docker compose logs
+          exit 1
+
+      - name: Assert health status
+        run: curl -sf localhost:3000/api/health | jq -e '.status=="ok"'
+
+      - name: Assert UI serves island marker
+        run: curl -fs localhost:3000/ | grep -q astro-island
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

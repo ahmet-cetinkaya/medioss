@@ -1,0 +1,5 @@
+[package]
+name = "kernel"
+edition.workspace = true
+
+[dependencies]

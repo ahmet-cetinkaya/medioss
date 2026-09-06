@@ -18,13 +18,16 @@ Provide individuals with a private, self-hosted sanctuary for mental wellness th
 ## 🚀 Quick Start
 
 ```bash
-# Clone and deploy
 git clone https://github.com/ahmet-cetinkaya/medioss.git
 cd medioss
-docker-compose up -d
+
+cp .env.example .env          # then set JWT_SECRET: openssl rand -base64 32
+make up                       # build the image and start it in the background
 ```
 
-Visit `http://localhost:3000` to access your wellness app.
+Visit `http://localhost:3000` to access your wellness app. `make logs` follows the container output and `make down` stops it.
+
+`make up` reads `JWT_SECRET` from your environment or `.env` and refuses to start if it is empty. The binary does not use it yet (authentication lands in M1), but setting a real value now means you never ship a placeholder.
 
 ## 📋 Documentation
 
@@ -39,7 +42,7 @@ Visit `http://localhost:3000` to access your wellness app.
 - **Frontend:** Astro with TypeScript, Svelte 5 islands for interactivity
 - **Styling:** Tailwind CSS with shadcn-svelte components
 - **Audio:** Web Audio API with Howler.js
-- **Deployment:** Docker & docker-compose (single binary)
+- **Deployment:** Docker & Docker Compose (single binary)
 
 ## 🎨 Design Principles
 
@@ -81,16 +84,19 @@ Built for individuals seeking private, comprehensive wellness tools without subs
 
 ## 🔧 Development
 
+Every workflow goes through the `Makefile`. Use the targets rather than the underlying `cargo` and `npm` commands: they wire up the frontend build and the required environment for you.
+
 ```bash
-# Backend development (Rust workspace)
-cargo run -p web-api
-
-# Frontend development (Astro)
-cd src/apps/web-ui
-npm run dev
-
-# Production build
-cd src/apps/web-ui && npm run build && cd -
-cargo build --release
-docker-compose up
+make run     # build the UI, then serve API + UI from one process on :3000
+make dev     # Astro dev server with hot reload on :4321
+make test    # the same gates CI runs: fmt, clippy, cargo test, boundary check
+make build   # release binary at target/release/medioss, UI bundled in
+make up      # run it in Docker exactly as deployed, on :3000
+make down    # stop and remove the Docker stack
 ```
+
+`make run` is the one to reach for day to day. Running `cargo run -p web-api` directly exits immediately, because `MEDIOSS_DATA_DIR` has no default and the app refuses to start without it; `make run` points it at `./.data` and rebuilds the Astro bundle into the API's static directory first. Override the location with `make run DATA_DIR=/srv/medioss`.
+
+For frontend work, run `make dev` for hot reload and `make run` in a second terminal for the API behind it. Two more targets round things out: `make logs` follows the Docker output, and `make format` rewrites Markdown with Prettier and Rust with `cargo fmt`.
+
+See [`.env.example`](.env.example) for the full environment contract. Only `MEDIOSS_DATA_DIR` is read at startup today.

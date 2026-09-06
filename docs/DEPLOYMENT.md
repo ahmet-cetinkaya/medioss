@@ -119,7 +119,7 @@ PORT=3000
 MEDIOSS_DATA_DIR=/data
 MAX_UPLOAD_SIZE=100MB
 
-# Authentication (required)
+# Authentication (reserved for M1; not read by the binary yet)
 JWT_SECRET=<strong-random-secret>
 SESSION_TIMEOUT=7d
 
@@ -129,63 +129,32 @@ BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
 BACKUP_PATH=/data/backups
 ```
 
-`MEDIOSS_DATA_DIR` and `JWT_SECRET` have no defaults. The application refuses to start without either — generate the secret with `openssl rand -base64 32`. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
+`MEDIOSS_DATA_DIR` has no default and the application refuses to start without it. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
+
+`JWT_SECRET` is reserved for M1 (authentication) and is not yet read by the binary, so setting it today has no effect on startup. Set it anyway if you deploy from this branch: the compose file already requires it, and rotating a placeholder later is more disruptive than generating a real one up front with `openssl rand -base64 32`.
 
 ### Docker Configuration
 
-```dockerfile
-# Stage 1: Build the Astro frontend
-FROM node:22-slim as frontend
-WORKDIR /app
-COPY src/apps/web-ui .
-RUN npm ci && npm run build
+The image is defined in [`Dockerfile`](../Dockerfile) at the repository root. Read that file for the exact instructions; this section explains the reasoning behind its shape, which the file itself cannot tell you.
 
-# Stage 2: Build the Rust workspace
-FROM rust:1.81 as builder
-WORKDIR /app
-COPY . .
-COPY --from=frontend /app/dist src/apps/web-api/static
-RUN cargo build --release
+It builds in three stages:
 
-# Stage 3: Runtime image
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates curl
-COPY --from=builder /app/target/release/medioss /usr/local/bin/
-WORKDIR /data
-EXPOSE 3000
-CMD ["medioss"]
-```
+1. **Frontend build.** A Node image installs the `src/apps/web-ui` dependencies from the lockfile and runs the Astro production build. Package manifests are copied before the rest of the source so dependency installation stays cached across source-only edits.
+2. **Rust build.** A Rust image compiles the workspace, with the Astro output from stage 1 copied into `src/apps/web-api/static` first, so the frontend is embedded in the same build that produces the binary. The build is `--workspace`, not just `-p web-api`: the workspace crates are compiled and checked together, so a break in a sibling crate fails the image build instead of surfacing later at runtime.
+3. **Runtime.** A slim Debian image carries only the compiled binary, the static assets, and the CA certificates plus `curl` that the healthcheck needs. Neither toolchain survives into the shipped image.
 
-The Astro build output is embedded into the binary's static directory, so the runtime image serves both the API and the UI from a single process.
+Two constraints are worth calling out, because breaking them produces confusing failures:
+
+- **The builder image is pinned to a `-bookworm` tag.** The binary is dynamically linked against glibc, so the builder's glibc must be no newer than the runtime's. Default Rust tags track a newer Debian than `bookworm-slim`, and mixing them yields a `GLIBC_x.yz not found` crash at container start, long after the build reported success. The pinned toolchain version also matches `rust-toolchain.toml`.
+- **The static assets ship at `MEDIOSS_STATIC_DIR`.** The runtime image sets that variable to the path it copied the Astro output to, which is why one process serves both the API and the UI without a second web server or a separate frontend container.
 
 ### Docker Compose Setup
 
-```yaml
-# docker-compose.yml
-version: "3.8"
-services:
-  backend:
-    build: .
-    ports: ["3000:3000"]
-    volumes:
-      - app_data:/data
-    environment:
-      - RUST_LOG=info
-      - MEDIOSS_DATA_DIR=/data
-      - JWT_SECRET=${JWT_SECRET}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+The stack is defined in [`docker-compose.yml`](../docker-compose.yml) at the repository root, and `make up` / `make down` drive it. It declares one service and one named volume.
 
-volumes:
-  app_data:
-    driver: local
-```
+The service builds the image from the `Dockerfile` above, publishes the app on port 3000, restarts unless you stop it explicitly, and polls `/api/health` so an unhealthy container is visible in `docker ps` rather than silently serving errors. Its environment sets `MEDIOSS_DATA_DIR` to the mount point and passes `JWT_SECRET` through from your shell or the `.env` file described above; the secret is never baked into the image or committed.
 
-`/data` is the single read-write mount for everything mutable: the `medioss.db` SQLite file and the `media/` directory where users' own meditation and white noise audio is stored. There is no separate media volume.
+`/data` is the single read-write mount for everything mutable: the `medioss.db` SQLite file and the `media/` directory where users' own meditation and white noise audio is stored. There is no separate media volume, so backing up the app means backing up one volume. Because the container runs as an unprivileged user, that mount is also the only path the process needs to write; the rest of the filesystem can stay untouched.
 
 ## Resource Requirements
 
