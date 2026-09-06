@@ -5,7 +5,10 @@ use crate::storage::{
     storage_namespace::StorageNamespace,
 };
 
+/// `Clone` keeps the store usable in `Clone`-required Axum state without an `Arc`.
+#[derive(Debug, Clone)]
 pub struct MediaStore {
+    // M2 reads this when the storage methods stop being `todo!()`.
     #[allow(dead_code)]
     root: PathBuf,
 }
