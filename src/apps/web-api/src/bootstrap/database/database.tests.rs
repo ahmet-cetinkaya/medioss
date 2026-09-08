@@ -7,7 +7,8 @@ use sea_orm::DbErr;
 use super::open;
 use crate::bootstrap::BootstrapError;
 
-const STARTUP_TIMEOUT: Duration = Duration::from_secs(10);
+const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
+const CONCURRENT_START_RUNS: usize = 20;
 const QA_PREFIX: &str = "manual QA";
 
 #[derive(Debug, PartialEq, Eq)]
@@ -110,18 +111,20 @@ async fn unwritable_database_path_returns_typed_error_with_exact_path() {
 #[tokio::test]
 async fn concurrent_database_starts_complete_within_bound() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let path = temp_dir.path().join("medioss.db");
 
-    let (first, second) = tokio::time::timeout(STARTUP_TIMEOUT, async {
-        tokio::join!(open(&path), open(&path))
-    })
-    .await
-    .expect("concurrent database startup timed out");
+    for run in 0..CONCURRENT_START_RUNS {
+        let path = temp_dir.path().join(format!("medioss-{run}.db"));
+        let (first, second) = tokio::time::timeout(STARTUP_TIMEOUT, async {
+            tokio::join!(open(&path), open(&path))
+        })
+        .await
+        .expect("concurrent database startup timed out");
 
-    let first = first.unwrap();
-    let second = second.unwrap();
-    first.pool.close().await;
-    second.pool.close().await;
+        let first = first.unwrap();
+        let second = second.unwrap();
+        first.pool.close().await;
+        second.pool.close().await;
+    }
 }
 
 #[test]
