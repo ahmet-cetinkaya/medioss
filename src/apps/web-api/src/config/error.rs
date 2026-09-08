@@ -9,6 +9,21 @@ pub enum ConfigError {
     )]
     MissingDataDir,
 
+    #[error("SESSION_SECRET is required and must not be blank")]
+    MissingSessionSecret,
+
+    #[error("SESSION_TIMEOUT must be a positive duration in <n>d|h|m|s format, got `{value}`")]
+    InvalidSessionTimeout { value: String },
+
+    #[error("MEDIOSS_ORIGIN is required and must not be blank")]
+    MissingMediossOrigin,
+
+    #[error("MEDIOSS_ORIGIN must be a single absolute http:// or https:// origin, got `{value}`")]
+    InvalidMediossOrigin { value: String },
+
+    #[error("SESSION_COOKIE_SECURE must be exactly `true` or `false`, got `{value}`")]
+    InvalidSessionCookieSecure { value: String },
+
     #[error("PORT must be a number between 0 and 65535, got `{value}`")]
     InvalidPort { value: String },
 }

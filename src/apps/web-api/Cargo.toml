@@ -16,6 +16,7 @@ serde_json = { workspace = true }
 tower-http = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+url = "2"
 # M0: wired so the release binary proves the whole workspace compiles
 kernel = { path = "../../kernel" }
 media-store = { path = "../../shared/media-store" }

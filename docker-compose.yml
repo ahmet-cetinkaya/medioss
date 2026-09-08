@@ -7,8 +7,11 @@ services:
     environment:
       - RUST_LOG=info
       - MEDIOSS_DATA_DIR=/data
-      # Refuse to start rather than sign M1 session tokens with an empty HMAC key.
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
+      # Required for constant-time first-run setup possession; not cookie signing.
+      - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET must be set}
+      - MEDIOSS_ORIGIN=${MEDIOSS_ORIGIN:?MEDIOSS_ORIGIN must be set}
+      - SESSION_TIMEOUT=${SESSION_TIMEOUT:-7d}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
     restart: unless-stopped
     read_only: true
     security_opt:
