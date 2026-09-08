@@ -1,3 +1,10 @@
 [package]
 name = "identity-application"
 edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+identity-domain = { path = "../domain" }
+kernel = { path = "../../../kernel" }
+thiserror.workspace = true

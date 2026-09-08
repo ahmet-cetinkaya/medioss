@@ -864,6 +864,13 @@ dependencies = [
 [[package]]
 name = "identity-application"
 version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "identity-domain",
+ "kernel",
+ "thiserror",
+]
 
 [[package]]
 name = "identity-domain"
