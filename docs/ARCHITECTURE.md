@@ -340,7 +340,7 @@ impl<S> FromRequestParts<S> for CurrentActor {
 }
 ```
 
-Whichever module owns sessions supplies that service to `web-api` through the same constructor injection as any other dependency. No module crate depends on it. Whether that service issues a signed session cookie or a JWT is a decision left to that module; `web-api` only needs a signing/verifying secret from configuration (currently named `JWT_SECRET`, see [DEPLOYMENT.md](./DEPLOYMENT.md)) to hand to whichever mechanism is chosen.
+Whichever module owns sessions supplies that service to `web-api` through the same constructor injection as any other dependency. No module crate depends on it. `SESSION_SECRET` actively authorizes first-run setup through a constant-time host-possession check. It is not a cookie-signing key: opaque session cookies contain random server-side IDs, so session validation uses the server-side session store instead of a signing/verifying secret.
 
 ### Request flow
 
