@@ -1,3 +1,9 @@
 [package]
 name = "identity-domain"
 edition.workspace = true
+
+[dependencies]
+kernel = { path = "../../../kernel" }
+serde.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
