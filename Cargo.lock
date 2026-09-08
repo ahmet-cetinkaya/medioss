@@ -249,6 +249,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "identity-application"
+version = "0.0.0"
+
+[[package]]
+name = "identity-domain"
+version = "0.0.0"
+
+[[package]]
+name = "identity-infrastructure"
+version = "0.0.0"
+
+[[package]]
+name = "identity-presentation"
+version = "0.0.0"
+
+[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

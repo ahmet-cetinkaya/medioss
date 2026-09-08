@@ -1,0 +1,3 @@
+[package]
+name = "identity-presentation"
+edition.workspace = true

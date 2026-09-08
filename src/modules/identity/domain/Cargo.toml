@@ -1,0 +1,3 @@
+[package]
+name = "identity-domain"
+edition.workspace = true

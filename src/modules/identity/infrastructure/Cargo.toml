@@ -1,0 +1,3 @@
+[package]
+name = "identity-infrastructure"
+edition.workspace = true
