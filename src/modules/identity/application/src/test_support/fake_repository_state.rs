@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use identity_domain::User;
+use identity_domain::{FailedAttempts, User};
 
 #[derive(Clone, Default)]
 pub(super) struct FakeRepositoryState {
     pub(super) users: HashMap<String, User>,
-    pub(super) failed_attempts: HashMap<String, u64>,
+    pub(super) failed_attempts: HashMap<String, FailedAttempts>,
     pub(super) next_user_id: i64,
     pub(super) count_calls: usize,
     pub(super) initial_admin_insert_calls: usize,

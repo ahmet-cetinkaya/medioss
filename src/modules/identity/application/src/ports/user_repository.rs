@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use identity_domain::{Email, User};
 
 use super::{CredentialChange, InitialAdminRegistration, MemberRegistration, RepositoryError};
@@ -24,10 +23,4 @@ pub trait UserRepository: Send + Sync {
         &self,
         credential_change: CredentialChange,
     ) -> Result<User, RepositoryError>;
-
-    async fn increment_failed_attempt(
-        &self,
-        normalized_email: &str,
-        attempted_at: DateTime<Utc>,
-    ) -> Result<(), RepositoryError>;
 }

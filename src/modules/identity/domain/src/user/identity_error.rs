@@ -22,6 +22,8 @@ pub enum IdentityError {
     SetupAlreadyCompleted,
     #[error("credential state is invalid")]
     InvalidCredentialState,
+    #[error("login throttle state is invalid")]
+    InvalidThrottleState,
     #[error("authentication version cannot be incremented")]
     AuthVersionOverflow,
 }

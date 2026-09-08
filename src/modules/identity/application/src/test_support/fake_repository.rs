@@ -2,14 +2,14 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use identity_domain::{Email, IdentityError, Role, User};
+use identity_domain::{Email, FailedAttempts, IdentityError, Role, User};
 use kernel::UserId;
 
 use super::{email, password, FakeHasher, FixedClock};
 use crate::{
     ports::{
-        CredentialChange, InitialAdminRegistration, MemberRegistration, RepositoryError,
-        UserRepository,
+        CredentialChange, InitialAdminRegistration, LoginThrottleRepository, MemberRegistration,
+        RepositoryError, UserRepository,
     },
     test_support::fake_repository_state::FakeRepositoryState,
 };
@@ -51,7 +51,12 @@ impl FakeRepository {
     pub(crate) fn set_failed_attempts(&self, email: &str, attempts: u64) {
         self.replace_state(|state| {
             let mut failed_attempts = state.failed_attempts.clone();
-            failed_attempts.insert(email.to_owned(), attempts);
+            let now = FixedClock::new().now_value();
+            let blocked_until = now + chrono::TimeDelta::seconds(1);
+            failed_attempts.insert(
+                email.to_owned(),
+                FailedAttempts::restore(attempts, now, blocked_until).unwrap(),
+            );
             FakeRepositoryState {
                 failed_attempts,
                 ..state
@@ -80,8 +85,7 @@ impl FakeRepository {
             .unwrap()
             .failed_attempts
             .get(email)
-            .copied()
-            .unwrap_or_default()
+            .map_or(0, FailedAttempts::count)
     }
 
     pub(crate) fn count_calls(&self) -> usize {
@@ -221,19 +225,52 @@ impl UserRepository for FakeRepository {
         };
         Ok(changed)
     }
+}
 
-    async fn increment_failed_attempt(
+#[async_trait]
+impl LoginThrottleRepository for FakeRepository {
+    async fn failed_attempts(
         &self,
-        normalized_email: &str,
-        _attempted_at: DateTime<Utc>,
+        normalized_identifier: &str,
+    ) -> Result<Option<FailedAttempts>, RepositoryError> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .failed_attempts
+            .get(normalized_identifier)
+            .cloned())
+    }
+
+    async fn record_failed_attempt(
+        &self,
+        normalized_identifier: &str,
+        attempted_at: DateTime<Utc>,
+    ) -> Result<FailedAttempts, RepositoryError> {
+        let mut state = self.state.lock().unwrap();
+        let attempts = state
+            .failed_attempts
+            .get(normalized_identifier)
+            .map_or_else(
+                || FailedAttempts::first_failure(attempted_at),
+                |current| current.record_failure(attempted_at),
+            );
+        let mut failed_attempts = state.failed_attempts.clone();
+        failed_attempts.insert(normalized_identifier.to_owned(), attempts.clone());
+        *state = FakeRepositoryState {
+            failed_attempts,
+            ..state.clone()
+        };
+        Ok(attempts)
+    }
+
+    async fn clear_failed_attempts(
+        &self,
+        normalized_identifier: &str,
     ) -> Result<(), RepositoryError> {
         self.replace_state(|state| {
             let mut failed_attempts = state.failed_attempts.clone();
-            let attempts = failed_attempts
-                .get(normalized_email)
-                .copied()
-                .unwrap_or_default();
-            failed_attempts.insert(normalized_email.to_owned(), attempts + 1);
+            failed_attempts.remove(normalized_identifier);
             FakeRepositoryState {
                 failed_attempts,
                 ..state

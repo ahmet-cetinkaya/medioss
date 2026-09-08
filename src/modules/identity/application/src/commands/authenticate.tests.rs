@@ -1,10 +1,14 @@
+use std::time::Duration;
+
 use chrono::TimeDelta;
-use identity_domain::{Email, PasswordHash, Role, User};
+use identity_domain::{required_delay, Email, IdentityError, PasswordHash, Role, User};
 use kernel::UserId;
 
 use super::Authenticate;
 use crate::{
-    test_support::{block_on, email, password, FakeHasher, FakeRepository, FixedClock},
+    test_support::{
+        block_on, email, password, FakeHasher, FakeLoginAdmission, FakeRepository, FixedClock,
+    },
     ApplicationError,
 };
 
@@ -13,9 +17,11 @@ fn authentication_normalizes_email_and_verifies_once() {
     let repository = FakeRepository::with_permanent_admin();
     let hasher = FakeHasher::new();
     let clock = FixedClock::new();
-    let command = Authenticate::new(&repository, &hasher, &clock, dummy_hash());
+    let admission = FakeLoginAdmission::available();
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
 
-    let user = block_on(command.execute("  ADMIN@LOCAL.INVALID ", password().as_str())).unwrap();
+    let mixed_case_email = format!("  {}  ", email().as_str().to_uppercase());
+    let user = block_on(command.execute(&mixed_case_email, password().as_str())).unwrap();
 
     assert_eq!(user.email(), &email());
     assert_eq!(hasher.verify_calls(), 1);
@@ -26,15 +32,17 @@ fn unknown_and_wrong_passwords_share_the_generic_error_and_one_verify() {
     let repository = FakeRepository::with_permanent_admin();
     let hasher = FakeHasher::new();
     let clock = FixedClock::new();
-    let command = Authenticate::new(&repository, &hasher, &clock, dummy_hash());
-    let unknown = block_on(command.execute("missing@local.invalid", "wrong-password"));
+    let admission = FakeLoginAdmission::available();
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
+    let unknown_identifier = unknown_email("missing");
+    let unknown = block_on(command.execute(&unknown_identifier, "wrong-password"));
     let wrong = block_on(command.execute(email().as_str(), "wrong-password"));
 
     assert_eq!(unknown, Err(ApplicationError::InvalidCredentials));
     assert_eq!(wrong, Err(ApplicationError::InvalidCredentials));
     assert_eq!(hasher.verify_calls(), 2);
     assert_eq!(
-        repository.failed_attempts("missing@local.invalid"),
+        repository.failed_attempts(&unknown_identifier),
         repository.failed_attempts(email().as_str())
     );
 }
@@ -44,6 +52,7 @@ fn expired_temporary_password_has_the_same_public_failure() {
     let repository = FakeRepository::new();
     let hasher = FakeHasher::new();
     let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::available();
     let created_at = clock.now_value() - TimeDelta::hours(25);
     let expired = User::new_temporary(
         UserId::new(9),
@@ -54,7 +63,7 @@ fn expired_temporary_password_has_the_same_public_failure() {
     )
     .unwrap();
     repository.seed_user(expired);
-    let command = Authenticate::new(&repository, &hasher, &clock, dummy_hash());
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
 
     let result = block_on(command.execute("expired@local.invalid", password().as_str()));
 
@@ -68,8 +77,9 @@ fn malformed_email_still_uses_the_fixed_dummy_hash_once() {
     let repository = FakeRepository::new();
     let hasher = FakeHasher::new();
     let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::available();
     let dummy_hash = dummy_hash();
-    let command = Authenticate::new(&repository, &hasher, &clock, dummy_hash.clone());
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash.clone());
 
     let result = block_on(command.execute(" NOT-AN-EMAIL ", "short"));
 
@@ -77,6 +87,157 @@ fn malformed_email_still_uses_the_fixed_dummy_hash_once() {
     assert_eq!(hasher.verify_calls(), 1);
     assert_eq!(hasher.last_verified_hash(), Some(dummy_hash));
     assert_eq!(repository.failed_attempts("not-an-email"), 1);
+}
+
+#[test]
+fn throttle_state_uses_the_normalized_identifier_for_unknown_users() {
+    let repository = FakeRepository::new();
+    let hasher = FakeHasher::new();
+    let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::available();
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
+
+    let result = block_on(command.execute("  MiSsInG-Identifier  ", "wrong-password"));
+
+    assert_eq!(result, Err(ApplicationError::InvalidCredentials));
+    assert_eq!(repository.failed_attempts("missing-identifier"), 1);
+    assert_eq!(repository.failed_attempts("MiSsInG-Identifier"), 0);
+}
+
+#[test]
+fn throttle_progression_has_exact_known_and_unknown_public_parity() {
+    let repository = FakeRepository::with_permanent_admin();
+    let hasher = FakeHasher::new();
+    let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::available();
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
+    let unknown_identifier = unknown_email("missing");
+
+    for failure_number in 1..=8 {
+        let known_failure = block_on(command.execute(email().as_str(), "wrong-password"));
+        let unknown_failure = block_on(command.execute(&unknown_identifier, "wrong-password"));
+        assert_eq!(
+            public_response(&known_failure),
+            public_response(&unknown_failure)
+        );
+        assert_eq!(
+            public_response(&known_failure),
+            (401, "invalid credentials", None)
+        );
+
+        let known_block = block_on(command.execute(email().as_str(), "wrong-password"));
+        let unknown_block = block_on(command.execute(&unknown_identifier, "wrong-password"));
+        assert_eq!(
+            public_response(&known_block),
+            public_response(&unknown_block)
+        );
+        assert_eq!(
+            public_response(&known_block),
+            (
+                429,
+                "login temporarily throttled",
+                Some(required_delay_for(failure_number).as_secs()),
+            )
+        );
+        assert_eq!(hasher.verify_calls(), failure_number as usize * 2);
+
+        clock.advance(required_delay_for(failure_number));
+    }
+}
+
+#[test]
+fn global_admission_throttle_is_generic_for_rotating_unknown_identifiers() {
+    let repository = FakeRepository::new();
+    let hasher = FakeHasher::new();
+    let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::saturated(Duration::from_secs(3));
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
+
+    for identifier in [
+        unknown_email("one"),
+        unknown_email("two"),
+        "not-an-email".to_owned(),
+    ] {
+        let result = block_on(command.execute(&identifier, "wrong-password"));
+
+        assert_eq!(result, Err(throttled_error(Duration::from_secs(3))));
+        assert_eq!(repository.failed_attempts(&identifier), 0);
+    }
+    assert_eq!(hasher.verify_calls(), 0);
+}
+
+#[test]
+fn successful_authentication_clears_throttle_state() {
+    let repository = FakeRepository::with_permanent_admin();
+    let hasher = FakeHasher::new();
+    let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::available();
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
+
+    assert_eq!(
+        block_on(command.execute(email().as_str(), "wrong-password")),
+        Err(ApplicationError::InvalidCredentials)
+    );
+    clock.advance(Duration::from_secs(1));
+
+    let result = block_on(command.execute(email().as_str(), password().as_str()));
+
+    assert!(result.is_ok());
+    assert_eq!(repository.failed_attempts(email().as_str()), 0);
+}
+
+#[test]
+fn throttle_allows_success_after_one_hundred_failures_and_the_final_delay() {
+    let repository = FakeRepository::with_permanent_admin();
+    let hasher = FakeHasher::new();
+    let clock = FixedClock::new();
+    let admission = FakeLoginAdmission::available();
+    let command = Authenticate::new(&repository, &hasher, &clock, &admission, dummy_hash());
+
+    for failure_number in 1..=100 {
+        let result = block_on(command.execute(email().as_str(), "wrong-password"));
+        assert_eq!(result, Err(ApplicationError::InvalidCredentials));
+        assert_eq!(repository.failed_attempts(email().as_str()), failure_number);
+
+        if failure_number < 100 {
+            clock.advance(required_delay_for(failure_number));
+        }
+    }
+
+    let still_blocked = block_on(command.execute(email().as_str(), password().as_str()));
+    assert_eq!(still_blocked, Err(throttled_error(Duration::from_secs(64))));
+    assert_eq!(hasher.verify_calls(), 100);
+
+    clock.advance(Duration::from_secs(64));
+    let recovered = block_on(command.execute(email().as_str(), password().as_str()));
+
+    assert!(recovered.is_ok());
+    assert_eq!(hasher.verify_calls(), 101);
+    assert_eq!(repository.failed_attempts(email().as_str()), 0);
+}
+
+fn required_delay_for(failure_number: u64) -> Duration {
+    required_delay(failure_number)
+}
+
+fn throttled_error(retry_after: Duration) -> ApplicationError {
+    ApplicationError::InvalidInput(IdentityError::LoginThrottled { retry_after })
+}
+
+fn public_response(result: &Result<User, ApplicationError>) -> (u16, &'static str, Option<u64>) {
+    match result {
+        Err(ApplicationError::InvalidCredentials) => (401, "invalid credentials", None),
+        Err(ApplicationError::InvalidInput(IdentityError::LoginThrottled { retry_after })) => (
+            429,
+            "login temporarily throttled",
+            Some(retry_after.as_secs()),
+        ),
+        _ => panic!("unexpected authentication result"),
+    }
+}
+
+fn unknown_email(local_part: &str) -> String {
+    [local_part, "example.com"].join("@")
 }
 
 fn dummy_hash() -> PasswordHash {
