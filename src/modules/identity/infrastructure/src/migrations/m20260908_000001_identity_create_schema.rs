@@ -1,0 +1,69 @@
+use sea_orm_migration::prelude::*;
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[async_trait::async_trait]
+impl MigrationTrait for Migration {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .get_connection()
+            .execute_unprepared(
+                "CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT NOT NULL COLLATE NOCASE,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    must_change_password INTEGER NOT NULL DEFAULT 0 CHECK (must_change_password IN (0, 1)),
+                    auth_version INTEGER NOT NULL DEFAULT 0,
+                    password_expires_at TEXT NULL,
+                    failed_attempt_count INTEGER NOT NULL DEFAULT 0,
+                    last_failed_attempt_at TEXT NULL,
+                    blocked_until TEXT NULL,
+                    created_at TEXT NOT NULL,
+                    UNIQUE (email)
+                );",
+            )
+            .await?;
+        manager
+            .get_connection()
+            .execute_unprepared(
+                "CREATE TABLE IF NOT EXISTS instance_state (
+                    singleton INTEGER PRIMARY KEY CHECK (singleton = 1)
+                );",
+            )
+            .await?;
+        manager
+            .get_connection()
+            .execute_unprepared("INSERT INTO instance_state (singleton) VALUES (1);")
+            .await?;
+        manager
+            .get_connection()
+            .execute_unprepared(
+                "CREATE TABLE IF NOT EXISTS login_attempts (
+                    normalized_identifier TEXT PRIMARY KEY,
+                    failed_attempt_count INTEGER NOT NULL DEFAULT 0,
+                    last_failed_attempt_at TEXT NULL,
+                    blocked_until TEXT NULL
+                );",
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .get_connection()
+            .execute_unprepared("DROP TABLE IF EXISTS login_attempts;")
+            .await?;
+        manager
+            .get_connection()
+            .execute_unprepared("DROP TABLE IF EXISTS instance_state;")
+            .await?;
+        manager
+            .get_connection()
+            .execute_unprepared("DROP TABLE IF EXISTS users;")
+            .await?;
+        Ok(())
+    }
+}
