@@ -21,9 +21,13 @@ pub fn router(state: AppState) -> Router {
     >()
     .with_state(state.identity_dependencies.clone());
 
+    let meditation =
+        meditation_presentation::meditation_router().with_state(state.meditation.clone());
+
     let api = Router::new()
         .route("/health", get(health))
         .merge(identity)
+        .merge(meditation)
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             resolve_actor,
