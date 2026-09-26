@@ -4,7 +4,6 @@
 
 use std::sync::Arc;
 
-use meditation_application::ports::BlobStore as _;
 use meditation_infrastructure::persistence::{
     SeaOrmCategoryRepository, SeaOrmMeditationRepository, SeaOrmMembershipRepository,
     SeaOrmNoteRepository, SeaOrmPlaybackRepository, SeaOrmProgramRepository,
