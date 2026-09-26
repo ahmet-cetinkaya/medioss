@@ -1,0 +1,18 @@
+[package]
+name = "meditation-infrastructure"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+meditation-application = { path = "../application" }
+meditation-domain = { path = "../domain" }
+kernel = { path = "../../../kernel" }
+media-store = { path = "../../../shared/media-store" }
+sea-orm.workspace = true
+sea-orm-migration.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

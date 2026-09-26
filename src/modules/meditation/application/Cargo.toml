@@ -1,0 +1,13 @@
+[package]
+name = "meditation-application"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+meditation-domain = { path = "../domain" }
+kernel = { path = "../../../kernel" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

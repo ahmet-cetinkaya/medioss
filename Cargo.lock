@@ -1311,6 +1311,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "meditation-application"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "meditation-domain",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "meditation-domain"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "meditation-infrastructure"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "media-store",
+ "meditation-application",
+ "meditation-domain",
+ "sea-orm",
+ "sea-orm-migration",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "meditation-presentation"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "kernel",
+ "meditation-application",
+ "meditation-domain",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

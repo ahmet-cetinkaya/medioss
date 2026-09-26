@@ -1,0 +1,17 @@
+[package]
+name = "meditation-presentation"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+chrono.workspace = true
+meditation-application = { path = "../application" }
+meditation-domain = { path = "../domain" }
+kernel = { path = "../../../kernel" }
+serde.workspace = true
+serde_json.workspace = true
+tower.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

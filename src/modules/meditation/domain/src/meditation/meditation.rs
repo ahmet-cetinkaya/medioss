@@ -1,0 +1,102 @@
+use chrono::{DateTime, Utc};
+use thiserror::Error;
+
+/// The stored audio content type. Every upload is normalized to Ogg Opus, so
+/// the row's content type is a constant rather than upload-controlled input.
+pub const STORED_CONTENT_TYPE: &str = "audio/ogg";
+
+/// Maximum accepted name length, in characters.
+const MAX_NAME_LENGTH: usize = 200;
+
+/// Why a [`Meditation`] could not be constructed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum MeditationError {
+    #[error("meditation name must not be empty")]
+    InvalidName,
+    #[error("meditation size must be positive")]
+    InvalidSize,
+    #[error("meditation content type must be {STORED_CONTENT_TYPE}")]
+    InvalidContentType,
+    #[error("meditation storage key must not be empty")]
+    InvalidStorageKey,
+}
+
+/// A curated meditation audio entry in the shared library.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Meditation {
+    id: i64,
+    name: String,
+    content_type: String,
+    size_bytes: i64,
+    storage_key: String,
+    created_at: DateTime<Utc>,
+}
+
+impl Meditation {
+    /// Constructs a meditation, enforcing the row invariants.
+    pub fn new(
+        id: i64,
+        name: &str,
+        content_type: &str,
+        size_bytes: i64,
+        storage_key: &str,
+        created_at: DateTime<Utc>,
+    ) -> Result<Self, MeditationError> {
+        let name = name.trim();
+        if name.is_empty() || name.chars().count() > MAX_NAME_LENGTH {
+            return Err(MeditationError::InvalidName);
+        }
+        if content_type != STORED_CONTENT_TYPE {
+            return Err(MeditationError::InvalidContentType);
+        }
+        if size_bytes <= 0 {
+            return Err(MeditationError::InvalidSize);
+        }
+        if storage_key.is_empty() {
+            return Err(MeditationError::InvalidStorageKey);
+        }
+
+        Ok(Self {
+            id,
+            name: name.to_owned(),
+            content_type: content_type.to_owned(),
+            size_bytes,
+            storage_key: storage_key.to_owned(),
+            created_at,
+        })
+    }
+
+    /// Row identifier.
+    pub fn id(&self) -> i64 {
+        self.id
+    }
+
+    /// Display name, already trimmed.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Stored audio content type (always `audio/ogg`).
+    pub fn content_type(&self) -> &str {
+        &self.content_type
+    }
+
+    /// Stored byte count of the converted audio.
+    pub fn size_bytes(&self) -> i64 {
+        self.size_bytes
+    }
+
+    /// Media-store key of the stored audio bytes.
+    pub fn storage_key(&self) -> &str {
+        &self.storage_key
+    }
+
+    /// Row creation timestamp.
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+}
+
+#[cfg(test)]
+#[path = "meditation.tests.rs"]
+mod tests;

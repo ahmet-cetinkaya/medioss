@@ -1,0 +1,39 @@
+use async_trait::async_trait;
+use kernel::UserId;
+
+/// One user's playback progress for one meditation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlaybackState {
+    pub position_ms: i64,
+    pub completed: bool,
+}
+
+/// Persists per-user playback state.
+#[async_trait]
+pub trait PlaybackStateRepository: Send + Sync {
+    /// Inserts or updates the stored position for (user, meditation).
+    async fn upsert_position(
+        &self,
+        user_id: UserId,
+        meditation_id: i64,
+        position_ms: i64,
+    ) -> Result<(), String>;
+
+    /// Sets the completed flag for (user, meditation).
+    async fn set_completed(
+        &self,
+        user_id: UserId,
+        meditation_id: i64,
+        completed: bool,
+    ) -> Result<(), String>;
+
+    /// Resets the stored position to zero for (user, meditation).
+    async fn reset_position(&self, user_id: UserId, meditation_id: i64) -> Result<(), String>;
+
+    /// Reads the playback state, if the user ever played this meditation.
+    async fn get(
+        &self,
+        user_id: UserId,
+        meditation_id: i64,
+    ) -> Result<Option<PlaybackState>, String>;
+}

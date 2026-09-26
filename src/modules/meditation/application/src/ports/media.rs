@@ -1,0 +1,86 @@
+use async_trait::async_trait;
+
+/// Byte formats the upload pipeline accepts, detected from leading bytes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AudioFormat {
+    /// MPEG audio layer III, with or without an ID3v2 tag.
+    Mp3,
+    /// RIFF/WAVE PCM audio.
+    Wav,
+    /// Ogg container already carrying Opus: stored as-is.
+    OggOpus,
+    /// Ogg container carrying Vorbis: re-encoded to Opus.
+    OggVorbis,
+}
+
+/// Why byte sniffing failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum SniffError {
+    #[error("not a supported audio format")]
+    Unsupported,
+    #[error("too few bytes to identify the format")]
+    TooShort,
+}
+
+/// Detects the audio format from leading bytes (magic sniffing only).
+#[async_trait]
+pub trait AudioValidator: Send + Sync {
+    /// Sniffs the format from the leading bytes of an upload.
+    async fn sniff(&self, leading: &[u8]) -> Result<AudioFormat, SniffError>;
+}
+
+/// Image formats accepted for program covers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImageFormat {
+    Png,
+    Jpeg,
+    Webp,
+}
+
+/// Detects cover image formats from leading bytes.
+#[async_trait]
+pub trait CoverValidator: Send + Sync {
+    /// Sniffs the image format from the leading bytes of a cover upload.
+    async fn sniff(&self, leading: &[u8]) -> Result<ImageFormat, SniffError>;
+}
+
+/// Converts accepted uploads to the stored Ogg Opus form. Implementations
+/// pass already-Opus input through unchanged.
+#[async_trait]
+pub trait OpusConverter: Send + Sync {
+    /// Converts `bytes` to Ogg Opus; `OggOpus` input is returned as-is.
+    async fn convert(&self, bytes: Vec<u8>, format: AudioFormat) -> Result<Vec<u8>, String>;
+}
+
+/// Why a conversion failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum ConvertError {
+    #[error("the audio stream could not be decoded")]
+    Decode,
+    #[error("the encoder is unavailable on this host")]
+    Unavailable,
+}
+
+/// A stored blob's location handle.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoredBlob {
+    pub storage_key: String,
+    pub size_bytes: i64,
+}
+
+/// Writes and removes audio and cover blobs. Keys are opaque and generated
+/// by the implementation; no user-controlled string becomes a path.
+#[async_trait]
+pub trait BlobStore: Send + Sync {
+    /// Persists `bytes` and returns its storage handle.
+    async fn put(&self, bytes: &[u8]) -> Result<StoredBlob, String>;
+    /// Removes the blob at `key`; an absent key is not an error.
+    async fn delete(&self, key: &str) -> Result<(), String>;
+}
+
+/// Tells the current time, so use-cases stay testable.
+#[async_trait]
+pub trait Clock: Send + Sync {
+    /// The current wall-clock time.
+    async fn now(&self) -> chrono::DateTime<chrono::Utc>;
+}
