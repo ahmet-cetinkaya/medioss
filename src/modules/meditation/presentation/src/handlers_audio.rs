@@ -363,6 +363,7 @@ pub(crate) async fn upload_for_tests(
     .tap(|row| state.seed_meditation(row.clone()))
 }
 
+#[cfg(test)]
 trait Tap: Sized {
     fn tap(self, f: impl FnOnce(&Self)) -> Self {
         f(&self);
