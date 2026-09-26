@@ -22,6 +22,9 @@ use identity_application::{
 use identity_domain::{Email, IdentityError, PasswordHash, RawPassword, User};
 use kernel::{Actor, Role};
 use serde::{Deserialize, Serialize};
+use tower_sessions::Session;
+
+use crate::session_keys::{SESSION_AUTH_VERSION_KEY, SESSION_USER_ID_KEY};
 
 /// Everything a handler needs, injected by web-api's composition root.
 pub struct IdentityDependencies<R, H, C, A> {
@@ -112,6 +115,7 @@ where
 }
 
 async fn login<R, H, C, A>(
+    session: Session,
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
     headers: HeaderMap,
     Json(request): Json<CredentialsRequest>,
@@ -131,12 +135,16 @@ where
         dependencies.dummy_password_hash.clone(),
     );
     let user = authenticate.execute(&request.email, &request.password).await?;
+    let _ = session.cycle_id().await;
+    session.insert(SESSION_USER_ID_KEY, user.id().value()).await?;
+    session.insert(SESSION_AUTH_VERSION_KEY, user.auth_version()).await?;
     Ok(Json(user_response(&user)))
 }
 
 async fn logout<R, H, C, A>(
     CurrentActor(_actor): CurrentActor,
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
+    session: Session,
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError>
 where
@@ -146,6 +154,7 @@ where
     A: LoginAdmission,
 {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
+    let _ = session.flush().await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -190,6 +199,7 @@ where
 }
 
 async fn me_password<R, H, C, A>(
+    session: Session,
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
@@ -210,6 +220,9 @@ where
         &new_password,
     )
     .await?;
+    let _ = session.cycle_id().await;
+    session.insert(SESSION_USER_ID_KEY, user.id().value()).await?;
+    session.insert(SESSION_AUTH_VERSION_KEY, user.auth_version()).await?;
     Ok(Json(user_response(&user)))
 }
 
@@ -303,6 +316,12 @@ impl From<ApplicationError> for ApiError {
 impl From<IdentityError> for ApiError {
     fn from(error: IdentityError) -> Self {
         Self(ApplicationError::InvalidInput(error))
+    }
+}
+
+impl From<tower_sessions::session::Error> for ApiError {
+    fn from(_: tower_sessions::session::Error) -> Self {
+        Self(ApplicationError::Repository)
     }
 }
 

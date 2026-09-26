@@ -17,10 +17,22 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 url = "2"
+time = "0.3"
 # M0: wired so the release binary proves the whole workspace compiles
 kernel = { path = "../../kernel" }
 media-store = { path = "../../shared/media-store" }
+identity-application = { path = "../../modules/identity/application" }
+identity-domain = { path = "../../modules/identity/domain" }
+identity-infrastructure = { path = "../../modules/identity/infrastructure" }
+identity-presentation = { path = "../../modules/identity/presentation" }
+arc-swap = "1"
+tower-sessions = { workspace = true }
+tower-sessions-sqlx-store = { workspace = true }
+tower = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
 tempfile = { workspace = true }
+serde = { workspace = true }

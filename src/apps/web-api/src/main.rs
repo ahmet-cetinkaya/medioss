@@ -1,7 +1,7 @@
 use std::{fmt::Display, sync::Arc};
 
 use tracing_subscriber::EnvFilter;
-use web_api::{bootstrap::ensure_data_dir, config, router::router, state::AppState};
+use web_api::{bootstrap::ensure_data_dir, config, router::router};
 
 fn fail(err: impl Display) -> ! {
     tracing::error!("{err}");
@@ -44,9 +44,26 @@ async fn main() {
         Err(err) => tracing::warn!("medioss listening on {addr}, bound address unavailable: {err}"),
     }
 
-    let state = AppState {
-        config: Arc::new(config),
-    };
+    let database_path = config.data_dir.join("medioss.db");
+    let database = web_api::bootstrap::database::open(&database_path)
+        .await
+        .unwrap_or_else(|err| fail(with_causes(&err)));
+    if let Err(err) = identity_infrastructure::migrate(&database.connection).await {
+        fail(format!("identity migration failed: {err}"));
+    }
+    let session_store = tower_sessions_sqlx_store::SqliteStore::new(database.pool.clone());
+    if let Err(err) = session_store.migrate().await {
+        fail(format!("session store migration failed: {err}"));
+    }
+    let hasher = identity_infrastructure::BoundedArgon2PasswordHasher::new();
+    let state = web_api::state::AppState::new(
+        Arc::new(config),
+        std::sync::Arc::new(session_store),
+        std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
+            database.connection,
+        )),
+        hasher,
+    );
     if let Err(err) = axum::serve(listener, router(state)).await {
         fail(format!("server error: {err}"));
     }

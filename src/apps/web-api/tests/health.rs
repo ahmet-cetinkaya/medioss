@@ -14,7 +14,7 @@ use web_api::{config, router::router, state::AppState};
 
 /// Returns state pointing at an empty temp static dir; the guard must outlive
 /// the request or the directory is removed mid-test.
-fn test_state() -> (AppState, TempDir) {
+async fn test_state() -> (AppState, TempDir) {
     let static_dir = tempfile::tempdir().expect("create temp static dir");
 
     let data_dir = static_dir.path().display().to_string();
@@ -26,15 +26,34 @@ fn test_state() -> (AppState, TempDir) {
         _ => None,
     })
     .expect("valid test configuration");
-    let state = AppState {
-        config: Arc::new(config),
-    };
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(static_dir.path().join("health.sqlite"))
+                .create_if_missing(true),
+        )
+        .await
+        .expect("open sqlite");
+    let connection = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone());
+    identity_infrastructure::migrate(&connection)
+        .await
+        .expect("identity migrations");
+    let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
+    store.migrate().await.expect("session store migrations");
+
+    let state = AppState::new(
+        Arc::new(config),
+        Arc::new(store),
+        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(connection)),
+        identity_infrastructure::BoundedArgon2PasswordHasher::new(),
+    );
 
     (state, static_dir)
 }
 
 async fn get(uri: &str) -> Response<Body> {
-    let (state, _static_dir) = test_state();
+    let (state, _static_dir) = test_state().await;
 
     router(state)
         .oneshot(

@@ -120,6 +120,15 @@ impl UserRepository for SeaOrmUserRepository {
             .transpose()
     }
 
+    async fn find_by_id(&self, id: UserId) -> Result<Option<User>, RepositoryError> {
+        users::Entity::find_by_id(id.value())
+            .one(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?
+            .map(restore_user)
+            .transpose()
+    }
+
     async fn insert_initial_admin_if_uninitialized(
         &self,
         registration: InitialAdminRegistration,

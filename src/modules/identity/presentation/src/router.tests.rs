@@ -64,6 +64,10 @@ impl UserRepository for EmptyRepository {
         Ok(None)
     }
 
+    async fn find_by_id(&self, _id: kernel::UserId) -> Result<Option<User>, RepositoryError> {
+        Ok(None)
+    }
+
     async fn insert_initial_admin_if_uninitialized(
         &self,
         _registration: identity_application::ports::InitialAdminRegistration,
@@ -126,6 +130,9 @@ fn dependencies() -> SharedDependencies<EmptyRepository, NullHasher, NullClock, 
 fn app() -> axum::Router {
     identity_router::<EmptyRepository, NullHasher, NullClock, NullAdmission>()
         .with_state(dependencies())
+        .layer(tower_sessions::SessionManagerLayer::new(
+            tower_sessions::MemoryStore::default(),
+        ))
 }
 
 #[tokio::test]

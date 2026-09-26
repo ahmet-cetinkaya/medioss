@@ -6,6 +6,11 @@ use std::fmt;
 pub struct SessionSecret(String);
 
 impl SessionSecret {
+    #[cfg(test)]
+    pub fn new_for_tests(value: &str) -> Self {
+        Self(value.to_owned())
+    }
+
     pub(super) fn new(value: String) -> Self {
         Self(value)
     }

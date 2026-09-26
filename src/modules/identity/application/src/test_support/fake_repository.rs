@@ -128,6 +128,17 @@ impl UserRepository for FakeRepository {
             .cloned())
     }
 
+    async fn find_by_id(&self, id: UserId) -> Result<Option<User>, RepositoryError> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .users
+            .values()
+            .find(|user| user.id() == id)
+            .cloned())
+    }
+
     async fn insert_initial_admin_if_uninitialized(
         &self,
         registration: InitialAdminRegistration,
