@@ -1,14 +1,8 @@
 ---
+import AuthLayout from "../layouts/AuthLayout.astro";
 import LoginForm from "$lib/components/login-form.svelte";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>MediOSS — Sign in</title>
-	</head>
-	<body>
-		<LoginForm client:load />
-	</body>
-</html>
+<AuthLayout title="MediOSS — Sign in">
+	<LoginForm client:load />
+</AuthLayout>
