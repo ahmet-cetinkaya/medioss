@@ -3,9 +3,17 @@ name = "identity-infrastructure"
 edition.workspace = true
 
 [dependencies]
+argon2.workspace = true
 async-trait.workspace = true
+chrono.workspace = true
+identity-application = { path = "../application" }
+identity-domain = { path = "../domain" }
+kernel = { path = "../../../kernel" }
+rand.workspace = true
 sea-orm.workspace = true
 sea-orm-migration.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 sqlx.workspace = true
