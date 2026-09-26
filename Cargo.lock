@@ -1100,6 +1100,18 @@ dependencies = [
 [[package]]
 name = "identity-presentation"
 version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "identity-application",
+ "identity-domain",
+ "kernel",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+]
 
 [[package]]
 name = "idna"
