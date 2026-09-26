@@ -39,12 +39,21 @@ async fn test_state() -> (AppState, TempDir) {
     identity_infrastructure::migrate(&connection)
         .await
         .expect("identity migrations");
+    meditation_infrastructure::migrations::migrate(&connection)
+        .await
+        .expect("meditation migrations");
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.expect("session store migrations");
 
+    let meditation = web_api::meditation::meditation_dependencies(
+        connection.clone(),
+        static_dir.path(),
+        Arc::new("http://localhost".to_owned()),
+    );
     let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
+        meditation,
         Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             connection,
         )),
