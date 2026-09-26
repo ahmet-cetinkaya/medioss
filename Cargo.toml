@@ -30,7 +30,7 @@ sea-orm-migration = "1.1"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
 tower-sessions = "0.14"
 tower-sessions-sqlx-store = { version = "0.14", features = ["sqlite"] }
-argon2 = "0.5"
+argon2 = { version = "0.5", features = ["std"] }
 clap = { version = "4", features = ["derive"] }
 rand = "0.9"
 async-trait = "0.1"
