@@ -15,6 +15,9 @@ jobs:
       - name: Activate pinned toolchain
         run: rustup show active-toolchain
 
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - uses: Swatinem/rust-cache@v2
 
       - name: Format
