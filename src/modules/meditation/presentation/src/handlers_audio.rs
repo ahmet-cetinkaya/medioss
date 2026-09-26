@@ -370,4 +370,5 @@ trait Tap: Sized {
         self
     }
 }
+#[cfg(test)]
 impl<T> Tap for T {}
