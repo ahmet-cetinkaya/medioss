@@ -21,13 +21,13 @@ Provide individuals with a private, self-hosted sanctuary for mental wellness th
 git clone https://github.com/ahmet-cetinkaya/medioss.git
 cd medioss
 
-cp .env.example .env          # then set JWT_SECRET: openssl rand -base64 32
+cp .env.example .env          # then set SESSION_SECRET: openssl rand -base64 32
 make up                       # build the image and start it in the background
 ```
 
 Visit `http://localhost:3000` to access your wellness app. `make logs` follows the container output and `make down` stops it.
 
-`make up` reads `JWT_SECRET` from your environment or `.env` and refuses to start if it is empty. The binary does not use it yet (authentication lands in M1), but setting a real value now means you never ship a placeholder.
+`make up` reads `SESSION_SECRET` from your environment or `.env` and refuses to start if it is empty. MediOSS uses it only as the constant-time possession proof that authorizes first-run setup; opaque session cookies contain random server-side IDs and are not signed with this secret.
 
 ## 📋 Documentation
 

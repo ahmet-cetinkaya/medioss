@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
 
-# Stage 1: Build the Astro + Svelte frontend
-FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS frontend
+# Stage 1: Build the Astro + Svelte frontend (bun, matching local and CI tooling)
+FROM oven/bun:1.4-slim@sha256:debbe76858f2e398d2937c1eceeb82c571ac1fcd78aadf00e9634578ac2b5ef7 AS frontend
 WORKDIR /app
-COPY src/apps/web-ui/package*.json ./
-RUN npm ci
+COPY src/apps/web-ui/package.json src/apps/web-ui/bun.lock ./
+RUN bun install --frozen-lockfile
 COPY src/apps/web-ui .
-RUN npm run build
+RUN bun run build
 
 # Stage 2: Build the Rust workspace with the frontend output embedded as static assets
 # The -bookworm suffix matches the runtime image's glibc (2.36); default tags are trixie-based (2.41).

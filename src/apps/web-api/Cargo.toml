@@ -9,15 +9,34 @@ path = "src/main.rs"
 [dependencies]
 thiserror = { workspace = true }
 axum = { workspace = true }
+sea-orm = { workspace = true }
+sqlx = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 tower-http = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+url = "2"
+time = "0.3"
+clap = { workspace = true }
+rand.workspace = true
+identity-application = { path = "../../modules/identity/application" }
 # M0: wired so the release binary proves the whole workspace compiles
 kernel = { path = "../../kernel" }
 media-store = { path = "../../shared/media-store" }
+identity-domain = { path = "../../modules/identity/domain" }
+identity-infrastructure = { path = "../../modules/identity/infrastructure" }
+identity-presentation = { path = "../../modules/identity/presentation" }
+tower-sessions = { workspace = true }
+tower-sessions-sqlx-store = { workspace = true }
+tower = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 tower = { workspace = true, features = ["util"] }
 tempfile = { workspace = true }
+serde = { workspace = true }

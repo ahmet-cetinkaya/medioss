@@ -5,6 +5,7 @@
 
 use std::path::Path;
 
+pub mod database;
 pub mod error;
 
 pub use error::BootstrapError;

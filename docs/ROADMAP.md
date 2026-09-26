@@ -32,9 +32,9 @@ The empty workspace that proves the architecture compiles before any feature exi
 
 **Exit criterion:** `docker-compose up` serves the health endpoint and the placeholder UI from one container; CI is green on an empty feature set.
 
-### M1 — Identity Module
+### M1 — Identity Module (delivered)
 
-First real module; every later module depends on its `Actor` context.
+First real module; every later module depends on its `Actor` context. Delivered with admin-driven registration (no public signup), Argon2id hashing, opaque server-side sessions, per-account exponential login throttling, first-run setup gated by host possession of `SESSION_SECRET`, and the `medioss reset-password` operator CLI.
 
 - `identity` module: registration, login, password hashing (bcrypt/argon2), session issuance and verification
 - `kernel` gains `UserId`, `Actor`, `Role` (its first legitimate tenants)

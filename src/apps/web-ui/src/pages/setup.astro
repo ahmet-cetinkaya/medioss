@@ -1,0 +1,8 @@
+---
+import AuthLayout from "../layouts/AuthLayout.astro";
+import SetupForm from "$lib/components/setup-form.svelte";
+---
+
+<AuthLayout title="MediOSS — First-run setup">
+	<SetupForm client:load />
+</AuthLayout>

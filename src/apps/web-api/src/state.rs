@@ -1,17 +1,107 @@
 //! Shared handler state.
-//!
-//! M1 will add services here (db pool, media-store instance, session service).
 
 use std::sync::Arc;
 
+use identity_presentation::SharedDependencies;
+use tower_sessions_sqlx_store::SqliteStore;
+
 use crate::config::Config;
 
-#[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
+    pub session_store: Arc<SqliteStore>,
+    pub identity: Arc<IdentityServices>,
+    pub identity_dependencies: SharedDependencies<
+        identity_infrastructure::SeaOrmUserRepository,
+        identity_infrastructure::BoundedArgon2PasswordHasher,
+        SystemClock,
+        TokioSemaphoreAdmission,
+    >,
 }
 
-// M0: proves workspace crates link into the binary without exposing them
-// (removed in M1 when real wiring lands and these become genuine fields).
-use kernel as _;
-use media_store as _;
+impl Clone for AppState {
+    fn clone(&self) -> Self {
+        Self {
+            config: Arc::clone(&self.config),
+            session_store: Arc::clone(&self.session_store),
+            identity: Arc::clone(&self.identity),
+            identity_dependencies: Arc::clone(&self.identity_dependencies),
+        }
+    }
+}
+
+impl AppState {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        config: Arc<Config>,
+        session_store: Arc<SqliteStore>,
+        repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
+        hasher: identity_infrastructure::BoundedArgon2PasswordHasher,
+    ) -> Self {
+        let dummy_password_hash = hasher.dummy_password_hash();
+        let identity_dependencies: SharedDependencies<
+            identity_infrastructure::SeaOrmUserRepository,
+            identity_infrastructure::BoundedArgon2PasswordHasher,
+            SystemClock,
+            TokioSemaphoreAdmission,
+        > = Arc::new(identity_presentation::IdentityDependencies {
+            repository: Arc::clone(&repository),
+            hasher: Arc::new(hasher),
+            clock: Arc::new(SystemClock),
+            admission: Arc::new(TokioSemaphoreAdmission::new(2)),
+            dummy_password_hash,
+            session_secret: Arc::new(config.session_secret.expose().to_owned()),
+            medioss_origin: Arc::new(config.medioss_origin.clone()),
+        });
+        Self {
+            config,
+            session_store,
+            identity: Arc::new(IdentityServices { repository }),
+            identity_dependencies,
+        }
+    }
+}
+
+pub struct IdentityServices {
+    pub repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
+}
+
+impl IdentityServices {
+    pub async fn find_user_by_id(
+        &self,
+        id: kernel::UserId,
+    ) -> Result<Option<identity_domain::User>, identity_application::ApplicationError> {
+        identity_application::queries::find_user_by_id(self.repository.as_ref(), id).await
+    }
+}
+
+pub struct SystemClock;
+
+impl identity_application::ports::Clock for SystemClock {
+    fn now(&self) -> chrono::DateTime<chrono::Utc> {
+        chrono::Utc::now()
+    }
+}
+
+pub struct TokioSemaphoreAdmission {
+    semaphore: Arc<tokio::sync::Semaphore>,
+}
+
+impl TokioSemaphoreAdmission {
+    pub fn new(bound: usize) -> Self {
+        Self {
+            semaphore: Arc::new(tokio::sync::Semaphore::new(bound)),
+        }
+    }
+}
+
+impl identity_application::ports::LoginAdmission for TokioSemaphoreAdmission {
+    type Permit = tokio::sync::OwnedSemaphorePermit;
+
+    fn try_acquire(&self) -> Result<Self::Permit, std::time::Duration> {
+        let semaphore = Arc::clone(&self.semaphore);
+        semaphore
+            .try_acquire_owned()
+            .map_err(|_| std::time::Duration::from_millis(250))
+    }
+}

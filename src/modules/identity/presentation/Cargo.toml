@@ -1,0 +1,18 @@
+[package]
+name = "identity-presentation"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+chrono.workspace = true
+identity-application = { path = "../application" }
+identity-domain = { path = "../domain" }
+kernel = { path = "../../../kernel" }
+serde.workspace = true
+serde_json.workspace = true
+tower.workspace = true
+tower-sessions = { workspace = true, features = ["memory-store"] }
+
+[dev-dependencies]
+tokio.workspace = true

@@ -119,9 +119,11 @@ PORT=3000
 MEDIOSS_DATA_DIR=/data
 MAX_UPLOAD_SIZE=100MB
 
-# Authentication (reserved for M1; not read by the binary yet)
-JWT_SECRET=<strong-random-secret>
+# Session and request security
+SESSION_SECRET=<strong-random-secret>
+MEDIOSS_ORIGIN=https://medioss.example
 SESSION_TIMEOUT=7d
+SESSION_COOKIE_SECURE=true
 
 # Backup Configuration
 BACKUP_ENABLED=true
@@ -131,7 +133,11 @@ BACKUP_PATH=/data/backups
 
 `MEDIOSS_DATA_DIR` has no default and the application refuses to start without it. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
 
-`JWT_SECRET` is reserved for M1 (authentication) and is not yet read by the binary, so setting it today has no effect on startup. Set it anyway if you deploy from this branch: the compose file already requires it, and rotating a placeholder later is more disruptive than generating a real one up front with `openssl rand -base64 32`.
+`SESSION_SECRET` is required and must be nonblank. Generate it with `openssl rand -base64 32`. It is actively used for constant-time first-run setup host-possession authorization. It is **not** a cookie-signing key: opaque session cookies contain random server-side session IDs.
+
+`MEDIOSS_ORIGIN` is required and must be one absolute `http://` or `https://` origin, such as `https://medioss.example` or `http://localhost:3000`. Wildcards, credentials, paths, queries, and fragments are rejected. Default ports and host casing are normalized for strict origin comparison.
+
+`SESSION_TIMEOUT` defaults to `7d` and accepts a positive whole number followed by `d`, `h`, `m`, or `s`. `SESSION_COOKIE_SECURE` defaults to `true` and accepts only literal `true` or `false`; setting it to `false` is intended only for deliberate local HTTP/LAN deployments and emits a startup warning.
 
 ### Docker Configuration
 
@@ -152,7 +158,7 @@ Two constraints are worth calling out, because breaking them produces confusing 
 
 The stack is defined in [`docker-compose.yml`](../docker-compose.yml) at the repository root, and `make up` / `make down` drive it. It declares one service and one named volume.
 
-The service builds the image from the `Dockerfile` above, publishes the app on port 3000, restarts unless you stop it explicitly, and polls `/api/health` so an unhealthy container is visible in `docker ps` rather than silently serving errors. Its environment sets `MEDIOSS_DATA_DIR` to the mount point and passes `JWT_SECRET` through from your shell or the `.env` file described above; the secret is never baked into the image or committed.
+The service builds the image from the `Dockerfile` above, publishes the app on port 3000, restarts unless you stop it explicitly, and polls `/api/health` so an unhealthy container is visible in `docker ps` rather than silently serving errors. Its environment sets `MEDIOSS_DATA_DIR` to the mount point and passes required `SESSION_SECRET` and `MEDIOSS_ORIGIN` values through from your shell or the `.env` file described above; the secret is never baked into the image or committed. Session timeout and secure-cookie settings retain their documented defaults unless explicitly overridden.
 
 `/data` is the single read-write mount for everything mutable: the `medioss.db` SQLite file and the `media/` directory where users' own meditation and white noise audio is stored. There is no separate media volume, so backing up the app means backing up one volume. Because the container runs as an unprivileged user, that mount is also the only path the process needs to write; the rest of the filesystem can stay untouched.
 
@@ -330,6 +336,14 @@ docker-compose up -d --build
 # Database migrations (automatic)
 # The Rust app handles migrations on startup
 ```
+
+### Rollbacks
+
+Database migrations are irreversible by design: the identity migration's
+`down` refuses to run because reverting would destroy every account and
+the setup-claim state. To roll back a deployment, restore the database
+volume from a backup taken **before** the upgrade (see *Backup
+Configuration*), then start the previous image version.
 
 ## Performance Optimization
 

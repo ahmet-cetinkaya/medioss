@@ -2,7 +2,7 @@
 //! paths answer in JSON, and other unknown paths fall through to the static
 //! handler as 404 when nothing is built yet.
 
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use axum::{
     body::Body,
@@ -10,26 +10,52 @@ use axum::{
 };
 use tempfile::TempDir;
 use tower::ServiceExt;
-use web_api::{config::Config, router::router, state::AppState};
+use web_api::{config, router::router, state::AppState};
 
 /// Returns state pointing at an empty temp static dir; the guard must outlive
 /// the request or the directory is removed mid-test.
-fn test_state() -> (AppState, TempDir) {
+async fn test_state() -> (AppState, TempDir) {
     let static_dir = tempfile::tempdir().expect("create temp static dir");
 
-    let state = AppState {
-        config: Arc::new(Config {
-            data_dir: PathBuf::from(static_dir.path()),
-            port: 0,
-            static_dir: static_dir.path().to_path_buf(),
-        }),
-    };
+    let data_dir = static_dir.path().display().to_string();
+    let config = config::from_vars(&|key| match key {
+        "MEDIOSS_DATA_DIR" => Some(data_dir.clone()),
+        "MEDIOSS_STATIC_DIR" => Some(data_dir.clone()),
+        "SESSION_SECRET" => Some("test-setup-secret".to_owned()),
+        "MEDIOSS_ORIGIN" => Some("http://localhost".to_owned()),
+        _ => None,
+    })
+    .expect("valid test configuration");
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(static_dir.path().join("health.sqlite"))
+                .create_if_missing(true),
+        )
+        .await
+        .expect("open sqlite");
+    let connection = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone());
+    identity_infrastructure::migrate(&connection)
+        .await
+        .expect("identity migrations");
+    let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
+    store.migrate().await.expect("session store migrations");
+
+    let state = AppState::new(
+        Arc::new(config),
+        Arc::new(store),
+        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
+            connection,
+        )),
+        identity_infrastructure::BoundedArgon2PasswordHasher::new(),
+    );
 
     (state, static_dir)
 }
 
 async fn get(uri: &str) -> Response<Body> {
-    let (state, _static_dir) = test_state();
+    let (state, _static_dir) = test_state().await;
 
     router(state)
         .oneshot(
