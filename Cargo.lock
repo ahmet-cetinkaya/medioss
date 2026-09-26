@@ -1342,6 +1342,7 @@ dependencies = [
  "meditation-domain",
  "sea-orm",
  "sea-orm-migration",
+ "sqlx",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
