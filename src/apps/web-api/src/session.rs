@@ -28,14 +28,8 @@ pub async fn resolve_actor(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
 
-    let user_id: Option<i64> = session
-        .get(SESSION_USER_ID_KEY)
-        .await
-        .unwrap_or(None);
-    let auth_version: Option<u64> = session
-        .get(SESSION_AUTH_VERSION_KEY)
-        .await
-        .unwrap_or(None);
+    let user_id: Option<i64> = session.get(SESSION_USER_ID_KEY).await.unwrap_or(None);
+    let auth_version: Option<u64> = session.get(SESSION_AUTH_VERSION_KEY).await.unwrap_or(None);
 
     if let (Some(user_id), Some(auth_version)) = (user_id, auth_version) {
         let matched = state

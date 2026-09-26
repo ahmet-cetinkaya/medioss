@@ -72,9 +72,10 @@ impl IdentityServices {
         id: kernel::UserId,
     ) -> Result<Option<identity_domain::User>, identity_application::ApplicationError> {
         use identity_application::ports::UserRepository;
-        self.repository.find_by_id(id).await.map_err(|_| {
-            identity_application::ApplicationError::Repository
-        })
+        self.repository
+            .find_by_id(id)
+            .await
+            .map_err(|_| identity_application::ApplicationError::Repository)
     }
 }
 

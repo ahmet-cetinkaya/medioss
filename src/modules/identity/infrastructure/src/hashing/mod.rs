@@ -91,12 +91,8 @@ impl PasswordHasher for BoundedArgon2PasswordHasher {
                 argon2::Version::V0x13,
                 BoundedArgon2PasswordHasher::configured_params(),
             );
-            let phc = argon2::PasswordHasher::hash_password(
-                &argon,
-                password.as_bytes(),
-                &salt,
-            )
-            .map_err(|_| PasswordHasherError)?;
+            let phc = argon2::PasswordHasher::hash_password(&argon, password.as_bytes(), &salt)
+                .map_err(|_| PasswordHasherError)?;
             Ok(PasswordHash::from_stored(phc.to_string()))
         })
         .await

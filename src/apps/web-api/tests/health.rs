@@ -45,7 +45,9 @@ async fn test_state() -> (AppState, TempDir) {
     let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
-        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(connection)),
+        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
+            connection,
+        )),
         identity_infrastructure::BoundedArgon2PasswordHasher::new(),
     );
 

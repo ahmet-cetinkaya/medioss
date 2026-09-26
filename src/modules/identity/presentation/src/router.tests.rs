@@ -21,8 +21,14 @@ struct NullHasher;
 
 #[async_trait::async_trait]
 impl PasswordHasher for NullHasher {
-    async fn hash(&self, password: &RawPassword) -> Result<PasswordHash, identity_application::ports::PasswordHasherError> {
-        Ok(PasswordHash::from_stored(format!("null:{}", password.as_str())))
+    async fn hash(
+        &self,
+        password: &RawPassword,
+    ) -> Result<PasswordHash, identity_application::ports::PasswordHasherError> {
+        Ok(PasswordHash::from_stored(format!(
+            "null:{}",
+            password.as_str()
+        )))
     }
 
     async fn verify(
@@ -138,7 +144,11 @@ fn app() -> axum::Router {
 #[tokio::test]
 async fn setup_status_is_public_and_reports_required_when_empty() {
     let response = app()
-        .oneshot(Request::get("/identity/setup-status").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::get("/identity/setup-status")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -150,7 +160,9 @@ async fn setup_rejects_missing_origin_with_forbidden() {
         .oneshot(
             Request::post("/identity/setup")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"email":"root@example.com","password":"long-enough"}"#))
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"long-enough"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -166,7 +178,9 @@ async fn setup_rejects_mismatched_origin_with_forbidden() {
                 .header("origin", "https://evil.example")
                 .header("x-setup-secret", "session-secret-value")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"email":"root@example.com","password":"long-enough"}"#))
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"long-enough"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -181,7 +195,9 @@ async fn setup_rejects_missing_secret_with_forbidden() {
             Request::post("/identity/setup")
                 .header("origin", "https://medioss.example")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"email":"root@example.com","password":"long-enough"}"#))
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"long-enough"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -197,7 +213,9 @@ async fn setup_rejects_wrong_secret_with_forbidden() {
                 .header("origin", "https://medioss.example")
                 .header("x-setup-secret", "wrong-secret")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"email":"root@example.com","password":"long-enough"}"#))
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"long-enough"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -211,7 +229,9 @@ async fn login_rejects_missing_origin_with_forbidden() {
         .oneshot(
             Request::post("/identity/login")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"email":"root@example.com","password":"long-enough"}"#))
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"long-enough"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -250,7 +270,9 @@ async fn weak_password_maps_to_bad_request() {
                 .header("origin", "https://medioss.example")
                 .header("x-setup-secret", "session-secret-value")
                 .header("content-type", "application/json")
-                .body(Body::from(r#"{"email":"root@example.com","password":"short"}"#))
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"short"}"#,
+                ))
                 .unwrap(),
         )
         .await
@@ -279,13 +301,25 @@ fn principal_role_serializes_as_lowercase_string() {
 #[test]
 fn api_error_mapping_table() {
     let cases: Vec<(ApplicationError, StatusCode)> = vec![
-        (ApplicationError::InvalidCredentials, StatusCode::UNAUTHORIZED),
+        (
+            ApplicationError::InvalidCredentials,
+            StatusCode::UNAUTHORIZED,
+        ),
         (ApplicationError::Forbidden, StatusCode::FORBIDDEN),
-        (ApplicationError::SetupAlreadyCompleted, StatusCode::CONFLICT),
+        (
+            ApplicationError::SetupAlreadyCompleted,
+            StatusCode::CONFLICT,
+        ),
         (ApplicationError::EmailAlreadyExists, StatusCode::CONFLICT),
         (ApplicationError::UserNotFound, StatusCode::UNAUTHORIZED),
-        (ApplicationError::PasswordHasher, StatusCode::INTERNAL_SERVER_ERROR),
-        (ApplicationError::Repository, StatusCode::INTERNAL_SERVER_ERROR),
+        (
+            ApplicationError::PasswordHasher,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ),
+        (
+            ApplicationError::Repository,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ),
         (
             ApplicationError::InvalidInput(IdentityError::WeakPassword),
             StatusCode::BAD_REQUEST,

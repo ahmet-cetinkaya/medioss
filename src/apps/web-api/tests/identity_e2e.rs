@@ -37,12 +37,13 @@ impl E2eServer {
         headers: &[(String, String)],
         body: Option<&str>,
     ) -> Response {
-        let mut stream = std::net::TcpStream::connect(("127.0.0.1", self.port))
-            .expect("connect to server");
+        let mut stream =
+            std::net::TcpStream::connect(("127.0.0.1", self.port)).expect("connect to server");
         stream
             .set_read_timeout(Some(Duration::from_secs(10)))
             .unwrap();
-        let mut raw = format!("{method} {path} HTTP/1.1\r\nhost: localhost\r\nconnection: close\r\n");
+        let mut raw =
+            format!("{method} {path} HTTP/1.1\r\nhost: localhost\r\nconnection: close\r\n");
         for (name, value) in headers {
             raw.push_str(&format!("{name}: {value}\r\n"));
         }
@@ -70,9 +71,7 @@ struct Response {
 
 fn parse_response(raw: &[u8]) -> Response {
     let text = String::from_utf8_lossy(raw);
-    let (head, body) = text
-        .split_once("\r\n\r\n")
-        .unwrap_or((&text, ""));
+    let (head, body) = text.split_once("\r\n\r\n").unwrap_or((&text, ""));
     let status = head
         .lines()
         .next()
@@ -180,7 +179,9 @@ async fn e2e_setup_login_me_logout_and_cli_reset() {
     let server = spawn_server(&[]).await;
 
     // 1. Setup status: required while uninitialized.
-    let status = server.request("GET", "/api/identity/setup-status", &[], None).await;
+    let status = server
+        .request("GET", "/api/identity/setup-status", &[], None)
+        .await;
     assert_eq!(status.status, 200);
     assert!(status.body.contains("\"setup_required\":true"));
 
@@ -246,10 +247,20 @@ async fn e2e_setup_login_me_logout_and_cli_reset() {
 
     // 7. No self-registration endpoints exist.
     let register = server
-        .request("POST", "/api/identity/register", &origin_headers(), Some("{}"))
+        .request(
+            "POST",
+            "/api/identity/register",
+            &origin_headers(),
+            Some("{}"),
+        )
         .await;
     let signup = server
-        .request("POST", "/api/identity/signup", &origin_headers(), Some("{}"))
+        .request(
+            "POST",
+            "/api/identity/signup",
+            &origin_headers(),
+            Some("{}"),
+        )
         .await;
     assert_eq!(register.status, 404);
     assert_eq!(signup.status, 404);
@@ -283,7 +294,12 @@ async fn e2e_setup_login_me_logout_and_cli_reset() {
 
     // 10. Authenticated /me with the cookie.
     let me_authed = server
-        .request("GET", "/api/identity/me", &headers_with_cookie(&Some(cookie.clone())), None)
+        .request(
+            "GET",
+            "/api/identity/me",
+            &headers_with_cookie(&Some(cookie.clone())),
+            None,
+        )
         .await;
     assert_eq!(me_authed.status, 200);
     assert!(me_authed.body.contains("admin@example.com"));
@@ -356,7 +372,12 @@ async fn e2e_setup_login_me_logout_and_cli_reset() {
         .await;
     assert_eq!(logout.status, 204);
     let me_after_logout = server
-        .request("GET", "/api/identity/me", &headers_with_cookie(&Some(cookie)), None)
+        .request(
+            "GET",
+            "/api/identity/me",
+            &headers_with_cookie(&Some(cookie)),
+            None,
+        )
         .await;
     assert_eq!(me_after_logout.status, 401);
 }

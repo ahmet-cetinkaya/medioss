@@ -6,11 +6,11 @@ use identity_application::ports::{
 };
 use identity_domain::{Email, FailedAttempts, PasswordHash, Role, User};
 use kernel::UserId;
+use sea_orm::sea_query::Expr;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
     PaginatorTrait, QueryFilter, Set, TransactionTrait,
 };
-use sea_orm::sea_query::Expr;
 
 use crate::persistence::{login_attempts, users};
 
@@ -166,7 +166,10 @@ impl UserRepository for SeaOrmUserRepository {
         restore_user(inserted)
     }
 
-    async fn insert_member(&self, registration: MemberRegistration) -> Result<User, RepositoryError> {
+    async fn insert_member(
+        &self,
+        registration: MemberRegistration,
+    ) -> Result<User, RepositoryError> {
         let user = User::new_temporary(
             UserId::new(0),
             registration.email().clone(),
@@ -176,16 +179,13 @@ impl UserRepository for SeaOrmUserRepository {
         )
         .map_err(|_| RepositoryError::OperationFailed)?;
         let model = insert_model(&user, registration.email().as_str());
-        let inserted = model
-            .insert(&self.db)
-            .await
-            .map_err(|error| {
-                if is_unique_violation(&error) {
-                    RepositoryError::EmailAlreadyExists
-                } else {
-                    RepositoryError::OperationFailed
-                }
-            })?;
+        let inserted = model.insert(&self.db).await.map_err(|error| {
+            if is_unique_violation(&error) {
+                RepositoryError::EmailAlreadyExists
+            } else {
+                RepositoryError::OperationFailed
+            }
+        })?;
         restore_user(inserted)
     }
 
@@ -383,7 +383,10 @@ impl LoginThrottleRepository for SeaOrmUserRepository {
         Ok(attempts)
     }
 
-    async fn clear_failed_attempts(&self, normalized_identifier: &str) -> Result<(), RepositoryError> {
+    async fn clear_failed_attempts(
+        &self,
+        normalized_identifier: &str,
+    ) -> Result<(), RepositoryError> {
         login_attempts::Entity::delete_many()
             .filter(login_attempts::Column::NormalizedIdentifier.eq(normalized_identifier))
             .exec(&self.db)

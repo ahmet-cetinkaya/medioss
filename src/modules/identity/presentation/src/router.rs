@@ -14,7 +14,7 @@ use axum::{
     Json, Router,
 };
 use identity_application::{
-    commands::{Authenticate, change_password, create_user, setup_admin},
+    commands::{change_password, create_user, setup_admin, Authenticate},
     ports::{Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository},
     queries::is_setup_required,
     ApplicationError,
@@ -134,10 +134,16 @@ where
         dependencies.admission.as_ref(),
         dependencies.dummy_password_hash.clone(),
     );
-    let user = authenticate.execute(&request.email, &request.password).await?;
+    let user = authenticate
+        .execute(&request.email, &request.password)
+        .await?;
     let _ = session.cycle_id().await;
-    session.insert(SESSION_USER_ID_KEY, user.id().value()).await?;
-    session.insert(SESSION_AUTH_VERSION_KEY, user.auth_version()).await?;
+    session
+        .insert(SESSION_USER_ID_KEY, user.id().value())
+        .await?;
+    session
+        .insert(SESSION_AUTH_VERSION_KEY, user.auth_version())
+        .await?;
     Ok(Json(user_response(&user)))
 }
 
@@ -221,8 +227,12 @@ where
     )
     .await?;
     let _ = session.cycle_id().await;
-    session.insert(SESSION_USER_ID_KEY, user.id().value()).await?;
-    session.insert(SESSION_AUTH_VERSION_KEY, user.auth_version()).await?;
+    session
+        .insert(SESSION_USER_ID_KEY, user.id().value())
+        .await?;
+    session
+        .insert(SESSION_AUTH_VERSION_KEY, user.auth_version())
+        .await?;
     Ok(Json(user_response(&user)))
 }
 
@@ -239,10 +249,7 @@ fn user_response(user: &User) -> UserResponse {
 }
 
 fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
-    match headers
-        .get("origin")
-        .and_then(|value| value.to_str().ok())
-    {
+    match headers.get("origin").and_then(|value| value.to_str().ok()) {
         Some(origin) if origin.eq_ignore_ascii_case(expected) => Ok(()),
         _ => Err(ApiError(ApplicationError::Forbidden)),
     }
@@ -294,7 +301,9 @@ impl IntoResponse for ApiError {
             ApplicationError::EmailAlreadyExists => {
                 (StatusCode::CONFLICT, "email already exists", None)
             }
-            ApplicationError::UserNotFound => (StatusCode::UNAUTHORIZED, "invalid credentials", None),
+            ApplicationError::UserNotFound => {
+                (StatusCode::UNAUTHORIZED, "invalid credentials", None)
+            }
             ApplicationError::PasswordHasher | ApplicationError::Repository => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal error", None)
             }

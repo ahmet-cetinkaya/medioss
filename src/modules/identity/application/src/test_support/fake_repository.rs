@@ -213,11 +213,12 @@ impl UserRepository for FakeRepository {
             None => current
                 .clone()
                 .replace_with_permanent_password(credential_change.password_hash().clone()),
-            Some(expires_at) => current
-                .clone()
-                .replace_with_temporary_password(credential_change.password_hash().clone(), expires_at),
+            Some(expires_at) => current.clone().replace_with_temporary_password(
+                credential_change.password_hash().clone(),
+                expires_at,
+            ),
         }
-            .map_err(map_credential_error)?;
+        .map_err(map_credential_error)?;
         let failed_email = current.email().as_str().to_owned();
         let next_state = FakeRepositoryState {
             credential_change_calls: state.credential_change_calls + 1,

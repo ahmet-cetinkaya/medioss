@@ -130,7 +130,12 @@ async fn run_reset_password(email: &str) {
             std::process::exit(1);
         }
     };
-    let user = match identity_application::ports::UserRepository::find_by_email(&repository, &parsed_email).await {
+    let user = match identity_application::ports::UserRepository::find_by_email(
+        &repository,
+        &parsed_email,
+    )
+    .await
+    {
         Ok(Some(user)) => user,
         Ok(None) => {
             eprintln!("no such user: {email}");
@@ -151,15 +156,19 @@ async fn run_reset_password(email: &str) {
         }
     };
     let expires_at = chrono::Utc::now() + chrono::TimeDelta::hours(24);
-    let password_hash = match identity_application::ports::PasswordHasher::hash(&hasher, &raw).await {
+    let password_hash = match identity_application::ports::PasswordHasher::hash(&hasher, &raw).await
+    {
         Ok(hash) => hash,
         Err(_) => {
             eprintln!("password hashing failed");
             std::process::exit(1);
         }
     };
-    let credential_change =
-        identity_application::ports::CredentialChange::temporary(user.id(), password_hash, expires_at);
+    let credential_change = identity_application::ports::CredentialChange::temporary(
+        user.id(),
+        password_hash,
+        expires_at,
+    );
     match identity_application::ports::UserRepository::apply_credential_change(
         &repository,
         credential_change,

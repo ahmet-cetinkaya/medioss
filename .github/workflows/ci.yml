@@ -5,6 +5,10 @@ on: [push, pull_request]
 jobs:
   rust:
     runs-on: ubuntu-latest
+    env:
+      SESSION_SECRET: ci-e2e-not-a-real-secret
+      MEDIOSS_ORIGIN: http://localhost
+      SESSION_COOKIE_SECURE: "false"
     steps:
       - uses: actions/checkout@v4
 
@@ -30,18 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: src/apps/web-ui/package-lock.json
+          bun-version: latest
 
       - name: Install
-        run: npm ci
+        run: bun install --frozen-lockfile
         working-directory: src/apps/web-ui
 
       - name: Build
-        run: npm run build
+        run: bun run build
         working-directory: src/apps/web-ui
 
       - name: Assert island hydration marker
@@ -54,6 +56,7 @@ jobs:
     env:
       SESSION_SECRET: ci-smoke-test-not-a-real-secret
       MEDIOSS_ORIGIN: http://localhost:3000
+      SESSION_COOKIE_SECURE: "false"
     steps:
       - uses: actions/checkout@v4
 

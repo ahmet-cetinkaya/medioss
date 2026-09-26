@@ -45,7 +45,9 @@ fn session_layer(state: &AppState) -> SessionManagerLayer<tower_sessions_sqlx_st
         "medioss-session"
     };
     if !secure {
-        tracing::warn!("session cookie Secure is disabled (LAN mode): using plain cookie name {cookie_name}");
+        tracing::warn!(
+            "session cookie Secure is disabled (LAN mode): using plain cookie name {cookie_name}"
+        );
     }
     let timeout = time::Duration::seconds(state.config.session_timeout.as_secs() as i64);
     SessionManagerLayer::new((*state.session_store).clone())

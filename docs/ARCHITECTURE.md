@@ -340,7 +340,9 @@ impl<S> FromRequestParts<S> for CurrentActor {
 }
 ```
 
-Whichever module owns sessions supplies that service to `web-api` through the same constructor injection as any other dependency. No module crate depends on it. `SESSION_SECRET` actively authorizes first-run setup through a constant-time host-possession check. It is not a cookie-signing key: opaque session cookies contain random server-side IDs, so session validation uses the server-side session store instead of a signing/verifying secret.
+Whichever module owns sessions supplies that service to `web-api` through the same constructor injection as any other dependency. No module crate depends on it. `SESSION_SECRET` actively authorizes first-run setup through a constant-time host-possession check (sent as the `X-Setup-Secret` header, checked constant-time, never stored). It is not a cookie-signing key: opaque session cookies contain random server-side IDs, so session validation uses the server-side session store instead of a signing/verifying secret.
+
+Identity-relevant environment variables: `MEDIOSS_DATA_DIR` (database location), `SESSION_SECRET` (first-run setup possession only), `MEDIOSS_ORIGIN` (strict Origin allowlist for every state-changing browser route: setup, login, logout, user creation, password change), `SESSION_TIMEOUT` (inactivity expiry), and `SESSION_COOKIE_SECURE` (defaults to `true`; when true the cookie is named `__Host-medioss-session` with the Secure attribute — required in production over HTTPS. Setting it false for LAN HTTP switches to the plain `medioss-session` name and logs a startup warning).
 
 ### Request flow
 

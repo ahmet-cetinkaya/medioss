@@ -172,7 +172,10 @@ async fn credential_change_for_missing_user_reports_user_not_found() {
     let repository = database.repository();
 
     let error = repository
-        .apply_credential_change(CredentialChange::permanent(UserId::new(4242), hash("irrelevant")))
+        .apply_credential_change(CredentialChange::permanent(
+            UserId::new(4242),
+            hash("irrelevant"),
+        ))
         .await
         .unwrap_err();
     assert_eq!(error, RepositoryError::UserNotFound);
@@ -191,20 +194,25 @@ async fn failed_attempts_record_grows_and_clears_for_unknown_identifiers() {
     assert_eq!(first.count(), 1);
 
     let second = repository
-        .record_failed_attempt(
-            identifier,
-            Utc::now() + chrono::TimeDelta::seconds(2),
-        )
+        .record_failed_attempt(identifier, Utc::now() + chrono::TimeDelta::seconds(2))
         .await
         .unwrap();
     assert_eq!(second.count(), 2);
     assert!(second.blocked_until() > first.blocked_until());
 
-    let stored = repository.failed_attempts(identifier).await.unwrap().unwrap();
+    let stored = repository
+        .failed_attempts(identifier)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(stored.count(), 2);
 
     repository.clear_failed_attempts(identifier).await.unwrap();
-    assert!(repository.failed_attempts(identifier).await.unwrap().is_none());
+    assert!(repository
+        .failed_attempts(identifier)
+        .await
+        .unwrap()
+        .is_none());
 }
 
 #[tokio::test]
