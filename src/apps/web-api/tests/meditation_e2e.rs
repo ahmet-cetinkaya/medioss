@@ -7,7 +7,6 @@
 //! idempotent completion report.
 
 use std::{
-    io::{Read, Write},
     process::{Child, Command},
     time::{Duration, Instant},
 };
