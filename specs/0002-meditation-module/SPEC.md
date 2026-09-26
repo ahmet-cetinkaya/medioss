@@ -1,5 +1,5 @@
 ---
-status: approved
+status: in_progress
 capability: meditation
 plan: specs/0002-meditation-module/PLAN.md
 supersedes:

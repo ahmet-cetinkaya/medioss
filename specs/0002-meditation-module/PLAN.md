@@ -1,6 +1,6 @@
 # Implementation Plan: M2 — Meditation Module
 
-**Spec**: `specs/0002-meditation-module/SPEC.md` (status: approved 2026-09-26) **Date**: 2026-09-26 | **Status**: approved (user ran `/ac:run` 2026-09-26) | **Suggested branch**: `feat/m2-meditation-module`
+**Spec**: `specs/0002-meditation-module/SPEC.md` (status: in_progress 2026-09-26) **Date**: 2026-09-26 | **Status**: in_progress (execution started via `/ac:run` 2026-09-26) | **Suggested branch**: `feat/m2-meditation-module`
 
 ## Goal
 
