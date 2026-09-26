@@ -337,6 +337,14 @@ docker-compose up -d --build
 # The Rust app handles migrations on startup
 ```
 
+### Rollbacks
+
+Database migrations are irreversible by design: the identity migration's
+`down` refuses to run because reverting would destroy every account and
+the setup-claim state. To roll back a deployment, restore the database
+volume from a backup taken **before** the upgrade (see *Backup
+Configuration*), then start the previous image version.
+
 ## Performance Optimization
 
 ### Rust-Specific Optimizations

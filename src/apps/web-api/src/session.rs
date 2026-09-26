@@ -32,14 +32,21 @@ pub async fn resolve_actor(
     let auth_version: Option<u64> = session.get(SESSION_AUTH_VERSION_KEY).await.unwrap_or(None);
 
     if let (Some(user_id), Some(auth_version)) = (user_id, auth_version) {
-        let matched = state
+        let user = match state
             .identity
             .find_user_by_id(kernel::UserId::new(user_id))
             .await
-            .ok()
-            .flatten()
-            .filter(|user| user.auth_version() == auth_version);
+        {
+            Ok(user) => user,
+            // A store failure is not "unknown user": never log the actor out
+            // because of a transient backend error.
+            Err(error) => {
+                tracing::error!("session actor lookup failed: {error}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
 
+        let matched = user.filter(|user| user.auth_version() == auth_version);
         match matched {
             Some(user) => {
                 parts.extensions.insert(user.actor());

@@ -17,9 +17,6 @@ impl MigrationTrait for Migration {
                     must_change_password INTEGER NOT NULL DEFAULT 0 CHECK (must_change_password IN (0, 1)),
                     auth_version INTEGER NOT NULL DEFAULT 0,
                     password_expires_at TEXT NULL,
-                    failed_attempt_count INTEGER NOT NULL DEFAULT 0,
-                    last_failed_attempt_at TEXT NULL,
-                    blocked_until TEXT NULL,
                     created_at TEXT NOT NULL,
                     UNIQUE (email)
                 );",
@@ -35,7 +32,9 @@ impl MigrationTrait for Migration {
             .await?;
         manager
             .get_connection()
-            .execute_unprepared("INSERT INTO instance_state (singleton) VALUES (1);")
+            .execute_unprepared(
+                "INSERT INTO instance_state (singleton) VALUES (1) ON CONFLICT DO NOTHING;",
+            )
             .await?;
         manager
             .get_connection()
@@ -51,19 +50,12 @@ impl MigrationTrait for Migration {
         Ok(())
     }
 
-    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .get_connection()
-            .execute_unprepared("DROP TABLE IF EXISTS login_attempts;")
-            .await?;
-        manager
-            .get_connection()
-            .execute_unprepared("DROP TABLE IF EXISTS instance_state;")
-            .await?;
-        manager
-            .get_connection()
-            .execute_unprepared("DROP TABLE IF EXISTS users;")
-            .await?;
-        Ok(())
+    async fn down(&self, _manager: &SchemaManager) -> Result<(), DbErr> {
+        // Deliberately irreversible: reverting would destroy every account,
+        // password hash, and the setup-claim state. Restore from a backup
+        // instead (see docs/DEPLOYMENT.md).
+        Err(DbErr::Custom(String::from(
+            "identity migration is irreversible; restore from backup instead",
+        )))
     }
 }

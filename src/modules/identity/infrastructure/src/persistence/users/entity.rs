@@ -13,9 +13,6 @@ pub struct Model {
     pub must_change_password: bool,
     pub auth_version: i64,
     pub password_expires_at: Option<String>,
-    pub failed_attempt_count: i64,
-    pub last_failed_attempt_at: Option<String>,
-    pub blocked_until: Option<String>,
     pub created_at: String,
 }
 

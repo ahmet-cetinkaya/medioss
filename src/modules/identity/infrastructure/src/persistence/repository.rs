@@ -69,7 +69,7 @@ fn restore_user(model: users::Model) -> Result<User, RepositoryError> {
         PasswordHash::from_stored(model.password_hash),
         role,
         parse_rfc3339(&model.created_at)?,
-        model.auth_version.unsigned_abs(),
+        u64::try_from(model.auth_version).map_err(|_| RepositoryError::OperationFailed)?,
         must_change,
         expires,
     )
@@ -82,11 +82,9 @@ fn insert_model(user: &User, email_raw: &str) -> users::ActiveModel {
         password_hash: Set(user.password_hash().as_str().to_owned()),
         role: Set(role_to_str(user.role()).to_owned()),
         must_change_password: Set(user.must_change_password()),
-        auth_version: Set(user.auth_version() as i64),
+        // New users are constructed with auth_version 0, far inside i64 range.
+        auth_version: Set(i64::try_from(user.auth_version()).unwrap_or_default()),
         password_expires_at: Set(user.password_expires_at().map(|value| to_rfc3339(&value))),
-        failed_attempt_count: Set(0),
-        last_failed_attempt_at: Set(None),
-        blocked_until: Set(None),
         created_at: Set(to_rfc3339(&user.created_at())),
         ..Default::default()
     }
@@ -227,7 +225,10 @@ impl UserRepository for SeaOrmUserRepository {
             )
             .col_expr(
                 users::Column::AuthVersion,
-                Expr::value(changed.auth_version() as i64),
+                Expr::value(
+                    i64::try_from(changed.auth_version())
+                        .map_err(|_| RepositoryError::OperationFailed)?,
+                ),
             )
             .col_expr(
                 users::Column::MustChangePassword,
@@ -240,15 +241,6 @@ impl UserRepository for SeaOrmUserRepository {
                         .password_expires_at()
                         .map(|expires_at| to_rfc3339(&expires_at)),
                 ),
-            )
-            .col_expr(users::Column::FailedAttemptCount, Expr::value(0i64))
-            .col_expr(
-                users::Column::LastFailedAttemptAt,
-                Expr::value(Option::<String>::None),
-            )
-            .col_expr(
-                users::Column::BlockedUntil,
-                Expr::value(Option::<String>::None),
             )
             .filter(users::Column::Id.eq(credential_change.user_id().value()))
             .exec(&txn)
@@ -279,7 +271,8 @@ impl LoginThrottleRepository for SeaOrmUserRepository {
         match row {
             None => Ok(None),
             Some(model) => {
-                let count = model.failed_attempt_count.unsigned_abs();
+                let count = u64::try_from(model.failed_attempt_count)
+                    .map_err(|_| RepositoryError::OperationFailed)?;
                 if count == 0 {
                     return Ok(None);
                 }
@@ -319,7 +312,8 @@ impl LoginThrottleRepository for SeaOrmUserRepository {
         let (existing, attempts) = match current {
             None => (None, FailedAttempts::first_failure(attempted_at)),
             Some(model) => {
-                let count = model.failed_attempt_count.unsigned_abs();
+                let count = u64::try_from(model.failed_attempt_count)
+                    .map_err(|_| RepositoryError::OperationFailed)?;
                 if count == 0 {
                     (Some(model), FailedAttempts::first_failure(attempted_at))
                 } else {
@@ -347,7 +341,10 @@ impl LoginThrottleRepository for SeaOrmUserRepository {
                 login_attempts::Entity::update_many()
                     .col_expr(
                         login_attempts::Column::FailedAttemptCount,
-                        Expr::value(attempts.count() as i64),
+                        Expr::value(
+                            i64::try_from(attempts.count())
+                                .map_err(|_| RepositoryError::OperationFailed)?,
+                        ),
                     )
                     .col_expr(
                         login_attempts::Column::LastFailedAttemptAt,
@@ -368,7 +365,8 @@ impl LoginThrottleRepository for SeaOrmUserRepository {
             None => {
                 login_attempts::ActiveModel {
                     normalized_identifier: Set(normalized_identifier.to_owned()),
-                    failed_attempt_count: Set(attempts.count() as i64),
+                    failed_attempt_count: Set(i64::try_from(attempts.count())
+                        .map_err(|_| RepositoryError::OperationFailed)?),
                     last_failed_attempt_at: Set(Some(to_rfc3339(&attempts.last_attempt_at()))),
                     blocked_until: Set(Some(to_rfc3339(&attempts.blocked_until()))),
                 }

@@ -16,11 +16,8 @@ const USER_INSERT: &str = r#"
         password_hash,
         role,
         password_expires_at,
-        failed_attempt_count,
-        last_failed_attempt_at,
-        blocked_until,
         created_at
-    ) VALUES (?, 'password-hash', 'admin', NULL, 0, NULL, NULL, '2026-09-08T00:00:00Z')
+    ) VALUES (?, 'password-hash', 'admin', NULL, '2026-09-08T00:00:00Z')
 "#;
 
 struct TestDatabase {

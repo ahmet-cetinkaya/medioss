@@ -29,6 +29,9 @@ enum Commands {
     /// Reset an account password from the host, without a running server.
     #[command(name = "reset-password")]
     ResetPassword { email: String },
+    /// Clear the login throttle for an identifier from the host.
+    #[command(name = "clear-throttle")]
+    ClearThrottle { identifier: String },
 }
 
 #[tokio::main]
@@ -37,6 +40,9 @@ async fn main() {
     match cli.command {
         Some(Commands::ResetPassword { email }) => {
             return run_reset_password(&email).await;
+        }
+        Some(Commands::ClearThrottle { identifier }) => {
+            return run_clear_throttle(&identifier).await;
         }
         None => {}
     }
@@ -141,8 +147,8 @@ async fn run_reset_password(email: &str) {
             eprintln!("no such user: {email}");
             std::process::exit(1);
         }
-        Err(_) => {
-            eprintln!("database read failed");
+        Err(err) => {
+            eprintln!("database read failed: {}", with_causes(&err));
             std::process::exit(1);
         }
     };
@@ -159,8 +165,8 @@ async fn run_reset_password(email: &str) {
     let password_hash = match identity_application::ports::PasswordHasher::hash(&hasher, &raw).await
     {
         Ok(hash) => hash,
-        Err(_) => {
-            eprintln!("password hashing failed");
+        Err(err) => {
+            eprintln!("password hashing failed: {}", with_causes(&err));
             std::process::exit(1);
         }
     };
@@ -176,8 +182,8 @@ async fn run_reset_password(email: &str) {
     .await
     {
         Ok(_) => {}
-        Err(_) => {
-            eprintln!("password reset failed");
+        Err(err) => {
+            eprintln!("password reset failed: {}", with_causes(&err));
             std::process::exit(1);
         }
     }
@@ -189,21 +195,33 @@ async fn run_reset_password(email: &str) {
 const TEMP_PASSWORD_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
 fn generate_temporary_password() -> String {
-    use rand::RngCore;
-    let mut bytes = [0u8; 20];
-    rand::rng().fill_bytes(&mut bytes);
-    bytes
-        .iter()
-        .map(|byte| TEMP_PASSWORD_ALPHABET[*byte as usize % TEMP_PASSWORD_ALPHABET.len()] as char)
+    use rand::Rng;
+    let mut rng = rand::rng();
+    (0..20)
+        .map(|_| {
+            let index = rng.random_range(0..TEMP_PASSWORD_ALPHABET.len());
+            TEMP_PASSWORD_ALPHABET[index] as char
+        })
         .collect()
+}
+
+async fn run_clear_throttle(identifier: &str) {
+    let config = config::from_env().unwrap_or_else(|err| fail(with_causes(&err)));
+    let database_path = config.data_dir.join("medioss.db");
+    let database = web_api::bootstrap::database::open(&database_path)
+        .await
+        .unwrap_or_else(|err| fail(with_causes(&err)));
+
+    let repository = identity_infrastructure::SeaOrmUserRepository::new(database.connection);
+    match identity_application::commands::clear_login_throttle(&repository, identifier).await {
+        Ok(()) => eprintln!("throttle cleared for {identifier}"),
+        Err(err) => fail(format!("clear-throttle failed: {err}")),
+    }
 }
 
 #[cfg(unix)]
 fn set_umask(mask: u32) {
-    extern "C" {
-        fn umask(mask: u32) -> u32;
-    }
     unsafe {
-        umask(mask);
+        libc::umask(mask);
     }
 }

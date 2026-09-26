@@ -34,7 +34,28 @@ pub fn router(state: AppState) -> Router {
         .nest("/api", api)
         .layer(session_layer(&state))
         .fallback_service(static_files)
+        .layer(axum::middleware::from_fn(cache_headers))
         .with_state(state)
+}
+
+/// Content-hashed assets are immutable; everything else must revalidate.
+async fn cache_headers(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let immutable = request.uri().path().starts_with("/_astro/");
+    let mut response = next.run(request).await;
+    if !response.headers().contains_key("cache-control") {
+        let value = if immutable {
+            "public, max-age=31536000, immutable"
+        } else {
+            "no-cache"
+        };
+        if let Ok(parsed) = value.parse() {
+            response.headers_mut().insert("cache-control", parsed);
+        }
+    }
+    response
 }
 
 fn session_layer(state: &AppState) -> SessionManagerLayer<tower_sessions_sqlx_store::SqliteStore> {

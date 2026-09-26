@@ -35,12 +35,14 @@
 				window.location.assign("/");
 				return;
 			}
-			const retryHeader = Number(response.headers.get("retry-after") ?? "0");
-			if (response.status === 429 && retryHeader > 0) {
-				retryAfter = retryHeader;
-				countdown = retryHeader;
-			}
 			const body = await response.json().catch(() => ({ error: "login failed" }));
+			const retryHeader = Number(
+				response.headers.get("retry-after") ?? body.retry_after ?? "0",
+			);
+			if (response.status === 429 && retryHeader > 0) {
+				retryAfter = Math.ceil(retryHeader);
+				countdown = Math.ceil(retryHeader);
+			}
 			error = body.error ?? "login failed";
 		} catch {
 			error = "could not reach the server";

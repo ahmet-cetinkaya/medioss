@@ -80,6 +80,11 @@ struct CredentialsRequest {
     password: String,
 }
 
+#[derive(Deserialize)]
+struct ChangePasswordRequest {
+    password: String,
+}
+
 #[derive(Serialize)]
 struct UserResponse {
     id: i64,
@@ -137,7 +142,7 @@ where
     let user = authenticate
         .execute(&request.email, &request.password)
         .await?;
-    let _ = session.cycle_id().await;
+    session.cycle_id().await?;
     session
         .insert(SESSION_USER_ID_KEY, user.id().value())
         .await?;
@@ -160,7 +165,7 @@ where
     A: LoginAdmission,
 {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
-    let _ = session.flush().await;
+    session.flush().await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -168,11 +173,7 @@ async fn me(CurrentPrincipal(principal): CurrentPrincipal) -> Result<Json<UserRe
     Ok(Json(UserResponse {
         id: principal.id,
         email: principal.email,
-        role: match principal.role {
-            Role::Admin => "admin",
-            Role::Member => "member",
-        }
-        .to_owned(),
+        role: role_to_str(principal.role).to_owned(),
         must_change_password: principal.must_change_password,
     }))
 }
@@ -209,7 +210,7 @@ async fn me_password<R, H, C, A>(
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
-    Json(request): Json<CredentialsRequest>,
+    Json(request): Json<ChangePasswordRequest>,
 ) -> Result<Json<UserResponse>, ApiError>
 where
     R: UserRepository + LoginThrottleRepository,
@@ -226,7 +227,7 @@ where
         &new_password,
     )
     .await?;
-    let _ = session.cycle_id().await;
+    session.cycle_id().await?;
     session
         .insert(SESSION_USER_ID_KEY, user.id().value())
         .await?;
@@ -240,10 +241,7 @@ fn user_response(user: &User) -> UserResponse {
     UserResponse {
         id: user.id().value(),
         email: user.email().as_str().to_owned(),
-        role: match user.role() {
-            Role::Admin => "admin".to_owned(),
-            Role::Member => "member".to_owned(),
-        },
+        role: role_to_str(user.role()).to_owned(),
         must_change_password: user.must_change_password(),
     }
 }
@@ -267,6 +265,13 @@ fn ensure_setup_secret(headers: &HeaderMap, expected: &str) -> Result<(), ApiErr
     }
 }
 
+fn role_to_str(role: Role) -> &'static str {
+    match role {
+        Role::Admin => "admin",
+        Role::Member => "member",
+    }
+}
+
 fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
     if left.len() != right.len() {
         return false;
@@ -281,38 +286,64 @@ pub struct ApiError(ApplicationError);
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let (status, message, retry_after) = match &self.0 {
+        let (status, message, retry_after): (StatusCode, String, _) = match &self.0 {
             ApplicationError::InvalidInput(IdentityError::LoginThrottled { retry_after }) => (
                 StatusCode::TOO_MANY_REQUESTS,
-                "too many attempts",
+                "too many attempts".to_owned(),
                 Some(retry_after.as_secs()),
             ),
-            ApplicationError::InvalidInput(IdentityError::WeakPassword) => {
-                (StatusCode::BAD_REQUEST, "invalid input", None)
+            // Domain messages are user-facing by design and contain no secrets.
+            ApplicationError::InvalidInput(error) => {
+                (StatusCode::BAD_REQUEST, error.to_string(), None)
             }
-            ApplicationError::InvalidInput(_) => (StatusCode::BAD_REQUEST, "invalid input", None),
-            ApplicationError::InvalidCredentials => {
-                (StatusCode::UNAUTHORIZED, "invalid credentials", None)
-            }
-            ApplicationError::Forbidden => (StatusCode::FORBIDDEN, "forbidden", None),
-            ApplicationError::SetupAlreadyCompleted => {
-                (StatusCode::CONFLICT, "setup already completed", None)
-            }
-            ApplicationError::EmailAlreadyExists => {
-                (StatusCode::CONFLICT, "email already exists", None)
-            }
-            ApplicationError::UserNotFound => {
-                (StatusCode::UNAUTHORIZED, "invalid credentials", None)
-            }
-            ApplicationError::PasswordHasher | ApplicationError::Repository => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal error", None)
-            }
+            ApplicationError::InvalidCredentials => (
+                StatusCode::UNAUTHORIZED,
+                "invalid credentials".to_owned(),
+                None,
+            ),
+            ApplicationError::Forbidden => (StatusCode::FORBIDDEN, "forbidden".to_owned(), None),
+            ApplicationError::SetupAlreadyCompleted => (
+                StatusCode::CONFLICT,
+                "setup already completed".to_owned(),
+                None,
+            ),
+            ApplicationError::EmailAlreadyExists => (
+                StatusCode::CONFLICT,
+                "email already exists".to_owned(),
+                None,
+            ),
+            ApplicationError::UserNotFound => (
+                StatusCode::UNAUTHORIZED,
+                "invalid credentials".to_owned(),
+                None,
+            ),
+            ApplicationError::PasswordHasher | ApplicationError::Repository => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error".to_owned(),
+                None,
+            ),
         };
-        let body = Json(serde_json::json!({
-            "error": message,
-            "retry_after": retry_after,
-        }));
-        (status, body).into_response()
+        let mut response = (
+            status,
+            Json(serde_json::json!({
+                "error": message,
+                "retry_after": retry_after,
+            })),
+        )
+            .into_response();
+        if let Some(secs) = retry_after {
+            // At least one second: sub-second penalties round up so the
+            // client never sees retry_after = 0.
+            let headers = response.headers_mut();
+            headers.insert(
+                "Retry-After",
+                secs.max(1)
+                    .to_string()
+                    .parse()
+                    .expect("retry-after is a valid header value"),
+            );
+        }
+        response
     }
 }
 
