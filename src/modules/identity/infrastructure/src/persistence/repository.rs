@@ -204,9 +204,17 @@ impl UserRepository for SeaOrmUserRepository {
             .map_err(|_| RepositoryError::OperationFailed)?
             .ok_or(RepositoryError::UserNotFound)?;
         let current = restore_user(model.clone())?;
-        let changed = current
-            .replace_with_permanent_password(credential_change.password_hash().clone())
-            .map_err(|_| RepositoryError::AuthVersionOverflow)?;
+        let changed = match credential_change.expires_at() {
+            None => current
+                .replace_with_permanent_password(credential_change.password_hash().clone())
+                .map_err(|_| RepositoryError::AuthVersionOverflow)?,
+            Some(expires_at) => current
+                .replace_with_temporary_password(
+                    credential_change.password_hash().clone(),
+                    expires_at,
+                )
+                .map_err(|_| RepositoryError::AuthVersionOverflow)?,
+        };
         login_attempts::Entity::delete_many()
             .filter(login_attempts::Column::NormalizedIdentifier.eq(changed.email().as_str()))
             .exec(&txn)
@@ -221,10 +229,17 @@ impl UserRepository for SeaOrmUserRepository {
                 users::Column::AuthVersion,
                 Expr::value(changed.auth_version() as i64),
             )
-            .col_expr(users::Column::MustChangePassword, Expr::value(false))
+            .col_expr(
+                users::Column::MustChangePassword,
+                Expr::value(changed.must_change_password()),
+            )
             .col_expr(
                 users::Column::PasswordExpiresAt,
-                Expr::value(Option::<String>::None),
+                Expr::value(
+                    changed
+                        .password_expires_at()
+                        .map(|expires_at| to_rfc3339(&expires_at)),
+                ),
             )
             .col_expr(users::Column::FailedAttemptCount, Expr::value(0i64))
             .col_expr(

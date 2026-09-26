@@ -209,9 +209,14 @@ impl UserRepository for FakeRepository {
             .find(|user| user.id() == credential_change.user_id())
             .cloned()
             .ok_or(RepositoryError::UserNotFound)?;
-        let changed = current
-            .clone()
-            .replace_with_permanent_password(credential_change.password_hash().clone())
+        let changed = match credential_change.expires_at() {
+            None => current
+                .clone()
+                .replace_with_permanent_password(credential_change.password_hash().clone()),
+            Some(expires_at) => current
+                .clone()
+                .replace_with_temporary_password(credential_change.password_hash().clone(), expires_at),
+        }
             .map_err(map_credential_error)?;
         let failed_email = current.email().as_str().to_owned();
         let next_state = FakeRepositoryState {

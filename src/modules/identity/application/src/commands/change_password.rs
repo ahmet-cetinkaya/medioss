@@ -13,7 +13,7 @@ pub async fn change_password(
     new_password: &RawPassword,
 ) -> Result<User, ApplicationError> {
     let password_hash = hasher.hash(new_password).await?;
-    let credential_change = CredentialChange::new(actor.user_id(), password_hash);
+    let credential_change = CredentialChange::permanent(actor.user_id(), password_hash);
 
     repository
         .apply_credential_change(credential_change)

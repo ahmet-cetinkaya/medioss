@@ -143,7 +143,7 @@ async fn credential_change_updates_user_and_clears_throttle_atomically() {
         .unwrap();
 
     let changed = repository
-        .apply_credential_change(CredentialChange::new(member.id(), hash("brand-new")))
+        .apply_credential_change(CredentialChange::permanent(member.id(), hash("brand-new")))
         .await
         .unwrap();
 
@@ -172,7 +172,7 @@ async fn credential_change_for_missing_user_reports_user_not_found() {
     let repository = database.repository();
 
     let error = repository
-        .apply_credential_change(CredentialChange::new(UserId::new(4242), hash("irrelevant")))
+        .apply_credential_change(CredentialChange::permanent(UserId::new(4242), hash("irrelevant")))
         .await
         .unwrap_err();
     assert_eq!(error, RepositoryError::UserNotFound);
