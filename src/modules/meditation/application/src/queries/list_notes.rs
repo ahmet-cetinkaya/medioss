@@ -11,8 +11,8 @@ pub async fn list_notes<R, N>(
     meditation_id: i64,
 ) -> Result<Vec<Note>, ApplicationError>
 where
-    R: MeditationRepository,
-    N: NoteRepository,
+    R: MeditationRepository + ?Sized,
+    N: NoteRepository + ?Sized,
 {
     crate::queries::get_meditation(meditations, meditation_id).await?;
     notes

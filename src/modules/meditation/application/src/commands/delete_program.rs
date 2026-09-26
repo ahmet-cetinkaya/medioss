@@ -11,9 +11,9 @@ pub async fn delete_program<P, M, S>(
     program_id: i64,
 ) -> Result<(), ApplicationError>
 where
-    P: ProgramRepository,
-    M: MembershipRepository,
-    S: BlobStore,
+    P: ProgramRepository + ?Sized,
+    M: MembershipRepository + ?Sized,
+    S: BlobStore + ?Sized,
 {
     let Some(program) = programs
         .delete(program_id)

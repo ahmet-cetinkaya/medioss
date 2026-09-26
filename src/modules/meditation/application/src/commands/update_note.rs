@@ -13,8 +13,8 @@ pub async fn update_note<N, K>(
     text: &str,
 ) -> Result<(), ApplicationError>
 where
-    N: NoteRepository,
-    K: Clock,
+    N: NoteRepository + ?Sized,
+    K: Clock + ?Sized,
 {
     let text = text.trim();
     if text.is_empty() {

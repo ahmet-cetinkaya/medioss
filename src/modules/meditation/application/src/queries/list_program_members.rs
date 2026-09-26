@@ -8,7 +8,7 @@ pub async fn list_program_members<M>(
     program_id: i64,
 ) -> Result<Vec<Membership>, ApplicationError>
 where
-    M: MembershipRepository,
+    M: MembershipRepository + ?Sized,
 {
     memberships
         .list_by_program(program_id)

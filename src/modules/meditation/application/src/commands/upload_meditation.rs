@@ -15,11 +15,11 @@ pub async fn upload_meditation<R, V, C, S, K>(
     bytes: Vec<u8>,
 ) -> Result<meditation_domain::Meditation, ApplicationError>
 where
-    R: MeditationRepository,
-    V: AudioValidator,
-    C: OpusConverter,
-    S: BlobStore,
-    K: Clock,
+    R: MeditationRepository + ?Sized,
+    V: AudioValidator + ?Sized,
+    C: OpusConverter + ?Sized,
+    S: BlobStore + ?Sized,
+    K: Clock + ?Sized,
 {
     validate_name(name)?;
     if bytes.len() > MAX_UPLOAD_BYTES {

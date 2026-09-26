@@ -10,8 +10,8 @@ pub async fn set_program_category<P, C>(
     category_id: Option<i64>,
 ) -> Result<(), ApplicationError>
 where
-    P: ProgramRepository,
-    C: CategoryRepository,
+    P: ProgramRepository + ?Sized,
+    C: CategoryRepository + ?Sized,
 {
     if let Some(category_id) = category_id {
         categories

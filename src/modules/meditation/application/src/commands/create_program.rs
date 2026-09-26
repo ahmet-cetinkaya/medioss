@@ -15,10 +15,10 @@ pub async fn create_program<P, V, S, K>(
     cover_bytes: Option<Vec<u8>>,
 ) -> Result<Program, ApplicationError>
 where
-    P: ProgramRepository,
-    V: CoverValidator,
-    S: BlobStore,
-    K: Clock,
+    P: ProgramRepository + ?Sized,
+    V: CoverValidator + ?Sized,
+    S: BlobStore + ?Sized,
+    K: Clock + ?Sized,
 {
     validate_name(title)?;
     let cover_key = match cover_bytes {

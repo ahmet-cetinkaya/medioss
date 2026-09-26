@@ -8,7 +8,7 @@ pub async fn get_meditation<R>(
     meditation_id: i64,
 ) -> Result<meditation_domain::Meditation, ApplicationError>
 where
-    R: MeditationRepository,
+    R: MeditationRepository + ?Sized,
 {
     repository
         .find_by_id(meditation_id)

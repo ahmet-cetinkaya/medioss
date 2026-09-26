@@ -9,8 +9,8 @@ pub async fn delete_category<C, P>(
     category_id: i64,
 ) -> Result<(), ApplicationError>
 where
-    C: CategoryRepository,
-    P: ProgramRepository,
+    C: CategoryRepository + ?Sized,
+    P: ProgramRepository + ?Sized,
 {
     let deleted = categories
         .delete(category_id)

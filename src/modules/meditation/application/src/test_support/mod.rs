@@ -158,6 +158,18 @@ impl BlobStore for FakeBlobStore {
         self.state.lock().unwrap().remove(key);
         Ok(())
     }
+
+    async fn read(&self, key: &str) -> Result<Vec<u8>, String> {
+        if *self.failures.lock().unwrap() {
+            return Err("store down".to_owned());
+        }
+        self.state
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .ok_or_else(|| "no blob".to_owned())
+    }
 }
 
 /// Shared in-memory state for all repository fakes; clone gives another

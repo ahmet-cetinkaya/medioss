@@ -4,7 +4,7 @@ edition.workspace = true
 
 [dependencies]
 async-trait.workspace = true
-axum.workspace = true
+axum = { workspace = true, features = ["multipart"] }
 chrono.workspace = true
 meditation-application = { path = "../application" }
 meditation-domain = { path = "../domain" }
@@ -15,3 +15,5 @@ tower.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+meditation-application = { path = "../application", features = ["test-support"] }
+tower.workspace = true

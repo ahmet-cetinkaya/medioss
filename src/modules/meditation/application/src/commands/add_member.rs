@@ -14,10 +14,10 @@ pub async fn add_member<R, P, M, K>(
     meditation_id: i64,
 ) -> Result<(), ApplicationError>
 where
-    R: MeditationRepository,
-    P: ProgramRepository,
-    M: MembershipRepository,
-    K: Clock,
+    R: MeditationRepository + ?Sized,
+    P: ProgramRepository + ?Sized,
+    M: MembershipRepository + ?Sized,
+    K: Clock + ?Sized,
 {
     ensure_meditation_exists(meditations, meditation_id).await?;
     programs

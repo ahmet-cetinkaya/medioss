@@ -11,7 +11,7 @@ pub async fn update_program<P>(
     description: Option<&str>,
 ) -> Result<(), ApplicationError>
 where
-    P: ProgramRepository,
+    P: ProgramRepository + ?Sized,
 {
     validate_name(title)?;
     let updated = programs

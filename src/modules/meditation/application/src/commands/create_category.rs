@@ -9,8 +9,8 @@ pub async fn create_category<C, K>(
     name: &str,
 ) -> Result<Category, ApplicationError>
 where
-    C: CategoryRepository,
-    K: Clock,
+    C: CategoryRepository + ?Sized,
+    K: Clock + ?Sized,
 {
     let name = name.trim();
     if name.is_empty() {

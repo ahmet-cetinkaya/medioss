@@ -16,6 +16,12 @@ impl MediaStream {
     pub fn new(reader: impl AsyncRead + Send + 'static) -> Self {
         Self(Box::pin(reader))
     }
+
+    /// The boxed reader, for callers (tests, adapters) that need to drive it
+    /// directly instead of through the AsyncRead impl.
+    pub fn reader(self) -> Pin<Box<dyn AsyncRead + Send>> {
+        self.0
+    }
 }
 
 impl AsyncRead for MediaStream {

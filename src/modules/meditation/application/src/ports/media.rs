@@ -76,6 +76,8 @@ pub trait BlobStore: Send + Sync {
     async fn put(&self, bytes: &[u8]) -> Result<StoredBlob, String>;
     /// Removes the blob at `key`; an absent key is not an error.
     async fn delete(&self, key: &str) -> Result<(), String>;
+    /// Reads the whole blob back. Bounded in practice by the upload caps.
+    async fn read(&self, key: &str) -> Result<Vec<u8>, String>;
 }
 
 /// Tells the current time, so use-cases stay testable.

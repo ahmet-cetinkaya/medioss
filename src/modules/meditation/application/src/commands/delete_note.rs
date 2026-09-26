@@ -10,7 +10,7 @@ pub async fn delete_note<N>(
     user_id: UserId,
 ) -> Result<(), ApplicationError>
 where
-    N: NoteRepository,
+    N: NoteRepository + ?Sized,
 {
     let deleted = notes
         .delete(note_id, user_id)

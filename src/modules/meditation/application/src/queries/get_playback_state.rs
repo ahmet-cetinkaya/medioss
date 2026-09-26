@@ -11,8 +11,8 @@ pub async fn get_playback_state<R, P>(
     meditation_id: i64,
 ) -> Result<PlaybackState, ApplicationError>
 where
-    R: MeditationRepository,
-    P: PlaybackStateRepository,
+    R: MeditationRepository + ?Sized,
+    P: PlaybackStateRepository + ?Sized,
 {
     crate::queries::get_meditation(meditations, meditation_id).await?;
     Ok(playback

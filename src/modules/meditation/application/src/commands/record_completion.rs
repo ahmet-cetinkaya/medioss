@@ -21,9 +21,9 @@ pub async fn record_completion<R, P, E>(
     finished_at: DateTime<Utc>,
 ) -> Result<MeditationSession, ApplicationError>
 where
-    R: MeditationRepository,
-    P: PlaybackStateRepository,
-    E: SessionRepository,
+    R: MeditationRepository + ?Sized,
+    P: PlaybackStateRepository + ?Sized,
+    E: SessionRepository + ?Sized,
 {
     ensure_meditation_exists(repository, meditation_id).await?;
     if finished_at < started_at {

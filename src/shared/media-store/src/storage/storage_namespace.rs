@@ -7,6 +7,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StorageNamespace {
     Meditation,
+    ProgramCover,
 }
 
 impl StorageNamespace {
@@ -14,6 +15,7 @@ impl StorageNamespace {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Meditation => "meditation",
+            Self::ProgramCover => "program-cover",
         }
     }
 }

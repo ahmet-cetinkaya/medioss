@@ -10,8 +10,8 @@ pub async fn remove_member<P, M>(
     meditation_id: i64,
 ) -> Result<(), ApplicationError>
 where
-    P: ProgramRepository,
-    M: MembershipRepository,
+    P: ProgramRepository + ?Sized,
+    M: MembershipRepository + ?Sized,
 {
     programs
         .find_by_id(program_id)

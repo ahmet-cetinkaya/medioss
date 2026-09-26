@@ -7,7 +7,7 @@ pub async fn list_library<R>(
     repository: &R,
 ) -> Result<Vec<meditation_domain::Meditation>, ApplicationError>
 where
-    R: MeditationRepository,
+    R: MeditationRepository + ?Sized,
 {
     repository
         .list_all()

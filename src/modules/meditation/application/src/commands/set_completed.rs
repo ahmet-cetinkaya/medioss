@@ -14,8 +14,8 @@ pub async fn set_completed<R, P>(
     completed: bool,
 ) -> Result<(), ApplicationError>
 where
-    R: MeditationRepository,
-    P: PlaybackStateRepository,
+    R: MeditationRepository + ?Sized,
+    P: PlaybackStateRepository + ?Sized,
 {
     ensure_meditation_exists(repository, meditation_id).await?;
     playback

@@ -14,9 +14,9 @@ pub async fn create_note<R, N, K>(
     text: &str,
 ) -> Result<Note, ApplicationError>
 where
-    R: MeditationRepository,
-    N: NoteRepository,
-    K: Clock,
+    R: MeditationRepository + ?Sized,
+    N: NoteRepository + ?Sized,
+    K: Clock + ?Sized,
 {
     ensure_meditation_exists(meditations, meditation_id).await?;
     let text = text.trim();

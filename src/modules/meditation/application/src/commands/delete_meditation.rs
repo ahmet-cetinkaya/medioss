@@ -13,10 +13,10 @@ pub async fn delete_meditation<R, M, N, S>(
     meditation_id: i64,
 ) -> Result<(), ApplicationError>
 where
-    R: MeditationRepository,
-    M: MembershipRepository,
-    N: NoteRepository,
-    S: BlobStore,
+    R: MeditationRepository + ?Sized,
+    M: MembershipRepository + ?Sized,
+    N: NoteRepository + ?Sized,
+    S: BlobStore + ?Sized,
 {
     let Some(meditation) = repository
         .find_by_id(meditation_id)

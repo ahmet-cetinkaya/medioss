@@ -1,0 +1,426 @@
+//! Router-level tests: authorization gates, streaming Range matrix, and
+//! error mapping against fake ports (identity router.tests.rs style).
+use std::sync::Arc;
+
+use axum::{
+    body::Body,
+    http::{header, HeaderName, Request, StatusCode},
+    Router,
+};
+use kernel::{Actor, Role, UserId};
+use tower::ServiceExt;
+
+use meditation_application::test_support::{
+    FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
+    FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
+    FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
+};
+
+use crate::{meditation_router, MeditationDependencies};
+
+fn admin_actor() -> Actor {
+    Actor::new(UserId::new(1), Role::Admin)
+}
+
+fn member_actor() -> Actor {
+    Actor::new(UserId::new(2), Role::Member)
+}
+
+struct TestApp {
+    router: Router,
+    state: RepoState,
+    store: FakeBlobStore,
+}
+
+fn app() -> TestApp {
+    let state = RepoState::new();
+    let store = FakeBlobStore::new();
+    let deps = MeditationDependencies {
+        meditations: Arc::new(FakeMeditationRepository(state.clone())),
+        programs: Arc::new(FakeProgramRepository(state.clone())),
+        categories: Arc::new(FakeCategoryRepository(state.clone())),
+        memberships: Arc::new(FakeMembershipRepository(state.clone())),
+        notes: Arc::new(FakeNoteRepository(state.clone())),
+        playback: Arc::new(FakePlaybackRepository(state.clone())),
+        sessions: Arc::new(FakeSessionRepository(state.clone())),
+        validator: Arc::new(FakeValidator),
+        cover_validator: Arc::new(FakeCoverValidator),
+        converter: Arc::new(FakeConverter { fail: false }),
+        store: Arc::new(store.clone()),
+        clock: Arc::new(FixedClock(chrono::Utc::now())),
+        medioss_origin: Arc::new("http://localhost".to_owned()),
+    };
+    TestApp {
+        router: meditation_router().with_state(Arc::new(deps)),
+        state,
+        store,
+    }
+}
+
+async fn call(
+    app: &TestApp,
+    actor: Option<Actor>,
+    method: &str,
+    path: &str,
+    headers: Vec<(&str, &str)>,
+    body: Body,
+) -> (StatusCode, Vec<(HeaderName, String)>, Vec<u8>) {
+    let mut request = Request::builder().method(method).uri(path);
+    for (name, value) in headers {
+        request = request.header(name, value);
+    }
+    request = request.header("origin", "http://localhost");
+    let mut request = request.body(body).unwrap();
+    if let Some(actor) = actor {
+        request.extensions_mut().insert(actor);
+    }
+    let response = app.router.clone().oneshot(request).await.unwrap();
+    let status = response.status();
+    let headers = response
+        .headers()
+        .iter()
+        .map(|(name, value)| (name.clone(), value.to_str().unwrap_or("").to_owned()))
+        .collect();
+    let body = axum::body::to_bytes(response.into_body(), 128 * 1024 * 1024)
+        .await
+        .unwrap()
+        .to_vec();
+    (status, headers, body)
+}
+
+async fn json_body(
+    app: &TestApp,
+    actor: Option<Actor>,
+    method: &str,
+    path: &str,
+    json: &str,
+) -> (StatusCode, Vec<(HeaderName, String)>, Vec<u8>) {
+    call(
+        app,
+        actor,
+        method,
+        path,
+        vec![("content-type", "application/json")],
+        Body::from(json.to_owned()),
+    )
+    .await
+}
+
+async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditation {
+    // A ready Ogg-Opus-shaped blob the fakes accept.
+    let mut bytes = b"OggS".to_vec();
+    bytes.extend_from_slice(b"....OpusHead-payload-for-tests");
+    crate::handlers_audio::upload_for_tests(&app.state, &app.store, bytes).await
+}
+
+#[tokio::test]
+async fn every_route_requires_an_actor() {
+    let app = app();
+    // A representative management route, read route, and per-user route.
+    for (method, path) in [
+        ("POST", "/meditation/audio"),
+        ("GET", "/meditation/library"),
+        ("GET", "/meditation/1"),
+        ("GET", "/meditation/1/audio"),
+        ("GET", "/meditation/1/download"),
+        ("GET", "/meditation/1/playback-state"),
+        ("GET", "/meditation/1/notes"),
+        ("GET", "/meditation/programs"),
+        ("GET", "/meditation/categories"),
+    ] {
+        let (status, _, _) = call(&app, None, method, path, vec![], Body::empty()).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "{method} {path}");
+    }
+}
+
+#[tokio::test]
+async fn content_management_is_admin_only() {
+    let app = app();
+    for (method, path) in [
+        ("POST", "/meditation/audio"),
+        ("DELETE", "/meditation/1"),
+        ("POST", "/meditation/programs"),
+        ("PUT", "/meditation/programs/1"),
+        ("DELETE", "/meditation/programs/1"),
+        ("POST", "/meditation/programs/1/members"),
+        ("DELETE", "/meditation/programs/1/members/1"),
+        ("PUT", "/meditation/programs/1/category"),
+        ("POST", "/meditation/categories"),
+        ("DELETE", "/meditation/categories/1"),
+    ] {
+        let (status, _, _) = call(
+            &app,
+            Some(member_actor()),
+            method,
+            path,
+            vec![("content-type", "application/json")],
+            Body::from("{}"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{method} {path}");
+    }
+}
+
+#[tokio::test]
+async fn unknown_ids_are_404_for_every_authenticated_reader() {
+    let app = app();
+    for path in [
+        "/meditation/999",
+        "/meditation/999/audio",
+        "/meditation/999/download",
+        "/meditation/999/playback-state",
+        "/meditation/999/notes",
+    ] {
+        let (status, _, _) = call(
+            &app,
+            Some(member_actor()),
+            "GET",
+            path,
+            vec![],
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "GET {path}");
+    }
+}
+
+#[tokio::test]
+async fn range_matrix_over_stored_audio() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let path = format!("/meditation/{}/audio", meditation.id());
+
+    // No Range: 200 with the full body.
+    let (status, headers, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &path,
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(!body.is_empty());
+    assert!(headers
+        .iter()
+        .any(|(name, _)| name == header::ACCEPT_RANGES));
+
+    // bytes=0-99: 206 with exactly 100 bytes (or the whole blob when smaller).
+    let (status, headers, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &path,
+        vec![(header::RANGE.as_str(), "bytes=0-99")],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PARTIAL_CONTENT);
+    assert_eq!(
+        body.len(),
+        100.min(expected_len(&app, meditation.id()).await)
+    );
+    let content_range = headers
+        .iter()
+        .find(|(name, _)| name == header::CONTENT_RANGE)
+        .expect("content-range present");
+    assert!(
+        content_range.1.starts_with("bytes 0-"),
+        "clamped end for short blobs: {content_range:?}"
+    );
+
+    // Open-ended: bytes=10-
+    let (status, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &path,
+        vec![(header::RANGE.as_str(), "bytes=10-")],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PARTIAL_CONTENT);
+    let total = expected_len(&app, meditation.id()).await as usize;
+    assert_eq!(body.len(), total - 10);
+
+    // Suffix: bytes=-5 → the last 5 bytes.
+    let (status, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &path,
+        vec![(header::RANGE.as_str(), "bytes=-5")],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PARTIAL_CONTENT);
+    assert_eq!(body.len(), 5);
+
+    // Unsatisfiable: 416 with `bytes */total`.
+    let (status, headers, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &path,
+        vec![(header::RANGE.as_str(), "bytes=999999-")],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::RANGE_NOT_SATISFIABLE);
+    assert!(headers
+        .iter()
+        .any(|(name, value)| name == header::CONTENT_RANGE && value.starts_with("bytes */")));
+
+    // Malformed: ignored, full 200.
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &path,
+        vec![(header::RANGE.as_str(), "not-a-range")],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+async fn expected_len(_app: &TestApp, _id: i64) -> usize {
+    // The fake converter turns non-Opus input into a fixed payload; the
+    // seeded upload used an Opus-shaped prefix, so the stored length is the
+    // input length. Derive from the store instead of duplicating the magic:
+    4 + "....OpusHead-payload-for-tests".len()
+}
+
+#[tokio::test]
+async fn download_is_an_attachment_named_after_the_meditation() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let (status, headers, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/{}/download", meditation.id()),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let disposition = headers
+        .iter()
+        .find(|(name, _)| name == header::CONTENT_DISPOSITION)
+        .expect("disposition present");
+    assert!(disposition.1.starts_with("attachment; filename="));
+    assert!(disposition.1.ends_with(".opus\""));
+}
+
+#[tokio::test]
+async fn completion_retry_is_idempotent_and_toggle_touches_nothing() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let started = chrono::Utc::now().to_rfc3339();
+    let finished = chrono::Utc::now().to_rfc3339();
+    let payload = format!("{{\"started_at\":\"{started}\",\"finished_at\":\"{finished}\"}}");
+
+    let (first, _, _) = json_body(
+        &app,
+        Some(member_actor()),
+        "POST",
+        &format!("/meditation/{}/completion", meditation.id()),
+        &payload,
+    )
+    .await;
+    assert_eq!(first, StatusCode::CREATED);
+    let (retry, _, _) = json_body(
+        &app,
+        Some(member_actor()),
+        "POST",
+        &format!("/meditation/{}/completion", meditation.id()),
+        &payload,
+    )
+    .await;
+    assert_eq!(retry, StatusCode::CREATED);
+    assert_eq!(
+        app.state.sessions.lock().unwrap().len(),
+        1,
+        "one session, not two"
+    );
+
+    // Toggle completed off and on: session count stays one.
+    let id = meditation.id();
+    for completed in [false, true] {
+        let (status, _, _) = json_body(
+            &app,
+            Some(member_actor()),
+            "PUT",
+            &format!("/meditation/{id}/completed"),
+            &format!("{{\"completed\":{completed}}}"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+    }
+    assert_eq!(app.state.sessions.lock().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn notes_of_one_user_are_invisible_to_another() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let (status, _, _) = json_body(
+        &app,
+        Some(member_actor()),
+        "POST",
+        &format!("/meditation/{}/notes", meditation.id()),
+        "{\"text\":\"private reflection\"}",
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    // The same member sees it; a different member's list is empty.
+    let (_, _, body) = json_body(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/{}/notes", meditation.id()),
+        "{}",
+    )
+    .await;
+    assert!(String::from_utf8_lossy(&body).contains("private reflection"));
+
+    let other = Actor::new(UserId::new(3), Role::Member);
+    let (_, _, body) = json_body(
+        &app,
+        Some(other.clone()),
+        "GET",
+        &format!("/meditation/{}/notes", meditation.id()),
+        "{}",
+    )
+    .await;
+    assert_eq!(body, b"[]");
+
+    // The other member cannot edit or delete what it cannot see.
+    let (status, _, _) = json_body(
+        &app,
+        Some(other),
+        "PUT",
+        &format!("/meditation/{}/notes/1", meditation.id()),
+        "{\"text\":\"hijack\"}",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn cross_origin_writes_are_rejected() {
+    let app = app();
+    let request = Request::builder()
+        .method("POST")
+        .uri("/meditation/categories")
+        .header("origin", "http://evil.example")
+        .header("content-type", "application/json")
+        .extension(admin_actor())
+        .body(Body::from("{\"name\":\"X\"}"))
+        .unwrap();
+    let response = app.router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}

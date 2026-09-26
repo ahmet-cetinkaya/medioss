@@ -51,7 +51,7 @@ pub(crate) async fn ensure_meditation_exists<R>(
     meditation_id: i64,
 ) -> Result<(), ApplicationError>
 where
-    R: MeditationRepository,
+    R: MeditationRepository + ?Sized,
 {
     let found = repository
         .find_by_id(meditation_id)

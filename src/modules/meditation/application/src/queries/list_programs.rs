@@ -5,7 +5,7 @@ use crate::ApplicationError;
 /// Lists every program (spec FR-025/031 views).
 pub async fn list_programs<P>(programs: &P) -> Result<Vec<Program>, ApplicationError>
 where
-    P: ProgramRepository,
+    P: ProgramRepository + ?Sized,
 {
     programs
         .list_all()
