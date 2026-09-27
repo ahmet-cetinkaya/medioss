@@ -13,13 +13,14 @@ An instance maintains a shared meditation library that only the admin curates: t
 
 ## User Stories
 
-### US1 — Admin uploads meditation audio (Priority: P1)
+### US1 — Admin uploads meditation audio into a program (Priority: P1)
 
-The admin adds an audio file (MP3, WAV, or OGG) with a name they have entered — prefilled from the file name in Title Case, not taken verbatim; regular users cannot add content.
+The admin adds an audio file (MP3, WAV, or OGG) with a name they have entered — prefilled from the file name in Title Case, not taken verbatim — and a mandatory first program it belongs to; regular users cannot add content.
 
-**Independent test:** as admin a valid small MP3 uploads and appears in the shared library; a request declaring more than 100MB is refused without its body being read; random bytes named `.mp3` are refused as non-audio; a regular user's upload is refused with 403.
+**Independent test:** as admin a valid small MP3 uploads into a chosen program and appears in the shared library and that program; an upload without a `program_id` is refused with 400; a request declaring more than 100MB is refused without its body being read; random bytes named `.mp3` are refused as non-audio; a regular user's upload is refused with 403.
 
-- Given the admin, when they upload at most 100MB of genuine MP3, WAV, or OGG audio with a non-empty name, then the meditation is stored and its metadata (identifier, name, content type, size, creation time) is returned.
+- Given the admin, when they upload at most 100MB of genuine MP3, WAV, or OGG audio with a non-empty name and a `program_id` naming an existing program, then the meditation is stored under that program's folder, an initial membership links it to that program, and its metadata (identifier, name, content type, size, duration, creation time) is returned.
+- Given an upload request with no `program_id` or one naming a program that does not exist, when the upload is attempted, then it is rejected with 400 and nothing is stored.
 - Given the upload form with a chosen file, when the name field is presented, then it is prefilled from the file name in Title Case and remains editable before submission.
 - Given a request whose declared size exceeds 100MB, when the request arrives, then it is rejected before the body is read.
 - Given an upload whose actual byte stream exceeds 100MB during transfer (undeclared or understated length), when the excess is detected, then the upload is aborted and nothing is stored.
@@ -81,18 +82,18 @@ When a user plays a meditation to the end, the instance records a meditation ses
 - Given a user, when they toggle their own completed state for a meditation in either direction, then the state changes accordingly without creating or removing any meditation session.
 - Given user A's completed state, when user B views the same meditation, then B sees only their own state, never A's.
 
-### US7 — Programs: curated shared lists (Priority: P1)
+### US7 — Programs: curated shared lists with dedicated storage folders (Priority: P1)
 
-The admin collects library meditations into programs: each program has a title, an optional description, and an optional cover image; every user sees the same programs, and each user sees their own completion progress on them.
+The admin collects library meditations into programs: each program has a title, an optional description, an optional cover image (creatable and later replaceable), and a fixed storage folder assigned at creation; every user sees the same programs, and each user sees their own completion progress on them, always as a number even when the program is empty or untouched.
 
-**Independent test:** a program with three meditations, one of them completed by user A, shows 33% for A; user B sees 0% on the same program; its cover is visible to every authenticated user.
+**Independent test:** a program with three meditations, one of them completed by user A, shows 33% for A; user B sees 0% on the same program; an empty program also shows 0% (not an absent field); its cover is visible to every authenticated user and replaceable by the admin.
 
-- Given the admin, when they create a program with a non-empty title (description and cover image optional), then the program is stored and its metadata returned.
-- Given a program cover image is supplied, when its bytes are a genuine accepted image format within the cover size cap, then it is stored like audio and served to authenticated users.
+- Given the admin, when they create a program with a non-empty title (description and cover image optional), then the program is stored with a generated storage folder unique to it and its metadata returned.
+- Given a program cover image is supplied at creation or later, when its bytes are a genuine accepted image format within the cover size cap, then it is stored under that program's folder like audio and served to authenticated users; a later replacement removes the previous cover blob.
 - Given the admin, when they add or remove a meditation to/from a program, then the program's membership list reflects it; membership order is the order meditations were added.
-- Given the admin, when they delete a program, then the program and its memberships are removed; meditations, bytes, per-user data, and notes remain intact.
+- Given the admin, when they delete a program, then the program row and its memberships are removed, every member meditation's stored file is relocated into a shared `_unfiled` folder with its `storage_key` updated accordingly, and the meditations, bytes, per-user data, and notes remain intact.
 - Given a program with at least one member meditation, when a user views it, then the progress shown equals that user's share of member meditations whose completed state (theirs) is true.
-- Given an empty program, when it is displayed, then no progress fraction is shown rather than a misleading 0%.
+- Given an empty or never-touched program, when it is displayed, then the progress shown is `0.0`, not an omitted or null field.
 - Given a regular user, when any program-management route is called, then 403 is returned.
 
 ### US8 — Program categories (Priority: P2)
@@ -138,11 +139,23 @@ Any signed-in user can download a library meditation to their device.
 - Given an authenticated user, when they request a download of a meditation, then the stored audio is returned as a file attachment with a filename derived from the meditation's name.
 - Given any requester naming an identifier that does not exist, when a download is attempted, then 404 is returned.
 
+### US12 — Home page discovery: continue, daily pick, and history (Priority: P2)
+
+Each user's home page surfaces three personal entry points into the shared library, none of which require a separate table since each is derived from data already recorded: the program holding whichever meditation they most recently touched ("Continue program"), one meditation suggested for the day ("Daily suggestion", the same pick for every user all day, deterministic from the calendar date so it needs no stored schedule), and their most recently touched distinct programs ("Recently experienced", capped to 5 on the home page with a link to a full, timeline-style history page).
+
+**Independent test:** a user who has never touched anything sees none of the three sections; after playing one meditation belonging to a program, "Continue program" names that program and "Recently experienced" includes it; the daily suggestion is the same meditation across repeated requests within the same day; the history page lists every touched program grouped by calendar day, newest first.
+
+- Given a user who has touched at least one meditation, when the home page loads, then "Continue program" names the program that first owns their most recently touched meditation (by playback `updated_at`), or nothing when they have touched nothing yet.
+- Given any day, when any user requests the daily suggestion, then the same meditation in the shared library is returned for every request that day, chosen deterministically from the calendar date so no two calls disagree; an empty library returns no suggestion.
+- Given a user's touched-meditation history, when the home page or the history page requests recently experienced programs, then each distinct program is listed once (its most recent touch), most recently touched first; the home page caps this to 5, the history page returns the full list.
+- Given the history page, when it renders the full recently-experienced list, then entries are grouped into a vertical timeline by the calendar day they were last touched, newest day first, each entry showing the program's cover, title, description, progress, and the local time of the touch.
+- Given a program surfaced by any of these three sections, when it is rendered, then it shows the same progress percentage or completed indicator every other program surface shows — never omitted.
+
 ## Requirements
 
 ### ADDED
 
-- FR-001: WHEN the admin uploads at most 100MB of genuine MP3, WAV, or OGG audio with a non-empty name THE SYSTEM SHALL store the meditation and return its metadata (identifier, name, content type, size, creation time).
+- FR-001: WHEN the admin uploads at most 100MB of genuine MP3, WAV, or OGG audio with a non-empty name and a `program_id` naming an existing program THE SYSTEM SHALL store the meditation under that program's folder, link it to that program as its first membership, and return its metadata (identifier, name, content type, size, duration, creation time).
 - FR-002: WHEN an upload request declares a size above 100MB THE SYSTEM SHALL reject it with 413 before reading the request body.
 - FR-003: WHEN an upload's actual byte stream exceeds 100MB during transfer THE SYSTEM SHALL abort and reject the upload without storing any record or byte.
 - FR-004: WHEN uploaded bytes are not genuinely one of the accepted audio formats THE SYSTEM SHALL reject the upload with 415 regardless of the file name or declared content type.
@@ -166,11 +179,11 @@ Any signed-in user can download a library meditation to their device.
 - FR-022: WHEN a user toggles their completed state for a meditation THE SYSTEM SHALL change that state as requested without creating or removing any meditation session.
 - FR-023: WHEN any per-user practice data (position, completed state, meditation sessions, notes, progress) is read or written THE SYSTEM SHALL scope it to the acting user only.
 - FR-024: WHEN the upload form presents a chosen file THE SYSTEM SHALL prefill the name field from the file name in Title Case and keep it editable.
-- FR-025: WHEN the admin creates a program with a non-empty title THE SYSTEM SHALL store it with its optional description and optional cover image and return its metadata.
-- FR-026: WHEN a program cover image is supplied THE SYSTEM SHALL accept it only if its bytes are a genuine accepted image format within the cover size cap, and store it and serve it to authenticated users like audio.
+- FR-025: WHEN the admin creates a program with a non-empty title THE SYSTEM SHALL store it with its optional description and optional cover image, assign it a unique storage folder, and return its metadata.
+- FR-026: WHEN a program cover image is supplied at creation or via a later replace request THE SYSTEM SHALL accept it only if its bytes are a genuine accepted image format within the cover size cap, store it under that program's folder, remove any previous cover blob on replacement, and serve it to authenticated users like audio.
 - FR-027: WHEN the admin adds or removes a meditation to/from a program THE SYSTEM SHALL update the membership, ordered by when meditations were added.
-- FR-028: WHEN the admin deletes a program THE SYSTEM SHALL remove the program and its memberships and retain all meditations, bytes, per-user data, and notes.
-- FR-029: WHEN a program's progress is displayed to a user THE SYSTEM SHALL show that user's share of member meditations whose completed state is true, and show no fraction for an empty program.
+- FR-028: WHEN the admin deletes a program THE SYSTEM SHALL remove the program row and its memberships, relocate every member meditation's stored file into a shared `_unfiled` storage folder updating its `storage_key`, remove the program's own storage folder, and retain all meditations, bytes, per-user data, and notes.
+- FR-029: WHEN a program's progress is displayed to a user THE SYSTEM SHALL show that user's share of member meditations whose completed state is true, reporting `0.0` rather than omitting the field for an empty or untouched program.
 - FR-030: WHEN the admin creates a category with a non-empty name unique among existing categories THE SYSTEM SHALL store it.
 - FR-031: WHEN the admin assigns a category to a program THE SYSTEM SHALL group that program under exactly that category.
 - FR-032: WHEN the admin deletes a category THE SYSTEM SHALL leave its programs intact and uncategorized.
@@ -182,6 +195,12 @@ Any signed-in user can download a library meditation to their device.
 - FR-038: WHEN an accepted audio upload is stored THE SYSTEM SHALL convert it to Opus in an Ogg container at a transparent quality setting and persist only the converted form.
 - FR-039: WHEN an accepted upload is already Opus in an Ogg container THE SYSTEM SHALL store it as-is without re-encoding.
 - FR-040: WHEN an authenticated user requests a download of a meditation THE SYSTEM SHALL return the stored audio as a file attachment named after the meditation.
+- FR-041: WHEN an accepted audio upload is converted to Opus THE SYSTEM SHALL probe and persist its decoded duration alongside the meditation row.
+- FR-042: WHEN a meditation is displayed on any surface THE SYSTEM SHALL show that user's completed state and a progress percentage derived from their stored position over the meditation's duration (capped at 100, and 100 whenever completed is true), reporting `0` rather than omitting the field when the user never played it.
+- FR-043: WHEN a user's home page is requested THE SYSTEM SHALL return the program holding their most recently touched meditation ("Continue program") when they have touched at least one meditation, and nothing otherwise.
+- FR-044: WHEN any user requests the daily suggestion on a given calendar date THE SYSTEM SHALL return the same one meditation from the shared library for every request that date, chosen deterministically from the date, or nothing when the library is empty.
+- FR-045: WHEN a user's recently-experienced programs are listed THE SYSTEM SHALL return their distinct touched programs ordered by most recent touch, each program appearing once at its most recent touch, honoring an optional result-count limit for the home page's 5-item strip versus the unlimited history page.
+- FR-046: WHEN the history page renders a user's recently-experienced programs THE SYSTEM SHALL group them into a timeline by the calendar day each was last touched, newest day first, entries within a day ordered newest touch first.
 
 ### PRESERVED
 
@@ -201,13 +220,22 @@ Any signed-in user can download a library meditation to their device.
 - SC-008: Completing playback returns an acknowledgement whose finish timestamp is greater than its start timestamp, exactly one meditation session exists for that playback pass after one retry of the completion report, and the completing user's completed state is true.
 - SC-009: Workspace checks pass in one run: formatting, lint with warnings as errors, the full test suite, the module boundary check, and the frontend build.
 - SC-010: A manual QA checklist covering play, pause, seek, both speed bounds (0.5x and 2.0x), and resume passes with every item checked in a real browser — the roadmap M2 exit criterion.
-- SC-011: A program with three member meditations reports progress of one third for a user who completed exactly one, and no fraction when empty; completing a meditation that belongs to two programs raises both programs' progress for that user.
-- SC-012: Browser QA: the library view shows program cards grouped under category headings with uncategorized programs last, each card showing title, cover or placeholder, and the viewing user's progress.
-- SC-013: Uploading a file named `morning_meditation.mp3` prefills the name field as `Morning Meditation`, editable before submission; the stored meditation uses the submitted name.
+- SC-011: A program with three member meditations reports progress of one third for a user who completed exactly one, and `0.0` (not an omitted field) when empty; completing a meditation that belongs to two programs raises both programs' progress for that user.
+- SC-012: Browser QA: the library view shows program cards grouped under category headings with uncategorized programs last, each card showing title, cover or placeholder, and the viewing user's progress as a number, never blank.
+- SC-013: Uploading a file named `morning_meditation.mp3` prefills the name field as `Morning Meditation`, editable before submission; the stored meditation uses the submitted name and the program chosen in the mandatory program selector.
 - SC-014: Notes created after playback are listed newest first under their meditation, editable and deletable by the author only; another user receives 404 for every route addressing them.
 - SC-015: Toggling a completed meditation to not-completed and back changes the state both times and leaves the count of meditation sessions unchanged.
 - SC-016: A large WAV uploads successfully; the stored file is Ogg Opus (`audio/ogg`) and substantially smaller than the source, and it streams and plays in a real browser end-to-end.
 - SC-017: A regular user's download returns the stored Opus file with an attachment disposition and a filename derived from the meditation's name; an unauthenticated requester receives 401.
+- SC-018: Uploading into program A then requesting the admin delete program A relocates that meditation's stored file into `_unfiled`, updates its `storage_key`, and the meditation still streams, downloads, and appears in the library afterward.
+- SC-019: After playing a meditation partway, the home page's "Continue program" names the program it first belongs to and links to it; a user who has never played anything sees no such section.
+- SC-020: Calling the daily-suggestion endpoint twice on the same date returns the identical meditation both times; calling it against an empty library returns no content.
+- SC-021: After touching meditations across six distinct programs, the home page's "recently experienced" strip shows exactly 5 most-recently-touched programs and a link to the history page, which shows all 6 grouped into a timeline by calendar day, newest first.
+
+- An upload with a missing or nonexistent `program_id` — rejected with 400 before anything is stored (US1).
+- Joining a second, third, etc. program for an already-uploaded meditation — adds only a membership row; the stored file stays under its first program's folder (US7).
+- Deleting a program that owns meditations with no other program membership — those files land in `_unfiled`, remain streamable and downloadable, and are simply not grouped under any program view until re-added.
+- A meditation whose duration probe failed (duration `0`) — its progress percentage reports `0` rather than dividing by zero.
 
 ## Edge Cases
 
@@ -242,8 +270,12 @@ Any signed-in user can download a library meditation to their device.
 - The meditation's display name is free text, non-empty, not unique; the prefill transform strips the extension, replaces separator characters with spaces, and capitalizes each word (Title Case).
 - Description and note text are free text, possibly empty; a program's description is optional and may be left blank.
 - Accepted cover image types are PNG, JPEG, and WebP, validated from bytes, with a 5MB cap; covers are served to authenticated users like audio.
-- A meditation may belong to any number of programs; membership order is the order meditations were added, and manual reordering is out of scope for M2.
+- A meditation may belong to any number of programs; membership order is the order meditations were added, and manual reordering is out of scope for M2. Its stored audio file lives under the folder of the first program it was uploaded into; joining additional programs only adds a membership row, it does not move or copy the file.
+- A program's storage folder name is generated once at creation from a slugified title plus a short unique suffix, and never changes afterward even if the title is edited later; the folder is fixed so uploads and cover replacements always resolve to the same location.
+- Deleting a program relocates its members' files into one shared `_unfiled` folder rather than deleting them, keeping every meditation streamable and downloadable with no dangling storage keys.
 - A program carries at most one category; programs without a category appear under a single uncategorized heading, listed last.
+- Duration is probed once, at upload time, from the converted Opus bytes; a probe failure leaves duration at zero rather than failing the upload, and a meditation with unknown duration reports 0% progress instead of erroring.
+- "Continue program", the daily suggestion, and "recently experienced" are all derived at read time from existing playback-state and membership rows; none of the three introduces its own persisted table.
 - Category names are unique instance-wide (categories are shared structure, not per-user).
 - The completed state is a single boolean per user per meditation; completing playback sets it to true for that user, who may toggle it either way at any time; toggling never touches meditation sessions.
 - "Meditation session" means one completed playback pass (start and finish timestamps); it is distinct from the identity login session and carries nothing else in M2 — history views and statistics are M7.
@@ -262,7 +294,7 @@ Any signed-in user can download a library meditation to their device.
 - Reordering program members manually (drag-and-drop) — later milestone.
 - More than one category per program, or categories on meditations themselves (categories apply to programs only).
 - Editing meditation names after upload, editing audio files — not in roadmap M2.
-- Search and filtering, streak counting, total-time statistics, calendar view, playback history UI (M7).
+- Search and filtering, streak counting, total-time statistics, calendar view (M7). A recently-experienced timeline ("History") and per-meditation progress percentages shipped ahead of schedule and are covered by US12/FR-041..046.
 - Sleep timer and fade-out (M3/M7).
 - Auto-play next in program (M7).
 - Offline/PWA access to media (M8).
@@ -271,7 +303,7 @@ Any signed-in user can download a library meditation to their device.
 - The soundscape module and its uploads (M3), though it will reuse the shared media storage.
 - Seed meditation content and sourcing documentation (M5).
 - Account-deletion media wipe (M6); M2 deletes individual meditations only.
-- Server-side duration/bitrate metadata extraction.
+- Bitrate metadata extraction (duration extraction shipped ahead of schedule per FR-041).
 
 ## Clarifications
 
@@ -290,3 +322,9 @@ Any signed-in user can download a library meditation to their device.
 ### Session 2026-09-26 (user direction 3, spec still draft)
 
 - Q: Who owns library content? → A (user): First stage is admin-curated: only the admin uploads and manages meditations, programs, and categories; every user sees the shared meditations and programs; progress, notes, and other practice data stay per-user. This reshaped US1–US9, FR-001–FR-037 into the shared-library model (regular-user management calls 403; per-user scoping for position, completed state, sessions, notes, and progress via FR-023); category uniqueness became instance-wide because categories are shared structure.
+
+### Session 2026-09-27 (user direction 4, post-implementation)
+
+- Q: How should meditation files be organized on disk, given per-meditation folders sprawl? → A (user): Program-scoped folders instead. Uploading a meditation requires choosing its first program up front; the file is stored under that program's fixed folder. Adding the same meditation to further programs only records a membership, it does not move or copy the file. Deleting a program relocates its members' files into a shared `_unfiled` folder rather than deleting them. This reshaped US1 and US7 into program-scoped storage (FR-001, FR-025..029) and added FR-041 (duration capture) once per-meditation progress percentages were requested.
+- Q: Should the home page surface personal continuation and discovery entry points? → A (user): Yes — "Continue program" (last touched program), "Daily suggestion" (one deterministic pick per calendar day, same for everyone), and "Recently experienced" (last 5 distinct touched programs with a "See all" link to a full history page). None introduces new persisted state; all three are read-time derivations over existing playback and membership data. This added US12 and FR-041..046.
+- Q: Should progress ever be a missing/null field? → A (user, via UI review): No — every program or meditation surface must always show a completion percentage or completed indicator, even at 0%; a missing field reads as a bug, not "not started". This superseded FR-029's original "no fraction for an empty program" rule.
