@@ -29,6 +29,7 @@
 
 	let file = $state<File | null>(null);
 	let name = $state("");
+	let uploadProgramId = $state<number | null>(null);
 	let uploading = $state(false);
 
 	let programTitle = $state("");
@@ -73,12 +74,12 @@
 
 	async function submitUpload(event: SubmitEvent) {
 		event.preventDefault();
-		if (!file || uploading) return;
+		if (!file || !uploadProgramId || uploading) return;
 		uploading = true;
 		error = "";
 		message = "";
 		try {
-			const created = await uploadAudio(file, name);
+			const created = await uploadAudio(file, name, uploadProgramId);
 			message = `Uploaded "${created.name}" (${created.size_bytes} bytes stored as Opus)`;
 			name = "";
 			file = null;
@@ -167,6 +168,24 @@
 		<Card.Content>
 			<form class="grid gap-4" onsubmit={submitUpload}>
 				<div class="grid gap-2">
+					<Label for="upload-program">Program (the file is stored in its folder)</Label>
+					<select
+						id="upload-program"
+						bind:value={uploadProgramId}
+						class="rounded-md border bg-background px-3 py-2 text-sm"
+					>
+						<option value={null} disabled>Select a program…</option>
+						{#each programs as program (program.id)}
+							<option value={program.id}>{program.title}</option>
+						{/each}
+					</select>
+					{#if programs.length === 0}
+						<p class="text-sm text-muted-foreground">
+							Create a program first — uploads belong to one.
+						</p>
+					{/if}
+				</div>
+				<div class="grid gap-2">
 					<Label for="file">Audio file</Label>
 					<Input id="file" type="file" accept=".mp3,.wav,.ogg,.opus" onchange={onFileChosen} />
 				</div>
@@ -174,7 +193,7 @@
 					<Label for="name">Name</Label>
 					<Input id="name" bind:value={name} placeholder="Morning Meditation" />
 				</div>
-				<Button type="submit" disabled={!file || uploading}>
+				<Button type="submit" disabled={!file || !uploadProgramId || uploading}>
 					{uploading ? "Converting…" : "Upload"}
 				</Button>
 			</form>

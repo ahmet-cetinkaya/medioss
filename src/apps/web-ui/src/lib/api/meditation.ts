@@ -150,10 +150,12 @@ export async function fetchMe(): Promise<{
 export async function uploadAudio(
   file: File,
   name: string,
+  programId: number,
 ): Promise<Meditation> {
   const form = new FormData();
   form.append("file", file);
   form.append("name", name);
+  form.append("program_id", String(programId));
   const response = await fetch("/api/meditation/audio", {
     method: "POST",
     credentials: "same-origin",
