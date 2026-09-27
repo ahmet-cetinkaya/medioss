@@ -96,16 +96,16 @@ impl crate::ports::OpusConverter for FakeConverter {
         &self,
         bytes: Vec<u8>,
         format: AudioFormat,
-    ) -> Result<Vec<u8>, crate::ports::ConvertError> {
+    ) -> Result<(Vec<u8>, i64), crate::ports::ConvertError> {
         if self.fail {
             return Err(crate::ports::ConvertError::Decode);
         }
         if format == AudioFormat::OggOpus {
-            return Ok(bytes);
+            return Ok((bytes, 60_000));
         }
         let mut encoded = b"OggS".to_vec();
         encoded.extend_from_slice(b"fake-opus-payload");
-        Ok(encoded)
+        Ok((encoded, 60_000))
     }
 }
 
@@ -272,6 +272,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
         content_type: &str,
         size_bytes: i64,
         storage_key: String,
+        duration_ms: i64,
         created_at: DateTime<Utc>,
     ) -> Result<meditation_domain::Meditation, String> {
         let mut rows = self.0.meditations.lock().unwrap();
@@ -282,6 +283,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             content_type,
             size_bytes,
             &storage_key,
+            duration_ms,
             created_at,
         )
         .map_err(|error| error.to_string())?;
@@ -330,6 +332,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             rows[index].content_type(),
             rows[index].size_bytes(),
             key,
+            rows[index].duration_ms(),
             rows[index].created_at(),
         )
         .map_err(|error| error.to_string())?;

@@ -19,6 +19,7 @@ impl MigrationTrait for Migration {
                 content_type TEXT NOT NULL,
                 size_bytes INTEGER NOT NULL,
                 storage_key TEXT NOT NULL UNIQUE,
+                duration_ms INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             );",
             "CREATE TABLE IF NOT EXISTS meditation_programs (

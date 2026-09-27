@@ -21,6 +21,7 @@ fn meditation(
         content_type,
         size_bytes,
         storage_key,
+        0,
         created_at(),
     )
 }

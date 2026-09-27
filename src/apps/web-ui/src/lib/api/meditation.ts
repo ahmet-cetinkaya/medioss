@@ -8,6 +8,7 @@ export interface Meditation {
   name: string;
   content_type: string;
   size_bytes: number;
+  duration_ms: number;
   created_at: string;
 }
 

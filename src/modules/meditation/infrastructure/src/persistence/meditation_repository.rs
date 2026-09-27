@@ -28,6 +28,7 @@ fn to_domain(model: table::Model) -> Result<Meditation, String> {
         &model.content_type,
         model.size_bytes,
         &model.storage_key,
+        model.duration_ms,
         created_at,
     )
     .map_err(|error| error.to_string())
@@ -41,6 +42,7 @@ impl MeditationRepository for SeaOrmMeditationRepository {
         content_type: &str,
         size_bytes: i64,
         storage_key: String,
+        duration_ms: i64,
         created_at: DateTime<Utc>,
     ) -> Result<Meditation, String> {
         let row = table::ActiveModel {
@@ -48,6 +50,7 @@ impl MeditationRepository for SeaOrmMeditationRepository {
             content_type: Set(content_type.to_owned()),
             size_bytes: Set(size_bytes),
             storage_key: Set(storage_key),
+            duration_ms: Set(duration_ms),
             created_at: Set(created_at.to_rfc3339()),
             ..Default::default()
         };

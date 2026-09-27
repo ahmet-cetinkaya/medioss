@@ -11,6 +11,7 @@ pub struct Model {
     pub size_bytes: i64,
     #[sea_orm(unique)]
     pub storage_key: String,
+    pub duration_ms: i64,
     pub created_at: String,
 }
 

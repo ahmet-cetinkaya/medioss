@@ -17,6 +17,7 @@ pub struct MeditationResponse {
     pub name: String,
     pub content_type: String,
     pub size_bytes: i64,
+    pub duration_ms: i64,
     pub created_at: String,
 }
 
@@ -28,6 +29,7 @@ pub(crate) fn meditation_response(
         name: meditation.name().to_owned(),
         content_type: meditation.content_type().to_owned(),
         size_bytes: meditation.size_bytes(),
+        duration_ms: meditation.duration_ms(),
         created_at: meditation.created_at().to_rfc3339(),
     }
 }
@@ -381,6 +383,7 @@ pub(crate) async fn upload_for_tests(
         meditation_domain::STORED_CONTENT_TYPE,
         blob.size_bytes,
         &blob.storage_key,
+        60_000,
         chrono::Utc::now(),
     )
     .unwrap()

@@ -11,6 +11,7 @@ pub trait MeditationRepository: Send + Sync {
         content_type: &str,
         size_bytes: i64,
         storage_key: String,
+        duration_ms: i64,
         created_at: chrono::DateTime<chrono::Utc>,
     ) -> Result<Meditation, String>;
 

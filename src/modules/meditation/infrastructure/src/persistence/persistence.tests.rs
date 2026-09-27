@@ -69,6 +69,7 @@ async fn meditation_rows_round_trip_and_list_newest_first() {
             "audio/ogg",
             10,
             "key-one".to_owned(),
+            0,
             Utc::now(),
         )
         .await
@@ -79,6 +80,7 @@ async fn meditation_rows_round_trip_and_list_newest_first() {
             "audio/ogg",
             20,
             "key-two".to_owned(),
+            0,
             Utc::now() + ChronoDuration::seconds(5),
         )
         .await
@@ -122,7 +124,14 @@ async fn memberships_are_idempotent_on_the_pair() {
     let memberships = SeaOrmMembershipRepository::new(database.connection);
 
     let meditation = meditations
-        .insert("M".to_owned(), "audio/ogg", 5, "k".to_owned(), Utc::now())
+        .insert(
+            "M".to_owned(),
+            "audio/ogg",
+            5,
+            "k".to_owned(),
+            0,
+            Utc::now(),
+        )
         .await
         .unwrap();
     let program = programs
@@ -156,7 +165,14 @@ async fn session_triple_is_the_idempotency_key() {
     let sessions = SeaOrmSessionRepository::new(database.connection);
 
     let meditation = meditations
-        .insert("M".to_owned(), "audio/ogg", 5, "k".to_owned(), Utc::now())
+        .insert(
+            "M".to_owned(),
+            "audio/ogg",
+            5,
+            "k".to_owned(),
+            0,
+            Utc::now(),
+        )
         .await
         .unwrap();
     let started = Utc::now();
@@ -208,7 +224,14 @@ async fn playback_upserts_are_per_user() {
     let playback = SeaOrmPlaybackRepository::new(database.connection);
 
     let meditation = meditations
-        .insert("M".to_owned(), "audio/ogg", 5, "k".to_owned(), Utc::now())
+        .insert(
+            "M".to_owned(),
+            "audio/ogg",
+            5,
+            "k".to_owned(),
+            0,
+            Utc::now(),
+        )
         .await
         .unwrap();
 
@@ -258,7 +281,14 @@ async fn notes_stay_author_scoped_and_newest_first() {
     let notes = SeaOrmNoteRepository::new(database.connection);
 
     let meditation = meditations
-        .insert("M".to_owned(), "audio/ogg", 5, "k".to_owned(), Utc::now())
+        .insert(
+            "M".to_owned(),
+            "audio/ogg",
+            5,
+            "k".to_owned(),
+            0,
+            Utc::now(),
+        )
         .await
         .unwrap();
     let older = notes

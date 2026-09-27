@@ -60,7 +60,13 @@ pub trait OpusConverter: Send + Sync {
     /// Converts `bytes` to Ogg Opus; `OggOpus` input is returned as-is.
     /// A missing encoder surfaces as [`ConvertError::Unavailable`] so the
     /// API can answer 503 instead of blaming the media (plan D2).
-    async fn convert(&self, bytes: Vec<u8>, format: AudioFormat) -> Result<Vec<u8>, ConvertError>;
+    /// Also reports the decoded duration so per-meditation progress can be
+    /// shown as a percentage instead of raw position.
+    async fn convert(
+        &self,
+        bytes: Vec<u8>,
+        format: AudioFormat,
+    ) -> Result<(Vec<u8>, i64), ConvertError>;
 }
 
 /// A stored blob's location handle.

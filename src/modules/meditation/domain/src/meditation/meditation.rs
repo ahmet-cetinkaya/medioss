@@ -29,6 +29,7 @@ pub struct Meditation {
     content_type: String,
     size_bytes: i64,
     storage_key: String,
+    duration_ms: i64,
     created_at: DateTime<Utc>,
 }
 
@@ -40,6 +41,7 @@ impl Meditation {
         content_type: &str,
         size_bytes: i64,
         storage_key: &str,
+        duration_ms: i64,
         created_at: DateTime<Utc>,
     ) -> Result<Self, MeditationError> {
         let name = name.trim();
@@ -62,6 +64,7 @@ impl Meditation {
             content_type: content_type.to_owned(),
             size_bytes,
             storage_key: storage_key.to_owned(),
+            duration_ms: duration_ms.max(0),
             created_at,
         })
     }
@@ -89,6 +92,12 @@ impl Meditation {
     /// Media-store key of the stored audio bytes.
     pub fn storage_key(&self) -> &str {
         &self.storage_key
+    }
+
+    /// Decoded audio duration in milliseconds; `0` when unknown (probe
+    /// failed or the row predates duration capture).
+    pub fn duration_ms(&self) -> i64 {
+        self.duration_ms
     }
 
     /// Row creation timestamp.

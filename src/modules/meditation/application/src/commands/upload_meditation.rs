@@ -54,7 +54,7 @@ where
         .sniff(&bytes)
         .await
         .map_err(|_| ApplicationError::UnsupportedMedia)?;
-    let stored_bytes = converter
+    let (stored_bytes, duration_ms) = converter
         .convert(bytes, format)
         .await
         .map_err(map_convert_error)?;
@@ -68,6 +68,7 @@ where
             meditation_domain::STORED_CONTENT_TYPE,
             blob.size_bytes,
             blob.storage_key.clone(),
+            duration_ms,
             clock.now().await,
         )
         .await

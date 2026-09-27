@@ -44,7 +44,7 @@ async fn wav_converts_to_smaller_ogg_opus() {
         "-",
     ])
     .await;
-    let opus = FfmpegOpusConverter
+    let (opus, duration_ms) = FfmpegOpusConverter
         .convert(wav.clone(), AudioFormat::Wav)
         .await
         .expect("conversion");
@@ -54,6 +54,10 @@ async fn wav_converts_to_smaller_ogg_opus() {
         "128k VBR Opus must be smaller than raw WAV: {} vs {}",
         opus.len(),
         wav.len()
+    );
+    assert!(
+        (1_800..2_200).contains(&duration_ms),
+        "a 2s fixture must probe close to 2000ms, got {duration_ms}"
     );
 }
 
@@ -75,7 +79,7 @@ async fn already_opus_passes_through_byte_identical() {
         "-",
     ])
     .await;
-    let stored = FfmpegOpusConverter
+    let (stored, _duration_ms) = FfmpegOpusConverter
         .convert(opus.clone(), AudioFormat::OggOpus)
         .await
         .expect("passthrough");

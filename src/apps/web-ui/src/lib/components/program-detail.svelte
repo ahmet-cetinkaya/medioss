@@ -12,8 +12,15 @@
 
 	let program = $state<Program | null>(null);
 	let members = $state<Meditation[]>([]);
-	let memberStates = $state<Record<number, boolean>>({});
+	let memberStates = $state<Record<number, { positionMs: number; completed: boolean }>>({});
 	let error = $state("");
+
+	function percentFor(meditation: Meditation): number | null {
+		const playback = memberStates[meditation.id];
+		if (!playback || meditation.duration_ms <= 0) return null;
+		if (playback.completed) return 100;
+		return Math.min(100, Math.round((playback.positionMs / meditation.duration_ms) * 100));
+	}
 
 	onMount(async () => {
 		const params = new URLSearchParams(window.location.search);
@@ -37,7 +44,10 @@
 			const states = await Promise.all(
 				library.map(async (meditation) => {
 					const state = await fetchPlaybackState(meditation.id);
-					return [meditation.id, state.completed] as const;
+					return [
+						meditation.id,
+						{ positionMs: state.position_ms, completed: state.completed },
+					] as const;
 				}),
 			);
 			memberStates = Object.fromEntries(states);
@@ -86,8 +96,10 @@
 							<div>
 								<p class="font-medium">{meditation.name}</p>
 							</div>
-							{#if memberStates[meditation.id]}
+							{#if memberStates[meditation.id]?.completed}
 								<span class="text-sm text-muted-foreground">✓ Completed</span>
+							{:else if percentFor(meditation) !== null}
+								<span class="text-sm text-muted-foreground">{percentFor(meditation)}%</span>
 							{/if}
 						</a>
 					</li>
