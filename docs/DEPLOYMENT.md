@@ -5,6 +5,7 @@ This guide covers deploying the MediOSS wellness app with its Rust backend and A
 ## Prerequisites
 
 - Docker and docker-compose installed
+- **ffmpeg** on the host PATH (meditation uploads are converted to Ogg Opus through it; without it the server starts but uploads answer 503)
 - 128MB RAM minimum (256MB recommended for multiple users)
 - 5GB storage space (10GB for multiple users)
 - Basic terminal familiarity
@@ -163,6 +164,18 @@ The service builds the image from the `Dockerfile` above, publishes the app on p
 `/data` is the single read-write mount for everything mutable: the `medioss.db` SQLite file and the `media/` directory where users' own meditation and white noise audio is stored. There is no separate media volume, so backing up the app means backing up one volume. Because the container runs as an unprivileged user, that mount is also the only path the process needs to write; the rest of the filesystem can stay untouched.
 
 ## Resource Requirements
+
+Runtime data lives under `$MEDIOSS_DATA_DIR`:
+
+```text
+$MEDIOSS_DATA_DIR/
+├── medioss.db                  # SQLite: identity + meditation tables
+└── media/
+    ├── meditation/             # stored audio (Ogg Opus, opaque keys)
+    └── program-cover/          # program cover images
+```
+
+Backups capture everything when they capture this directory. Restoring a backup restores the whole instance.
 
 ### Performance Characteristics
 
@@ -339,11 +352,7 @@ docker-compose up -d --build
 
 ### Rollbacks
 
-Database migrations are irreversible by design: the identity migration's
-`down` refuses to run because reverting would destroy every account and
-the setup-claim state. To roll back a deployment, restore the database
-volume from a backup taken **before** the upgrade (see *Backup
-Configuration*), then start the previous image version.
+Database migrations are irreversible by design: the identity migration's `down` refuses to run because reverting would destroy every account and the setup-claim state. To roll back a deployment, restore the database volume from a backup taken **before** the upgrade (see _Backup Configuration_), then start the previous image version.
 
 ## Performance Optimization
 

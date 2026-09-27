@@ -1,5 +1,3 @@
-use crate::storage::storage_namespace::StorageNamespace;
-
 /// Why a store operation failed.
 ///
 /// Deliberately no `#[from] std::io::Error`: an automatic conversion would let
@@ -8,11 +6,8 @@ use crate::storage::storage_namespace::StorageNamespace;
 /// failure names its file.
 #[derive(Debug, thiserror::Error)]
 pub enum MediaStoreError {
-    #[error("no blob at {}/{}", namespace.as_str(), key)]
-    NotFound {
-        namespace: StorageNamespace,
-        key: String,
-    },
+    #[error("no blob at {key}")]
+    NotFound { key: String },
     #[error("invalid storage key: {key}")]
     InvalidKey { key: String },
     #[error("io on {path}: {source}")]

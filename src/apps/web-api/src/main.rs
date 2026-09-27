@@ -79,14 +79,23 @@ async fn main() {
     if let Err(err) = identity_infrastructure::migrate(&database.connection).await {
         fail(format!("identity migration failed: {err}"));
     }
+    if let Err(err) = meditation_infrastructure::migrations::migrate(&database.connection).await {
+        fail(format!("meditation migration failed: {err}"));
+    }
     let session_store = tower_sessions_sqlx_store::SqliteStore::new(database.pool.clone());
     if let Err(err) = session_store.migrate().await {
         fail(format!("session store migration failed: {err}"));
     }
     let hasher = identity_infrastructure::BoundedArgon2PasswordHasher::new();
+    let meditation = web_api::meditation::meditation_dependencies(
+        database.connection.clone(),
+        &config.data_dir,
+        std::sync::Arc::new(config.medioss_origin.clone()),
+    );
     let state = web_api::state::AppState::new(
         Arc::new(config),
         std::sync::Arc::new(session_store),
+        meditation,
         std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             database.connection,
         )),

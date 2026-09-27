@@ -14,6 +14,29 @@ const MAX_KEY_LEN: usize = 255;
 pub struct StorageKey(String);
 
 impl StorageKey {
+    /// Validates a key containing exactly one `/` folder separator
+    /// (folder + file), each segment under the same character allowlist.
+    /// Unlike a bare `!key.contains('/')` shortcut, every key — including one
+    /// with no separator at all — goes through the same allowlist/length/`..`
+    /// checks, so there is no path that skips validation.
+    pub fn parse_with_separator(value: impl Into<String>) -> Result<Self, MediaStoreError> {
+        let key = value.into();
+        let parts: Vec<&str> = key.split('/').collect();
+        let valid = matches!(parts.len(), 1 | 2)
+            && parts.iter().all(|part| {
+                !part.is_empty()
+                    && part.len() <= MAX_KEY_LEN
+                    && !part.contains("..")
+                    && part.chars().all(|character| {
+                        character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
+                    })
+            });
+        if !valid {
+            return Err(MediaStoreError::InvalidKey { key });
+        }
+        Ok(Self(key))
+    }
+
     /// Validates an untrusted key, whether freshly generated or read back from
     /// a database row.
     pub fn parse(value: impl Into<String>) -> Result<Self, MediaStoreError> {
