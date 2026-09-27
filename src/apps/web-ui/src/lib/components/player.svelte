@@ -151,7 +151,11 @@
 <main class="mx-auto min-h-screen w-full max-w-2xl px-4 py-10">
 	<header class="mb-6 flex items-baseline justify-between">
 		<h1 class="text-3xl font-semibold tracking-tight">Player</h1>
-		<Button variant="outline" size="sm" onclick={() => (window.location.href = "/library")}>
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={() => (history.length > 1 ? history.back() : (window.location.href = "/library"))}
+		>
 			Back
 		</Button>
 	</header>

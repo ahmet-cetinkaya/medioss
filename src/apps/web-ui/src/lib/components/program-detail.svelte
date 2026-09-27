@@ -67,7 +67,11 @@
 				{/if}
 			{/if}
 		</div>
-		<Button variant="outline" size="sm" onclick={() => (window.location.href = "/library")}>
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={() => (history.length > 1 ? history.back() : (window.location.href = "/library"))}
+		>
 			Back
 		</Button>
 	</header>
