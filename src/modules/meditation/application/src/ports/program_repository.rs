@@ -50,7 +50,4 @@ pub trait ProgramRepository: Send + Sync {
     /// Clears the category from every program that held it; returns the number
     /// of programs affected.
     async fn clear_category(&self, category_id: i64) -> Result<u64, String>;
-
-    /// Removes every membership of a program; returns the number removed.
-    async fn remove_members_for_program(&self, program_id: i64) -> Result<u64, String>;
 }

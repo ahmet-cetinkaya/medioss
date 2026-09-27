@@ -357,13 +357,6 @@ impl ProgramRepository for FakeProgramRepository {
         }
         Ok(cleared)
     }
-
-    async fn remove_members_for_program(&self, program_id: i64) -> Result<u64, String> {
-        let mut rows = self.0.memberships.lock().unwrap();
-        let len = rows.len();
-        rows.retain(|membership| membership.program_id != program_id);
-        Ok((len - rows.len()) as u64)
-    }
 }
 
 /// CategoryRepository fake.

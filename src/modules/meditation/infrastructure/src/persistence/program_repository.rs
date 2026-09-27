@@ -135,13 +135,4 @@ impl ProgramRepository for SeaOrmProgramRepository {
             .map_err(|e| e.to_string())?;
         Ok(result.rows_affected)
     }
-
-    async fn remove_members_for_program(&self, program_id: i64) -> Result<u64, String> {
-        let result = crate::persistence::entities::memberships::Entity::delete_many()
-            .filter(crate::persistence::entities::memberships::Column::ProgramId.eq(program_id))
-            .exec(&self.db)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(result.rows_affected)
-    }
 }
