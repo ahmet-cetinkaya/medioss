@@ -25,4 +25,9 @@ pub trait MembershipRepository: Send + Sync {
     /// Removes every program membership of a meditation; returns the number
     /// removed.
     async fn remove_for_meditation(&self, meditation_id: i64) -> Result<u64, String>;
+
+    /// The meditation's first (earliest `added_at`) program membership —
+    /// its home program, used to resume "continue this program" links.
+    async fn first_program_for_meditation(&self, meditation_id: i64)
+        -> Result<Option<i64>, String>;
 }

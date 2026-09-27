@@ -94,4 +94,18 @@ impl MembershipRepository for SeaOrmMembershipRepository {
             .rows_affected;
         Ok(rows)
     }
+
+    async fn first_program_for_meditation(
+        &self,
+        meditation_id: i64,
+    ) -> Result<Option<i64>, String> {
+        let model = table::Entity::find()
+            .filter(table::Column::MeditationId.eq(meditation_id))
+            .order_by_asc(table::Column::AddedAt)
+            .order_by_asc(table::Column::Id)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(model.map(|row| row.program_id))
+    }
 }

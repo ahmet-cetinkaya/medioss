@@ -1,4 +1,5 @@
 //! Queries: read-only meditation use-cases, one file per query.
+mod get_continue_program;
 mod get_meditation;
 mod get_playback_state;
 mod list_categories;
@@ -7,6 +8,7 @@ mod list_notes;
 mod list_program_members;
 mod list_programs;
 
+pub use get_continue_program::{get_continue_program, ContinueProgram};
 pub use get_meditation::get_meditation;
 pub use get_playback_state::get_playback_state;
 pub use list_categories::list_categories;

@@ -2,7 +2,9 @@
 use async_trait::async_trait;
 use kernel::UserId;
 use meditation_application::ports::{PlaybackState, PlaybackStateRepository};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
+};
 
 use crate::persistence::entities::playback_state as table;
 
@@ -97,5 +99,15 @@ impl PlaybackStateRepository for SeaOrmPlaybackRepository {
             position_ms: row.position_ms,
             completed: row.completed,
         }))
+    }
+
+    async fn most_recent_meditation_id(&self, user_id: UserId) -> Result<Option<i64>, String> {
+        let model = table::Entity::find()
+            .filter(table::Column::UserId.eq(user_id.value()))
+            .order_by_desc(table::Column::UpdatedAt)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(model.map(|row| row.meditation_id))
     }
 }

@@ -70,6 +70,10 @@ pub fn meditation_router() -> Router<SharedDependencies> {
                 )),
         )
         .route(
+            "/meditation/continue",
+            get(crate::handlers_programs::continue_program),
+        )
+        .route(
             "/meditation/programs/{id}",
             get(crate::handlers_programs::program)
                 .put(crate::handlers_programs::update_program)

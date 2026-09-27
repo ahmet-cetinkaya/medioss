@@ -168,6 +168,37 @@ pub async fn program(
     Ok(Json(program_response(&found, progress)))
 }
 
+#[derive(Serialize)]
+pub struct ContinueProgramResponse {
+    pub program: ProgramResponse,
+    pub meditation_id: i64,
+}
+
+/// `GET /meditation/continue` — the program holding the caller's most
+/// recently touched meditation, or `204` when there is none yet.
+pub async fn continue_program(
+    CurrentActor(actor): CurrentActor,
+    State(deps): State<SharedDependencies>,
+) -> Result<Response, ApiError> {
+    let found = queries::get_continue_program(
+        deps.playback.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
+        actor.user_id(),
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    let Some(found) = found else {
+        return Ok(StatusCode::NO_CONTENT.into_response());
+    };
+    let progress = progress_for(&deps, actor.user_id(), found.program.id).await;
+    Ok(Json(ContinueProgramResponse {
+        program: program_response(&found.program, progress),
+        meditation_id: found.meditation_id,
+    })
+    .into_response())
+}
+
 /// `POST /meditation/programs` — admin multipart create (title,
 /// description, optional cover file) (spec FR-025/026).
 pub async fn create_program(

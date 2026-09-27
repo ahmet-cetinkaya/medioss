@@ -75,6 +75,18 @@ export async function fetchPrograms(): Promise<Program[]> {
   return request<Program[]>("/api/meditation/programs");
 }
 
+export interface ContinueProgram {
+  program: Program;
+  meditation_id: number;
+}
+
+export async function fetchContinueProgram(): Promise<ContinueProgram | null> {
+  return (
+    (await request<ContinueProgram | undefined>("/api/meditation/continue")) ??
+    null
+  );
+}
+
 export async function fetchCategories(): Promise<Category[]> {
   return request<Category[]>("/api/meditation/categories");
 }

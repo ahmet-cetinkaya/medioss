@@ -232,6 +232,9 @@ pub struct RepoState {
     pub sessions: Arc<Mutex<Vec<MeditationSession>>>,
     pub notes: Arc<Mutex<Vec<Note>>>,
     pub playback: Arc<Mutex<std::collections::HashMap<(i64, i64), PlaybackState>>>,
+    /// Touch order for playback rows, oldest first; mirrors the real
+    /// repository's `updated_at` ordering for `most_recent_meditation_id`.
+    pub playback_touches: Arc<Mutex<Vec<(i64, i64)>>>,
 }
 
 impl RepoState {
@@ -545,6 +548,23 @@ impl MembershipRepository for FakeMembershipRepository {
         rows.retain(|membership| membership.meditation_id != meditation_id);
         Ok((len - rows.len()) as u64)
     }
+
+    async fn first_program_for_meditation(
+        &self,
+        meditation_id: i64,
+    ) -> Result<Option<i64>, String> {
+        let mut rows: Vec<Membership> = self
+            .0
+            .memberships
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|membership| membership.meditation_id == meditation_id)
+            .cloned()
+            .collect();
+        rows.sort_by_key(|membership| membership.added_at);
+        Ok(rows.first().map(|membership| membership.program_id))
+    }
 }
 
 /// SessionRepository fake honoring the (user, meditation, started_at) key.
@@ -676,6 +696,16 @@ impl NoteRepository for FakeNoteRepository {
 #[derive(Clone)]
 pub struct FakePlaybackRepository(pub RepoState);
 
+impl FakePlaybackRepository {
+    fn touch(&self, user_id: UserId, meditation_id: i64) {
+        let mut touches = self.0.playback_touches.lock().unwrap();
+        touches.retain(|(existing_user, existing_meditation)| {
+            !(*existing_user == user_id.value() && *existing_meditation == meditation_id)
+        });
+        touches.push((user_id.value(), meditation_id));
+    }
+}
+
 #[async_trait::async_trait]
 impl PlaybackStateRepository for FakePlaybackRepository {
     async fn upsert_position(
@@ -692,6 +722,7 @@ impl PlaybackStateRepository for FakePlaybackRepository {
                 completed: false,
             });
         state.position_ms = position_ms;
+        self.touch(user_id, meditation_id);
         Ok(())
     }
 
@@ -709,6 +740,7 @@ impl PlaybackStateRepository for FakePlaybackRepository {
                 completed: false,
             });
         state.completed = completed;
+        self.touch(user_id, meditation_id);
         Ok(())
     }
 
@@ -732,5 +764,17 @@ impl PlaybackStateRepository for FakePlaybackRepository {
             .unwrap()
             .get(&(user_id.value(), meditation_id))
             .copied())
+    }
+
+    async fn most_recent_meditation_id(&self, user_id: UserId) -> Result<Option<i64>, String> {
+        Ok(self
+            .0
+            .playback_touches
+            .lock()
+            .unwrap()
+            .iter()
+            .rev()
+            .find(|(touched_user, _)| *touched_user == user_id.value())
+            .map(|(_, meditation_id)| *meditation_id))
     }
 }
