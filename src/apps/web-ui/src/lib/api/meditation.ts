@@ -53,8 +53,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     };
     throw new Error(body.error ?? `request failed (${response.status})`);
   }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  // 204 is not the only empty-body success: handlers like add-member
+  // answer 201 with no payload, so parse only when a body exists.
+  if (
+    response.status === 204 ||
+    response.headers.get("content-length") === "0"
+  ) {
+    return undefined as T;
+  }
+  const text = await response.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 export async function fetchLibrary(): Promise<Meditation[]> {
