@@ -126,7 +126,7 @@ async fn memberships_are_idempotent_on_the_pair() {
         .await
         .unwrap();
     let program = programs
-        .insert("P".to_owned(), None, None, Utc::now())
+        .insert("P".to_owned(), None, Utc::now())
         .await
         .unwrap();
 
@@ -308,7 +308,7 @@ async fn program_category_sweep_nulls_references() {
         .await
         .unwrap();
     let program = programs
-        .insert("P".to_owned(), None, None, Utc::now())
+        .insert("P".to_owned(), None, Utc::now())
         .await
         .unwrap();
     programs

@@ -80,6 +80,20 @@ impl MeditationRepository for SeaOrmMeditationRepository {
             })
     }
 
+    async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {
+        let Some(model) = table::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
+            return Err(format!("meditation {id} vanished mid-relocation"));
+        };
+        let mut row: table::ActiveModel = model.into();
+        row.storage_key = Set(key.to_owned());
+        row.update(&self.db).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     async fn delete(&self, id: i64) -> Result<bool, String> {
         let rows = table::Entity::delete_by_id(id)
             .exec(&self.db)

@@ -22,4 +22,7 @@ pub trait MeditationRepository: Send + Sync {
 
     /// Deletes a meditation row; `false` when the identifier is unknown.
     async fn delete(&self, id: i64) -> Result<bool, String>;
+
+    /// Updates the stored location after a file relocation.
+    async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String>;
 }

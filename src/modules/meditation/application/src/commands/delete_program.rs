@@ -1,18 +1,25 @@
-//! Deletes a program: memberships and cover bytes go, meditations stay.
-use crate::ports::{BlobStore, MembershipRepository, ProgramRepository};
+//! Deletes a program: memberships go, the folder goes, and member
+//! meditations survive by relocating their files to the shared `_unfiled`
+//! folder (spec FR-028 + user direction).
+use crate::ports::{BlobStore, MeditationRepository, MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 
-/// Deletes a program (spec FR-028). Note: memberships are removed through
-/// the program's membership sweep, mirroring the repository contract.
-pub async fn delete_program<P, M, S>(
+const UNFILED: &str = "_unfiled";
+
+/// Deletes a program (spec FR-028). Every member meditation's file moves to
+/// `_unfiled/` and its storage key is updated; the program folder and cover
+/// are then removed.
+pub async fn delete_program<P, M, S, R>(
     programs: &P,
     memberships: &M,
+    meditations: &R,
     store: &S,
     program_id: i64,
 ) -> Result<(), ApplicationError>
 where
     P: ProgramRepository + ?Sized,
     M: MembershipRepository + ?Sized,
+    R: MeditationRepository + ?Sized,
     S: BlobStore + ?Sized,
 {
     let Some(program) = programs
@@ -22,9 +29,6 @@ where
     else {
         return Err(ApplicationError::NotFound);
     };
-    // The fake and SeaORM repositories expose remove_for_meditation; a
-    // program-scoped sweep is expressed as listing and removing each pair
-    // so the port stays minimal.
     for membership in memberships
         .list_by_program(program_id)
         .await
@@ -34,12 +38,30 @@ where
             .remove(program_id, membership.meditation_id)
             .await
             .map_err(ApplicationError::Repository)?;
-    }
-    if let Some(key) = program.cover_storage_key {
-        store
-            .delete(&key)
+        // Relocate the file only when it still lives under this program's
+        // folder (an upload from a different program keeps its own folder).
+        if let Some(meditation) = meditations
+            .find_by_id(membership.meditation_id)
             .await
-            .map_err(ApplicationError::Storage)?;
+            .map_err(ApplicationError::Repository)?
+        {
+            let key = meditation.storage_key().to_owned();
+            if key.starts_with(&format!("{}/", program.folder)) {
+                let name = meditation.name().to_owned();
+                let new_key = store
+                    .relocate(&key, UNFILED, &name, "opus")
+                    .await
+                    .map_err(ApplicationError::Storage)?;
+                meditations
+                    .set_storage_key(meditation.id(), &new_key)
+                    .await
+                    .map_err(ApplicationError::Repository)?;
+            }
+        }
     }
+    store
+        .delete_folder(&program.folder)
+        .await
+        .map_err(ApplicationError::Storage)?;
     Ok(())
 }

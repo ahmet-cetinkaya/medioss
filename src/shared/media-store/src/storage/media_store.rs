@@ -1,18 +1,59 @@
 use std::path::PathBuf;
 
-use crate::storage::{
-    error::MediaStoreError, media_stream::MediaStream, storage_key::StorageKey,
-    storage_namespace::StorageNamespace,
-};
+use crate::storage::{error::MediaStoreError, media_stream::MediaStream, storage_key::StorageKey};
 
-/// A filesystem blob store: writes, opens, and deletes opaque-keyed files
-/// under `root/<namespace>/`. Keys are generated here and validated by
+/// Sanitizes a caller-supplied name segment into a path-safe slug: lowercase
+/// ASCII alphanumerics and dashes. The store trusts nobody: whatever the
+/// caller passes, only characters from its own allowlist reach the path.
+fn slugify(input: &str, max_len: usize) -> String {
+    let folded = input
+        .chars()
+        .flat_map(|character| character.to_lowercase())
+        .map(|character| match character {
+            'ç' => 'c',
+            'ğ' => 'g',
+            'ı' => 'i',
+            'ö' => 'o',
+            'ş' => 's',
+            'ü' => 'u',
+            '_' => '_',
+            other if other.is_ascii_alphanumeric() => other,
+            _ => '-',
+        })
+        .collect::<String>();
+    let mut slug = String::new();
+    let mut previous_dash = false;
+    for character in folded.chars() {
+        if character == '-' {
+            if !previous_dash && !slug.is_empty() {
+                slug.push('-');
+                previous_dash = true;
+            }
+        } else {
+            slug.push(character);
+            previous_dash = false;
+        }
+        if slug.chars().count() >= max_len {
+            break;
+        }
+    }
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+    slug
+}
+
+/// A filesystem blob store: writes, opens, moves, and deletes files under
+/// `root/`. Keys are full relative paths produced here and validated by
 /// [`StorageKey::parse`] on the way back in, so no user-controlled string
-/// ever reaches a resolved path.
+/// ever reaches a resolved path unfiltered.
 #[derive(Debug, Clone)]
 pub struct MediaStore {
     root: PathBuf,
 }
+
+/// Suffix entropy: 24 bits, hex-encoded (the store retries on collision).
+const SUFFIX_LEN: usize = 6;
 
 impl MediaStore {
     /// Builds a store rooted at `root` (typically `$MEDIOSS_DATA_DIR/media`).
@@ -20,17 +61,42 @@ impl MediaStore {
         Self { root }
     }
 
-    fn blob_path(&self, ns: StorageNamespace, key: &StorageKey) -> PathBuf {
-        self.root.join(ns.as_str()).join(key.as_str())
+    fn blob_path(&self, key: &StorageKey) -> PathBuf {
+        self.root.join(key.as_str())
     }
 
-    /// Persists `bytes` under a freshly generated key and returns it.
+    /// Generates a fresh random hex suffix.
+    fn random_suffix() -> String {
+        // Same construction as StorageKey::generate: time + counter mix.
+        // Uniqueness is enforced by O_EXCL; the suffix only keeps retries rare.
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_nanos() as u64)
+            .unwrap_or(0);
+        static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let count = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let mix = nanos ^ (count.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        let tail = mix as u32 as u64 ^ (mix >> 32);
+        format!("{tail:0width$x}", width = SUFFIX_LEN)
+    }
+
+    /// Persists `bytes` under `folder/{slug}-{suffix}.{ext}` and returns the
+    /// full relative key. Both `folder` and `stem` are slugified here — the
+    /// path is built entirely from the store's own allowlist.
     pub async fn put(
         &self,
-        ns: StorageNamespace,
+        folder: &str,
+        stem: &str,
+        ext: &str,
         bytes: &[u8],
     ) -> Result<StorageKey, MediaStoreError> {
-        let dir = self.root.join(ns.as_str());
+        let folder = slugify(folder, 48);
+        let stem = slugify(stem, 48);
+        let ext: String = ext
+            .chars()
+            .filter(|character| character.is_ascii_alphanumeric())
+            .collect();
+        let dir = self.root.join(&folder);
         tokio::fs::create_dir_all(&dir)
             .await
             .map_err(|source| MediaStoreError::Io {
@@ -38,13 +104,19 @@ impl MediaStore {
                 source,
             })?;
 
-        // Loop until the generated key collides with nothing: 128 bits of
-        // randomness make a second iteration astronomically unlikely.
         loop {
-            let key = StorageKey::generate();
-            let final_path = self.blob_path(ns, &key);
-            let temp_path = self.blob_path(ns, &key).with_extension("tmp");
-            // O_EXCL-style create: never clobber an existing blob.
+            let suffix = Self::random_suffix();
+            let key = format!(
+                "{folder}/{}-{suffix}.{ext}",
+                if stem.is_empty() {
+                    "file"
+                } else {
+                    stem.as_str()
+                }
+            );
+            let key = StorageKey::parse_with_separator(&key)?;
+            let final_path = self.blob_path(&key);
+            let temp_path = final_path.with_extension("tmp");
             let file = tokio::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -70,7 +142,6 @@ impl MediaStore {
                     return Ok(key);
                 }
                 Err(source) if source.kind() == std::io::ErrorKind::AlreadyExists => {
-                    // Collision on the temp name: regenerate and retry.
                     let _ = tokio::fs::remove_file(&temp_path).await;
                     continue;
                 }
@@ -84,17 +155,75 @@ impl MediaStore {
         }
     }
 
-    /// Opens a stored blob for reading.
-    pub async fn open(
+    /// Moves a blob from one key to another (same store). Used when a
+    /// program folder goes away and its meditations relocate.
+    pub async fn rename(
         &self,
-        ns: StorageNamespace,
-        key: &StorageKey,
-    ) -> Result<MediaStream, MediaStoreError> {
-        let path = self.blob_path(ns, key);
+        from: &StorageKey,
+        to_folder: &str,
+        to_stem: &str,
+        to_ext: &str,
+    ) -> Result<StorageKey, MediaStoreError> {
+        let source_path = self.blob_path(from);
+        let folder = slugify(to_folder, 48);
+        let stem = slugify(to_stem, 48);
+        let ext: String = to_ext
+            .chars()
+            .filter(|character| character.is_ascii_alphanumeric())
+            .collect();
+        let dir = self.root.join(&folder);
+        tokio::fs::create_dir_all(&dir)
+            .await
+            .map_err(|source| MediaStoreError::Io {
+                path: dir.display().to_string(),
+                source,
+            })?;
+        loop {
+            let suffix = Self::random_suffix();
+            let key = format!(
+                "{folder}/{}-{suffix}.{ext}",
+                if stem.is_empty() {
+                    "file"
+                } else {
+                    stem.as_str()
+                }
+            );
+            let key = StorageKey::parse_with_separator(&key)?;
+            let target = self.blob_path(&key);
+            match tokio::fs::rename(&source_path, &target).await {
+                Ok(()) => return Ok(key),
+                Err(source) if source.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(source) => {
+                    return Err(MediaStoreError::Io {
+                        path: source_path.display().to_string(),
+                        source,
+                    });
+                }
+            }
+        }
+    }
+
+    /// Removes a folder and everything under it (a program folder on
+    /// program delete). Absent folders are not an error.
+    pub async fn delete_folder(&self, folder: &str) -> Result<(), MediaStoreError> {
+        let folder = slugify(folder, 48);
+        let path = self.root.join(&folder);
+        match tokio::fs::remove_dir_all(&path).await {
+            Ok(()) => Ok(()),
+            Err(source) if source.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(source) => Err(MediaStoreError::Io {
+                path: path.display().to_string(),
+                source,
+            }),
+        }
+    }
+
+    /// Opens a stored blob for reading.
+    pub async fn open(&self, key: &StorageKey) -> Result<MediaStream, MediaStoreError> {
+        let path = self.blob_path(key);
         let file = tokio::fs::File::open(&path).await.map_err(|source| {
             if source.kind() == std::io::ErrorKind::NotFound {
                 MediaStoreError::NotFound {
-                    namespace: ns,
                     key: key.as_str().to_owned(),
                 }
             } else {
@@ -107,17 +236,13 @@ impl MediaStore {
         Ok(MediaStream::new(file))
     }
 
-    /// Deletes a stored blob; an absent key is reported as [`MediaStoreError::NotFound`].
-    pub async fn delete(
-        &self,
-        ns: StorageNamespace,
-        key: &StorageKey,
-    ) -> Result<(), MediaStoreError> {
-        let path = self.blob_path(ns, key);
+    /// Deletes a stored blob; an absent key is reported as
+    /// [`MediaStoreError::NotFound`].
+    pub async fn delete(&self, key: &StorageKey) -> Result<(), MediaStoreError> {
+        let path = self.blob_path(key);
         tokio::fs::remove_file(&path).await.map_err(|source| {
             if source.kind() == std::io::ErrorKind::NotFound {
                 MediaStoreError::NotFound {
-                    namespace: ns,
                     key: key.as_str().to_owned(),
                 }
             } else {

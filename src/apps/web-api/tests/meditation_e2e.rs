@@ -336,10 +336,38 @@ async fn m2_full_battery() {
         .await;
     assert_eq!(response.status, 401);
 
-    // --- Admin uploads an MP3; it is stored as Opus (FR-001/038).
+    // --- Admin creates a program (uploads now belong to one, user
+    // direction) and uploads an MP3 into it; it is stored as Opus (FR-001/038).
+    let (content_type, program_body) = multipart_body(&[
+        ("title", "", b"Morning Program".to_vec()),
+        ("description", "", b"e2e program".to_vec()),
+    ]);
+    let response = server
+        .request(
+            "POST",
+            "/api/meditation/programs",
+            &[
+                origin(),
+                ("cookie".to_owned(), admin_cookie.clone()),
+                ("content-type".to_owned(), content_type),
+            ],
+            Some(program_body),
+        )
+        .await;
+    assert_eq!(response.status, 201, "program create: {}", response.text());
+    let program_id: i64 = {
+        let text = response.text();
+        let start = text.find("\"id\":").map(|index| index + 5).unwrap();
+        let end = text[start..]
+            .find(',')
+            .map(|index| start + index)
+            .unwrap_or(text.len());
+        text[start..end].parse().unwrap()
+    };
     let mp3 = mp3_fixture();
     let (content_type, body) = multipart_body(&[
         ("name", "", b"Morning Meditation".to_vec()),
+        ("program_id", "", program_id.to_string().into_bytes()),
         ("file", "morning.mp3", mp3),
     ]);
     let response = server
@@ -447,6 +475,7 @@ async fn m2_full_battery() {
     // --- Garbage bytes named .mp3: 415, nothing stored (FR-004, SC-003).
     let (content_type, body) = multipart_body(&[
         ("name", "", b"Fake".to_vec()),
+        ("program_id", "", program_id.to_string().into_bytes()),
         ("file", "fake.mp3", b"definitely not audio".to_vec()),
     ]);
     let response = server
@@ -477,6 +506,7 @@ async fn m2_full_battery() {
     let wav = wav_fixture();
     let (content_type, body) = multipart_body(&[
         ("name", "", b"Windy Evening".to_vec()),
+        ("program_id", "", program_id.to_string().into_bytes()),
         ("file", "windy.wav", wav.clone()),
     ]);
     let response = server

@@ -18,6 +18,30 @@ const KEY_ALPHABET: &[u8; 16] = b"0123456789abcdef";
 pub struct StorageKey(String);
 
 impl StorageKey {
+    /// Validates a key containing exactly one `/` folder separator
+    /// (folder + file), each segment under the same character allowlist.
+    pub fn parse_with_separator(value: impl Into<String>) -> Result<Self, MediaStoreError> {
+        let key = value.into();
+        let valid =
+            key.split('/').collect::<Vec<_>>() == [key.split('/').next_back().unwrap_or("")] || {
+                let parts: Vec<&str> = key.split('/').collect();
+                parts.len() == 2
+                    && parts.iter().all(|part| {
+                        !part.is_empty()
+                            && part.len() <= MAX_KEY_LEN
+                            && !part.contains("..")
+                            && part.chars().all(|character| {
+                                character.is_ascii_alphanumeric()
+                                    || matches!(character, '.' | '_' | '-')
+                            })
+                    })
+            };
+        if !valid {
+            return Err(MediaStoreError::InvalidKey { key });
+        }
+        Ok(Self(key))
+    }
+
     /// Generates a fresh opaque key: 128 random hex characters of entropy,
     /// never derived from any user input.
     pub fn generate() -> Self {

@@ -1,7 +1,9 @@
-//! Uploads audio: sniffs, converts to Opus, stores, persists the row.
+//! Uploads audio into a program folder: sniffs, converts to Opus, stores,
+//! persists the row, and records the first program membership (spec FR-001).
 use crate::commands::{validate_name, MAX_UPLOAD_BYTES};
 use crate::ports::{
-    AudioValidator, BlobStore, Clock, ConvertError, MeditationRepository, OpusConverter,
+    AudioValidator, BlobStore, Clock, ConvertError, MeditationRepository, MembershipRepository,
+    OpusConverter, ProgramRepository,
 };
 use crate::ApplicationError;
 
@@ -14,15 +16,20 @@ fn map_convert_error(error: ConvertError) -> ApplicationError {
     }
 }
 
-/// Uploads meditation audio. Garbage bytes, oversized payloads, and
-/// conversion failures leave nothing stored (spec FR-001..004).
-pub async fn upload_meditation<R, V, C, S, K>(
+/// Uploads meditation audio belonging to `program_id` (the first, mandatory
+/// program). Garbage bytes, oversized payloads, and conversion failures
+/// leave nothing stored (spec FR-001..004).
+#[allow(clippy::too_many_arguments)]
+pub async fn upload_meditation<R, V, C, S, K, M, P>(
     repository: &R,
+    memberships: &M,
+    programs: &P,
     validator: &V,
     converter: &C,
     store: &S,
     clock: &K,
     name: &str,
+    program_id: i64,
     bytes: Vec<u8>,
 ) -> Result<meditation_domain::Meditation, ApplicationError>
 where
@@ -31,11 +38,18 @@ where
     C: OpusConverter + ?Sized,
     S: BlobStore + ?Sized,
     K: Clock + ?Sized,
+    M: MembershipRepository + ?Sized,
+    P: ProgramRepository + ?Sized,
 {
     validate_name(name)?;
     if bytes.len() > MAX_UPLOAD_BYTES {
         return Err(ApplicationError::PayloadTooLarge);
     }
+    let program = programs
+        .find_by_id(program_id)
+        .await
+        .map_err(ApplicationError::Repository)?
+        .ok_or(ApplicationError::NotFound)?;
     let format = validator
         .sniff(&bytes)
         .await
@@ -45,10 +59,10 @@ where
         .await
         .map_err(map_convert_error)?;
     let blob = store
-        .put(&stored_bytes)
+        .put(&program.folder, name, "opus", &stored_bytes)
         .await
         .map_err(ApplicationError::Storage)?;
-    match repository
+    let meditation = match repository
         .insert(
             name.trim().to_owned(),
             meditation_domain::STORED_CONTENT_TYPE,
@@ -58,12 +72,16 @@ where
         )
         .await
     {
-        Ok(meditation) => Ok(meditation),
+        Ok(meditation) => meditation,
         Err(error) => {
             // The row is the source of truth: with no row, the blob must not
             // survive either. Best effort — the insert error is primary.
             let _ = store.delete(&blob.storage_key).await;
-            Err(ApplicationError::Repository(error))
+            return Err(ApplicationError::Repository(error));
         }
-    }
+    };
+    memberships
+        .add(program_id, meditation.id(), clock.now().await)
+        .await;
+    Ok(meditation)
 }

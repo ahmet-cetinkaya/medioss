@@ -50,6 +50,7 @@ pub async fn upload(
     // past the name limit in memory.
     let max_text = commands::MAX_NAME_LENGTH * 4;
     let mut name: Option<String> = None;
+    let mut program_id: Option<i64> = None;
     let mut bytes: Option<Vec<u8>> = None;
 
     while let Some(mut field) = multipart
@@ -58,6 +59,20 @@ pub async fn upload(
         .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?
     {
         match field.name() {
+            Some("program_id") => {
+                let mut text = Vec::new();
+                while let Ok(Some(chunk)) = field.chunk().await {
+                    text.extend_from_slice(&chunk);
+                    if text.len() > 32 {
+                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                    }
+                }
+                program_id = Some(
+                    String::from_utf8_lossy(&text)
+                        .parse::<i64>()
+                        .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?,
+                );
+            }
             Some("name") => {
                 let mut text = Vec::new();
                 while let Ok(Some(chunk)) = field.chunk().await {
@@ -85,15 +100,19 @@ pub async fn upload(
     }
 
     let name = name.ok_or(ApiError::StatusCode(StatusCode::BAD_REQUEST))?;
+    let program_id = program_id.ok_or(ApiError::StatusCode(StatusCode::BAD_REQUEST))?;
     let bytes = bytes.ok_or(ApiError::StatusCode(StatusCode::BAD_REQUEST))?;
 
     let meditation = commands::upload_meditation(
         deps.meditations.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
         deps.validator.as_ref(),
         deps.converter.as_ref(),
         deps.store.as_ref(),
         deps.clock.as_ref(),
         &name,
+        program_id,
         bytes,
     )
     .await
@@ -355,7 +374,7 @@ pub(crate) async fn upload_for_tests(
     bytes: Vec<u8>,
 ) -> meditation_domain::Meditation {
     use meditation_application::ports::BlobStore as _;
-    let blob = store.put(&bytes).await.unwrap();
+    let blob = store.put("holder", "seed", "opus", &bytes).await.unwrap();
     meditation_domain::Meditation::new(
         1,
         "Seed",

@@ -279,6 +279,7 @@ pub async fn delete_program(
     commands::delete_program(
         deps.programs.as_ref(),
         deps.memberships.as_ref(),
+        deps.meditations.as_ref(),
         deps.store.as_ref(),
         id,
     )

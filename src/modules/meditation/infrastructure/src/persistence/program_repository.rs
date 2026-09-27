@@ -24,6 +24,7 @@ fn to_domain(model: table::Model) -> Result<Program, String> {
     Ok(Program {
         id: model.id,
         title: model.title,
+        folder: model.folder,
         description: model.description,
         cover_storage_key: model.cover_storage_key,
         category_id: model.category_id,
@@ -37,19 +38,34 @@ impl ProgramRepository for SeaOrmProgramRepository {
         &self,
         title: String,
         description: Option<String>,
-        cover_storage_key: Option<String>,
         created_at: DateTime<Utc>,
     ) -> Result<Program, String> {
+        let folder = crate::persistence::folder_for(&title, crate::persistence::model_suffix());
         let row = table::ActiveModel {
             title: Set(title),
+            folder: Set(folder),
             description: Set(description),
-            cover_storage_key: Set(cover_storage_key),
+            cover_storage_key: Set(None),
             category_id: Set(None),
             created_at: Set(created_at.to_rfc3339()),
             ..Default::default()
         };
         let model = row.insert(&self.db).await.map_err(|e| e.to_string())?;
         to_domain(model)
+    }
+
+    async fn set_cover_key(&self, id: i64, key: &str) -> Result<bool, String> {
+        let Some(model) = table::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(false);
+        };
+        let mut row: table::ActiveModel = model.into();
+        row.cover_storage_key = Set(Some(key.to_owned()));
+        row.update(&self.db).await.map_err(|e| e.to_string())?;
+        Ok(true)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Program>, String> {

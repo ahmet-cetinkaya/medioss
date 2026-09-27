@@ -36,15 +36,34 @@ impl Deps {
         }
     }
 
+    /// A ready program whose folder receives uploads in tests.
+    async fn seed_program_id(&self) -> i64 {
+        create_program(
+            &self.programs,
+            &FakeCoverValidator,
+            &self.store,
+            &self.clock,
+            "Holder Program",
+            None,
+            None,
+        )
+        .await
+        .expect("holder program")
+        .id
+    }
     /// A ready-made stored meditation row the other commands can reference.
     async fn seeded_meditation(&self) -> meditation_domain::Meditation {
+        let program_id = self.seed_program_id().await;
         upload_meditation(
             &self.meditations,
+            &self.memberships,
+            &self.programs,
             &FakeValidator,
             &FakeConverter { fail: false },
             &self.store,
             &self.clock,
             "Seed",
+            program_id,
             b"OggS....OpusHead".to_vec(),
         )
         .await
@@ -67,11 +86,14 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
 
     let blank = upload_meditation(
         &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
         &FakeValidator,
         &converter,
         &deps.store,
         &deps.clock,
         "   ",
+        deps.seed_program_id().await,
         b"OggSx".to_vec(),
     )
     .await;
@@ -80,11 +102,14 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
     let long_name = "x".repeat(MAX_NAME_LENGTH + 1);
     let too_long = upload_meditation(
         &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
         &FakeValidator,
         &converter,
         &deps.store,
         &deps.clock,
         &long_name,
+        deps.seed_program_id().await,
         b"OggSx".to_vec(),
     )
     .await;
@@ -92,11 +117,14 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
 
     let garbage = upload_meditation(
         &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
         &FakeValidator,
         &converter,
         &deps.store,
         &deps.clock,
         "Valid name",
+        deps.seed_program_id().await,
         b"not audio at all".to_vec(),
     )
     .await;
@@ -113,11 +141,14 @@ async fn upload_rejects_payloads_over_the_cap_before_anything_stored() {
     oversized[1] = 0xFB;
     let result = upload_meditation(
         &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
         &FakeValidator,
         &FakeConverter { fail: false },
         &deps.store,
         &deps.clock,
         "Big",
+        deps.seed_program_id().await,
         oversized,
     )
     .await;
@@ -134,11 +165,14 @@ async fn upload_failure_after_store_leaves_no_blob() {
     *deps.store.failures.lock().unwrap() = true;
     let result = upload_meditation(
         &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
         &FakeValidator,
         &FakeConverter { fail: false },
         &deps.store,
         &deps.clock,
         "Valid",
+        deps.seed_program_id().await,
         b"OggS....OpusHead".to_vec(),
     )
     .await;
@@ -410,13 +444,23 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     .await
     .expect("member");
 
-    delete_program(&deps.programs, &deps.memberships, &deps.store, program.id)
-        .await
-        .expect("delete program");
+    delete_program(
+        &deps.programs,
+        &deps.memberships,
+        &deps.meditations,
+        &deps.store,
+        program.id,
+    )
+    .await
+    .expect("delete program");
 
     assert!(!deps.meditations.0.meditations.lock().unwrap().is_empty());
-    assert!(deps.memberships.0.memberships.lock().unwrap().is_empty());
-    // Only the audio blob remains; the cover blob is gone.
+    let survivors = deps.memberships.0.memberships.lock().unwrap();
+    assert!(
+        survivors.iter().all(|m| m.program_id != program.id),
+        "no membership may reference the deleted program"
+    );
+    // The cover blob is gone; the seed audio (and any holder membership) stays.
     assert_eq!(deps.store.len(), 1);
 }
 

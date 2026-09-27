@@ -7,6 +7,8 @@ use chrono::{DateTime, Utc};
 pub struct Program {
     pub id: i64,
     pub title: String,
+    /// Storage folder name (slug + program-unique suffix), fixed at creation.
+    pub folder: String,
     pub description: Option<String>,
     pub cover_storage_key: Option<String>,
     pub category_id: Option<i64>,
@@ -16,14 +18,16 @@ pub struct Program {
 /// Persists programs and their memberships.
 #[async_trait]
 pub trait ProgramRepository: Send + Sync {
-    /// Inserts a program row, assigning its identifier.
+    /// Inserts a program row, assigning its identifier and storage folder.
     async fn insert(
         &self,
         title: String,
         description: Option<String>,
-        cover_storage_key: Option<String>,
         created_at: DateTime<Utc>,
     ) -> Result<Program, String>;
+
+    /// Records the stored cover location; `false` when the program is unknown.
+    async fn set_cover_key(&self, id: i64, key: &str) -> Result<bool, String>;
 
     /// Finds a program by identifier.
     async fn find_by_id(&self, id: i64) -> Result<Option<Program>, String>;

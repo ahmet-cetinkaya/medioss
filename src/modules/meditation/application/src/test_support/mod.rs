@@ -136,15 +136,25 @@ impl FakeBlobStore {
 
 #[async_trait::async_trait]
 impl BlobStore for FakeBlobStore {
-    async fn put(&self, bytes: &[u8]) -> Result<StoredBlob, String> {
+    async fn put(
+        &self,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+        bytes: &[u8],
+    ) -> Result<StoredBlob, String> {
         if *self.failures.lock().unwrap() {
             return Err("store down".to_owned());
         }
-        let key = format!("key{}", {
-            let mut counter = self.counter.lock().unwrap();
-            *counter += 1;
-            *counter
-        });
+        let key = format!(
+            "{folder}/{stem}-{}.{}",
+            {
+                let mut counter = self.counter.lock().unwrap();
+                *counter += 1;
+                *counter
+            },
+            ext
+        );
         self.state
             .lock()
             .unwrap()
@@ -173,6 +183,41 @@ impl BlobStore for FakeBlobStore {
             .get(key)
             .cloned()
             .ok_or_else(|| "no blob".to_owned())
+    }
+
+    async fn relocate(
+        &self,
+        key: &str,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<String, String> {
+        if *self.failures.lock().unwrap() {
+            return Err("store down".to_owned());
+        }
+        let bytes = self
+            .state
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .ok_or_else(|| "no blob".to_owned())?;
+        let new_key = format!("{folder}/{stem}-moved.{ext}");
+        let mut state = self.state.lock().unwrap();
+        state.remove(key);
+        state.insert(new_key.clone(), bytes);
+        Ok(new_key)
+    }
+
+    async fn delete_folder(&self, folder: &str) -> Result<(), String> {
+        if *self.failures.lock().unwrap() {
+            return Err("store down".to_owned());
+        }
+        self.state
+            .lock()
+            .unwrap()
+            .retain(|key, _| !key.starts_with(&format!("{folder}/")));
+        Ok(())
     }
 }
 
@@ -272,6 +317,25 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
         rows.retain(|meditation| meditation.id() != id);
         Ok(rows.len() != len)
     }
+
+    async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {
+        let mut rows = self.0.meditations.lock().unwrap();
+        let index = rows.iter().position(|meditation| meditation.id() == id);
+        let Some(index) = index else {
+            return Err(format!("meditation {id} vanished mid-relocation"));
+        };
+        let replacement = meditation_domain::Meditation::new(
+            rows[index].id(),
+            rows[index].name(),
+            rows[index].content_type(),
+            rows[index].size_bytes(),
+            key,
+            rows[index].created_at(),
+        )
+        .map_err(|error| error.to_string())?;
+        rows[index] = replacement;
+        Ok(())
+    }
 }
 
 /// ProgramRepository fake.
@@ -284,21 +348,37 @@ impl ProgramRepository for FakeProgramRepository {
         &self,
         title: String,
         description: Option<String>,
-        cover_storage_key: Option<String>,
         created_at: DateTime<Utc>,
     ) -> Result<Program, String> {
         let mut rows = self.0.programs.lock().unwrap();
         let id = RepoState::next_id(&rows, |program| program.id);
+        let folder = format!(
+            "{}-{}",
+            title
+                .to_lowercase()
+                .replace(|c: char| !c.is_ascii_alphanumeric(), "-"),
+            id
+        );
         let program = Program {
             id,
             title,
+            folder,
             description,
-            cover_storage_key,
+            cover_storage_key: None,
             category_id: None,
             created_at,
         };
         rows.push(program.clone());
         Ok(program)
+    }
+
+    async fn set_cover_key(&self, id: i64, key: &str) -> Result<bool, String> {
+        let mut rows = self.0.programs.lock().unwrap();
+        let Some(program) = rows.iter_mut().find(|program| program.id == id) else {
+            return Ok(false);
+        };
+        program.cover_storage_key = Some(key.to_owned());
+        Ok(true)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Program>, String> {

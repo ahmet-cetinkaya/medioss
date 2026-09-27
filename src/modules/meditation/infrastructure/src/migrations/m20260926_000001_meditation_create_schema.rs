@@ -24,6 +24,7 @@ impl MigrationTrait for Migration {
             "CREATE TABLE IF NOT EXISTS meditation_programs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
+                folder TEXT NOT NULL UNIQUE,
                 description TEXT NULL,
                 cover_storage_key TEXT NULL,
                 category_id INTEGER NULL,

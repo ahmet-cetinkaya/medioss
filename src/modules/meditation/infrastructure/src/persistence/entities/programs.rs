@@ -7,6 +7,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
     pub title: String,
+    pub folder: String,
     pub description: Option<String>,
     pub cover_storage_key: Option<String>,
     pub category_id: Option<i64>,
