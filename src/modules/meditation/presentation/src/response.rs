@@ -53,15 +53,17 @@ impl IntoResponse for ApiError {
     }
 }
 
-/// Strict same-origin check, mirroring identity's router (CSRF defense for
-/// the cookie-authenticated surface).
+/// Strict same-origin guard for state-changing routes, mirroring
+/// identity's router: a request whose Origin header is present and
+/// mismatched is rejected; a same-origin browser request (no Origin
+/// header, cookies sent first-party) passes.
 pub fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
     let origin = headers
         .get("origin")
         .and_then(|value| value.to_str().ok())
         .unwrap_or("");
-    if origin != expected {
-        return Err(ApiError::StatusCode(StatusCode::FORBIDDEN));
+    if origin.is_empty() || origin.eq_ignore_ascii_case(expected) {
+        return Ok(());
     }
-    Ok(())
+    Err(ApiError::StatusCode(StatusCode::FORBIDDEN))
 }

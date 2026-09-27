@@ -212,7 +212,10 @@ async fn e2e_setup_login_me_logout_and_cli_reset() {
         .await;
     assert_eq!(wrong_secret.status, 403);
 
-    // 4. Setup rejects a missing Origin (CSRF).
+    // 4. Setup without an Origin header still creates the admin: a
+    // same-origin browser request carries no Origin header (cookies sent
+    // first-party). The setup secret alone gates it; only a mismatched
+    // Origin is CSRF-relevant.
     let no_origin = server
         .request(
             "POST",
@@ -221,20 +224,10 @@ async fn e2e_setup_login_me_logout_and_cli_reset() {
             Some(r#"{"email":"admin@example.com","password":"long-enough-pass"}"#),
         )
         .await;
-    assert_eq!(no_origin.status, 403);
+    assert_eq!(no_origin.status, 201);
 
-    // 5. Correct setup creates the admin.
-    let setup = server
-        .request(
-            "POST",
-            "/api/identity/setup",
-            &headers_origin_secret("e2e-secret-value"),
-            Some(r#"{"email":"admin@example.com","password":"long-enough-pass"}"#),
-        )
-        .await;
-    assert_eq!(setup.status, 201, "setup body: {}", setup.body);
-
-    // 6. Second setup attempt fails: exactly-once semantics.
+    // 5. Second setup attempt fails: exactly-once semantics (the no-origin
+    // request in step 4 already created the admin).
     let second = server
         .request(
             "POST",

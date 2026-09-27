@@ -110,7 +110,10 @@ impl LoginThrottleRepository for EmptyRepository {
         _normalized_identifier: &str,
         _attempted_at: chrono::DateTime<chrono::Utc>,
     ) -> Result<FailedAttempts, RepositoryError> {
-        unreachable!("login tests never reach the throttle with an empty repository")
+        // Reaching the throttle is legitimate for an unknown email (the
+        // response is deliberately uniform); return a fresh zero-count
+        // record instead of panicking.
+        Ok(FailedAttempts::first_failure(_attempted_at))
     }
 
     async fn clear_failed_attempts(
@@ -224,11 +227,27 @@ async fn setup_rejects_wrong_secret_with_forbidden() {
 }
 
 #[tokio::test]
-async fn login_rejects_missing_origin_with_forbidden() {
+async fn login_accepts_missing_origin_but_rejects_mismatched() {
+    // A same-origin browser request carries no Origin header (cookies sent
+    // first-party); it must pass. Only a mismatched Origin is CSRF-relevant.
     let response = app()
         .oneshot(
             Request::post("/identity/login")
                 .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"root@example.com","password":"long-enough"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+
+    let response = app()
+        .oneshot(
+            Request::post("/identity/login")
+                .header("content-type", "application/json")
+                .header("origin", "http://evil.example")
                 .body(Body::from(
                     r#"{"email":"root@example.com","password":"long-enough"}"#,
                 ))
