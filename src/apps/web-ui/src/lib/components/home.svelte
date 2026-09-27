@@ -33,6 +33,13 @@
 		{#if continueProgram}
 			<Card.Root>
 				<Card.Header>
+					{#if continueProgram.program.has_cover}
+						<img
+							src="/api/meditation/programs/{continueProgram.program.id}/cover"
+							alt=""
+							class="mb-3 h-32 w-full rounded-md object-cover"
+						/>
+					{/if}
 					<Card.Title>Continue program</Card.Title>
 					<Card.Description>{continueProgram.program.title}</Card.Description>
 				</Card.Header>
