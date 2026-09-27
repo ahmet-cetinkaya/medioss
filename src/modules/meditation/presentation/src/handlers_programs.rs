@@ -179,6 +179,7 @@ pub async fn create_program(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
 
     let max_cover = commands::MAX_COVER_BYTES;
+    let max_text = commands::MAX_NAME_LENGTH * 4;
     let mut title: Option<String> = None;
     let mut description: Option<String> = None;
     let mut cover: Option<Vec<u8>> = None;
@@ -189,20 +190,25 @@ pub async fn create_program(
     {
         match field.name() {
             Some("title") => {
-                title = Some(
-                    field
-                        .text()
-                        .await
-                        .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?,
-                );
+                let mut text = Vec::new();
+                while let Ok(Some(chunk)) = field.chunk().await {
+                    text.extend_from_slice(&chunk);
+                    if text.len() > max_text {
+                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                    }
+                }
+                title = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("description") => {
-                description = Some(
-                    field
-                        .text()
-                        .await
-                        .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?,
-                );
+                // Descriptions stay modest: ten times the name bound.
+                let mut text = Vec::new();
+                while let Ok(Some(chunk)) = field.chunk().await {
+                    text.extend_from_slice(&chunk);
+                    if text.len() > max_text * 10 {
+                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                    }
+                }
+                description = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("cover") => {
                 let mut buffer = Vec::new();

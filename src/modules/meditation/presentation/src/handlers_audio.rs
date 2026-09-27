@@ -46,6 +46,9 @@ pub async fn upload(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
 
     let max_bytes = commands::MAX_UPLOAD_BYTES;
+    // Text fields are bounded the same way: a streaming field cannot grow
+    // past the name limit in memory.
+    let max_text = commands::MAX_NAME_LENGTH * 4;
     let mut name: Option<String> = None;
     let mut bytes: Option<Vec<u8>> = None;
 
@@ -56,12 +59,14 @@ pub async fn upload(
     {
         match field.name() {
             Some("name") => {
-                name = Some(
-                    field
-                        .text()
-                        .await
-                        .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?,
-                );
+                let mut text = Vec::new();
+                while let Ok(Some(chunk)) = field.chunk().await {
+                    text.extend_from_slice(&chunk);
+                    if text.len() > max_text {
+                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                    }
+                }
+                name = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("file") => {
                 let mut buffer = Vec::new();
