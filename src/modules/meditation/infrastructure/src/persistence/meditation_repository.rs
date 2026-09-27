@@ -3,7 +3,9 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use meditation_application::ports::MeditationRepository;
 use meditation_domain::Meditation;
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
+};
 
 use crate::persistence::entities::meditations as table;
 
@@ -68,19 +70,37 @@ impl MeditationRepository for SeaOrmMeditationRepository {
     }
 
     async fn list_all(&self) -> Result<Vec<Meditation>, String> {
+        // Matches the port contract exactly (`created_at` DESC, then id
+        // DESC): sorting by id alone would misorder rows whose `created_at`
+        // was captured before the insert, letting two concurrent uploads
+        // commit with ids in the opposite order of their creation time.
         table::Entity::find()
-            .order_by_asc(table::Column::Id)
+            .order_by_desc(table::Column::CreatedAt)
+            .order_by_desc(table::Column::Id)
+            .all(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .map(to_domain)
+            .collect()
+    }
+
+    async fn list_by_storage_prefix(&self, prefix: &str) -> Result<Vec<Meditation>, String> {
+        // Escape SQL LIKE metacharacters in the prefix itself; the folder
+        // name is generated (slug + hex suffix) and never user-controlled
+        // free text, but this keeps the query correct regardless.
+        let escaped = prefix
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
+        table::Entity::find()
+            .filter(table::Column::StorageKey.like(format!("{escaped}%")))
             .all(&self.db)
             .await
             .map_err(|e| e.to_string())?
             .into_iter()
             .map(to_domain)
             .collect::<Result<Vec<_>, _>>()
-            // Newest first = highest id first (AUTOINCREMENT monotonic).
-            .map(|mut rows| {
-                rows.reverse();
-                rows
-            })
     }
 
     async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {

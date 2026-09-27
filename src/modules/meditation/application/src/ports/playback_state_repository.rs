@@ -37,10 +37,6 @@ pub trait PlaybackStateRepository: Send + Sync {
         meditation_id: i64,
     ) -> Result<Option<PlaybackState>, String>;
 
-    /// The most recently touched meditation for this user (by `updated_at`),
-    /// used to resume "the last program you started" on the home page.
-    async fn most_recent_meditation_id(&self, user_id: UserId) -> Result<Option<i64>, String>;
-
     /// Every meditation this user has touched, most recently touched first,
     /// paired with the touch timestamp — feeds "recently experienced" and
     /// the history timeline's date grouping. Callers dedupe by program and

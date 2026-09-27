@@ -102,13 +102,7 @@ pub async fn upload(
     {
         match field.name() {
             Some("program_id") => {
-                let mut text = Vec::new();
-                while let Ok(Some(chunk)) = field.chunk().await {
-                    text.extend_from_slice(&chunk);
-                    if text.len() > 32 {
-                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                    }
-                }
+                let text = crate::response::read_field_capped(&mut field, 32).await?;
                 program_id = Some(
                     String::from_utf8_lossy(&text)
                         .parse::<i64>()
@@ -116,24 +110,11 @@ pub async fn upload(
                 );
             }
             Some("name") => {
-                let mut text = Vec::new();
-                while let Ok(Some(chunk)) = field.chunk().await {
-                    text.extend_from_slice(&chunk);
-                    if text.len() > max_text {
-                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                    }
-                }
+                let text = crate::response::read_field_capped(&mut field, max_text).await?;
                 name = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("file") => {
-                let mut buffer = Vec::new();
-                while let Ok(Some(chunk)) = field.chunk().await {
-                    buffer.extend_from_slice(&chunk);
-                    if buffer.len() > max_bytes {
-                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                    }
-                }
-                bytes = Some(buffer);
+                bytes = Some(crate::response::read_field_capped(&mut field, max_bytes).await?);
             }
             _ => {
                 let _ = field.bytes().await;
@@ -194,7 +175,7 @@ pub async fn meditation(
 /// Fills a meditation response's `completed`/`progress_percent` from the
 /// caller's own playback state; every meditation surface must show progress,
 /// so this is not optional decoration.
-async fn with_playback(
+pub(crate) async fn with_playback(
     playback: &dyn meditation_application::ports::PlaybackStateRepository,
     user_id: kernel::UserId,
     meditation: &meditation_domain::Meditation,
@@ -205,7 +186,8 @@ async fn with_playback(
         response.progress_percent = if state.completed {
             100
         } else if meditation.duration_ms() > 0 {
-            ((state.position_ms * 100) / meditation.duration_ms()).clamp(0, 100)
+            (((state.position_ms as i128) * 100) / meditation.duration_ms() as i128).clamp(0, 100)
+                as i64
         } else {
             0
         };
@@ -238,12 +220,19 @@ pub fn parse_range(header: &str, total: u64) -> Result<Option<ByteRange>, Unsati
     if spec.contains(',') {
         return Ok(None);
     }
-    let (start_text, end_text) = spec.split_once('-').ok_or(Unsatisfiable)?;
+    // A malformed range spec (no `-`, or a non-numeric bound) is not a
+    // well-formed-but-unsatisfiable range per FR-012: ignore it and serve
+    // the full body, matching absent/multi-range handling above.
+    let Some((start_text, end_text)) = spec.split_once('-') else {
+        return Ok(None);
+    };
     match (start_text.trim(), end_text.trim()) {
         ("", "") => Ok(None),
         // Suffix form: the last N bytes.
         ("", suffix_text) => {
-            let suffix: u64 = suffix_text.parse().map_err(|_| Unsatisfiable)?;
+            let Ok(suffix) = suffix_text.parse::<u64>() else {
+                return Ok(None);
+            };
             if suffix == 0 || total == 0 {
                 return Err(Unsatisfiable);
             }
@@ -254,7 +243,9 @@ pub fn parse_range(header: &str, total: u64) -> Result<Option<ByteRange>, Unsati
             }))
         }
         (start_text, "") => {
-            let start: u64 = start_text.parse().map_err(|_| Unsatisfiable)?;
+            let Ok(start) = start_text.parse::<u64>() else {
+                return Ok(None);
+            };
             if total == 0 || start >= total {
                 return Err(Unsatisfiable);
             }
@@ -264,8 +255,9 @@ pub fn parse_range(header: &str, total: u64) -> Result<Option<ByteRange>, Unsati
             }))
         }
         (start_text, end_text) => {
-            let start: u64 = start_text.parse().map_err(|_| Unsatisfiable)?;
-            let end: u64 = end_text.parse().map_err(|_| Unsatisfiable)?;
+            let (Ok(start), Ok(end)) = (start_text.parse::<u64>(), end_text.parse::<u64>()) else {
+                return Ok(None);
+            };
             if total == 0 || start >= total || start > end {
                 return Err(Unsatisfiable);
             }

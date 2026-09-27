@@ -17,8 +17,14 @@ where
     P: PlaybackStateRepository + ?Sized,
 {
     ensure_meditation_exists(repository, meditation_id).await?;
-    if position_ms < 0 {
-        return Err(ApplicationError::InvalidInput("position must be >= 0"));
+    // Bounded well above any real meditation's duration; rejects pathological
+    // inputs before they can reach the progress-percent computation instead
+    // of relying solely on wide-integer arithmetic there.
+    const MAX_POSITION_MS: i64 = 30 * 24 * 60 * 60 * 1000;
+    if !(0..=MAX_POSITION_MS).contains(&position_ms) {
+        return Err(ApplicationError::InvalidInput(
+            "position must be between 0 and 30 days in milliseconds",
+        ));
     }
     playback
         .upsert_position(user_id, meditation_id, position_ms)

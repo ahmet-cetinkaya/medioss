@@ -248,10 +248,9 @@ fn user_response(user: &User) -> UserResponse {
 
 fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
     match headers.get("origin").and_then(|value| value.to_str().ok()) {
-        // A same-origin browser request carries no Origin header (cookies
-        // were sent first-party); only a mismatched Origin is a CSRF risk.
-        None => Ok(()),
         Some(origin) if origin.eq_ignore_ascii_case(expected) => Ok(()),
+        // A missing or mismatched Origin is rejected: fail closed rather
+        // than assume any Origin-less request is a same-origin browser one.
         _ => Err(ApiError(ApplicationError::Forbidden)),
     }
 }

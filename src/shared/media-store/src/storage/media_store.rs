@@ -190,16 +190,34 @@ impl MediaStore {
             );
             let key = StorageKey::parse_with_separator(&key)?;
             let target = self.blob_path(&key);
-            match tokio::fs::rename(&source_path, &target).await {
-                Ok(()) => return Ok(key),
+            // `rename` alone would silently overwrite an existing target on
+            // Unix (no O_EXCL-equivalent), so first claim the target path
+            // with `create_new` — a genuine collision is caught here, before
+            // any data moves, instead of destroying whatever already lived
+            // at that key.
+            match tokio::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&target)
+                .await
+            {
+                Ok(_) => {}
                 Err(source) if source.kind() == std::io::ErrorKind::AlreadyExists => continue,
                 Err(source) => {
                     return Err(MediaStoreError::Io {
-                        path: source_path.display().to_string(),
+                        path: target.display().to_string(),
                         source,
                     });
                 }
             }
+            if let Err(source) = tokio::fs::rename(&source_path, &target).await {
+                let _ = tokio::fs::remove_file(&target).await;
+                return Err(MediaStoreError::Io {
+                    path: source_path.display().to_string(),
+                    source,
+                });
+            }
+            return Ok(key);
         }
     }
 
@@ -207,6 +225,12 @@ impl MediaStore {
     /// program delete). Absent folders are not an error.
     pub async fn delete_folder(&self, folder: &str) -> Result<(), MediaStoreError> {
         let folder = slugify(folder, 48);
+        if folder.is_empty() {
+            // An empty slug would resolve to the store root itself
+            // (`root.join("")` == `root`); refuse rather than wipe every
+            // folder under management.
+            return Err(MediaStoreError::InvalidKey { key: folder });
+        }
         let path = self.root.join(&folder);
         match tokio::fs::remove_dir_all(&path).await {
             Ok(()) => Ok(()),

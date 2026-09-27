@@ -27,6 +27,7 @@ where
         .ok_or(ApplicationError::NotFound)?;
     memberships
         .add(program_id, meditation_id, clock.now().await)
-        .await;
+        .await
+        .map_err(ApplicationError::Repository)?;
     Ok(())
 }

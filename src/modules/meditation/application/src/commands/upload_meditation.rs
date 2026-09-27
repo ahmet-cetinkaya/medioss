@@ -81,8 +81,17 @@ where
             return Err(ApplicationError::Repository(error));
         }
     };
-    memberships
+    if let Err(error) = memberships
         .add(program_id, meditation.id(), clock.now().await)
-        .await;
+        .await
+    {
+        // No membership means the meditation is unreachable through any
+        // program (upload requires a home program) — undo the row and the
+        // blob rather than leave an orphaned, unfiled meditation with a
+        // successful-looking response.
+        let _ = repository.delete(meditation.id()).await;
+        let _ = store.delete(&blob.storage_key).await;
+        return Err(ApplicationError::Repository(error));
+    }
     Ok(meditation)
 }

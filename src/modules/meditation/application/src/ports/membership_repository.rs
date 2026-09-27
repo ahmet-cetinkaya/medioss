@@ -14,7 +14,12 @@ pub struct Membership {
 pub trait MembershipRepository: Send + Sync {
     /// Adds a meditation to a program. Idempotent on the (program, meditation)
     /// pair: a repeat add returns the existing membership's row id.
-    async fn add(&self, program_id: i64, meditation_id: i64, added_at: DateTime<Utc>) -> i64;
+    async fn add(
+        &self,
+        program_id: i64,
+        meditation_id: i64,
+        added_at: DateTime<Utc>,
+    ) -> Result<i64, String>;
 
     /// Removes a membership; `false` when the pair is not a member.
     async fn remove(&self, program_id: i64, meditation_id: i64) -> Result<bool, String>;

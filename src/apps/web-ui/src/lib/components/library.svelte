@@ -5,6 +5,7 @@
 	import {
 		fetchCategories,
 		fetchPrograms,
+		programProgressLabel,
 		type Category,
 		type Program,
 	} from "$lib/api/meditation";
@@ -39,9 +40,6 @@
 		return grouped;
 	});
 
-	function progressLabel(program: Program): string {
-		return `${Math.round(program.progress * 100)}%`;
-	}
 </script>
 
 <main class="mx-auto min-h-screen w-full max-w-4xl px-4 py-10">
@@ -90,13 +88,7 @@
 							{/if}
 						</Card.Header>
 						<Card.Content>
-							<p class="text-sm text-muted-foreground">
-								{#if program.progress >= 1}
-									✓ Completed
-								{:else}
-									{progressLabel(program)} complete
-								{/if}
-							</p>
+							<p class="text-sm text-muted-foreground">{programProgressLabel(program)}</p>
 						</Card.Content>
 					</Card.Root>
 					</a>

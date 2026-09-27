@@ -32,14 +32,20 @@ fn to_domain(model: table::Model) -> Result<Membership, String> {
 
 #[async_trait]
 impl MembershipRepository for SeaOrmMembershipRepository {
-    async fn add(&self, program_id: i64, meditation_id: i64, added_at: DateTime<Utc>) -> i64 {
+    async fn add(
+        &self,
+        program_id: i64,
+        meditation_id: i64,
+        added_at: DateTime<Utc>,
+    ) -> Result<i64, String> {
         let existing = table::Entity::find()
             .filter(table::Column::ProgramId.eq(program_id))
             .filter(table::Column::MeditationId.eq(meditation_id))
             .one(&self.db)
-            .await;
-        if let Ok(Some(model)) = existing {
-            return model.id;
+            .await
+            .map_err(|e| e.to_string())?;
+        if let Some(model) = existing {
+            return Ok(model.id);
         }
         let row = table::ActiveModel {
             program_id: Set(program_id),
@@ -48,17 +54,17 @@ impl MembershipRepository for SeaOrmMembershipRepository {
             ..Default::default()
         };
         match row.insert(&self.db).await {
-            Ok(model) => model.id,
-            // A concurrent insert hit the UNIQUE pair first: read it back.
-            Err(_) => table::Entity::find()
+            Ok(model) => Ok(model.id),
+            // A concurrent insert may have hit the UNIQUE pair first: read
+            // it back before surfacing the original error as a failure.
+            Err(insert_error) => table::Entity::find()
                 .filter(table::Column::ProgramId.eq(program_id))
                 .filter(table::Column::MeditationId.eq(meditation_id))
                 .one(&self.db)
                 .await
-                .ok()
-                .flatten()
+                .map_err(|e| e.to_string())?
                 .map(|model| model.id)
-                .unwrap_or_default(),
+                .ok_or_else(|| insert_error.to_string()),
         }
     }
 

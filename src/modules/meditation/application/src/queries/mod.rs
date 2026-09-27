@@ -20,3 +20,7 @@ pub use list_notes::list_notes;
 pub use list_program_members::list_program_members;
 pub use list_programs::list_programs;
 pub use list_recent_programs::{list_recent_programs, RecentProgram};
+
+#[cfg(test)]
+#[path = "queries.tests.rs"]
+mod tests;

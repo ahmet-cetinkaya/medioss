@@ -3,8 +3,10 @@
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
 	import {
-		fetchLibrary,
-		fetchPrograms,
+		fetchProgram,
+		fetchProgramMembers,
+		meditationProgressLabel,
+		programProgressLabel,
 		type Meditation,
 		type Program,
 	} from "$lib/api/meditation";
@@ -21,17 +23,7 @@
 			return;
 		}
 		try {
-			const [programs, library] = await Promise.all([fetchPrograms(), fetchLibrary()]);
-			program = programs.find((candidate) => candidate.id === id) ?? null;
-			if (!program) {
-				window.location.assign("/library");
-				return;
-			}
-			// The API returns progress but not membership; derive members from
-			// the meditations list once memberships are exposed — for now the
-			// detail view lists the whole library with the caller's completed
-			// state per item (each item already carries its own progress).
-			members = library;
+			[program, members] = await Promise.all([fetchProgram(id), fetchProgramMembers(id)]);
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : "could not load the program";
 		}
@@ -64,13 +56,7 @@
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>Meditations</Card.Title>
-			<Card.Description>
-				{#if (program?.progress ?? 0) >= 1}
-					✓ Completed
-				{:else}
-					{Math.round((program?.progress ?? 0) * 100)}% complete
-				{/if}
-			</Card.Description>
+			<Card.Description>{programProgressLabel({ progress: program?.progress ?? 0 })}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<ul class="grid gap-2">
@@ -83,13 +69,7 @@
 							<div>
 								<p class="font-medium">{meditation.name}</p>
 							</div>
-							<span class="text-sm text-muted-foreground">
-								{#if meditation.completed}
-									✓ Completed
-								{:else}
-									{meditation.progress_percent}%
-								{/if}
-							</span>
+							<span class="text-sm text-muted-foreground">{meditationProgressLabel(meditation)}</span>
 						</a>
 					</li>
 				{/each}

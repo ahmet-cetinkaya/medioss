@@ -38,6 +38,21 @@ export interface Note {
   updated_at: string;
 }
 
+/** "100% complete" once every member is completed, else "NN%". */
+export function programProgressLabel(
+  program: Pick<Program, "progress">,
+): string {
+  const percent = Math.round(program.progress * 100);
+  return program.progress >= 1 ? "Completed" : `${percent}% complete`;
+}
+
+/** Same shape for a single meditation's own completion state/percent. */
+export function meditationProgressLabel(
+  meditation: Pick<Meditation, "completed" | "progress_percent">,
+): string {
+  return meditation.completed ? "Completed" : `${meditation.progress_percent}%`;
+}
+
 export interface PlaybackState {
   position_ms: number;
   completed: boolean;
@@ -77,6 +92,14 @@ export async function fetchLibrary(): Promise<Meditation[]> {
 
 export async function fetchPrograms(): Promise<Program[]> {
   return request<Program[]>("/api/meditation/programs");
+}
+
+export async function fetchProgram(id: number): Promise<Program> {
+  return request<Program>(`/api/meditation/programs/${id}`);
+}
+
+export async function fetchProgramMembers(id: number): Promise<Meditation[]> {
+  return request<Meditation[]>(`/api/meditation/programs/${id}/members`);
 }
 
 export interface ContinueProgram {

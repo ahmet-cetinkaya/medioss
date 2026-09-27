@@ -113,6 +113,33 @@ async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditation {
     crate::handlers_audio::upload_for_tests(&app.state, &app.store, bytes).await
 }
 
+/// Builds a multipart body from `(field name, filename, bytes)` triples; an
+/// empty filename means a plain text field.
+fn multipart_body(fields: &[(&str, &str, &[u8])]) -> (String, Vec<u8>) {
+    let boundary = "router-tests-boundary-4471";
+    let mut body = Vec::new();
+    for (name, filename, bytes) in fields {
+        body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+        if filename.is_empty() {
+            body.extend_from_slice(
+                format!("content-disposition: form-data; name=\"{name}\"\r\n\r\n").as_bytes(),
+            );
+        } else {
+            body.extend_from_slice(
+                format!(
+                    "content-disposition: form-data; name=\"{name}\"; filename=\"{filename}\"\r\n"
+                )
+                .as_bytes(),
+            );
+            body.extend_from_slice(b"content-type: application/octet-stream\r\n\r\n");
+        }
+        body.extend_from_slice(bytes);
+        body.extend_from_slice(b"\r\n");
+    }
+    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    (format!("multipart/form-data; boundary={boundary}"), body)
+}
+
 #[tokio::test]
 async fn every_route_requires_an_actor() {
     let app = app();
@@ -408,6 +435,105 @@ async fn notes_of_one_user_are_invisible_to_another() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn progress_percent_reflects_the_reported_position() {
+    let app = app();
+    let meditation = seed_meditation(&app).await; // duration_ms == 60_000
+
+    let (_, _, body) = json_body(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/{}", meditation.id()),
+        "{}",
+    )
+    .await;
+    assert!(
+        String::from_utf8_lossy(&body).contains("\"progress_percent\":0"),
+        "untouched meditation reports 0, never omitted: {}",
+        String::from_utf8_lossy(&body)
+    );
+
+    let (status, _, _) = json_body(
+        &app,
+        Some(member_actor()),
+        "POST",
+        &format!("/meditation/{}/playback-state", meditation.id()),
+        "{\"position_ms\":30000}",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let (_, _, body) = json_body(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/{}", meditation.id()),
+        "{}",
+    )
+    .await;
+    let text = String::from_utf8_lossy(&body);
+    assert!(
+        text.contains("\"progress_percent\":50"),
+        "30s of 60s must report 50%: {text}"
+    );
+    assert!(text.contains("\"completed\":false"));
+
+    // Someone else's position report must not move this meditation's own
+    // percent for the original caller.
+    let other = Actor::new(UserId::new(3), Role::Member);
+    let (_, _, body) = json_body(
+        &app,
+        Some(other),
+        "GET",
+        &format!("/meditation/{}", meditation.id()),
+        "{}",
+    )
+    .await;
+    assert!(String::from_utf8_lossy(&body).contains("\"progress_percent\":0"));
+}
+
+#[tokio::test]
+async fn replacing_a_cover_removes_the_previous_blob() {
+    let app = app();
+    let png = vec![0x89, b'P', b'N', b'G', 0, 0, 0, 0, 0, 0, 0, 0];
+    let (content_type, body) =
+        multipart_body(&[("title", "", b"Covered"), ("cover", "cover.png", &png)]);
+    let (status, _, body) = call(
+        &app,
+        Some(admin_actor()),
+        "POST",
+        "/meditation/programs",
+        vec![("content-type", &content_type)],
+        Body::from(body),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let text = String::from_utf8_lossy(&body);
+    let start = text.find("\"id\":").map(|index| index + 5).unwrap();
+    let end = text[start..].find(',').map(|index| start + index).unwrap();
+    let program_id: i64 = text[start..end].parse().unwrap();
+    assert_eq!(app.store.len(), 1, "one cover blob after create");
+
+    let jpeg = vec![0xFF, 0xD8, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let (content_type, body) = multipart_body(&[("cover", "new.jpg", &jpeg)]);
+    let (status, _, _) = call(
+        &app,
+        Some(admin_actor()),
+        "PUT",
+        &format!("/meditation/programs/{program_id}/cover"),
+        vec![("content-type", &content_type)],
+        Body::from(body),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        app.store.len(),
+        1,
+        "the old cover blob is removed, not left behind alongside the new one"
+    );
 }
 
 #[tokio::test]

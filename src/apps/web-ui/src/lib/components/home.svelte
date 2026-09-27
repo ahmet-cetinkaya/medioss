@@ -7,6 +7,8 @@
 		fetchDailySuggestion,
 		fetchMe,
 		fetchRecentPrograms,
+		meditationProgressLabel,
+		programProgressLabel,
 		type ContinueProgram,
 		type Meditation,
 		type RecentProgram,
@@ -73,11 +75,7 @@
 									{continueProgram.program.description}
 									·
 								{/if}
-								{#if continueProgram.program.progress >= 1}
-									✓ Completed
-								{:else}
-									{Math.round(continueProgram.program.progress * 100)}% complete
-								{/if}
+								{programProgressLabel(continueProgram.program)}
 							</Card.Description>
 						</div>
 						<Button
@@ -110,13 +108,7 @@
 					<div class="flex flex-1 flex-col gap-2">
 						<div>
 							<Card.Title>{dailySuggestion.name}</Card.Title>
-							<Card.Description>
-								{#if dailySuggestion.completed}
-									✓ Completed
-								{:else}
-									{dailySuggestion.progress_percent}% complete
-								{/if}
-							</Card.Description>
+							<Card.Description>{meditationProgressLabel(dailySuggestion)}</Card.Description>
 						</div>
 						<Button
 							size="sm"
@@ -151,13 +143,7 @@
 									<div class="h-24 w-full rounded-md bg-muted" aria-hidden="true"></div>
 								{/if}
 								<p class="truncate text-sm font-medium">{entry.program.title}</p>
-								<p class="text-xs text-muted-foreground">
-									{#if entry.program.progress >= 1}
-										✓ Completed
-									{:else}
-										{Math.round(entry.program.progress * 100)}%
-									{/if}
-								</p>
+								<p class="text-xs text-muted-foreground">{programProgressLabel(entry.program)}</p>
 							</Card.Root>
 						</a>
 					{/each}

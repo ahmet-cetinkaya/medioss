@@ -227,9 +227,9 @@ async fn setup_rejects_wrong_secret_with_forbidden() {
 }
 
 #[tokio::test]
-async fn login_accepts_missing_origin_but_rejects_mismatched() {
-    // A same-origin browser request carries no Origin header (cookies sent
-    // first-party); it must pass. Only a mismatched Origin is CSRF-relevant.
+async fn login_rejects_missing_origin_with_forbidden() {
+    // A request with no Origin header at all is rejected: fail closed
+    // rather than assume it is a same-origin browser request.
     let response = app()
         .oneshot(
             Request::post("/identity/login")
@@ -241,7 +241,7 @@ async fn login_accepts_missing_origin_but_rejects_mismatched() {
         )
         .await
         .unwrap();
-    assert_ne!(response.status(), StatusCode::FORBIDDEN);
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
     let response = app()
         .oneshot(

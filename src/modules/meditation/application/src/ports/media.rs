@@ -37,6 +37,17 @@ pub enum ImageFormat {
     Webp,
 }
 
+impl ImageFormat {
+    /// The file extension the store persists this format under.
+    pub fn extension(self) -> &'static str {
+        match self {
+            ImageFormat::Png => "png",
+            ImageFormat::Jpeg => "jpg",
+            ImageFormat::Webp => "webp",
+        }
+    }
+}
+
 /// Detects cover image formats from leading bytes.
 #[async_trait]
 pub trait CoverValidator: Send + Sync {

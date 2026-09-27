@@ -29,17 +29,25 @@ pub trait NoteRepository: Send + Sync {
     /// Lists the author's notes for one meditation, newest first.
     async fn list_for(&self, user_id: UserId, meditation_id: i64) -> Result<Vec<Note>, String>;
 
-    /// Updates the author's note; `false` when unknown or not the author.
+    /// Updates the author's note on the named meditation; `false` when
+    /// unknown, not the author, or belonging to a different meditation.
     async fn update(
         &self,
         note_id: i64,
+        meditation_id: i64,
         user_id: UserId,
         text: String,
         updated_at: DateTime<Utc>,
     ) -> Result<bool, String>;
 
-    /// Deletes the author's note; `false` when unknown or not the author.
-    async fn delete(&self, note_id: i64, user_id: UserId) -> Result<bool, String>;
+    /// Deletes the author's note on the named meditation; `false` when
+    /// unknown, not the author, or belonging to a different meditation.
+    async fn delete(
+        &self,
+        note_id: i64,
+        meditation_id: i64,
+        user_id: UserId,
+    ) -> Result<bool, String>;
 
     /// Deletes every note on a meditation (admin meditation delete);
     /// returns the number removed.

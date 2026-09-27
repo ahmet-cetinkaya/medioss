@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { Button } from "$lib/components/ui/button";
-	import { fetchRecentPrograms, type RecentProgram } from "$lib/api/meditation";
+	import {
+		fetchRecentPrograms,
+		programProgressLabel,
+		type RecentProgram,
+	} from "$lib/api/meditation";
 
 	let entries = $state<RecentProgram[]>([]);
 	let error = $state("");
@@ -113,13 +117,7 @@
 										{entry.program.description}
 									</p>
 								{/if}
-								<p class="text-sm text-muted-foreground">
-									{#if entry.program.progress >= 1}
-										✓ Completed
-									{:else}
-										{Math.round(entry.program.progress * 100)}% complete
-									{/if}
-								</p>
+								<p class="text-sm text-muted-foreground">{programProgressLabel(entry.program)}</p>
 							</div>
 							<span class="shrink-0 text-sm text-muted-foreground">
 								{timeLabel(entry.last_touched_at)}

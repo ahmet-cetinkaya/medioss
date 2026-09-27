@@ -132,6 +132,11 @@ impl FakeBlobStore {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Whether a blob exists at this exact key.
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.state.lock().unwrap().contains_key(key)
+    }
 }
 
 #[async_trait::async_trait]
@@ -236,8 +241,12 @@ pub struct RepoState {
     pub notes: Arc<Mutex<Vec<Note>>>,
     pub playback: Arc<Mutex<std::collections::HashMap<(i64, i64), PlaybackState>>>,
     /// Touch order for playback rows, oldest first; mirrors the real
-    /// repository's `updated_at` ordering for `most_recent_meditation_id`.
+    /// repository's `updated_at` ordering for `list_touched`.
     pub playback_touches: Arc<Mutex<PlaybackTouches>>,
+    /// When set, `FakeMembershipRepository::add` fails instead of inserting;
+    /// exercises the compensation path in commands that add a membership
+    /// after already committing other state (e.g. `upload_meditation`).
+    pub membership_add_failures: Arc<Mutex<bool>>,
 }
 
 impl RepoState {
@@ -324,6 +333,21 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
         let len = rows.len();
         rows.retain(|meditation| meditation.id() != id);
         Ok(rows.len() != len)
+    }
+
+    async fn list_by_storage_prefix(
+        &self,
+        prefix: &str,
+    ) -> Result<Vec<meditation_domain::Meditation>, String> {
+        Ok(self
+            .0
+            .meditations
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|meditation| meditation.storage_key().starts_with(prefix))
+            .cloned()
+            .collect())
     }
 
     async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {
@@ -506,12 +530,23 @@ pub struct FakeMembershipRepository(pub RepoState);
 
 #[async_trait::async_trait]
 impl MembershipRepository for FakeMembershipRepository {
-    async fn add(&self, program_id: i64, meditation_id: i64, added_at: DateTime<Utc>) -> i64 {
+    async fn add(
+        &self,
+        program_id: i64,
+        meditation_id: i64,
+        added_at: DateTime<Utc>,
+    ) -> Result<i64, String> {
+        if *self.0.membership_add_failures.lock().unwrap() {
+            return Err("membership insert failed".to_owned());
+        }
         let mut rows = self.0.memberships.lock().unwrap();
-        if let Some(existing) = rows.iter().find(|membership| {
+        let existing_index = rows.iter().position(|membership| {
             membership.program_id == program_id && membership.meditation_id == meditation_id
-        }) {
-            return existing.meditation_id;
+        });
+        if let Some(index) = existing_index {
+            // Row id == 1-based position, matching the fresh-insert numbering
+            // below.
+            return Ok(index as i64 + 1);
         }
         let row_id = rows.len() as i64 + 1;
         rows.push(Membership {
@@ -519,7 +554,7 @@ impl MembershipRepository for FakeMembershipRepository {
             meditation_id,
             added_at,
         });
-        row_id
+        Ok(row_id)
     }
 
     async fn remove(&self, program_id: i64, meditation_id: i64) -> Result<bool, String> {
@@ -664,15 +699,15 @@ impl NoteRepository for FakeNoteRepository {
     async fn update(
         &self,
         note_id: i64,
+        meditation_id: i64,
         user_id: UserId,
         text: String,
         updated_at: DateTime<Utc>,
     ) -> Result<bool, String> {
         let mut rows = self.0.notes.lock().unwrap();
-        let Some(note) = rows
-            .iter_mut()
-            .find(|note| note.id == note_id && note.user_id == user_id)
-        else {
+        let Some(note) = rows.iter_mut().find(|note| {
+            note.id == note_id && note.user_id == user_id && note.meditation_id == meditation_id
+        }) else {
             return Ok(false);
         };
         note.text = text;
@@ -680,10 +715,17 @@ impl NoteRepository for FakeNoteRepository {
         Ok(true)
     }
 
-    async fn delete(&self, note_id: i64, user_id: UserId) -> Result<bool, String> {
+    async fn delete(
+        &self,
+        note_id: i64,
+        meditation_id: i64,
+        user_id: UserId,
+    ) -> Result<bool, String> {
         let mut rows = self.0.notes.lock().unwrap();
         let len = rows.len();
-        rows.retain(|note| !(note.id == note_id && note.user_id == user_id));
+        rows.retain(|note| {
+            !(note.id == note_id && note.user_id == user_id && note.meditation_id == meditation_id)
+        });
         Ok(rows.len() != len)
     }
 
@@ -767,18 +809,6 @@ impl PlaybackStateRepository for FakePlaybackRepository {
             .unwrap()
             .get(&(user_id.value(), meditation_id))
             .copied())
-    }
-
-    async fn most_recent_meditation_id(&self, user_id: UserId) -> Result<Option<i64>, String> {
-        Ok(self
-            .0
-            .playback_touches
-            .lock()
-            .unwrap()
-            .iter()
-            .rev()
-            .find(|(touched_user, _, _)| *touched_user == user_id.value())
-            .map(|(_, meditation_id, _)| *meditation_id))
     }
 
     async fn list_touched(&self, user_id: UserId) -> Result<Vec<(i64, DateTime<Utc>)>, String> {

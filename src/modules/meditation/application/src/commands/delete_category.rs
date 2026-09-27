@@ -12,6 +12,14 @@ where
     C: CategoryRepository + ?Sized,
     P: ProgramRepository + ?Sized,
 {
+    // Sweep references before removing the row: if the sweep failed after
+    // the delete already committed, programs would keep a `category_id`
+    // pointing at nothing (no FK enforcement). Sweeping first only risks a
+    // harmless no-op sweep if the category never existed.
+    programs
+        .clear_category(category_id)
+        .await
+        .map_err(ApplicationError::Repository)?;
     let deleted = categories
         .delete(category_id)
         .await
@@ -19,9 +27,5 @@ where
     if !deleted {
         return Err(ApplicationError::NotFound);
     }
-    programs
-        .clear_category(category_id)
-        .await
-        .map_err(ApplicationError::Repository)?;
     Ok(())
 }

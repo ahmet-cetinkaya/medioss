@@ -1,11 +1,31 @@
 //! Error mapping and the same-origin guard.
 
 use axum::{
+    extract::multipart::Field,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
 use meditation_application::ApplicationError;
+
+/// Reads one multipart field's bytes, rejecting it once it exceeds `cap`
+/// and surfacing any mid-stream read error as `400` instead of silently
+/// treating a truncated body as a complete one.
+pub async fn read_field_capped(field: &mut Field<'_>, cap: usize) -> Result<Vec<u8>, ApiError> {
+    let mut buffer = Vec::new();
+    loop {
+        match field.chunk().await {
+            Ok(Some(chunk)) => {
+                buffer.extend_from_slice(&chunk);
+                if buffer.len() > cap {
+                    return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                }
+            }
+            Ok(None) => return Ok(buffer),
+            Err(_) => return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST)),
+        }
+    }
+}
 
 /// Typed handler error.
 pub enum ApiError {
@@ -54,15 +74,15 @@ impl IntoResponse for ApiError {
 }
 
 /// Strict same-origin guard for state-changing routes, mirroring
-/// identity's router: a request whose Origin header is present and
-/// mismatched is rejected; a same-origin browser request (no Origin
-/// header, cookies sent first-party) passes.
+/// identity's router: a request is accepted only when its Origin header is
+/// present and matches exactly; a missing or mismatched Origin is rejected
+/// (fail closed).
 pub fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
     let origin = headers
         .get("origin")
         .and_then(|value| value.to_str().ok())
         .unwrap_or("");
-    if origin.is_empty() || origin.eq_ignore_ascii_case(expected) {
+    if origin.eq_ignore_ascii_case(expected) {
         return Ok(());
     }
     Err(ApiError::StatusCode(StatusCode::FORBIDDEN))

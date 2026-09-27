@@ -97,7 +97,8 @@ pub fn meditation_router() -> Router<SharedDependencies> {
         )
         .route(
             "/meditation/programs/{id}/members",
-            post(crate::handlers_programs::add_member),
+            get(crate::handlers_programs::program_members)
+                .post(crate::handlers_programs::add_member),
         )
         .route(
             "/meditation/programs/{id}/members/{meditation_id}",

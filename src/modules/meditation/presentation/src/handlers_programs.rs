@@ -166,6 +166,41 @@ pub async fn program(
     Ok(Json(program_response(&found, progress)))
 }
 
+/// `GET /meditation/programs/{id}/members` — the program's meditations, in
+/// the order they were added, each with the caller's own progress.
+pub async fn program_members(
+    CurrentActor(actor): CurrentActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+) -> Result<Json<Vec<crate::handlers_audio::MeditationResponse>>, ApiError> {
+    deps.programs
+        .find_by_id(id)
+        .await
+        .map_err(meditation_application::ApplicationError::Repository)
+        .map_err(ApiError::Application)?
+        .ok_or(ApiError::Application(
+            meditation_application::ApplicationError::NotFound,
+        ))?;
+    let members = queries::list_program_members(deps.memberships.as_ref(), id)
+        .await
+        .map_err(ApiError::Application)?;
+    let mut responses = Vec::with_capacity(members.len());
+    for member in &members {
+        let meditation = queries::get_meditation(deps.meditations.as_ref(), member.meditation_id)
+            .await
+            .map_err(ApiError::Application)?;
+        responses.push(
+            crate::handlers_audio::with_playback(
+                deps.playback.as_ref(),
+                actor.user_id(),
+                &meditation,
+            )
+            .await,
+        );
+    }
+    Ok(Json(responses))
+}
+
 #[derive(Serialize)]
 pub struct ContinueProgramResponse {
     pub program: ProgramResponse,
@@ -258,35 +293,16 @@ pub async fn create_program(
     {
         match field.name() {
             Some("title") => {
-                let mut text = Vec::new();
-                while let Ok(Some(chunk)) = field.chunk().await {
-                    text.extend_from_slice(&chunk);
-                    if text.len() > max_text {
-                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                    }
-                }
+                let text = crate::response::read_field_capped(&mut field, max_text).await?;
                 title = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("description") => {
                 // Descriptions stay modest: ten times the name bound.
-                let mut text = Vec::new();
-                while let Ok(Some(chunk)) = field.chunk().await {
-                    text.extend_from_slice(&chunk);
-                    if text.len() > max_text * 10 {
-                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                    }
-                }
+                let text = crate::response::read_field_capped(&mut field, max_text * 10).await?;
                 description = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("cover") => {
-                let mut buffer = Vec::new();
-                while let Ok(Some(chunk)) = field.chunk().await {
-                    buffer.extend_from_slice(&chunk);
-                    if buffer.len() > max_cover {
-                        return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                    }
-                }
-                cover = Some(buffer);
+                cover = Some(crate::response::read_field_capped(&mut field, max_cover).await?);
             }
             _ => {
                 let _ = field.bytes().await;
@@ -418,22 +434,11 @@ pub async fn replace_cover(
         .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?
     {
         if field.name() == Some("cover") {
-            let mut buffer = Vec::new();
-            while let Ok(Some(chunk)) = field.chunk().await {
-                buffer.extend_from_slice(&chunk);
-                if buffer.len() > max_cover {
-                    return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
-                }
-            }
+            let buffer = crate::response::read_field_capped(&mut field, max_cover).await?;
             let format = deps.cover_validator.sniff(&buffer).await.map_err(|_| {
                 ApiError::Application(meditation_application::ApplicationError::UnsupportedMedia)
             })?;
-            let ext = match format {
-                meditation_application::ports::ImageFormat::Png => "png",
-                meditation_application::ports::ImageFormat::Jpeg => "jpg",
-                meditation_application::ports::ImageFormat::Webp => "webp",
-            };
-            cover = Some((buffer, ext));
+            cover = Some((buffer, format.extension()));
         } else {
             let _ = field.bytes().await;
         }

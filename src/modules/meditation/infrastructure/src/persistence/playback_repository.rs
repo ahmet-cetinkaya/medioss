@@ -101,16 +101,6 @@ impl PlaybackStateRepository for SeaOrmPlaybackRepository {
         }))
     }
 
-    async fn most_recent_meditation_id(&self, user_id: UserId) -> Result<Option<i64>, String> {
-        let model = table::Entity::find()
-            .filter(table::Column::UserId.eq(user_id.value()))
-            .order_by_desc(table::Column::UpdatedAt)
-            .one(&self.db)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(model.map(|row| row.meditation_id))
-    }
-
     async fn list_touched(
         &self,
         user_id: UserId,

@@ -157,11 +157,10 @@ async fn upload_rejects_payloads_over_the_cap_before_anything_stored() {
 }
 
 #[tokio::test]
-async fn upload_failure_after_store_leaves_no_blob() {
+async fn upload_failure_at_the_store_leaves_no_blob() {
+    // The store itself fails at `put`, before any row exists — nothing to
+    // compensate, so the only assertion is that no blob was left behind.
     let deps = Deps::new();
-    // Force the store to succeed but the insert to fail by using a name that
-    // passes command validation but violates the domain (impossible via the
-    // normal path), so simulate via a failing store instead.
     *deps.store.failures.lock().unwrap() = true;
     let result = upload_meditation(
         &deps.meditations,
@@ -177,6 +176,32 @@ async fn upload_failure_after_store_leaves_no_blob() {
     )
     .await;
     assert!(matches!(result, Err(ApplicationError::Storage(_))));
+    assert!(deps.store.is_empty());
+}
+
+#[tokio::test]
+async fn upload_failure_after_store_deletes_the_orphaned_blob() {
+    // The store succeeds but the membership insert fails afterward — the
+    // meditation row and its blob must both be rolled back rather than left
+    // as an unreachable, program-less meditation.
+    let deps = Deps::new();
+    *deps.memberships.0.membership_add_failures.lock().unwrap() = true;
+    let result = upload_meditation(
+        &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
+        &FakeValidator,
+        &FakeConverter { fail: false },
+        &deps.store,
+        &deps.clock,
+        "Valid",
+        deps.seed_program_id().await,
+        b"OggS....OpusHead".to_vec(),
+    )
+    .await;
+    assert!(matches!(result, Err(ApplicationError::Repository(_))));
+    assert!(deps.store.is_empty());
+    assert!(deps.meditations.0.meditations.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -420,7 +445,6 @@ async fn deleting_a_category_leaves_its_programs_uncategorized() {
 #[tokio::test]
 async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     let deps = Deps::new();
-    let meditation = deps.seeded_meditation().await;
     let png = vec![0x89, b'P', b'N', b'G', 0, 0, 0, 0, 0, 0, 0, 0];
     let program = create_program(
         &deps.programs,
@@ -433,16 +457,25 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     )
     .await
     .expect("program with cover");
-    add_member(
+    // Uploaded directly into the program being deleted, so its file actually
+    // lives in that program's folder — exercising the relocation branch,
+    // not the "stayed in a different program's folder" no-op path.
+    let meditation = upload_meditation(
         &deps.meditations,
-        &deps.programs,
         &deps.memberships,
+        &deps.programs,
+        &FakeValidator,
+        &FakeConverter { fail: false },
+        &deps.store,
         &deps.clock,
+        "Home",
         program.id,
-        meditation.id(),
+        b"OggS....OpusHead".to_vec(),
     )
     .await
-    .expect("member");
+    .expect("home upload");
+    let original_key = meditation.storage_key().to_owned();
+    assert!(original_key.starts_with(&format!("{}/", program.folder)));
 
     delete_program(
         &deps.programs,
@@ -454,14 +487,30 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     .await
     .expect("delete program");
 
-    assert!(!deps.meditations.0.meditations.lock().unwrap().is_empty());
-    let survivors = deps.memberships.0.memberships.lock().unwrap();
+    let relocated_key = {
+        let survivors = deps.meditations.0.meditations.lock().unwrap();
+        let relocated = survivors
+            .iter()
+            .find(|row| row.id() == meditation.id())
+            .expect("meditation row survives");
+        assert_ne!(
+            relocated.storage_key(),
+            original_key,
+            "file must be relocated"
+        );
+        assert!(relocated.storage_key().starts_with("_unfiled/"));
+        relocated.storage_key().to_owned()
+    };
+    let memberships = deps.memberships.0.memberships.lock().unwrap();
     assert!(
-        survivors.iter().all(|m| m.program_id != program.id),
+        memberships.iter().all(|m| m.program_id != program.id),
         "no membership may reference the deleted program"
     );
-    // The cover blob is gone; the seed audio (and any holder membership) stays.
+    drop(memberships);
+    // The cover blob is gone; the relocated audio blob remains (moved, not
+    // duplicated).
     assert_eq!(deps.store.len(), 1);
+    assert!(deps.store.contains_key(&relocated_key));
 }
 
 #[tokio::test]
@@ -539,10 +588,33 @@ async fn notes_are_author_scoped_and_newest_first() {
 
     // B cannot update or delete A's note: indistinguishable from unknown.
     let a_note_id = listed[0].id;
-    let updated = update_note(&deps.notes, &deps.clock, a_note_id, user_b(), "hijack").await;
+    let updated = update_note(
+        &deps.notes,
+        &deps.clock,
+        a_note_id,
+        meditation.id(),
+        user_b(),
+        "hijack",
+    )
+    .await;
     assert_eq!(updated.unwrap_err(), ApplicationError::NotFound);
-    let deleted = delete_note(&deps.notes, a_note_id, user_b()).await;
+    let deleted = delete_note(&deps.notes, a_note_id, meditation.id(), user_b()).await;
     assert_eq!(deleted.unwrap_err(), ApplicationError::NotFound);
+
+    // The author's own note, but addressed via the wrong meditation id, is
+    // also NotFound: the nested route's meditation segment is enforced, not
+    // decorative.
+    let other_meditation = deps.seeded_meditation().await;
+    let wrong_meditation = update_note(
+        &deps.notes,
+        &deps.clock,
+        a_note_id,
+        other_meditation.id(),
+        user_a(),
+        "still hijack",
+    )
+    .await;
+    assert_eq!(wrong_meditation.unwrap_err(), ApplicationError::NotFound);
 }
 
 #[tokio::test]

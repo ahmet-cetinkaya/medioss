@@ -18,29 +18,32 @@ where
     M: MembershipRepository + ?Sized,
     P: ProgramRepository + ?Sized,
 {
-    let Some(meditation_id) = playback
-        .most_recent_meditation_id(user_id)
+    // Walk touches most-recent-first: a deleted meditation (no membership,
+    // no program) must not permanently hide "continue" behind a live one
+    // touched earlier.
+    let touched = playback
+        .list_touched(user_id)
         .await
-        .map_err(ApplicationError::Repository)?
-    else {
-        return Ok(None);
-    };
-    let Some(program_id) = memberships
-        .first_program_for_meditation(meditation_id)
-        .await
-        .map_err(ApplicationError::Repository)?
-    else {
-        return Ok(None);
-    };
-    let Some(program) = programs
-        .find_by_id(program_id)
-        .await
-        .map_err(ApplicationError::Repository)?
-    else {
-        return Ok(None);
-    };
-    Ok(Some(ContinueProgram {
-        program,
-        meditation_id,
-    }))
+        .map_err(ApplicationError::Repository)?;
+    for (meditation_id, _touched_at) in touched {
+        let Some(program_id) = memberships
+            .first_program_for_meditation(meditation_id)
+            .await
+            .map_err(ApplicationError::Repository)?
+        else {
+            continue;
+        };
+        let Some(program) = programs
+            .find_by_id(program_id)
+            .await
+            .map_err(ApplicationError::Repository)?
+        else {
+            continue;
+        };
+        return Ok(Some(ContinueProgram {
+            program,
+            meditation_id,
+        }));
+    }
+    Ok(None)
 }

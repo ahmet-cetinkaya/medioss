@@ -311,12 +311,27 @@ async fn notes_stay_author_scoped_and_newest_first() {
 
     // B cannot touch A's note.
     assert!(!notes
-        .update(older.id, user_b(), "hijack".to_owned(), Utc::now())
+        .update(
+            older.id,
+            meditation.id(),
+            user_b(),
+            "hijack".to_owned(),
+            Utc::now()
+        )
         .await
         .unwrap());
-    assert!(!notes.delete(older.id, user_b()).await.unwrap());
+    assert!(!notes
+        .delete(older.id, meditation.id(), user_b())
+        .await
+        .unwrap());
     assert!(notes
-        .update(older.id, user_a(), "edited".to_owned(), Utc::now())
+        .update(
+            older.id,
+            meditation.id(),
+            user_a(),
+            "edited".to_owned(),
+            Utc::now()
+        )
         .await
         .unwrap());
 

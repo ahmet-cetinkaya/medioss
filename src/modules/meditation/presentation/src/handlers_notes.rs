@@ -77,7 +77,7 @@ pub async fn create_note(
 pub async fn update_note(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
-    Path((_id, note_id)): Path<(i64, i64)>,
+    Path((id, note_id)): Path<(i64, i64)>,
     headers: HeaderMap,
     Json(request): Json<NoteRequest>,
 ) -> Result<StatusCode, ApiError> {
@@ -86,6 +86,7 @@ pub async fn update_note(
         deps.notes.as_ref(),
         deps.clock.as_ref(),
         note_id,
+        id,
         actor.user_id(),
         &request.text,
     )
@@ -98,11 +99,11 @@ pub async fn update_note(
 pub async fn delete_note(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
-    Path((_id, note_id)): Path<(i64, i64)>,
+    Path((id, note_id)): Path<(i64, i64)>,
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::delete_note(deps.notes.as_ref(), note_id, actor.user_id())
+    commands::delete_note(deps.notes.as_ref(), note_id, id, actor.user_id())
         .await
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

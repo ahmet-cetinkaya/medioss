@@ -76,14 +76,17 @@ impl NoteRepository for SeaOrmNoteRepository {
     async fn update(
         &self,
         note_id: i64,
+        meditation_id: i64,
         user_id: UserId,
         text: String,
         updated_at: DateTime<Utc>,
     ) -> Result<bool, String> {
-        // Author scoping lives in the WHERE clause: another author's note is
-        // indistinguishable from a nonexistent one.
+        // Author and meditation scoping both live in the WHERE clause:
+        // another author's note, or the right note on the wrong meditation,
+        // is indistinguishable from a nonexistent one.
         let Some(model) = table::Entity::find_by_id(note_id)
             .filter(table::Column::UserId.eq(user_id.value()))
+            .filter(table::Column::MeditationId.eq(meditation_id))
             .one(&self.db)
             .await
             .map_err(|e| e.to_string())?
@@ -97,10 +100,16 @@ impl NoteRepository for SeaOrmNoteRepository {
         Ok(true)
     }
 
-    async fn delete(&self, note_id: i64, user_id: UserId) -> Result<bool, String> {
+    async fn delete(
+        &self,
+        note_id: i64,
+        meditation_id: i64,
+        user_id: UserId,
+    ) -> Result<bool, String> {
         let rows = table::Entity::delete_many()
             .filter(table::Column::Id.eq(note_id))
             .filter(table::Column::UserId.eq(user_id.value()))
+            .filter(table::Column::MeditationId.eq(meditation_id))
             .exec(&self.db)
             .await
             .map_err(|e| e.to_string())?
