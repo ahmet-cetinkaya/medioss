@@ -331,6 +331,78 @@ pub async fn cover(
         .into_response())
 }
 
+/// `PUT /meditation/programs/{id}/cover` (spec FR-026 follow-up: covers are
+/// replaceable, not create-only). Removes the previous cover blob, if any.
+pub async fn replace_cover(
+    AdminActor(_actor): AdminActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> Result<StatusCode, ApiError> {
+    ensure_browser_origin(&headers, &deps.medioss_origin)?;
+
+    let max_cover = commands::MAX_COVER_BYTES;
+    let mut cover: Option<(Vec<u8>, &'static str)> = None;
+    while let Some(mut field) = multipart
+        .next_field()
+        .await
+        .map_err(|_| ApiError::StatusCode(StatusCode::BAD_REQUEST))?
+    {
+        if field.name() == Some("cover") {
+            let mut buffer = Vec::new();
+            while let Ok(Some(chunk)) = field.chunk().await {
+                buffer.extend_from_slice(&chunk);
+                if buffer.len() > max_cover {
+                    return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                }
+            }
+            let format = deps.cover_validator.sniff(&buffer).await.map_err(|_| {
+                ApiError::Application(meditation_application::ApplicationError::UnsupportedMedia)
+            })?;
+            let ext = match format {
+                meditation_application::ports::ImageFormat::Png => "png",
+                meditation_application::ports::ImageFormat::Jpeg => "jpg",
+                meditation_application::ports::ImageFormat::Webp => "webp",
+            };
+            cover = Some((buffer, ext));
+        } else {
+            let _ = field.bytes().await;
+        }
+    }
+    let Some((bytes, ext)) = cover else {
+        return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST));
+    };
+
+    let program = deps
+        .programs
+        .find_by_id(id)
+        .await
+        .map_err(meditation_application::ApplicationError::Repository)
+        .map_err(ApiError::Application)?
+        .ok_or(ApiError::Application(
+            meditation_application::ApplicationError::NotFound,
+        ))?;
+
+    let blob = deps
+        .store
+        .put(&program.folder, "cover", ext, &bytes)
+        .await
+        .map_err(meditation_application::ApplicationError::Storage)
+        .map_err(ApiError::Application)?;
+    deps.programs
+        .set_cover_key(id, &blob.storage_key)
+        .await
+        .map_err(meditation_application::ApplicationError::Repository)
+        .map_err(ApiError::Application)?;
+    if let Some(old_key) = program.cover_storage_key {
+        if old_key != blob.storage_key {
+            let _ = deps.store.delete(&old_key).await;
+        }
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[derive(Deserialize)]
 pub struct MemberRequest {
     pub meditation_id: i64,

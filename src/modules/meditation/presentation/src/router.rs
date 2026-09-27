@@ -77,7 +77,11 @@ pub fn meditation_router() -> Router<SharedDependencies> {
         )
         .route(
             "/meditation/programs/{id}/cover",
-            get(crate::handlers_programs::cover),
+            get(crate::handlers_programs::cover)
+                .put(crate::handlers_programs::replace_cover)
+                .layer(axum::extract::DefaultBodyLimit::max(
+                    meditation_application::commands::MAX_COVER_BYTES + 1024 * 1024,
+                )),
         )
         .route(
             "/meditation/programs/{id}/members",
