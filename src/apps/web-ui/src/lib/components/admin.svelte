@@ -12,15 +12,18 @@
 		fetchCategories,
 		fetchLibrary,
 		fetchMe,
+		fetchPrograms,
 		titleCaseFromFile,
 		uploadAudio,
 		type Category,
 		type Meditation,
+		type Program,
 	} from "$lib/api/meditation";
 
 	let me = $state<{ role: string } | null>(null);
 	let meditations = $state<Meditation[]>([]);
 	let categories = $state<Category[]>([]);
+	let programs = $state<Program[]>([]);
 	let error = $state("");
 	let message = $state("");
 
@@ -43,21 +46,28 @@
 				return;
 			}
 			await reload();
-		} catch (cause) {
+		} catch {
 			window.location.assign("/login");
 		}
 	});
 
 	async function reload() {
-		[meditations, categories] = await Promise.all([fetchLibrary(), fetchCategories()]);
+		const [library, cats, progs] = await Promise.all([
+			fetchLibrary(),
+			fetchCategories(),
+			fetchPrograms(),
+		]);
+		meditations = library;
+		categories = cats;
+		programs = progs;
 	}
 
 	function onFileChosen(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		file = input.files?.[0] ?? null;
-		if (file) {
+		if (file && !name.trim()) {
 			// Title Case prefill from the file name, still editable (FR-024).
-			if (!name.trim()) name = titleCaseFromFile(file.name);
+			name = titleCaseFromFile(file.name);
 		}
 	}
 
@@ -112,16 +122,29 @@
 		}
 	}
 
-	async function addTo(programId: number, event: Event) {
+	async function addToProgram(meditationId: number, event: Event) {
 		const select = event.currentTarget as HTMLSelectElement;
-		const meditationId = Number(select.value);
-		if (!meditationId) return;
+		const programId = Number(select.value);
+		if (!programId) return;
 		try {
 			await addMember(programId, meditationId);
 			select.value = "";
 			message = "Added to program";
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : "could not add member";
+		}
+	}
+
+	async function assignToCategory(programId: number, event: Event) {
+		const select = event.currentTarget as HTMLSelectElement;
+		const raw = select.value;
+		const categoryId = raw === "" ? null : Number(raw);
+		try {
+			await assignCategory(programId, categoryId);
+			message = "Category updated";
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "could not assign category";
 		}
 	}
 </script>
@@ -197,12 +220,41 @@
 		</Card.Content>
 	</Card.Root>
 
+	{#if programs.length > 0}
+		<Card.Root class="mb-8">
+			<Card.Header><Card.Title>Programs</Card.Title>
+				<Card.Description>Assign categories and meditations.</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<ul class="grid gap-3">
+					{#each programs as program (program.id)}
+						<li class="rounded-md border p-3">
+							<div class="flex flex-wrap items-center justify-between gap-2">
+								<p class="font-medium">{program.title}</p>
+								<select
+									class="rounded-md border bg-background px-2 py-1 text-sm"
+									value={program.category_id ?? ""}
+									onchange={(event) => assignToCategory(program.id, event)}
+								>
+									<option value="">Uncategorized</option>
+									{#each categories as category (category.id)}
+										<option value={category.id}>{category.name}</option>
+									{/each}
+								</select>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</Card.Content>
+		</Card.Root>
+	{/if}
+
 	<Card.Root>
 		<Card.Header><Card.Title>Library ({meditations.length})</Card.Title></Card.Header>
 		<Card.Content>
 			<ul class="grid gap-2">
 				{#each meditations as meditation (meditation.id)}
-					<li class="flex items-center justify-between rounded-md border p-3">
+					<li class="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
 						<div>
 							<p class="font-medium">{meditation.name}</p>
 							<p class="text-sm text-muted-foreground">
@@ -210,12 +262,18 @@
 							</p>
 						</div>
 						<div class="flex gap-2">
-							<select class="rounded-md border bg-background px-2 py-1 text-sm"
-								onchange={(event) => addTo(Number((event.currentTarget as HTMLSelectElement).dataset.program ?? 0), event)}
-								data-program="0">
-								<option value="">Add to…</option>
-							</select>
-							<a href="/player?id={meditation.id}">
+							{#if programs.length > 0}
+								<select
+									class="rounded-md border bg-background px-2 py-1 text-sm"
+									onchange={(event) => addToProgram(meditation.id, event)}
+								>
+									<option value="">Add to…</option>
+									{#each programs as program (program.id)}
+										<option value={program.id}>{program.title}</option>
+									{/each}
+								</select>
+							{/if}
+							<a href="/player/?id={meditation.id}">
 								<Button variant="outline" size="sm" type="button">Play</Button>
 							</a>
 						</div>

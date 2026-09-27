@@ -40,6 +40,7 @@
 			return;
 		}
 		meditationId = id;
+		document.addEventListener("pagehide", flushOnHide);
 		try {
 			const state = await fetchPlaybackState(id);
 			completed = state.completed;
@@ -94,6 +95,17 @@
 
 	function onPlay() {
 		if (startedAt === null) startedAt = new Date().toISOString();
+	}
+
+	// Final position flush on tab close: sendBeacon carries the last position
+	// without awaiting a response (plan D11).
+	function flushOnHide() {
+		if (meditationId === null || !audio || audio.paused) return;
+		const payload = JSON.stringify({ position_ms: Math.floor(audio.currentTime * 1000) });
+		navigator.sendBeacon(
+			`/api/meditation/${meditationId}/playback-state`,
+			new Blob([payload], { type: "application/json" }),
+		);
 	}
 
 	function setRate(next: number) {
