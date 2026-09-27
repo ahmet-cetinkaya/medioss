@@ -42,7 +42,15 @@ pub type SharedDependencies = Arc<MeditationDependencies>;
 /// [`AdminActor`] extractor.
 pub fn meditation_router() -> Router<SharedDependencies> {
     Router::new()
-        .route("/meditation/audio", post(crate::handlers_audio::upload))
+        // The extractor-level default body limit (2MB) would reject large
+        // uploads before the handler's own streamed cap ever runs; the
+        // upload route owns its limit (spec FR-002/003).
+        .route(
+            "/meditation/audio",
+            post(crate::handlers_audio::upload).layer(axum::extract::DefaultBodyLimit::max(
+                meditation_application::commands::MAX_UPLOAD_BYTES + 1024 * 1024,
+            )),
+        )
         .route("/meditation/library", get(crate::handlers_audio::library))
         .route(
             "/meditation/categories",
@@ -55,7 +63,11 @@ pub fn meditation_router() -> Router<SharedDependencies> {
         )
         .route(
             "/meditation/programs",
-            get(crate::handlers_programs::programs).post(crate::handlers_programs::create_program),
+            get(crate::handlers_programs::programs)
+                .post(crate::handlers_programs::create_program)
+                .layer(axum::extract::DefaultBodyLimit::max(
+                    meditation_application::commands::MAX_COVER_BYTES + 1024 * 1024,
+                )),
         )
         .route(
             "/meditation/programs/{id}",
