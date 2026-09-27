@@ -85,9 +85,6 @@
 						>
 							<div>
 								<p class="font-medium">{meditation.name}</p>
-								<p class="text-sm text-muted-foreground">
-									{(meditation.size_bytes / 1024).toFixed(0)} KB · Opus
-								</p>
 							</div>
 							{#if memberStates[meditation.id]}
 								<span class="text-sm text-muted-foreground">✓ Completed</span>
