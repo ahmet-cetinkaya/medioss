@@ -1,7 +1,18 @@
 //! Uploads audio: sniffs, converts to Opus, stores, persists the row.
 use crate::commands::{validate_name, MAX_UPLOAD_BYTES};
-use crate::ports::{AudioValidator, BlobStore, Clock, MeditationRepository, OpusConverter};
+use crate::ports::{
+    AudioValidator, BlobStore, Clock, ConvertError, MeditationRepository, OpusConverter,
+};
 use crate::ApplicationError;
+
+fn map_convert_error(error: ConvertError) -> ApplicationError {
+    match error {
+        ConvertError::Decode => ApplicationError::UnsupportedMedia,
+        ConvertError::Unavailable => {
+            ApplicationError::Storage("the Opus encoder is unavailable".to_owned())
+        }
+    }
+}
 
 /// Uploads meditation audio. Garbage bytes, oversized payloads, and
 /// conversion failures leave nothing stored (spec FR-001..004).
@@ -32,7 +43,7 @@ where
     let stored_bytes = converter
         .convert(bytes, format)
         .await
-        .map_err(|_| ApplicationError::UnsupportedMedia)?;
+        .map_err(map_convert_error)?;
     let blob = store
         .put(&stored_bytes)
         .await

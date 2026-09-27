@@ -44,14 +44,6 @@ pub trait CoverValidator: Send + Sync {
     async fn sniff(&self, leading: &[u8]) -> Result<ImageFormat, SniffError>;
 }
 
-/// Converts accepted uploads to the stored Ogg Opus form. Implementations
-/// pass already-Opus input through unchanged.
-#[async_trait]
-pub trait OpusConverter: Send + Sync {
-    /// Converts `bytes` to Ogg Opus; `OggOpus` input is returned as-is.
-    async fn convert(&self, bytes: Vec<u8>, format: AudioFormat) -> Result<Vec<u8>, String>;
-}
-
 /// Why a conversion failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum ConvertError {
@@ -59,6 +51,16 @@ pub enum ConvertError {
     Decode,
     #[error("the encoder is unavailable on this host")]
     Unavailable,
+}
+
+/// Converts accepted uploads to the stored Ogg Opus form. Implementations
+/// pass already-Opus input through unchanged.
+#[async_trait]
+pub trait OpusConverter: Send + Sync {
+    /// Converts `bytes` to Ogg Opus; `OggOpus` input is returned as-is.
+    /// A missing encoder surfaces as [`ConvertError::Unavailable`] so the
+    /// API can answer 503 instead of blaming the media (plan D2).
+    async fn convert(&self, bytes: Vec<u8>, format: AudioFormat) -> Result<Vec<u8>, ConvertError>;
 }
 
 /// A stored blob's location handle.

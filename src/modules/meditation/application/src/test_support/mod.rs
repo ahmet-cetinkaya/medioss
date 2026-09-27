@@ -92,9 +92,13 @@ pub struct FakeConverter {
 
 #[async_trait::async_trait]
 impl crate::ports::OpusConverter for FakeConverter {
-    async fn convert(&self, bytes: Vec<u8>, format: AudioFormat) -> Result<Vec<u8>, String> {
+    async fn convert(
+        &self,
+        bytes: Vec<u8>,
+        format: AudioFormat,
+    ) -> Result<Vec<u8>, crate::ports::ConvertError> {
         if self.fail {
-            return Err("conversion failed".to_owned());
+            return Err(crate::ports::ConvertError::Decode);
         }
         if format == AudioFormat::OggOpus {
             return Ok(bytes);
