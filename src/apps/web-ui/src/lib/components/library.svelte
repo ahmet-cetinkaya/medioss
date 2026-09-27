@@ -70,7 +70,8 @@
 			<h2 class="mb-4 text-lg font-medium">{group.name}</h2>
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{#each group.programs as program (program.id)}
-					<Card.Root>
+					<a href="/program/?id={program.id}" class="block">
+					<Card.Root class="transition-shadow hover:shadow-md">
 						<Card.Header>
 							{#if program.has_cover}
 								<img
@@ -99,6 +100,7 @@
 							{/if}
 						</Card.Content>
 					</Card.Root>
+					</a>
 				{/each}
 			</div>
 		</section>
