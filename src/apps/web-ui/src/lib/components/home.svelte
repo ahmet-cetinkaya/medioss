@@ -41,7 +41,12 @@
 						/>
 					{/if}
 					<Card.Title>Continue program</Card.Title>
-					<Card.Description>{continueProgram.program.title}</Card.Description>
+					<Card.Description>
+						{continueProgram.program.title}
+						{#if continueProgram.program.progress !== null}
+							· {Math.round(continueProgram.program.progress * 100)}%
+						{/if}
+					</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<Button
