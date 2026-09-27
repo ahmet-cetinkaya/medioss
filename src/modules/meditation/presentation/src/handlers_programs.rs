@@ -30,14 +30,14 @@ pub struct ProgramResponse {
     pub has_cover: bool,
     pub category_id: Option<i64>,
     pub created_at: String,
-    /// The requesting user's completed share; `None` for empty programs
-    /// (spec FR-029).
-    pub progress: Option<f64>,
+    /// The requesting user's completed share; every program surface must
+    /// show it, so an empty program reports `0.0` rather than omitting it.
+    pub progress: f64,
 }
 
 fn program_response(
     program: &meditation_application::ports::Program,
-    progress: Option<f64>,
+    progress: f64,
 ) -> ProgramResponse {
     ProgramResponse {
         id: program.id,
@@ -50,17 +50,15 @@ fn program_response(
     }
 }
 
-/// Computes the caller's completed share over a program's members.
-async fn progress_for(
-    deps: &SharedDependencies,
-    user_id: kernel::UserId,
-    program_id: i64,
-) -> Option<f64> {
-    let members = queries::list_program_members(deps.memberships.as_ref(), program_id)
-        .await
-        .ok()?;
+/// Computes the caller's completed share over a program's members; `0.0`
+/// when the program has no members yet.
+async fn progress_for(deps: &SharedDependencies, user_id: kernel::UserId, program_id: i64) -> f64 {
+    let Ok(members) = queries::list_program_members(deps.memberships.as_ref(), program_id).await
+    else {
+        return 0.0;
+    };
     if members.is_empty() {
-        return None;
+        return 0.0;
     }
     let mut completed = 0;
     for member in &members {
@@ -75,7 +73,7 @@ async fn progress_for(
             completed += 1;
         }
     }
-    Some(completed as f64 / members.len() as f64)
+    completed as f64 / members.len() as f64
 }
 
 /// `GET /meditation/categories` — every category.
@@ -199,6 +197,45 @@ pub async fn continue_program(
     .into_response())
 }
 
+#[derive(Deserialize)]
+pub struct RecentProgramsQuery {
+    pub limit: Option<usize>,
+}
+
+#[derive(Serialize)]
+pub struct RecentProgramResponse {
+    pub program: ProgramResponse,
+    pub last_touched_at: String,
+}
+
+/// `GET /meditation/recent-programs?limit=N` — the caller's touched
+/// programs, most recently touched first; `limit` caps the count (the home
+/// page's strip asks for 5, the history page omits it for the full list).
+pub async fn recent_programs(
+    CurrentActor(actor): CurrentActor,
+    State(deps): State<SharedDependencies>,
+    axum::extract::Query(query): axum::extract::Query<RecentProgramsQuery>,
+) -> Result<Json<Vec<RecentProgramResponse>>, ApiError> {
+    let listed = queries::list_recent_programs(
+        deps.playback.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
+        actor.user_id(),
+        query.limit,
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    let mut responses = Vec::with_capacity(listed.len());
+    for entry in &listed {
+        let progress = progress_for(&deps, actor.user_id(), entry.program.id).await;
+        responses.push(RecentProgramResponse {
+            program: program_response(&entry.program, progress),
+            last_touched_at: entry.last_touched_at.to_rfc3339(),
+        });
+    }
+    Ok(Json(responses))
+}
+
 /// `POST /meditation/programs` — admin multipart create (title,
 /// description, optional cover file) (spec FR-025/026).
 pub async fn create_program(
@@ -269,7 +306,7 @@ pub async fn create_program(
     )
     .await
     .map_err(ApiError::Application)?;
-    Ok((StatusCode::CREATED, Json(program_response(&program, None))))
+    Ok((StatusCode::CREATED, Json(program_response(&program, 0.0))))
 }
 
 #[derive(Deserialize)]

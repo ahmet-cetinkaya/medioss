@@ -10,6 +10,8 @@ export interface Meditation {
   size_bytes: number;
   duration_ms: number;
   created_at: string;
+  completed: boolean;
+  progress_percent: number;
   program_id?: number;
   program_has_cover?: boolean;
 }
@@ -26,7 +28,7 @@ export interface Program {
   has_cover: boolean;
   category_id: number | null;
   created_at: string;
-  progress: number | null;
+  progress: number;
 }
 
 export interface Note {
@@ -95,6 +97,18 @@ export async function fetchDailySuggestion(): Promise<Meditation | null> {
       "/api/meditation/daily-suggestion",
     )) ?? null
   );
+}
+
+export interface RecentProgram {
+  program: Program;
+  last_touched_at: string;
+}
+
+export async function fetchRecentPrograms(
+  limit?: number,
+): Promise<RecentProgram[]> {
+  const query = limit !== undefined ? `?limit=${limit}` : "";
+  return request<RecentProgram[]>(`/api/meditation/recent-programs${query}`);
 }
 
 export async function fetchCategories(): Promise<Category[]> {

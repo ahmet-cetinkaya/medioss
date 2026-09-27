@@ -40,7 +40,6 @@
 	});
 
 	function progressLabel(program: Program): string {
-		if (program.progress === null) return "";
 		return `${Math.round(program.progress * 100)}%`;
 	}
 </script>
@@ -91,13 +90,13 @@
 							{/if}
 						</Card.Header>
 						<Card.Content>
-							{#if program.progress !== null}
-								<p class="text-sm text-muted-foreground">
-									Completed: {progressLabel(program)}
-								</p>
-							{:else}
-								<p class="text-sm text-muted-foreground">No meditations yet</p>
-							{/if}
+							<p class="text-sm text-muted-foreground">
+								{#if program.progress >= 1}
+									✓ Completed
+								{:else}
+									{progressLabel(program)} complete
+								{/if}
+							</p>
 						</Card.Content>
 					</Card.Root>
 					</a>

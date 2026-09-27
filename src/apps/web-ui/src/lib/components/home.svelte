@@ -6,14 +6,17 @@
 		fetchContinueProgram,
 		fetchDailySuggestion,
 		fetchMe,
+		fetchRecentPrograms,
 		type ContinueProgram,
 		type Meditation,
+		type RecentProgram,
 	} from "$lib/api/meditation";
 
 	let role = $state<string | null>(null);
 	let ready = $state(false);
 	let continueProgram = $state<ContinueProgram | null>(null);
 	let dailySuggestion = $state<Meditation | null>(null);
+	let recentPrograms = $state<RecentProgram[]>([]);
 
 	onMount(async () => {
 		try {
@@ -34,6 +37,11 @@
 			dailySuggestion = await fetchDailySuggestion();
 		} catch {
 			// Same as above: a suggestion failure must not block the home page.
+		}
+		try {
+			recentPrograms = await fetchRecentPrograms(5);
+		} catch {
+			// Same as above: a history failure must not block the home page.
 		}
 	});
 </script>
@@ -60,19 +68,17 @@
 					<div class="flex flex-1 flex-col gap-2">
 						<div>
 							<Card.Title>{continueProgram.program.title}</Card.Title>
-							{#if continueProgram.program.description || continueProgram.program.progress !== null}
-								<Card.Description>
-									{#if continueProgram.program.description}
-										{continueProgram.program.description}
-										{#if continueProgram.program.progress !== null}
-											·
-										{/if}
-									{/if}
-									{#if continueProgram.program.progress !== null}
-										{Math.round(continueProgram.program.progress * 100)}% complete
-									{/if}
-								</Card.Description>
-							{/if}
+							<Card.Description>
+								{#if continueProgram.program.description}
+									{continueProgram.program.description}
+									·
+								{/if}
+								{#if continueProgram.program.progress >= 1}
+									✓ Completed
+								{:else}
+									{Math.round(continueProgram.program.progress * 100)}% complete
+								{/if}
+							</Card.Description>
 						</div>
 						<Button
 							size="sm"
@@ -102,7 +108,16 @@
 						{/if}
 					</div>
 					<div class="flex flex-1 flex-col gap-2">
-						<Card.Title>{dailySuggestion.name}</Card.Title>
+						<div>
+							<Card.Title>{dailySuggestion.name}</Card.Title>
+							<Card.Description>
+								{#if dailySuggestion.completed}
+									✓ Completed
+								{:else}
+									{dailySuggestion.progress_percent}% complete
+								{/if}
+							</Card.Description>
+						</div>
 						<Button
 							size="sm"
 							class="self-start"
@@ -112,6 +127,41 @@
 						</Button>
 					</div>
 				</Card.Root>
+			</section>
+		{/if}
+		{#if recentPrograms.length > 0}
+			<section class="grid gap-2">
+				<div class="flex items-baseline justify-between">
+					<h2 class="text-sm font-medium text-muted-foreground">Recently experienced</h2>
+					<a href="/history" class="text-sm font-medium underline-offset-4 hover:underline">
+						See all
+					</a>
+				</div>
+				<div class="-mx-6 flex gap-3 overflow-x-auto px-6 pb-2">
+					{#each recentPrograms as entry (entry.program.id)}
+						<a href="/program/?id={entry.program.id}" class="block shrink-0">
+							<Card.Root class="w-36 gap-2 p-3">
+								{#if entry.program.has_cover}
+									<img
+										src="/api/meditation/programs/{entry.program.id}/cover"
+										alt=""
+										class="h-24 w-full rounded-md object-cover"
+									/>
+								{:else}
+									<div class="h-24 w-full rounded-md bg-muted" aria-hidden="true"></div>
+								{/if}
+								<p class="truncate text-sm font-medium">{entry.program.title}</p>
+								<p class="text-xs text-muted-foreground">
+									{#if entry.program.progress >= 1}
+										✓ Completed
+									{:else}
+										{Math.round(entry.program.progress * 100)}%
+									{/if}
+								</p>
+							</Card.Root>
+						</a>
+					{/each}
+				</div>
 			</section>
 		{/if}
 		<div class="flex flex-wrap gap-3">

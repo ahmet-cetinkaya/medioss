@@ -110,4 +110,24 @@ impl PlaybackStateRepository for SeaOrmPlaybackRepository {
             .map_err(|e| e.to_string())?;
         Ok(model.map(|row| row.meditation_id))
     }
+
+    async fn list_touched(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<(i64, chrono::DateTime<chrono::Utc>)>, String> {
+        let rows = table::Entity::find()
+            .filter(table::Column::UserId.eq(user_id.value()))
+            .order_by_desc(table::Column::UpdatedAt)
+            .all(&self.db)
+            .await
+            .map_err(|e| e.to_string())?;
+        rows.into_iter()
+            .map(|row| {
+                let updated_at = chrono::DateTime::parse_from_rfc3339(&row.updated_at)
+                    .map(|value| value.with_timezone(&chrono::Utc))
+                    .map_err(|error| format!("corrupt updated_at {error}"))?;
+                Ok((row.meditation_id, updated_at))
+            })
+            .collect()
+    }
 }

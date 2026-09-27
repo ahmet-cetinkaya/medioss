@@ -19,6 +19,10 @@ pub struct MeditationResponse {
     pub size_bytes: i64,
     pub duration_ms: i64,
     pub created_at: String,
+    /// Every meditation surface must show progress: `0` and `false` when the
+    /// caller never touched this meditation.
+    pub completed: bool,
+    pub progress_percent: i64,
     /// Set only on the daily-suggestion response, so its card can borrow the
     /// home program's cover; absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,6 +41,8 @@ pub(crate) fn meditation_response(
         size_bytes: meditation.size_bytes(),
         duration_ms: meditation.duration_ms(),
         created_at: meditation.created_at().to_rfc3339(),
+        completed: false,
+        progress_percent: 0,
         program_id: None,
         program_has_cover: false,
     }
@@ -45,7 +51,7 @@ pub(crate) fn meditation_response(
 /// `GET /meditation/daily-suggestion` — today's suggested meditation, the
 /// same pick for everyone all day; `204` when the library is empty.
 pub async fn daily_suggestion(
-    CurrentActor(_actor): CurrentActor,
+    CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Response, ApiError> {
     let found = queries::get_daily_suggestion(
@@ -59,7 +65,8 @@ pub async fn daily_suggestion(
     let Some(found) = found else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
-    let mut response = meditation_response(&found.meditation);
+    let mut response =
+        with_playback(deps.playback.as_ref(), actor.user_id(), &found.meditation).await;
     if let Some(program) = &found.program {
         response.program_id = Some(program.id);
         response.program_has_cover = program.cover_storage_key.is_some();
@@ -157,25 +164,53 @@ pub async fn upload(
 
 /// `GET /meditation/library` — the shared library, newest first.
 pub async fn library(
-    CurrentActor(_actor): CurrentActor,
+    CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Json<Vec<MeditationResponse>>, ApiError> {
     let listed = queries::list_library(deps.meditations.as_ref())
         .await
         .map_err(ApiError::Application)?;
-    Ok(Json(listed.iter().map(meditation_response).collect()))
+    let mut responses = Vec::with_capacity(listed.len());
+    for meditation in &listed {
+        responses.push(with_playback(deps.playback.as_ref(), actor.user_id(), meditation).await);
+    }
+    Ok(Json(responses))
 }
 
 /// `GET /meditation/{id}` — one meditation's metadata.
 pub async fn meditation(
-    CurrentActor(_actor): CurrentActor,
+    CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<MeditationResponse>, ApiError> {
     let found = queries::get_meditation(deps.meditations.as_ref(), id)
         .await
         .map_err(ApiError::Application)?;
-    Ok(Json(meditation_response(&found)))
+    Ok(Json(
+        with_playback(deps.playback.as_ref(), actor.user_id(), &found).await,
+    ))
+}
+
+/// Fills a meditation response's `completed`/`progress_percent` from the
+/// caller's own playback state; every meditation surface must show progress,
+/// so this is not optional decoration.
+async fn with_playback(
+    playback: &dyn meditation_application::ports::PlaybackStateRepository,
+    user_id: kernel::UserId,
+    meditation: &meditation_domain::Meditation,
+) -> MeditationResponse {
+    let mut response = meditation_response(meditation);
+    if let Ok(Some(state)) = playback.get(user_id, meditation.id()).await {
+        response.completed = state.completed;
+        response.progress_percent = if state.completed {
+            100
+        } else if meditation.duration_ms() > 0 {
+            ((state.position_ms * 100) / meditation.duration_ms()).clamp(0, 100)
+        } else {
+            0
+        };
+    }
+    response
 }
 
 /// One satisfiable byte range of a blob.

@@ -4,7 +4,6 @@
 	import * as Card from "$lib/components/ui/card";
 	import {
 		fetchLibrary,
-		fetchPlaybackState,
 		fetchPrograms,
 		type Meditation,
 		type Program,
@@ -12,15 +11,7 @@
 
 	let program = $state<Program | null>(null);
 	let members = $state<Meditation[]>([]);
-	let memberStates = $state<Record<number, { positionMs: number; completed: boolean }>>({});
 	let error = $state("");
-
-	function percentFor(meditation: Meditation): number | null {
-		const playback = memberStates[meditation.id];
-		if (!playback || meditation.duration_ms <= 0) return null;
-		if (playback.completed) return 100;
-		return Math.min(100, Math.round((playback.positionMs / meditation.duration_ms) * 100));
-	}
 
 	onMount(async () => {
 		const params = new URLSearchParams(window.location.search);
@@ -39,18 +30,8 @@
 			// The API returns progress but not membership; derive members from
 			// the meditations list once memberships are exposed — for now the
 			// detail view lists the whole library with the caller's completed
-			// state per item.
+			// state per item (each item already carries its own progress).
 			members = library;
-			const states = await Promise.all(
-				library.map(async (meditation) => {
-					const state = await fetchPlaybackState(meditation.id);
-					return [
-						meditation.id,
-						{ positionMs: state.position_ms, completed: state.completed },
-					] as const;
-				}),
-			);
-			memberStates = Object.fromEntries(states);
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : "could not load the program";
 		}
@@ -83,11 +64,13 @@
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>Meditations</Card.Title>
-			{#if program?.progress !== null && program?.progress !== undefined}
-				<Card.Description>
-					Completed: {Math.round((program.progress ?? 0) * 100)}%
-				</Card.Description>
-			{/if}
+			<Card.Description>
+				{#if (program?.progress ?? 0) >= 1}
+					✓ Completed
+				{:else}
+					{Math.round((program?.progress ?? 0) * 100)}% complete
+				{/if}
+			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<ul class="grid gap-2">
@@ -100,11 +83,13 @@
 							<div>
 								<p class="font-medium">{meditation.name}</p>
 							</div>
-							{#if memberStates[meditation.id]?.completed}
-								<span class="text-sm text-muted-foreground">✓ Completed</span>
-							{:else if percentFor(meditation) !== null}
-								<span class="text-sm text-muted-foreground">{percentFor(meditation)}%</span>
-							{/if}
+							<span class="text-sm text-muted-foreground">
+								{#if meditation.completed}
+									✓ Completed
+								{:else}
+									{meditation.progress_percent}%
+								{/if}
+							</span>
 						</a>
 					</li>
 				{/each}

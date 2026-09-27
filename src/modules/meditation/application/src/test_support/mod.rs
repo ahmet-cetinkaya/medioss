@@ -222,6 +222,9 @@ impl BlobStore for FakeBlobStore {
 }
 
 /// Shared in-memory state for all repository fakes; clone gives another
+/// (user, meditation, touched-at) rows tracking playback touch order.
+type PlaybackTouches = Vec<(i64, i64, DateTime<Utc>)>;
+
 /// handle to the same data.
 #[derive(Clone, Default)]
 pub struct RepoState {
@@ -234,7 +237,7 @@ pub struct RepoState {
     pub playback: Arc<Mutex<std::collections::HashMap<(i64, i64), PlaybackState>>>,
     /// Touch order for playback rows, oldest first; mirrors the real
     /// repository's `updated_at` ordering for `most_recent_meditation_id`.
-    pub playback_touches: Arc<Mutex<Vec<(i64, i64)>>>,
+    pub playback_touches: Arc<Mutex<PlaybackTouches>>,
 }
 
 impl RepoState {
@@ -699,10 +702,10 @@ pub struct FakePlaybackRepository(pub RepoState);
 impl FakePlaybackRepository {
     fn touch(&self, user_id: UserId, meditation_id: i64) {
         let mut touches = self.0.playback_touches.lock().unwrap();
-        touches.retain(|(existing_user, existing_meditation)| {
+        touches.retain(|(existing_user, existing_meditation, _)| {
             !(*existing_user == user_id.value() && *existing_meditation == meditation_id)
         });
-        touches.push((user_id.value(), meditation_id));
+        touches.push((user_id.value(), meditation_id, Utc::now()));
     }
 }
 
@@ -774,7 +777,20 @@ impl PlaybackStateRepository for FakePlaybackRepository {
             .unwrap()
             .iter()
             .rev()
-            .find(|(touched_user, _)| *touched_user == user_id.value())
-            .map(|(_, meditation_id)| *meditation_id))
+            .find(|(touched_user, _, _)| *touched_user == user_id.value())
+            .map(|(_, meditation_id, _)| *meditation_id))
+    }
+
+    async fn list_touched(&self, user_id: UserId) -> Result<Vec<(i64, DateTime<Utc>)>, String> {
+        Ok(self
+            .0
+            .playback_touches
+            .lock()
+            .unwrap()
+            .iter()
+            .rev()
+            .filter(|(touched_user, _, _)| *touched_user == user_id.value())
+            .map(|(_, meditation_id, touched_at)| (*meditation_id, *touched_at))
+            .collect())
     }
 }
