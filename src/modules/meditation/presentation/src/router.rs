@@ -74,6 +74,10 @@ pub fn meditation_router() -> Router<SharedDependencies> {
             get(crate::handlers_programs::continue_program),
         )
         .route(
+            "/meditation/daily-suggestion",
+            get(crate::handlers_audio::daily_suggestion),
+        )
+        .route(
             "/meditation/programs/{id}",
             get(crate::handlers_programs::program)
                 .put(crate::handlers_programs::update_program)

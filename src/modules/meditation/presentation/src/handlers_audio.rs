@@ -19,6 +19,12 @@ pub struct MeditationResponse {
     pub size_bytes: i64,
     pub duration_ms: i64,
     pub created_at: String,
+    /// Set only on the daily-suggestion response, so its card can borrow the
+    /// home program's cover; absent elsewhere.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program_id: Option<i64>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub program_has_cover: bool,
 }
 
 pub(crate) fn meditation_response(
@@ -31,7 +37,34 @@ pub(crate) fn meditation_response(
         size_bytes: meditation.size_bytes(),
         duration_ms: meditation.duration_ms(),
         created_at: meditation.created_at().to_rfc3339(),
+        program_id: None,
+        program_has_cover: false,
     }
+}
+
+/// `GET /meditation/daily-suggestion` — today's suggested meditation, the
+/// same pick for everyone all day; `204` when the library is empty.
+pub async fn daily_suggestion(
+    CurrentActor(_actor): CurrentActor,
+    State(deps): State<SharedDependencies>,
+) -> Result<Response, ApiError> {
+    let found = queries::get_daily_suggestion(
+        deps.meditations.as_ref(),
+        deps.clock.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    let Some(found) = found else {
+        return Ok(StatusCode::NO_CONTENT.into_response());
+    };
+    let mut response = meditation_response(&found.meditation);
+    if let Some(program) = &found.program {
+        response.program_id = Some(program.id);
+        response.program_has_cover = program.cover_storage_key.is_some();
+    }
+    Ok(Json(response).into_response())
 }
 
 /// `POST /meditation/audio` — admin-only multipart upload (file + name).

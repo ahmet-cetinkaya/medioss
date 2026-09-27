@@ -10,6 +10,8 @@ export interface Meditation {
   size_bytes: number;
   duration_ms: number;
   created_at: string;
+  program_id?: number;
+  program_has_cover?: boolean;
 }
 
 export interface Category {
@@ -84,6 +86,14 @@ export async function fetchContinueProgram(): Promise<ContinueProgram | null> {
   return (
     (await request<ContinueProgram | undefined>("/api/meditation/continue")) ??
     null
+  );
+}
+
+export async function fetchDailySuggestion(): Promise<Meditation | null> {
+  return (
+    (await request<Meditation | undefined>(
+      "/api/meditation/daily-suggestion",
+    )) ?? null
   );
 }
 
