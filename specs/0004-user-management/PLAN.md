@@ -3,68 +3,68 @@ status: complete
 spec: specs/0004-user-management/SPEC.md
 ---
 
-# Implementation Plan: Kullanıcı Yönetimi (Admin UI + Liste)
+# Implementation Plan: User Management (Admin UI + List)
 
 ## Goal
 
-Onaylı spec 0004'ü teslim et: admin'in web arayüzünden kullanıcı ekleyebilmesi ve hesap listesini görebilmesi. `POST /api/identity/users` (FR-013) zaten mevcut ve testli; bu plan yalnızca (1) `GET /api/identity/users` admin-only liste uç noktasını, (2) admin sayfasında kullanıcı yönetimi bölümünü (form + liste + tek kullanımlık şifre gösterimi) ekler. Hiçbir mevcut identity davranışı değişmez (PRESERVED: FR-004/012/013/014/018).
+Deliver approved spec 0004: allow admin to add users and view account list via web UI. `POST /api/identity/users` (FR-013) already exists and is tested; this plan adds only (1) `GET /api/identity/users` admin-only list endpoint, and (2) user management section in admin page (form + list + one-time password display). No existing identity behavior changes (PRESERVED: FR-004/012/013/014/018).
 
 ## Context
 
-- **Mevcut API:** `POST /identity/users` router.rs:55, `create_user` komutu → `insert_member` → `User::new_temporary` (member rolü, must-change-password, 24h geçici hash). 403/409/400 yolları komut + rota testleriyle güvence altında.
-- **UserRepository** portunda `list` yok — `count`, `find_by_email/id`, `insert_initial_admin_if_uninitialized`, `insert_member`, `apply_credential_change` var. Yeni `list_users` query'si port genişletmesini gerektirir.
-- **UI:** Astro pages (`pages/admin.astro` → `components/admin.svelte`), rol kontrolü `fetchMe()` ile satır 63'te (`me.role !== "admin"` → içerik yok). `lib/api/` altında identity istemcisi yok; `fetchMe`/`login` `api/meditation.ts` içinde duruyor (teknik borç, bu planlık kapsam değil ama yeni istemci `lib/api/identity.ts`'e yazılır).
-- **Test düzeni:** presentation'da `router.tests.rs` (fake repository ile rota testleri), infrastructure'da `repository.tests.rs` (in-memory SQLite), application'da query testleri.
-- Konvansiyon: plan spec klasöründe `PLAN.md`; commitler İngilizce conventional, gövde FR referansları taşır.
+- **Existing API:** `POST /identity/users` router.rs:55, `create_user` command → `insert_member` → `User::new_temporary` (member role, must-change-password, 24h temporary hash). 403/409/400 paths are covered by command + route tests.
+- **UserRepository** port has no `list` — only `count`, `find_by_email/id`, `insert_initial_admin_if_uninitialized`, `insert_member`, `apply_credential_change`. New `list_users` query requires port extension.
+- **UI:** Astro pages (`pages/admin.astro` → `components/admin.svelte`), role check `fetchMe()` at line 63 (`me.role !== "admin"` → no content). No identity client under `lib/api/`; `fetchMe`/`login` are in `api/meditation.ts` (technical debt, not in scope of this plan but new client goes to `lib/api/identity.ts`).
+- **Test structure:** presentation layer `router.tests.rs` (fake repository route tests), infrastructure `repository.tests.rs` (in-memory SQLite), application layer query tests.
+- Convention: plan spec in `PLAN.md` in spec folder; commits use English conventional, body contains FR references.
 
 ## Tasks
 
 ### T1 — Application: `list_users` query
 
-`identity/application/src/queries/list_users.rs` (+ test dosyası, `mod.rs` kaydı): `list_users(repository) -> Result<Vec<User>, ApplicationError>`; boş repo → `vec![]`. `UserRepository` portuna `async fn list(&self) -> Result<Vec<User>, RepositoryError>` eklenir; `fake_repository.rs` ve `infrastructure/persistence/repository.rs` (SQL: `SELECT ... ORDER BY email ASC`) uygular. Domain değişikliği yok (User zaten tüm alanları taşıyor).
+`identity/application/src/queries/list_users.rs` (+ test file, `mod.rs` registration): `list_users(repository) -> Result<Vec<User>, ApplicationError>`; empty repo → `vec![]`. Add `async fn list(&self) -> Result<Vec<User>, RepositoryError>` to `UserRepository` port; `fake_repository.rs` and `infrastructure/persistence/repository.rs` (SQL: `SELECT ... ORDER BY email ASC`) implement it. No domain change (User already has all fields).
 
-Kabul: `cargo test -p identity-application` yeşil; `queries/list_users.tests.rs` (boş → vec![], seed'li → email asc sıralı döner).
+Acceptance: `cargo test -p identity-application` green; `queries/list_users.tests.rs` (empty → vec![], seeded → email asc sorted).
 
 ### T2 — Presentation: `GET /identity/users` (admin-only)
 
-`identity/presentation/src/router.rs`: yeni rota `GET /identity/users` → `AdminActor` extractor'ü (mevcut `CurrentActor` + rol kontrolü pattern'i — soundscape router'daki `AdminActor` ile aynı şekil) + `list_users` çağrısı → `200` `[{id, email, role, must_change_password}]` (şifre hash'i asla serileştirilmez; `created_at` zaten mevcut). Origin kontrolü: GET için gerekmez (mevcut GET rotaları origin kontrolü uygulamıyor — login/me ile tutarlı).
+`identity/presentation/src/router.rs`: new route `GET /identity/users` → `AdminActor` extractor (existing `CurrentActor` + role check pattern — same style as `AdminActor` in soundscape router) + `list_users` call → `200` `[{id, email, role, must_change_password}]` (password hash never serialized; `created_at` already exists). Origin check: not needed for GET (existing GET routes don't apply origin check — consistent with login/me).
 
-Kabul: `router.tests.rs`'a 3 test: admin → 200 + liste doğru sıralı; member → 403; anonim → 401. Mevcut `POST /identity/users` testleri etkilenmez.
+Acceptance: 3 tests in `router.tests.rs`: admin → 200 + list correctly sorted; member → 403; anonymous → 401. Existing `POST /identity/users` tests unaffected.
 
-### T3 — Web UI: identity istemcisi + admin sayfası kullanıcı bölümü
+### T3 — Web UI: identity client + admin page user section
 
-`lib/api/identity.ts` (yeni): `fetchUsers()`, `createUser(email, password)` — `request()` helper'ı `api/meditation.ts`'ten import/re-export edilir (helper'ın kendisi kopyalanmaz). `admin.svelte`: mevcut düzenin devamına "Kullanıcılar" kartı — form (e-posta + geçici şifre girdileri), 409/400 mesajları form altında aynı dilde (FR-023), başarılı oluşturmada geçici şifre tek seferlik görüntülenir (FR-025a; kopyalanabilir, sayfa yenilendiğinde kaybolur), liste (id, e-posta, rol, must-change göstergesi) `fetchUsers()` ile, üye rolü zaten satır 63'te engelleniyor (FR-024 karşılanmış durumda — sadece doğrulama kalır).
+`lib/api/identity.ts` (new): `fetchUsers()`, `createUser(email, password)` — `request()` helper imported/re-exported from `api/meditation.ts` (helper itself not copied). `admin.svelte`: continue existing layout with "Users" card — form (email + temporary password inputs), 409/400 messages shown below form in same language (FR-023), successful creation shows temporary password once (FR-025a; copyable, disappears on page refresh), list (id, email, role, must-change indicator) via `fetchUsers()`, member role already blocked at line 63 (FR-024 already addressed — only validation remains).
 
-Kabul: `bun run build` temiz; elle QA (T5'te).
+Acceptance: `bun run build` clean; manual QA (T5).
 
 ### T4 — Gates + commit
 
-`cargo fmt --all`; `nix-shell -p rustfmt clippy --run "cargo clippy --workspace --all-targets -- -D warnings"`; `cargo test --workspace`; `cd src/apps/web-ui && bun run build`. Tek commit (tek cohesion'lu değişiklik): `feat(identity): admin user management UI and user listing` — gövde FR-022..FR-025a + PRESERVED referansları. Commit yalnız kullanıcı isterse (repo kuralı).
+`cargo fmt --all`; `nix-shell -p rustfmt clippy --run "cargo clippy --workspace --all-targets -- -D warnings"`; `cargo test --workspace`; `cd src/apps/web-ui && bun run build`. Single commit (single cohesive change): `feat(identity): admin user management UI and user listing` — body contains FR-022..FR-025a + PRESERVED references. Commit only if user requests (repo rule).
 
-### T5 — Canlı QA (SC-001..SC-004a)
+### T5 — Live QA (SC-001..SC-004a)
 
-`/tmp` altında taze data dir + sunucu: admin kurulumu → admin formundan kullanıcı oluştur (SC-001: 201, listede) → yeni kullanıcı geçici şifreyle login → `must_change_password: true` (SC-004a) → şifre değiştir → normal kullanım. Aynı e-posta tekrar (farklı case) → formda 409 mesajı (SC-002). Üye oturumuyla admin sayfası → liste çekilmez (SC-003). Rota testleri zaten SC-004'ü kapsıyor.
+Fresh data dir + server under `/tmp`: admin setup → create user from admin form (SC-001: 201, in list) → new user logs in with temporary password → `must_change_password: true` (SC-004a) → change password → normal usage. Same email again (different case) → 409 message in form (SC-002). Member session on admin page → list not fetched (SC-003). Route tests already cover SC-004.
 
 ## DoD
 
-- Tüm gates yeşil (fmt, clippy `-D warnings`, `cargo test --workspace`, UI build).
-- Canlı QA senaryoları SC-001..SC-004a geçer.
-- Traceability tablosundaki her FR/SC için kanıt mevcut.
+- All gates green (fmt, clippy `-D warnings`, `cargo test --workspace`, UI build).
+- Live QA scenarios SC-001..SC-004a pass.
+- Evidence exists for every FR/SC in traceability table.
 
 ## Traceability
 
-| ID | Task(s) | Kanıt |
+| ID | Task(s) | Evidence |
 | --- | --- | --- |
-| FR-022 | T3 | QA: form → 201 + listede; rota testi T2'de değil ama create rotası mevcut |
-| FR-023 | T3 | QA: 409/400 formda gösterilir, form korunur |
-| FR-024 | T4 | Mevcut satır 63 gate + QA üye oturumu |
-| FR-025 | T1, T2 | Rota testleri (200/403/401) + QA |
-| FR-025a | T3 | QA: şifre tek seferlik görünür |
-| SC-001..005 | T4, T5 | Gates + canlı QA çıktıları |
+| FR-022 | T3 | QA: form → 201 + in list; route test not in T2 but create route exists |
+| FR-023 | T3 | QA: 409/400 shown in form, form preserved |
+| FR-024 | T4 | Existing line 63 gate + QA member session |
+| FR-025 | T1, T2 | Route tests (200/403/401) + QA |
+| FR-025a | T3 | QA: password shown once |
+| SC-001..005 | T4, T5 | Gates + live QA outputs |
 
 ## Risks / Rollback
 
-- Port genişletmesi (`UserRepository::list`) breaking'dir ama yalnızca iki impl (fake + SQLite) var; ikisi de bu plan içinde güncellenir. Risk düşük.
-- `created_at` repository SELECT/serialize yolunda zaten mevcut (repository.rs:71); şema değişikliği yok — migration gerekmez.
-- Geri alma: tek commit revert. API geriye dönük uyumlu (yalnız eklemeler).
-- Kimlik doğrulama/throttle/argon2 yollarına dokunulmuyor — PRESERVED listesi.
+- Port extension (`UserRepository::list`) is breaking but only two impls (fake + SQLite) exist; both updated in this plan. Low risk.
+- `created_at` already exists in repository SELECT/serialize path (repository.rs:71); no schema change — no migration needed.
+- Rollback: single commit revert. API backward compatible (only additions).
+- Authentication/throttle/argon2 paths untouched — PRESERVED list.

@@ -5,79 +5,74 @@ plan: specs/0004-user-management/PLAN.md
 supersedes:
 ---
 
-# M4 — Kullanıcı Yönetimi
+# M4 — User Management
 
 ## Intent
 
-Yönetici (admin) kimliği doğrulanmış kullanıcıları uygulamanın hiçbir yerine dokunmadan bir
-ekran üzerinden ekleyebilsin ve hesap listesini görebilsin. API yüzeyi (`POST
-/api/identity/users`) M1'den beri mevcuttur; bu spec, admin web UI yüzeyini ve liste uç
-noktasını sözleşme altına alır. Tek instance'lı uygulamada kullanıcı ömrü yönetici ile
-başlar: self-servis kayıt yok (PRD), e-posta altyapısı yok (PRD) — geçici şifre yöneticinin
-ekranında bir kez gösterilir ve kişisel kanaldan iletilir.
+An authenticated admin can add users and view the account list from a single screen, without touching the application anywhere else. The API surface (`POST /api/identity/users`) has existed since M1; this spec puts the admin web UI surface and the list endpoint under contract. In the single-instance app, a user's lifecycle starts with the administrator: no self-service registration (PRD), no email infrastructure (PRD) — the temporary password is shown once on the admin's screen and delivered through a personal channel.
 
 ## User Stories
 
-### US1 — Yönetici, kullanıcı ekler (Priority: P1)
+### US1 — Admin creates a user (Priority: P1)
 
-**Bireysel test:** Yönetici olarak admin sayfasını aç; e-posta ve geçici şifre girip gönder; yeni kullanıcı listede görünür ve oluşturulan hesapla ilk girişte şifre değişikliği istenir.
+**Solo test:** As an admin, open the admin page; enter an email and a temporary password and submit; the new user appears in the list, and the created account is asked to change its password on first login.
 
-- **Given** yönetici oturumu ve kullanılmayan bir e-posta, **when** kullanıcı oluşturulursa, **then** istek `201` döner, hesap `member` rolüyle ve must-change-password işaretiyle oluşur, ve UI tek kullanımlık şifreyi bir kez, yalnızca bu ekranda gösterir.
-- **Given** zaten mevcut bir e-posta (büyük/küçük harf farkı dahil), **when** kullanıcı oluşturulursa, **then** UI `409` hatasını aynı dilde bir hata mesajı olarak gösterir ve form temizlenmez.
-- **Given** 8 karakterden kısa bir geçici şifre, **when** form gönderilirse, **then** API `400` döner ve UI doğrulama hatasını alanın altında gösterir.
-- **Given** üye oturumu, **when** admin sayfası açılmaya çalışılırsa, **then** sayfa yönetici olmayanlara içeriği göstermez ve yönetim aksiyonları 403 ile reddedilir.
+- **Given** an admin session and an unused email, **when** the user is created, **then** the request returns `201`, the account is created with the `member` role and the must-change-password flag, and the UI shows the one-time password once, only on this screen.
+- **Given** an email that already exists (including case differences), **when** the user is created, **then** the UI shows the `409` error as an error message in the same language, and the form is not cleared.
+- **Given** a temporary password shorter than 8 characters, **when** the form is submitted, **then** the API returns `400` and the UI shows the validation error under the field.
+- **Given** a member session, **when** the admin page is opened, **then** the page shows no content to non-admins and admin actions are rejected with 403.
 
-### US2 — Yönetici, kullanıcıları listeler (Priority: P2)
+### US2 — Admin lists users (Priority: P2)
 
-**Bireysel test:** Yönetici olarak admin sayfasını aç; hesap listesi e-posta, rol ve durum ile görüntülenir.
+**Solo test:** As an admin, open the admin page; the account list is displayed with email, role, and status.
 
-- **Given** yönetici oturumu, **when** admin sayfası açılır, **then** mevcut hesaplar (id, e-posta, rol, must-change-password durumu, oluşturma zamanı) e-posta alfabetik sırada listelenir.
-- **Given** üye veya anonim istemci, **when** liste uç noktası çağrılırsa, **then** istek sırasıyla 403/401 ile reddedilir.
+- **Given** an admin session, **when** the admin page opens, **then** current accounts (id, email, role, must-change-password status, creation time) are listed in alphabetical email order.
+- **Given** a member or anonymous client, **when** the list endpoint is called, **then** the request is rejected with 403/401 respectively.
 
 ## Requirements
 
 ### ADDED
 
-- FR-001: WHEN yönetici oturumlu bir istemci admin sayfasındaki formu kullanılmayan bir e-posta ve en az 8 karakterlik bir geçici şifreyle gönderirse THE SYSTEM SHALL `201` ile hesabı oluşturup UI'da listeye eklesin; hesap member rolünde ve must-change-password işaretli doğar.
-- FR-002: WHEN oluşturma isteği `409` (e-posta çakışması) veya `400` (doğrulama) döndürürse THE SYSTEM SHALL formdaki girişleri koruyup mesajı formun yanında aynı dilde göstersin.
-- FR-003: WHEN üye rolündeki bir kullanıcı admin sayfasına erişmeye çalışırsa THE SYSTEM SHALL sayfayı boş/erişilemez gösterip API çağrılarını yapmadan reddetsin (API zaten 403 döner; UI kaba dokunmadan gizler).
-- FR-004: WHEN admin sayfası yüklendiğinde THE SYSTEM SHALL mevcut kullanıcıları (id, e-posta, rol, must_change_password, oluşturma zamanı) e-posta alfabetik sırada çekebilsin; liste uç noktası yalnızca yönetici erişimine açıktır.
-- FR-005: WHEN geçici şifre gösterim alanı kullanılırsa THE SYSTEM SHALL şifreyi yalnızca oluşturma anında bir kez görüntüleyip sonraki render'larda ve sayfa yenilemelerinde erişilemez kılsın; şifre yöneticinin ekranında kalıcı olarak saklanmaz.
+- FR-001: WHEN an admin-session client submits the form on the admin page with an unused email and a temporary password of at least 8 characters THE SYSTEM SHALL create the account with `201` and add it to the list in the UI; the account is born with the member role and the must-change-password flag.
+- FR-002: WHEN the creation request returns `409` (email conflict) or `400` (validation) THE SYSTEM SHALL keep the form inputs and show the message next to the form in the same language.
+- FR-003: WHEN a member-role user tries to access the admin page THE SYSTEM SHALL show the page empty/inaccessible and reject it without making API calls (the API already returns 403; the UI hides without touching anything).
+- FR-004: WHEN the admin page loads THE SYSTEM SHALL be able to fetch current users (id, email, role, must_change_password, creation time) in alphabetical email order; the list endpoint is open to admin access only.
+- FR-005: WHEN the temporary-password display area is used THE SYSTEM SHALL display the password only once at creation time and make it inaccessible in later renders and page reloads; the password is not stored persistently on the admin's screen.
 
 ## Success Criteria
 
-- SC-001: Yönetici, admin sayfasından bir kullanıcı oluşturur; istek `201`, hesap listede, yeni kullanıcı ilk girişte şifre değişikliğine zorlanır (canlı QA: admin ekler → üye geçici şifreyle girer → şifre değişimi istenir).
-- SC-002: Aynı e-posta tekrar (farklı case) gönderildiğinde UI çakışma hatası gösterir, form korunur; API seviyesinde `409` doğrulanır.
-- SC-003: Üye oturumuyla admin sayfası açıldığında kullanıcı listesi çekilmez ve oluşturma aksiyonu `403` alır; rota testleriyle kanıtlanır.
-- SC-004: Rota seviyesi testler: admin `POST /api/identity/users` → 201; üye → 403; anonim → 401; `GET /api/identity/users` → admin 200 (sıralı) / üye 403.
-- SC-005: Tüm kapılar (fmt, clippy `-D warnings`, `cargo test --workspace`, UI build) yeşil; canlı doğrulama tamamlanır.
+- SC-001: The admin creates a user from the admin page; request `201`, account in the list, the new user is forced to change their password on first login (live QA: admin adds → member logs in with the temporary password → password change is requested).
+- SC-002: When the same email is submitted again (different case), the UI shows a conflict error, the form is preserved; `409` is verified at the API level.
+- SC-003: With a member session, opening the admin page does not fetch the user list and the creation action gets `403`; proven by route tests.
+- SC-004: Route-level tests: admin `POST /api/identity/users` → 201; member → 403; anonymous → 401; `GET /api/identity/users` → admin 200 (sorted) / member 403.
+- SC-005: All gates (fmt, clippy `-D warnings`, `cargo test --workspace`, UI build) green; live verification completed.
 
 ## Edge Cases
 
-- Geçici şifre, yöneticiye yalnızca ekranda gösterilir; sayfa yenilendiğinde tekrar görünmez.
-- E-posta büyük/küçük harf farklarıyla girilirse, API normalizasyonuyla `409` tetiklenir; UI mesajı hem 409 hem 400 için aynı formda gösterilir.
-- Admin sayfası, yönetici olmayan kullanıcılar için tamamen render edilmez; `fetchMe()` rol kontrolü ile gizlenir.
-- E-posta boş/geçersiz formatta → tarayıcı form doğrulaması istek öncesinde engeller; API `400` fallback.
-- Aynı anda iki yönetici aynı e-postayı oluşturmaya çalışırsa DB uniqueness `409` üretir; UI'da çakışma mesajı gösterilir.
+- The temporary password is shown to the admin only on screen; it does not reappear after a page reload.
+- If the email is entered with case differences, API normalization triggers `409`; the UI message is shown in the same form for both 409 and 400.
+- The admin page is not rendered at all for non-admin users; it is hidden via the `fetchMe()` role check.
+- Empty/invalid-format email → browser form validation blocks before the request; API `400` fallback.
+- If two admins try to create the same email simultaneously, DB uniqueness produces `409`; a conflict message is shown in the UI.
 
 ## Assumptions
 
-- `POST /api/identity/users` M1 semantiğiyle kullanılır; şifre üretimi, gösterimi ve must-change akışı bu spec'in kapsamıdır.
-- Liste uç noktası (`GET /api/identity/users`) bu modülle eklendi; pagination yok (tek instance, az kullanıcı), sıralama e-posta asc.
-- UI dili Türkçe kalır (mevcut sayfalarla tutarlı).
-- Migration gerekmez; users tablosu M1'den beri mevcut.
-- Rol sabitleri: `admin` ve `member` — UI'da `role === "admin"` kontrolü kullanılır (mevcut `fetchMe` contract'ı korunur).
+- `POST /api/identity/users` is used with M1 semantics; password generation, display, and the must-change flow are in this spec's scope.
+- The list endpoint (`GET /api/identity/users`) was added with this module; no pagination (single instance, few users), ordering by email asc.
+- The UI language stays Turkish (consistent with existing pages).
+- No migration needed; the users table has existed since M1.
+- Role constants: `admin` and `member` — the UI uses the `role === "admin"` check (the existing `fetchMe` contract is preserved).
 
 ## Out of Scope
 
-- Şifre sıfırlama/OTP akışı, e-posta ile davet, self-servis kayıt (PRD gereği var olmayacak).
-- Rol değiştirme, hesap silme/devre dışı bırakma (operator CLI işleri M1'de kalır).
-- Kullanıcı listesi için pagination/search.
+- Password reset/OTP flow, email invitations, self-service registration (will not exist per the PRD).
+- Role changes, account deletion/deactivation (operator CLI tasks stay in M1).
+- Pagination/search for the user list.
 
 ## Clarifications
 
-Yok.
+None.
 
 ## Deviations
 
-Yok.
+None.
