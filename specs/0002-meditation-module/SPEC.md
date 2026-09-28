@@ -9,7 +9,7 @@ supersedes:
 
 ## Intent
 
-An instance maintains a shared meditation library that only the admin curates: they upload personal audio (genuinely audio, size-capped, converted to Opus for efficient storage), organize it into programs with cover images under categories, and every signed-in user can browse, stream with seeking, and download it. Each user's practice data stays their own: playback position, completed state, meditation sessions, practice notes, and program progress are recorded per user and are invisible to others. This delivers the meditation pillar of the MVP per the PRD and roadmap M2, reshaped by user direction toward an admin-curated shared library for the first stage, on top of the identity capability (specs/0001-identity-module): every meditation action is performed by an authenticated Actor. Stored media bytes live only under the operator-configured data directory, so backing up that directory captures everything.
+An instance maintains a shared meditation library that only the admin curates: they upload personal audio (genuinely audio, size-capped, stored lossless-preserving: PCM sources as FLAC, compressed sources byte-identical), organize it into programs with cover images under categories, and every signed-in user can browse, stream with seeking, and download it. Each user's practice data stays their own: playback position, completed state, meditation sessions, practice notes, and program progress are recorded per user and are invisible to others. This delivers the meditation pillar of the MVP per the PRD and roadmap M2, reshaped by user direction toward an admin-curated shared library for the first stage, on top of the identity capability (specs/0001-identity-module): every meditation action is performed by an authenticated Actor. Stored media bytes live only under the operator-configured data directory, so backing up that directory captures everything.
 
 ## User Stories
 
@@ -119,16 +119,15 @@ After practicing, a user writes notes linked to the meditation for their own ref
 - Given the author, when they edit or delete their note, then the change is applied to exactly that note.
 - Given any user other than the author, when a route addressing another user's note is called, then 404 is returned, indistinguishable from a nonexistent identifier.
 
-### US10 — Efficient storage via Opus conversion (Priority: P1)
+### US10 — Lossless-preserving, efficient storage (Priority: P1)
 
-Accepted uploads are stored once, as Opus, so disk usage stays efficient; the original file is not retained.
+Accepted uploads are stored exactly once, without any quality loss: PCM sources are compressed losslessly to FLAC, and already-compressed sources are kept byte-identical; the original lossy form is never re-encoded.
 
-**Independent test:** upload a large WAV; the stored file is Ogg Opus, substantially smaller, and streams and plays back end-to-end.
+**Independent test:** upload a large WAV; the stored file is FLAC, substantially smaller, decodes bit-exact to the source, and streams and plays back end-to-end.
 
-- Given an accepted upload in any accepted format, when storage completes, then the stored file is Opus in an Ogg container and the original bytes are not retained.
-- Given a WAV source, when converted, then the Opus encoding is transparent at the configured quality setting and the stored size is substantially smaller than the source.
-- Given an upload that is already Opus in an Ogg container, when stored, then it is kept as-is without re-encoding.
-- Given a stream that passes initial signature validation but cannot be decoded fully (corrupt mid-stream), when conversion fails, then the upload is rejected and nothing is stored.
+- Given an accepted upload in any accepted format, when storage completes, then the stored file is FLAC (for PCM sources) or the original compressed bytes (MP3, Ogg Opus) and no lossy re-encode happened.
+- Given a WAV source, when converted, then the FLAC encoding decodes bit-exact to the source PCM and the stored size is substantially smaller than the raw WAV.
+- Given an upload that is already compressed (MP3 or Opus in an Ogg container), when stored, then it is kept as-is without re-encoding.
 
 ### US11 — Download meditation (Priority: P2)
 
@@ -192,7 +191,7 @@ Each user's home page surfaces three personal entry points into the shared libra
 - FR-035: WHEN a user lists notes on a meditation THE SYSTEM SHALL return only that user's own notes for it, newest first.
 - FR-036: WHEN the author edits or deletes their note THE SYSTEM SHALL apply the change to exactly that note.
 - FR-037: WHEN a route addressing another user's note is called by anyone but its author THE SYSTEM SHALL return 404 indistinguishable from a nonexistent identifier.
-- FR-038: WHEN an accepted audio upload is stored THE SYSTEM SHALL convert it to Opus in an Ogg container at a transparent quality setting and persist only the converted form.
+- FR-038: WHEN an accepted audio upload is stored THE SYSTEM SHALL preserve its quality: PCM input SHALL be compressed losslessly to FLAC, already-compressed input SHALL be persisted byte-identical, and no lossy re-encode SHALL occur.
 - FR-039: WHEN an accepted upload is already Opus in an Ogg container THE SYSTEM SHALL store it as-is without re-encoding.
 - FR-040: WHEN an authenticated user requests a download of a meditation THE SYSTEM SHALL return the stored audio as a file attachment named after the meditation.
 - FR-041: WHEN an accepted audio upload is converted to Opus THE SYSTEM SHALL probe and persist its decoded duration alongside the meditation row.

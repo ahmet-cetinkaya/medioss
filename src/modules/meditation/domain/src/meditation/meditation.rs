@@ -1,9 +1,19 @@
 use chrono::{DateTime, Utc};
 use thiserror::Error;
 
-/// The stored audio content type. Every upload is normalized to Ogg Opus, so
-/// the row's content type is a constant rather than upload-controlled input.
+/// The stored audio content type for legacy Opus-normalized rows. New rows
+/// keep their upload's content type (MP3, Opus) or store FLAC when the
+/// source was uncompressed PCM; see [`valid_content_type`].
 pub const STORED_CONTENT_TYPE: &str = "audio/ogg";
+
+/// Content types a persisted meditation may carry. Compressed uploads keep
+/// their original format; PCM-derived ones are stored losslessly as FLAC.
+pub fn valid_content_type(content_type: &str) -> bool {
+    matches!(
+        content_type,
+        "audio/ogg" | "audio/mpeg" | "audio/flac" | "audio/wav"
+    )
+}
 
 /// Maximum accepted name length, in characters.
 const MAX_NAME_LENGTH: usize = 200;
@@ -15,7 +25,7 @@ pub enum MeditationError {
     InvalidName,
     #[error("meditation size must be positive")]
     InvalidSize,
-    #[error("meditation content type must be {STORED_CONTENT_TYPE}")]
+    #[error("meditation content type is not a supported audio type")]
     InvalidContentType,
     #[error("meditation storage key must not be empty")]
     InvalidStorageKey,
@@ -48,7 +58,7 @@ impl Meditation {
         if name.is_empty() || name.chars().count() > MAX_NAME_LENGTH {
             return Err(MeditationError::InvalidName);
         }
-        if content_type != STORED_CONTENT_TYPE {
+        if !valid_content_type(content_type) {
             return Err(MeditationError::InvalidContentType);
         }
         if size_bytes <= 0 {

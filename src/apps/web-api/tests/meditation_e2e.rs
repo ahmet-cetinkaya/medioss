@@ -383,7 +383,7 @@ async fn m2_full_battery() {
         )
         .await;
     assert_eq!(response.status, 201, "admin upload: {}", response.text());
-    assert!(response.text().contains("\"content_type\":\"audio/ogg\""));
+    assert!(response.text().contains("\"content_type\":\"audio/mpeg\""));
     let meditation_id: i64 = {
         let text = response.text();
         let start = text.find("\"id\":").map(|index| index + 5).unwrap();
@@ -415,7 +415,10 @@ async fn m2_full_battery() {
         content_range.starts_with("bytes 0-99/"),
         "content-range: {content_range}"
     );
-    assert!(response.body.starts_with(b"OggS"), "stored form is Ogg");
+    assert!(
+        response.body.starts_with(b"ID3"),
+        "stored form is the original MP3"
+    );
 
     // --- Unknown id: 404; unauthenticated audio: 401 (SC-001).
     let response = server
@@ -522,7 +525,7 @@ async fn m2_full_battery() {
         )
         .await;
     assert_eq!(response.status, 201, "wav upload: {}", response.text());
-    assert!(response.text().contains("audio/ogg"));
+    assert!(response.text().contains("audio/flac"));
     let stored_size: i64 = {
         let text = response.text();
         let start = text
@@ -537,7 +540,7 @@ async fn m2_full_battery() {
     };
     assert!(
         (stored_size as usize) < wav.len() / 2,
-        "opus output {} must be well under half of wav {}",
+        "flac output {} must be well under half of wav {}",
         stored_size,
         wav.len()
     );
