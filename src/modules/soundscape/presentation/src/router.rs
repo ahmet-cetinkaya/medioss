@@ -158,7 +158,12 @@ pub fn soundscape_router() -> Router<SharedDependencies> {
             "/soundscape/categories/{id}",
             put(rename_category).delete(delete_category),
         )
-        .route("/soundscape/sounds", get(list_sounds).post(upload_sound))
+        .route(
+            "/soundscape/sounds",
+            get(list_sounds).post(upload_sound).layer(axum::extract::DefaultBodyLimit::max(
+                commands::sounds::MAX_UPLOAD_BYTES,
+            )),
+        )
         .route(
             "/soundscape/sounds/{id}",
             put(update_sound).delete(delete_sound),
@@ -240,7 +245,7 @@ async fn upload_sound(
     let mut name = None;
     let mut category_id = None;
     let mut bytes = None;
-    while let Some(field) = multipart
+    while let Some(mut field) = multipart
         .next_field()
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?
@@ -258,11 +263,37 @@ async fn upload_sound(
                 )
             }
             Some("file") => {
-                let data = field.bytes().await.map_err(|_| StatusCode::BAD_REQUEST)?;
-                if data.len() > commands::sounds::MAX_UPLOAD_BYTES {
+                // Read in bounded chunks instead of field.bytes(): DefaultBodyLimit
+                // aborts the stream when the declared limit is hit, which lets us
+                // answer 413 (too large) instead of a generic 400 (bad multipart).
+                let mut data = Vec::new();
+                let mut too_large = false;
+                loop {
+                    match field.chunk().await {
+                        Ok(Some(chunk)) => {
+                            data.extend_from_slice(&chunk);
+                            if data.len() > commands::sounds::MAX_UPLOAD_BYTES {
+                                too_large = true;
+                                break;
+                            }
+                        }
+                        Ok(None) => break,
+                        Err(_) => {
+                            // The stream broke at the body limit on an already
+                            // large payload means size, not shape; a small
+                            // payload failing here really is malformed.
+                            return Err(if data.len() >= 2 * 1024 * 1024 {
+                                StatusCode::PAYLOAD_TOO_LARGE
+                            } else {
+                                StatusCode::BAD_REQUEST
+                            });
+                        }
+                    }
+                }
+                if too_large {
                     return Err(StatusCode::PAYLOAD_TOO_LARGE);
                 }
-                bytes = Some(data.to_vec());
+                bytes = Some(data);
             }
             _ => {}
         }
