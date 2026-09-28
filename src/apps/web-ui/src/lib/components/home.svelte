@@ -154,6 +154,9 @@
 			<Button size="lg" onclick={() => (window.location.href = "/library")}>
 				Begin
 			</Button>
+			<Button size="lg" variant="outline" onclick={() => (window.location.href = "/soundscape")}>
+				Soundscape
+			</Button>
 			{#if role === "admin"}
 				<Button size="lg" variant="outline" onclick={() => (window.location.href = "/admin")}>
 					Admin

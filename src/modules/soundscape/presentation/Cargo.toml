@@ -1,0 +1,15 @@
+[package]
+name = "soundscape-presentation"
+edition.workspace = true
+
+[dependencies]
+axum = { workspace = true, features = ["multipart"] }
+async-trait.workspace = true
+kernel = { path = "../../../kernel" }
+serde.workspace = true
+serde_json.workspace = true
+soundscape-application = { path = "../application" }
+soundscape-domain = { path = "../domain" }
+tokio.workspace = true
+tokio-util.workspace = true
+tower.workspace = true
