@@ -66,7 +66,7 @@ impl<S: Send + Sync> FromRequestParts<S> for AdminActor {
         }
     }
 }
-fn origin(headers: &HeaderMap, expected: &str) -> Result<(), StatusCode> {
+fn origin(headers: HeaderMap, expected: &str) -> Result<(), StatusCode> {
     if headers.get("origin").and_then(|value| value.to_str().ok()) == Some(expected) {
         Ok(())
     } else {
@@ -187,7 +187,7 @@ async fn create_category(
     Json(input): Json<Name>,
 ) -> Result<(StatusCode, Json<CategoryDto>), StatusCode> {
     admin(&actor)?;
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::create_category(deps.categories.as_ref(), &input.name)
         .await
         .map(|value| (StatusCode::CREATED, Json(value.into())))
@@ -201,7 +201,7 @@ async fn rename_category(
     Json(input): Json<Name>,
 ) -> Result<Json<CategoryDto>, StatusCode> {
     admin(&actor)?;
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::rename_category(deps.categories.as_ref(), id, &input.name)
         .await
         .map(|value| Json(value.into()))
@@ -214,7 +214,7 @@ async fn delete_category(
     AdminActor(actor): AdminActor,
 ) -> Result<StatusCode, StatusCode> {
     admin(&actor)?;
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::delete_category(deps.categories.as_ref(), id)
         .await
         .map(|_| StatusCode::NO_CONTENT)
@@ -236,7 +236,7 @@ async fn upload_sound(
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<SoundDto>), StatusCode> {
     admin(&actor)?;
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     let mut name = None;
     let mut category_id = None;
     let mut bytes = None;
@@ -289,7 +289,7 @@ async fn update_sound(
     Json(input): Json<UpdateSound>,
 ) -> Result<Json<SoundDto>, StatusCode> {
     admin(&actor)?;
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     deps.sounds
         .update(id, &input.name, input.category_id)
         .await
@@ -304,7 +304,7 @@ async fn delete_sound(
     AdminActor(actor): AdminActor,
 ) -> Result<StatusCode, StatusCode> {
     admin(&actor)?;
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::sounds::delete_sound(deps.sounds.as_ref(), deps.store.as_ref(), id)
         .await
         .map(|_| StatusCode::NO_CONTENT)
@@ -412,7 +412,7 @@ pub(crate) fn parse_range(value: &str, total: u64) -> Option<Result<(u64, u64), 
 }
 async fn list_mixes(
     State(deps): State<SharedDependencies>,
-    AdminActor(actor): AdminActor,
+    CurrentActor(actor): CurrentActor,
 ) -> Result<Json<Vec<MixDto>>, StatusCode> {
     deps.mixes
         .list_for(actor.user_id())
@@ -423,7 +423,7 @@ async fn list_mixes(
 async fn get_mix(
     Path(id): Path<i64>,
     State(deps): State<SharedDependencies>,
-    AdminActor(actor): AdminActor,
+    CurrentActor(actor): CurrentActor,
 ) -> Result<Json<MixDto>, StatusCode> {
     deps.mixes
         .find_for(id, actor.user_id())
@@ -435,10 +435,10 @@ async fn get_mix(
 async fn create_mix(
     State(deps): State<SharedDependencies>,
     headers: HeaderMap,
-    AdminActor(actor): AdminActor,
+    CurrentActor(actor): CurrentActor,
     Json(input): Json<MixInput>,
 ) -> Result<(StatusCode, Json<MixDto>), StatusCode> {
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::mixes::create_mix(
         deps.mixes.as_ref(),
         deps.sounds.as_ref(),
@@ -455,10 +455,10 @@ async fn update_mix(
     Path(id): Path<i64>,
     State(deps): State<SharedDependencies>,
     headers: HeaderMap,
-    AdminActor(actor): AdminActor,
+    CurrentActor(actor): CurrentActor,
     Json(input): Json<MixInput>,
 ) -> Result<Json<MixDto>, StatusCode> {
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::mixes::update_mix(
         deps.mixes.as_ref(),
         deps.sounds.as_ref(),
@@ -476,9 +476,9 @@ async fn delete_mix(
     Path(id): Path<i64>,
     State(deps): State<SharedDependencies>,
     headers: HeaderMap,
-    AdminActor(actor): AdminActor,
+    CurrentActor(actor): CurrentActor,
 ) -> Result<StatusCode, StatusCode> {
-    origin(&headers, &deps.medioss_origin)?;
+    origin(headers, &deps.medioss_origin)?;
     commands::mixes::delete_mix(deps.mixes.as_ref(), id, actor.user_id())
         .await
         .map(|_| StatusCode::NO_CONTENT)
