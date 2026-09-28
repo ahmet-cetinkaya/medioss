@@ -220,7 +220,10 @@ async fn deleting_a_builtin_sound_records_a_tombstone() {
     let database = TestDatabase::open().await;
     let sounds = SeaOrmSoundRepository::new(database.connection.clone());
 
-    let builtin = sounds.create(sound("Rain", "soundscape/rain.opus")).await.unwrap();
+    let builtin = sounds
+        .create(sound("Rain", "soundscape/rain.opus"))
+        .await
+        .unwrap();
     database
         .connection
         .execute(sea_orm::Statement::from_sql_and_values(
@@ -230,10 +233,21 @@ async fn deleting_a_builtin_sound_records_a_tombstone() {
         ))
         .await
         .unwrap();
-    let uploaded = sounds.create(sound("Wind", "soundscape/wind.opus")).await.unwrap();
+    let uploaded = sounds
+        .create(sound("Wind", "soundscape/wind.opus"))
+        .await
+        .unwrap();
 
-    sounds.delete_with_mix_items(builtin.id).await.unwrap().unwrap();
-    sounds.delete_with_mix_items(uploaded.id).await.unwrap().unwrap();
+    sounds
+        .delete_with_mix_items(builtin.id)
+        .await
+        .unwrap()
+        .unwrap();
+    sounds
+        .delete_with_mix_items(uploaded.id)
+        .await
+        .unwrap()
+        .unwrap();
 
     let tombstones = database
         .connection
@@ -246,5 +260,9 @@ async fn deleting_a_builtin_sound_records_a_tombstone() {
         .iter()
         .map(|row| row.try_get::<String>("", "builtin_id").unwrap())
         .collect::<Vec<_>>();
-    assert_eq!(tombstones, vec!["rain:rain".to_owned()], "only the built-in delete is tombstoned");
+    assert_eq!(
+        tombstones,
+        vec!["rain:rain".to_owned()],
+        "only the built-in delete is tombstoned"
+    );
 }
