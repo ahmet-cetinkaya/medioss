@@ -20,11 +20,15 @@ url = "2"
 time = "0.3"
 clap = { workspace = true }
 rand.workspace = true
+dotenvy = "0.15"
 identity-application = { path = "../../modules/identity/application" }
 meditation-application = { path = "../../modules/meditation/application" }
 meditation-domain = { path = "../../modules/meditation/domain" }
 meditation-infrastructure = { path = "../../modules/meditation/infrastructure" }
 meditation-presentation = { path = "../../modules/meditation/presentation" }
+soundscape-application = { path = "../../modules/soundscape/application" }
+soundscape-infrastructure = { path = "../../modules/soundscape/infrastructure" }
+soundscape-presentation = { path = "../../modules/soundscape/presentation" }
 # M0: wired so the release binary proves the whole workspace compiles
 kernel = { path = "../../kernel" }
 media-store = { path = "../../shared/media-store" }

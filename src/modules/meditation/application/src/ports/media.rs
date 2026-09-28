@@ -64,20 +64,29 @@ pub enum ConvertError {
     Unavailable,
 }
 
-/// Converts accepted uploads to the stored Ogg Opus form. Implementations
-/// pass already-Opus input through unchanged.
+/// The stored form the converter produced, so callers persist the right
+/// extension and content type for the bytes they were handed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StoredAudio {
+    pub extension: &'static str,
+    pub content_type: &'static str,
+}
+
+/// Converts accepted uploads to their stored, lossless-preserving form:
+/// compressed inputs pass through byte-identical and PCM inputs become
+/// lossless FLAC.
 #[async_trait]
 pub trait OpusConverter: Send + Sync {
-    /// Converts `bytes` to Ogg Opus; `OggOpus` input is returned as-is.
-    /// A missing encoder surfaces as [`ConvertError::Unavailable`] so the
-    /// API can answer 503 instead of blaming the media (plan D2).
-    /// Also reports the decoded duration so per-meditation progress can be
-    /// shown as a percentage instead of raw position.
+    /// Converts `bytes` to its stored form and reports that form plus the
+    /// decoded duration, so per-meditation progress can be shown as a
+    /// percentage instead of raw position. A missing encoder surfaces as
+    /// [`ConvertError::Unavailable`] so the API can answer 503 instead of
+    /// blaming the media (plan D2).
     async fn convert(
         &self,
         bytes: Vec<u8>,
         format: AudioFormat,
-    ) -> Result<(Vec<u8>, i64), ConvertError>;
+    ) -> Result<(Vec<u8>, i64, StoredAudio), ConvertError>;
 }
 
 /// A stored blob's location handle.

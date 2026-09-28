@@ -54,18 +54,18 @@ where
         .sniff(&bytes)
         .await
         .map_err(|_| ApplicationError::UnsupportedMedia)?;
-    let (stored_bytes, duration_ms) = converter
+    let (stored_bytes, duration_ms, stored) = converter
         .convert(bytes, format)
         .await
         .map_err(map_convert_error)?;
     let blob = store
-        .put(&program.folder, name, "opus", &stored_bytes)
+        .put(&program.folder, name, stored.extension, &stored_bytes)
         .await
         .map_err(ApplicationError::Storage)?;
     let meditation = match repository
         .insert(
             name.trim().to_owned(),
-            meditation_domain::STORED_CONTENT_TYPE,
+            stored.content_type,
             blob.size_bytes,
             blob.storage_key.clone(),
             duration_ms,

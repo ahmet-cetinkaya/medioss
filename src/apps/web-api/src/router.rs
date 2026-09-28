@@ -23,11 +23,14 @@ pub fn router(state: AppState) -> Router {
 
     let meditation =
         meditation_presentation::meditation_router().with_state(state.meditation.clone());
+    let soundscape =
+        soundscape_presentation::soundscape_router().with_state(state.soundscape.clone());
 
     let api = Router::new()
         .route("/health", get(health))
         .merge(identity)
         .merge(meditation)
+        .merge(soundscape)
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             resolve_actor,

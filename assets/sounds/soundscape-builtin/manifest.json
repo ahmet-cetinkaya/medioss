@@ -1,0 +1,892 @@
+[
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "beehive",
+    "file": "animals/beehive.opus",
+    "duration_ms": 45161,
+    "size": 823257,
+    "source": "remvze/moodist@main public/sounds/animals/beehive.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "birds",
+    "file": "animals/birds.opus",
+    "duration_ms": 115126,
+    "size": 2400875,
+    "source": "remvze/moodist@main public/sounds/animals/birds.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "cat-purring",
+    "file": "animals/cat-purring.opus",
+    "duration_ms": 38669,
+    "size": 586412,
+    "source": "remvze/moodist@main public/sounds/animals/cat-purring.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "chickens",
+    "file": "animals/chickens.opus",
+    "duration_ms": 202083,
+    "size": 3801942,
+    "source": "remvze/moodist@main public/sounds/animals/chickens.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "cows",
+    "file": "animals/cows.opus",
+    "duration_ms": 59705,
+    "size": 1128285,
+    "source": "remvze/moodist@main public/sounds/animals/cows.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "crickets",
+    "file": "animals/crickets.opus",
+    "duration_ms": 172544,
+    "size": 4430498,
+    "source": "remvze/moodist@main public/sounds/animals/crickets.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "crows",
+    "file": "animals/crows.opus",
+    "duration_ms": 58084,
+    "size": 838611,
+    "source": "remvze/moodist@main public/sounds/animals/crows.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "dog-barking",
+    "file": "animals/dog-barking.opus",
+    "duration_ms": 16186,
+    "size": 327339,
+    "source": "remvze/moodist@main public/sounds/animals/dog-barking.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "frog",
+    "file": "animals/frog.opus",
+    "duration_ms": 78655,
+    "size": 1853010,
+    "source": "remvze/moodist@main public/sounds/animals/frog.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "horse-gallop",
+    "file": "animals/horse-gallop.opus",
+    "duration_ms": 9149,
+    "size": 248314,
+    "source": "remvze/moodist@main public/sounds/animals/horse-gallop.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "owl",
+    "file": "animals/owl.opus",
+    "duration_ms": 12949,
+    "size": 103794,
+    "source": "remvze/moodist@main public/sounds/animals/owl.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "seagulls",
+    "file": "animals/seagulls.opus",
+    "duration_ms": 43481,
+    "size": 554780,
+    "source": "remvze/moodist@main public/sounds/animals/seagulls.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "sheep",
+    "file": "animals/sheep.opus",
+    "duration_ms": 31201,
+    "size": 614839,
+    "source": "remvze/moodist@main public/sounds/animals/sheep.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "whale",
+    "file": "animals/whale.opus",
+    "duration_ms": 30013,
+    "size": 686979,
+    "source": "remvze/moodist@main public/sounds/animals/whale.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "wolf",
+    "file": "animals/wolf.opus",
+    "duration_ms": 55378,
+    "size": 802048,
+    "source": "remvze/moodist@main public/sounds/animals/wolf.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "animals",
+    "category_name": "Animals",
+    "name": "woodpecker",
+    "file": "animals/woodpecker.opus",
+    "duration_ms": 15326,
+    "size": 275245,
+    "source": "remvze/moodist@main public/sounds/animals/woodpecker.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "binaural",
+    "category_name": "Binaural",
+    "name": "binaural-alpha",
+    "file": "binaural/binaural-alpha.flac",
+    "duration_ms": 15000,
+    "size": 596109,
+    "source": "remvze/moodist@main public/sounds/binaural/binaural-alpha.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "binaural",
+    "category_name": "Binaural",
+    "name": "binaural-beta",
+    "file": "binaural/binaural-beta.flac",
+    "duration_ms": 15000,
+    "size": 600049,
+    "source": "remvze/moodist@main public/sounds/binaural/binaural-beta.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "binaural",
+    "category_name": "Binaural",
+    "name": "binaural-delta",
+    "file": "binaural/binaural-delta.flac",
+    "duration_ms": 15000,
+    "size": 584367,
+    "source": "remvze/moodist@main public/sounds/binaural/binaural-delta.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "binaural",
+    "category_name": "Binaural",
+    "name": "binaural-gamma",
+    "file": "binaural/binaural-gamma.flac",
+    "duration_ms": 15000,
+    "size": 603745,
+    "source": "remvze/moodist@main public/sounds/binaural/binaural-gamma.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "binaural",
+    "category_name": "Binaural",
+    "name": "binaural-theta",
+    "file": "binaural/binaural-theta.flac",
+    "duration_ms": 15000,
+    "size": 586923,
+    "source": "remvze/moodist@main public/sounds/binaural/binaural-theta.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "campfire",
+    "file": "nature/campfire.opus",
+    "duration_ms": 125412,
+    "size": 2647503,
+    "source": "remvze/moodist@main public/sounds/nature/campfire.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "droplets",
+    "file": "nature/droplets.opus",
+    "duration_ms": 51759,
+    "size": 1208424,
+    "source": "remvze/moodist@main public/sounds/nature/droplets.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "howling-wind",
+    "file": "nature/howling-wind.opus",
+    "duration_ms": 55951,
+    "size": 994506,
+    "source": "remvze/moodist@main public/sounds/nature/howling-wind.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "jungle",
+    "file": "nature/jungle.opus",
+    "duration_ms": 266703,
+    "size": 5242931,
+    "source": "remvze/moodist@main public/sounds/nature/jungle.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "river",
+    "file": "nature/river.opus",
+    "duration_ms": 113434,
+    "size": 2641285,
+    "source": "remvze/moodist@main public/sounds/nature/river.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "walk-in-snow",
+    "file": "nature/walk-in-snow.opus",
+    "duration_ms": 36674,
+    "size": 712093,
+    "source": "remvze/moodist@main public/sounds/nature/walk-in-snow.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "walk-on-gravel",
+    "file": "nature/walk-on-gravel.opus",
+    "duration_ms": 70835,
+    "size": 1559368,
+    "source": "remvze/moodist@main public/sounds/nature/walk-on-gravel.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "walk-on-leaves",
+    "file": "nature/walk-on-leaves.opus",
+    "duration_ms": 20579,
+    "size": 403667,
+    "source": "remvze/moodist@main public/sounds/nature/walk-on-leaves.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "waterfall",
+    "file": "nature/waterfall.opus",
+    "duration_ms": 23492,
+    "size": 429827,
+    "source": "remvze/moodist@main public/sounds/nature/waterfall.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "waves",
+    "file": "nature/waves.opus",
+    "duration_ms": 98668,
+    "size": 1819919,
+    "source": "remvze/moodist@main public/sounds/nature/waves.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "wind-in-trees",
+    "file": "nature/wind-in-trees.opus",
+    "duration_ms": 57562,
+    "size": 1057591,
+    "source": "remvze/moodist@main public/sounds/nature/wind-in-trees.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "nature",
+    "category_name": "Nature",
+    "name": "wind",
+    "file": "nature/wind.opus",
+    "duration_ms": 73430,
+    "size": 1307699,
+    "source": "remvze/moodist@main public/sounds/nature/wind.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "noise",
+    "category_name": "Noise",
+    "name": "brown-noise",
+    "file": "noise/brown-noise.flac",
+    "duration_ms": 9510,
+    "size": 569468,
+    "source": "remvze/moodist@main public/sounds/noise/brown-noise.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "noise",
+    "category_name": "Noise",
+    "name": "pink-noise",
+    "file": "noise/pink-noise.flac",
+    "duration_ms": 9506,
+    "size": 818305,
+    "source": "remvze/moodist@main public/sounds/noise/pink-noise.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "noise",
+    "category_name": "Noise",
+    "name": "white-noise",
+    "file": "noise/white-noise.flac",
+    "duration_ms": 9502,
+    "size": 808256,
+    "source": "remvze/moodist@main public/sounds/noise/white-noise.wav (WAV→FLAC lossless (bit-exact))",
+    "content_type": "audio/flac"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "airport",
+    "file": "places/airport.opus",
+    "duration_ms": 311616,
+    "size": 6291566,
+    "source": "remvze/moodist@main public/sounds/places/airport.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "cafe",
+    "file": "places/cafe.opus",
+    "duration_ms": 199101,
+    "size": 3684985,
+    "source": "remvze/moodist@main public/sounds/places/cafe.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "carousel",
+    "file": "places/carousel.opus",
+    "duration_ms": 160771,
+    "size": 3156518,
+    "source": "remvze/moodist@main public/sounds/places/carousel.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "church",
+    "file": "places/church.opus",
+    "duration_ms": 70485,
+    "size": 904696,
+    "source": "remvze/moodist@main public/sounds/places/church.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "construction-site",
+    "file": "places/construction-site.opus",
+    "duration_ms": 125055,
+    "size": 2766612,
+    "source": "remvze/moodist@main public/sounds/places/construction-site.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "crowded-bar",
+    "file": "places/crowded-bar.opus",
+    "duration_ms": 58741,
+    "size": 1131063,
+    "source": "remvze/moodist@main public/sounds/places/crowded-bar.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "laboratory",
+    "file": "places/laboratory.opus",
+    "duration_ms": 21241,
+    "size": 451337,
+    "source": "remvze/moodist@main public/sounds/places/laboratory.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "laundry-room",
+    "file": "places/laundry-room.opus",
+    "duration_ms": 32490,
+    "size": 591382,
+    "source": "remvze/moodist@main public/sounds/places/laundry-room.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "library",
+    "file": "places/library.opus",
+    "duration_ms": 176535,
+    "size": 3086290,
+    "source": "remvze/moodist@main public/sounds/places/library.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "night-village",
+    "file": "places/night-village.opus",
+    "duration_ms": 106424,
+    "size": 1930042,
+    "source": "remvze/moodist@main public/sounds/places/night-village.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "office",
+    "file": "places/office.opus",
+    "duration_ms": 139734,
+    "size": 2736647,
+    "source": "remvze/moodist@main public/sounds/places/office.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "restaurant",
+    "file": "places/restaurant.opus",
+    "duration_ms": 170893,
+    "size": 3257214,
+    "source": "remvze/moodist@main public/sounds/places/restaurant.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "subway-station",
+    "file": "places/subway-station.opus",
+    "duration_ms": 171037,
+    "size": 3373546,
+    "source": "remvze/moodist@main public/sounds/places/subway-station.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "supermarket",
+    "file": "places/supermarket.opus",
+    "duration_ms": 175100,
+    "size": 3555434,
+    "source": "remvze/moodist@main public/sounds/places/supermarket.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "temple",
+    "file": "places/temple.opus",
+    "duration_ms": 91624,
+    "size": 2333448,
+    "source": "remvze/moodist@main public/sounds/places/temple.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "places",
+    "category_name": "Places",
+    "name": "underwater",
+    "file": "places/underwater.opus",
+    "duration_ms": 43255,
+    "size": 1104304,
+    "source": "remvze/moodist@main public/sounds/places/underwater.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "heavy-rain",
+    "file": "rain/heavy-rain.opus",
+    "duration_ms": 21795,
+    "size": 402691,
+    "source": "remvze/moodist@main public/sounds/rain/heavy-rain.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "light-rain",
+    "file": "rain/light-rain.opus",
+    "duration_ms": 149872,
+    "size": 2754955,
+    "source": "remvze/moodist@main public/sounds/rain/light-rain.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "rain-on-car-roof",
+    "file": "rain/rain-on-car-roof.opus",
+    "duration_ms": 10022,
+    "size": 191831,
+    "source": "remvze/moodist@main public/sounds/rain/rain-on-car-roof.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "rain-on-leaves",
+    "file": "rain/rain-on-leaves.opus",
+    "duration_ms": 42226,
+    "size": 879561,
+    "source": "remvze/moodist@main public/sounds/rain/rain-on-leaves.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "rain-on-tent",
+    "file": "rain/rain-on-tent.opus",
+    "duration_ms": 82577,
+    "size": 2165712,
+    "source": "remvze/moodist@main public/sounds/rain/rain-on-tent.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "rain-on-umbrella",
+    "file": "rain/rain-on-umbrella.opus",
+    "duration_ms": 26561,
+    "size": 742929,
+    "source": "remvze/moodist@main public/sounds/rain/rain-on-umbrella.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "rain-on-window",
+    "file": "rain/rain-on-window.opus",
+    "duration_ms": 33149,
+    "size": 653910,
+    "source": "remvze/moodist@main public/sounds/rain/rain-on-window.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "rain",
+    "category_name": "Rain",
+    "name": "thunder",
+    "file": "rain/thunder.opus",
+    "duration_ms": 68552,
+    "size": 1179116,
+    "source": "remvze/moodist@main public/sounds/rain/thunder.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "boiling-water",
+    "file": "things/boiling-water.opus",
+    "duration_ms": 18505,
+    "size": 363068,
+    "source": "remvze/moodist@main public/sounds/things/boiling-water.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "bubbles",
+    "file": "things/bubbles.opus",
+    "duration_ms": 6396,
+    "size": 144795,
+    "source": "remvze/moodist@main public/sounds/things/bubbles.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "ceiling-fan",
+    "file": "things/ceiling-fan.opus",
+    "duration_ms": 15599,
+    "size": 199918,
+    "source": "remvze/moodist@main public/sounds/things/ceiling-fan.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "clock",
+    "file": "things/clock.opus",
+    "duration_ms": 15946,
+    "size": 218304,
+    "source": "remvze/moodist@main public/sounds/things/clock.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "dryer",
+    "file": "things/dryer.opus",
+    "duration_ms": 28032,
+    "size": 426003,
+    "source": "remvze/moodist@main public/sounds/things/dryer.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "keyboard",
+    "file": "things/keyboard.opus",
+    "duration_ms": 12153,
+    "size": 269929,
+    "source": "remvze/moodist@main public/sounds/things/keyboard.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "morse-code",
+    "file": "things/morse-code.opus",
+    "duration_ms": 75394,
+    "size": 1053211,
+    "source": "remvze/moodist@main public/sounds/things/morse-code.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "paper",
+    "file": "things/paper.opus",
+    "duration_ms": 17216,
+    "size": 280254,
+    "source": "remvze/moodist@main public/sounds/things/paper.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "singing-bowl",
+    "file": "things/singing-bowl.opus",
+    "duration_ms": 49089,
+    "size": 970125,
+    "source": "remvze/moodist@main public/sounds/things/singing-bowl.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "slide-projector",
+    "file": "things/slide-projector.opus",
+    "duration_ms": 142890,
+    "size": 2732980,
+    "source": "remvze/moodist@main public/sounds/things/slide-projector.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "tuning-radio",
+    "file": "things/tuning-radio.opus",
+    "duration_ms": 70237,
+    "size": 1046727,
+    "source": "remvze/moodist@main public/sounds/things/tuning-radio.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "typewriter",
+    "file": "things/typewriter.opus",
+    "duration_ms": 21787,
+    "size": 480053,
+    "source": "remvze/moodist@main public/sounds/things/typewriter.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "vinyl-effect",
+    "file": "things/vinyl-effect.opus",
+    "duration_ms": 65907,
+    "size": 1501624,
+    "source": "remvze/moodist@main public/sounds/things/vinyl-effect.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "washing-machine",
+    "file": "things/washing-machine.opus",
+    "duration_ms": 22537,
+    "size": 396279,
+    "source": "remvze/moodist@main public/sounds/things/washing-machine.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "wind-chimes",
+    "file": "things/wind-chimes.opus",
+    "duration_ms": 83016,
+    "size": 2086382,
+    "source": "remvze/moodist@main public/sounds/things/wind-chimes.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "things",
+    "category_name": "Things",
+    "name": "windshield-wipers",
+    "file": "things/windshield-wipers.opus",
+    "duration_ms": 15131,
+    "size": 371029,
+    "source": "remvze/moodist@main public/sounds/things/windshield-wipers.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "transport",
+    "category_name": "Transport",
+    "name": "airplane",
+    "file": "transport/airplane.opus",
+    "duration_ms": 60038,
+    "size": 1569333,
+    "source": "remvze/moodist@main public/sounds/transport/airplane.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "transport",
+    "category_name": "Transport",
+    "name": "inside-a-train",
+    "file": "transport/inside-a-train.opus",
+    "duration_ms": 66510,
+    "size": 1206692,
+    "source": "remvze/moodist@main public/sounds/transport/inside-a-train.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "transport",
+    "category_name": "Transport",
+    "name": "rowing-boat",
+    "file": "transport/rowing-boat.opus",
+    "duration_ms": 25541,
+    "size": 471048,
+    "source": "remvze/moodist@main public/sounds/transport/rowing-boat.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "transport",
+    "category_name": "Transport",
+    "name": "sailboat",
+    "file": "transport/sailboat.opus",
+    "duration_ms": 160527,
+    "size": 3128439,
+    "source": "remvze/moodist@main public/sounds/transport/sailboat.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "transport",
+    "category_name": "Transport",
+    "name": "submarine",
+    "file": "transport/submarine.opus",
+    "duration_ms": 46039,
+    "size": 984153,
+    "source": "remvze/moodist@main public/sounds/transport/submarine.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "transport",
+    "category_name": "Transport",
+    "name": "train",
+    "file": "transport/train.opus",
+    "duration_ms": 61070,
+    "size": 1078919,
+    "source": "remvze/moodist@main public/sounds/transport/train.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "ambulance-siren",
+    "file": "urban/ambulance-siren.opus",
+    "duration_ms": 22596,
+    "size": 463314,
+    "source": "remvze/moodist@main public/sounds/urban/ambulance-siren.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "busy-street",
+    "file": "urban/busy-street.opus",
+    "duration_ms": 175362,
+    "size": 3407020,
+    "source": "remvze/moodist@main public/sounds/urban/busy-street.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "crowd",
+    "file": "urban/crowd.opus",
+    "duration_ms": 72570,
+    "size": 1185288,
+    "source": "remvze/moodist@main public/sounds/urban/crowd.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "fireworks",
+    "file": "urban/fireworks.opus",
+    "duration_ms": 34501,
+    "size": 718026,
+    "source": "remvze/moodist@main public/sounds/urban/fireworks.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "highway",
+    "file": "urban/highway.opus",
+    "duration_ms": 132510,
+    "size": 2449801,
+    "source": "remvze/moodist@main public/sounds/urban/highway.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "road",
+    "file": "urban/road.opus",
+    "duration_ms": 102359,
+    "size": 1924012,
+    "source": "remvze/moodist@main public/sounds/urban/road.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  },
+  {
+    "category": "urban",
+    "category_name": "Urban",
+    "name": "traffic",
+    "file": "urban/traffic.opus",
+    "duration_ms": 39896,
+    "size": 508817,
+    "source": "remvze/moodist@main public/sounds/urban/traffic.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono))",
+    "content_type": "audio/ogg"
+  }
+]

@@ -11,7 +11,7 @@ mod session_repository;
 pub use category_repository::{Category, CategoryRepository};
 pub use media::{
     AudioFormat, AudioValidator, BlobStore, Clock, ConvertError, CoverValidator, ImageFormat,
-    OpusConverter, SniffError, StoredBlob,
+    OpusConverter, SniffError, StoredAudio, StoredBlob,
 };
 pub use meditation_repository::MeditationRepository;
 pub use membership_repository::{Membership, MembershipRepository};

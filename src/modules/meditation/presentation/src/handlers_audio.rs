@@ -279,7 +279,14 @@ pub async fn audio(
     let meditation = queries::get_meditation(deps.meditations.as_ref(), id)
         .await
         .map_err(ApiError::Application)?;
-    serve_blob(deps, meditation.storage_key(), &headers, None).await
+    serve_blob(
+        deps,
+        meditation.storage_key(),
+        meditation.content_type(),
+        &headers,
+        None,
+    )
+    .await
 }
 
 /// `GET /meditation/{id}/download` — the stored audio as an attachment
@@ -296,6 +303,7 @@ pub async fn download(
     serve_blob(
         deps,
         meditation.storage_key(),
+        meditation.content_type(),
         &headers,
         Some(meditation.name()),
     )
@@ -307,6 +315,7 @@ pub async fn download(
 async fn serve_blob(
     deps: SharedDependencies,
     key: &str,
+    content_type: &str,
     headers: &HeaderMap,
     download_name: Option<&str>,
 ) -> Result<Response, ApiError> {
@@ -317,7 +326,6 @@ async fn serve_blob(
         .map_err(meditation_application::ApplicationError::Storage)
         .map_err(ApiError::Application)?;
     let total = bytes.len() as u64;
-    let content_type = meditation_domain::STORED_CONTENT_TYPE;
 
     let mut response = match headers
         .get(header::RANGE)
@@ -370,11 +378,7 @@ fn insert_header(
     Ok(())
 }
 
-fn full_response(
-    bytes: &[u8],
-    content_type: &'static str,
-    download_name: Option<&str>,
-) -> Response {
+fn full_response(bytes: &[u8], content_type: &str, download_name: Option<&str>) -> Response {
     let mut response = (
         StatusCode::OK,
         [(header::CONTENT_TYPE, content_type)],

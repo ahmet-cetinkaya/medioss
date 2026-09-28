@@ -1,0 +1,17 @@
+[package]
+name = "soundscape-application"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+kernel = { path = "../../../kernel" }
+soundscape-domain = { path = "../domain" }
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[features]
+test-support = []

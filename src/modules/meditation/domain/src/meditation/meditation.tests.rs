@@ -67,9 +67,15 @@ fn name_longer_than_200_characters_is_invalid() {
 }
 
 #[test]
-fn only_the_stored_content_type_is_accepted() {
+fn only_supported_audio_content_types_are_accepted() {
+    for good in ["audio/ogg", "audio/mpeg", "audio/flac", "audio/wav"] {
+        assert!(
+            meditation("Morning", good, 42, KEY).is_ok(),
+            "{good} must be accepted"
+        );
+    }
     assert_eq!(
-        meditation("Morning", "audio/mpeg", 42, KEY),
+        meditation("Morning", "audio/aac", 42, KEY),
         Err(MeditationError::InvalidContentType)
     );
     assert_eq!(

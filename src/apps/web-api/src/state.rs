@@ -11,6 +11,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub session_store: Arc<SqliteStore>,
     pub meditation: meditation_presentation::SharedDependencies,
+    pub soundscape: soundscape_presentation::SharedDependencies,
     pub identity: Arc<IdentityServices>,
     pub identity_dependencies: SharedDependencies<
         identity_infrastructure::SeaOrmUserRepository,
@@ -26,6 +27,7 @@ impl Clone for AppState {
             config: Arc::clone(&self.config),
             session_store: Arc::clone(&self.session_store),
             meditation: Arc::clone(&self.meditation),
+            soundscape: Arc::clone(&self.soundscape),
             identity: Arc::clone(&self.identity),
             identity_dependencies: Arc::clone(&self.identity_dependencies),
         }
@@ -38,6 +40,7 @@ impl AppState {
         config: Arc<Config>,
         session_store: Arc<SqliteStore>,
         meditation: meditation_presentation::SharedDependencies,
+        soundscape: soundscape_presentation::SharedDependencies,
         repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
         hasher: identity_infrastructure::BoundedArgon2PasswordHasher,
     ) -> Self {
@@ -59,6 +62,7 @@ impl AppState {
         Self {
             config,
             meditation,
+            soundscape,
             session_store,
             identity: Arc::new(IdentityServices { repository }),
             identity_dependencies,

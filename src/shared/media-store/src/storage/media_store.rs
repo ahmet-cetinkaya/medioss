@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use tokio::io::AsyncReadExt;
 
 use crate::storage::{error::MediaStoreError, media_stream::MediaStream, storage_key::StorageKey};
 
@@ -242,6 +243,26 @@ impl MediaStore {
         }
     }
 
+    /// Returns a stored blob's length after validating and resolving its opaque key.
+    pub async fn size(&self, key: &StorageKey) -> Result<u64, MediaStoreError> {
+        let path = self.blob_path(key);
+        tokio::fs::metadata(&path)
+            .await
+            .map(|metadata| metadata.len())
+            .map_err(|source| {
+                if source.kind() == std::io::ErrorKind::NotFound {
+                    MediaStoreError::NotFound {
+                        key: key.as_str().to_owned(),
+                    }
+                } else {
+                    MediaStoreError::Io {
+                        path: path.display().to_string(),
+                        source,
+                    }
+                }
+            })
+    }
+
     /// Opens a stored blob for reading.
     pub async fn open(&self, key: &StorageKey) -> Result<MediaStream, MediaStoreError> {
         let path = self.blob_path(key);
@@ -258,6 +279,37 @@ impl MediaStore {
             }
         })?;
         Ok(MediaStream::new(file))
+    }
+
+    /// Opens a byte window from a stored blob without buffering it in memory.
+    pub async fn open_range(
+        &self,
+        key: &StorageKey,
+        start: u64,
+        length: u64,
+    ) -> Result<MediaStream, MediaStoreError> {
+        use tokio::io::{AsyncSeekExt, BufReader};
+
+        let path = self.blob_path(key);
+        let mut file = tokio::fs::File::open(&path).await.map_err(|source| {
+            if source.kind() == std::io::ErrorKind::NotFound {
+                MediaStoreError::NotFound {
+                    key: key.as_str().to_owned(),
+                }
+            } else {
+                MediaStoreError::Io {
+                    path: path.display().to_string(),
+                    source,
+                }
+            }
+        })?;
+        file.seek(std::io::SeekFrom::Start(start))
+            .await
+            .map_err(|source| MediaStoreError::Io {
+                path: path.display().to_string(),
+                source,
+            })?;
+        Ok(MediaStream::new(BufReader::new(file).take(length)))
     }
 
     /// Deletes a stored blob; an absent key is reported as

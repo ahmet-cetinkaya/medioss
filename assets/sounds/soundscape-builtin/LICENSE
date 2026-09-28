@@ -1,0 +1,126 @@
+# LICENSE — Built-in Ambient Sound Set
+
+All 89 sound files in this folder originate from the open-source
+[Moodist](https://github.com/remvze/moodist) project (commit `main`,
+tree `11c0be2`), where they live under `public/sounds/`.
+
+## License status
+
+Moodist's code is MIT (© 2023 MAE), but its README's "Third-Party
+Assets" section explicitly excludes the sound files from that license
+and states they are subject to either:
+
+- the **Pixabay Content License** — https://pixabay.com/service/license-summary/
+- or **CC0 1.0** (Creative Commons Zero)
+
+The upstream project does **not** publish a per-file license mapping,
+so an individual file's exact license between those two cannot be
+verified from the repository. Both licenses grant free use,
+modification, and distribution; neither requires attribution. The most
+restrictive reading (Pixabay Content License) permits modification and
+bundling into an application (as here) and only bars redistributing the
+files as a standalone pack with no added creative value.
+
+## Storage form
+
+- WAV sources are stored as **FLAC** (lossless, level 8): each file
+  decodes bit-exact to its upstream WAV (verified via PCM md5).
+- MP3 sources are re-encoded to **Opus VBR at the transparency tier**
+  (160 kbps stereo / 112 kbps mono — beyond the commonly cited
+  transparency thresholds for each channel layout, with headroom for
+  the lossy-to-lossy generation). Every output decodes cleanly and
+  preserves the source duration.
+
+## Per-file source and license
+
+| File | License | Upstream source and processing |
+|---|---|---|
+| `animals/beehive.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/beehive.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/birds.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/birds.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/cat-purring.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/cat-purring.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/chickens.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/chickens.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/cows.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/cows.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/crickets.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/crickets.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/crows.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/crows.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/dog-barking.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/dog-barking.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/frog.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/frog.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/horse-gallop.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/horse-gallop.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/owl.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/owl.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/seagulls.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/seagulls.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/sheep.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/sheep.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/whale.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/whale.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/wolf.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/wolf.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `animals/woodpecker.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/animals/woodpecker.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `binaural/binaural-alpha.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/binaural/binaural-alpha.wav (WAV→FLAC lossless (bit-exact)) |
+| `binaural/binaural-beta.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/binaural/binaural-beta.wav (WAV→FLAC lossless (bit-exact)) |
+| `binaural/binaural-delta.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/binaural/binaural-delta.wav (WAV→FLAC lossless (bit-exact)) |
+| `binaural/binaural-gamma.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/binaural/binaural-gamma.wav (WAV→FLAC lossless (bit-exact)) |
+| `binaural/binaural-theta.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/binaural/binaural-theta.wav (WAV→FLAC lossless (bit-exact)) |
+| `nature/campfire.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/campfire.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/droplets.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/droplets.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/howling-wind.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/howling-wind.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/jungle.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/jungle.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/river.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/river.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/walk-in-snow.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/walk-in-snow.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/walk-on-gravel.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/walk-on-gravel.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/walk-on-leaves.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/walk-on-leaves.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/waterfall.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/waterfall.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/waves.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/waves.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/wind-in-trees.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/wind-in-trees.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `nature/wind.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/nature/wind.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `noise/brown-noise.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/noise/brown-noise.wav (WAV→FLAC lossless (bit-exact)) |
+| `noise/pink-noise.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/noise/pink-noise.wav (WAV→FLAC lossless (bit-exact)) |
+| `noise/white-noise.flac` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/noise/white-noise.wav (WAV→FLAC lossless (bit-exact)) |
+| `places/airport.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/airport.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/cafe.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/cafe.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/carousel.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/carousel.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/church.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/church.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/construction-site.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/construction-site.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/crowded-bar.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/crowded-bar.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/laboratory.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/laboratory.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/laundry-room.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/laundry-room.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/library.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/library.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/night-village.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/night-village.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/office.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/office.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/restaurant.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/restaurant.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/subway-station.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/subway-station.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/supermarket.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/supermarket.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/temple.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/temple.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `places/underwater.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/places/underwater.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/heavy-rain.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/heavy-rain.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/light-rain.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/light-rain.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/rain-on-car-roof.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/rain-on-car-roof.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/rain-on-leaves.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/rain-on-leaves.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/rain-on-tent.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/rain-on-tent.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/rain-on-umbrella.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/rain-on-umbrella.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/rain-on-window.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/rain-on-window.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `rain/thunder.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/rain/thunder.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/boiling-water.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/boiling-water.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/bubbles.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/bubbles.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/ceiling-fan.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/ceiling-fan.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/clock.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/clock.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/dryer.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/dryer.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/keyboard.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/keyboard.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/morse-code.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/morse-code.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/paper.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/paper.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/singing-bowl.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/singing-bowl.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/slide-projector.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/slide-projector.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/tuning-radio.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/tuning-radio.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/typewriter.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/typewriter.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/vinyl-effect.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/vinyl-effect.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/washing-machine.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/washing-machine.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/wind-chimes.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/wind-chimes.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `things/windshield-wipers.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/things/windshield-wipers.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `transport/airplane.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/transport/airplane.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `transport/inside-a-train.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/transport/inside-a-train.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `transport/rowing-boat.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/transport/rowing-boat.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `transport/sailboat.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/transport/sailboat.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `transport/submarine.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/transport/submarine.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `transport/train.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/transport/train.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/ambulance-siren.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/ambulance-siren.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/busy-street.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/busy-street.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/crowd.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/crowd.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/fireworks.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/fireworks.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/highway.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/highway.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/road.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/road.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |
+| `urban/traffic.opus` | Pixabay/CC0 (see note) | remvze/moodist@main public/sounds/urban/traffic.mp3 (MP3→Opus VBR transparent tier (160k stereo / 112k mono)) |

@@ -2305,6 +2305,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "soundscape-application"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "soundscape-domain",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "soundscape-domain"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "soundscape-infrastructure"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "media-store",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "soundscape-application",
+ "soundscape-domain",
+ "sqlx",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "soundscape-presentation"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "kernel",
+ "serde",
+ "serde_json",
+ "soundscape-application",
+ "soundscape-domain",
+ "tokio",
+ "tokio-util",
+ "tower",
+]
+
+[[package]]
 name = "spin"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3177,6 +3235,7 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "dotenvy",
  "identity-application",
  "identity-domain",
  "identity-infrastructure",
@@ -3192,6 +3251,9 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "soundscape-application",
+ "soundscape-infrastructure",
+ "soundscape-presentation",
  "sqlx",
  "tempfile",
  "thiserror 2.0.21",
