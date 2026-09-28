@@ -1,6 +1,6 @@
 ---
-status: draft
-spec: specs/changes/0004-user-management/SPEC.md
+status: complete
+spec: specs/0004-user-management/SPEC.md
 ---
 
 # Implementation Plan: Kullanıcı Yönetimi (Admin UI + Liste)
