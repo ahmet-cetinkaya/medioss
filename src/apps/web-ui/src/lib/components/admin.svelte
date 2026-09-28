@@ -19,6 +19,18 @@
 		type Meditation,
 		type Program,
 	} from "$lib/api/meditation";
+	import {
+		createSoundscapeCategory,
+		deleteSound,
+		deleteSoundscapeCategory,
+		fetchSoundscapeCategories,
+		fetchSounds,
+		renameSoundscapeCategory,
+		updateSound,
+		uploadSound,
+		type SoundscapeCategory,
+		type SoundscapeSound,
+	} from "$lib/api/soundscape";
 
 	let me = $state<{ role: string } | null>(null);
 	let meditations = $state<Meditation[]>([]);
@@ -38,6 +50,12 @@
 	let creatingProgram = $state(false);
 
 	let categoryName = $state("");
+	let soundscapeCategories = $state<SoundscapeCategory[]>([]);
+	let soundscapeSounds = $state<SoundscapeSound[]>([]);
+	let soundscapeCategoryName = $state("");
+	let soundscapeFile = $state<File | null>(null);
+	let soundscapeName = $state("");
+	let soundscapeCategoryId = $state<number | null>(null);
 
 	onMount(async () => {
 		try {
@@ -61,6 +79,79 @@
 		meditations = library;
 		categories = cats;
 		programs = progs;
+		[soundscapeCategories, soundscapeSounds] = await Promise.all([
+			fetchSoundscapeCategories(),
+			fetchSounds(),
+		]);
+	}
+
+	async function createSoundCategory() {
+		if (!soundscapeCategoryName.trim()) return;
+		try {
+			await createSoundscapeCategory(soundscapeCategoryName);
+			soundscapeCategoryName = "";
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "Could not create sound category.";
+		}
+	}
+
+	async function removeSoundCategory(category: SoundscapeCategory) {
+		if (!window.confirm(`Delete ${category.name}? Categories containing sounds cannot be deleted.`)) return;
+		try {
+			await deleteSoundscapeCategory(category.id);
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "Could not delete sound category.";
+		}
+	}
+
+	async function renameSoundCategory(category: SoundscapeCategory) {
+		const name = window.prompt("Category name", category.name);
+		if (!name?.trim()) return;
+		try {
+			await renameSoundscapeCategory(category.id, name);
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "Could not rename sound category.";
+		}
+	}
+
+	async function editSound(sound: SoundscapeSound) {
+		const name = window.prompt("Sound name", sound.name);
+		if (!name?.trim()) return;
+		const categoryText = window.prompt("Category id", String(sound.category_id));
+		const categoryId = Number(categoryText);
+		if (!Number.isInteger(categoryId) || categoryId <= 0) return;
+		try {
+			await updateSound(sound.id, name, categoryId);
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "Could not update sound.";
+		}
+	}
+
+	async function removeSound(sound: SoundscapeSound) {
+		if (!window.confirm(`Delete ${sound.name}? It will be removed from saved mixes.`)) return;
+		try {
+			await deleteSound(sound.id);
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "Could not delete sound.";
+		}
+	}
+
+	async function submitSoundUpload(event: SubmitEvent) {
+		event.preventDefault();
+		if (!soundscapeFile || !soundscapeCategoryId || !soundscapeName.trim()) return;
+		try {
+			await uploadSound(soundscapeName, soundscapeCategoryId, soundscapeFile);
+			soundscapeFile = null;
+			soundscapeName = "";
+			await reload();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "Could not upload sound.";
+		}
 	}
 
 	function onFileChosen(event: Event) {
@@ -301,4 +392,24 @@
 			</ul>
 		</Card.Content>
 	</Card.Root>
+
+	<section class="grid gap-4 border-t pt-8">
+		<h2 class="text-2xl font-semibold">Soundscape library</h2>
+		<form class="flex flex-wrap gap-2" onsubmit={(event) => { event.preventDefault(); createSoundCategory(); }}>
+			<Input bind:value={soundscapeCategoryName} placeholder="New sound category" aria-label="New sound category" />
+			<Button type="submit">Add category</Button>
+		</form>
+		<ul class="flex flex-wrap gap-2">
+			{#each soundscapeCategories as category (category.id)}
+				<li class="flex items-center gap-1 rounded border px-2 py-1 text-sm"><span>{category.name}</span><Button size="sm" variant="ghost" onclick={() => renameSoundCategory(category)}>Rename</Button><Button size="sm" variant="ghost" onclick={() => removeSoundCategory(category)}>Delete</Button></li>
+			{/each}
+		</ul>
+		<form class="grid gap-3 rounded border p-4" onsubmit={submitSoundUpload}>
+			<Label for="sound-name">Sound name</Label><Input id="sound-name" bind:value={soundscapeName} required />
+			<Label for="sound-category">Category</Label><select id="sound-category" class="rounded border p-2" bind:value={soundscapeCategoryId} required><option value={null}>Choose a category</option>{#each soundscapeCategories as category}<option value={category.id}>{category.name}</option>{/each}</select>
+			<Label for="sound-file">Audio file</Label><Input id="sound-file" type="file" accept="audio/*,.mp3,.wav,.ogg" onchange={(event) => { soundscapeFile = (event.currentTarget as HTMLInputElement).files?.[0] ?? null; }} required />
+			<Button type="submit">Upload sound</Button>
+		</form>
+		<ul class="grid gap-2">{#each soundscapeSounds as sound (sound.id)}<li class="flex flex-wrap items-center justify-between gap-2 rounded border p-3"><span>{sound.name} · {soundscapeCategories.find((category) => category.id === sound.category_id)?.name ?? "Unknown"}{#if sound.builtin}<span class="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">built-in</span>{/if}</span><span class="flex gap-2"><Button size="sm" variant="outline" onclick={() => editSound(sound)}>Edit</Button><Button size="sm" variant="destructive" onclick={() => removeSound(sound)}>Delete</Button></span></li>{/each}</ul>
+	</section>
 </main>

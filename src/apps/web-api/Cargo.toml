@@ -25,6 +25,9 @@ meditation-application = { path = "../../modules/meditation/application" }
 meditation-domain = { path = "../../modules/meditation/domain" }
 meditation-infrastructure = { path = "../../modules/meditation/infrastructure" }
 meditation-presentation = { path = "../../modules/meditation/presentation" }
+soundscape-application = { path = "../../modules/soundscape/application" }
+soundscape-infrastructure = { path = "../../modules/soundscape/infrastructure" }
+soundscape-presentation = { path = "../../modules/soundscape/presentation" }
 # M0: wired so the release binary proves the whole workspace compiles
 kernel = { path = "../../kernel" }
 media-store = { path = "../../shared/media-store" }

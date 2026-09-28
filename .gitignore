@@ -33,6 +33,11 @@ src/apps/web-api/static/
 # Local runtime data root used by `make run` ($MEDIOSS_DATA_DIR)
 /.data/
 
+# Shipped built-in sound set is assets/sounds/soundscape-builtin (committed); old staging dirs kept out:
+assets/builtin-sounds-opus/
+assets/builtin-sounds-lossless/
+assets/builtin-sounds/
+
 # Local environment secrets (see docs/DEPLOYMENT.md)
 .env
 .env.*

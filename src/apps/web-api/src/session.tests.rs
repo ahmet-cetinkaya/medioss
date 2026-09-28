@@ -26,6 +26,8 @@ async fn test_state() -> AppState {
         .unwrap();
     let connection = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone());
     identity_infrastructure::migrate(&connection).await.unwrap();
+    meditation_infrastructure::migrations::migrate(&connection).await.unwrap();
+    soundscape_infrastructure::migrations::migrate(&connection).await.unwrap();
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.unwrap();
 
@@ -39,9 +41,22 @@ async fn test_state() -> AppState {
         session_cookie_secure: false,
     };
 
+    let origin = Arc::new(config.medioss_origin.clone());
+    let meditation = crate::meditation::meditation_dependencies(
+        connection.clone(),
+        directory.path(),
+        Arc::clone(&origin),
+    );
+    let soundscape = crate::soundscape::soundscape_dependencies(
+        connection.clone(),
+        directory.path(),
+        origin,
+    );
     AppState::new(
         Arc::new(config),
         Arc::new(store),
+        meditation,
+        soundscape,
         Arc::new(identity_infrastructure::SeaOrmUserRepository::new(connection)),
         identity_infrastructure::BoundedArgon2PasswordHasher::new(),
     )

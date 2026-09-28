@@ -82,6 +82,19 @@ async fn main() {
     if let Err(err) = meditation_infrastructure::migrations::migrate(&database.connection).await {
         fail(format!("meditation migration failed: {err}"));
     }
+    if let Err(err) = soundscape_infrastructure::migrations::migrate(&database.connection).await {
+        fail(format!("soundscape migration failed: {err}"));
+    }
+    match soundscape_infrastructure::builtin::seed_if_present(
+        &database.connection,
+        &config.data_dir.join("media"),
+    )
+    .await
+    {
+        Ok(true) => tracing::info!("built-in soundscape set seeded"),
+        Ok(false) => tracing::debug!("no built-in soundscape set found; skipping seed"),
+        Err(err) => tracing::warn!("built-in soundscape seed failed: {err}"),
+    }
     let session_store = tower_sessions_sqlx_store::SqliteStore::new(database.pool.clone());
     if let Err(err) = session_store.migrate().await {
         fail(format!("session store migration failed: {err}"));
@@ -92,10 +105,16 @@ async fn main() {
         &config.data_dir,
         std::sync::Arc::new(config.medioss_origin.clone()),
     );
+    let soundscape = web_api::soundscape::soundscape_dependencies(
+        database.connection.clone(),
+        &config.data_dir,
+        std::sync::Arc::new(config.medioss_origin.clone()),
+    );
     let state = web_api::state::AppState::new(
         Arc::new(config),
         std::sync::Arc::new(session_store),
         meditation,
+        soundscape,
         std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             database.connection,
         )),

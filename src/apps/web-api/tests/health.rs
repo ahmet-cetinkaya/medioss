@@ -42,6 +42,9 @@ async fn test_state() -> (AppState, TempDir) {
     meditation_infrastructure::migrations::migrate(&connection)
         .await
         .expect("meditation migrations");
+    soundscape_infrastructure::migrations::migrate(&connection)
+        .await
+        .expect("soundscape migrations");
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.expect("session store migrations");
 
@@ -50,10 +53,16 @@ async fn test_state() -> (AppState, TempDir) {
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
     );
+    let soundscape = web_api::soundscape::soundscape_dependencies(
+        connection.clone(),
+        static_dir.path(),
+        Arc::new("http://localhost".to_owned()),
+    );
     let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
         meditation,
+        soundscape,
         Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             connection,
         )),

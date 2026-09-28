@@ -556,12 +556,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dotenvy"
-version = "0.15.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
-
-[[package]]
 name = "either"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2042,7 +2036,6 @@ checksum = "da80ebcdb44571e86f03a2bdcb5532136a87397f366f38bbce64673fc5e6a450"
 dependencies = [
  "chrono",
  "clap",
- "dotenvy",
  "glob",
  "regex",
  "tracing",
@@ -2302,6 +2295,63 @@ checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "soundscape-application"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "soundscape-domain",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "soundscape-domain"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "soundscape-infrastructure"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "media-store",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "soundscape-application",
+ "soundscape-domain",
+ "sqlx",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "soundscape-presentation"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "kernel",
+ "serde",
+ "serde_json",
+ "soundscape-application",
+ "soundscape-domain",
+ "tokio",
+ "tokio-util",
+ "tower",
 ]
 
 [[package]]
@@ -3177,6 +3227,7 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "dotenvy",
  "identity-application",
  "identity-domain",
  "identity-infrastructure",
@@ -3192,6 +3243,9 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "soundscape-application",
+ "soundscape-infrastructure",
+ "soundscape-presentation",
  "sqlx",
  "tempfile",
  "thiserror 2.0.21",
