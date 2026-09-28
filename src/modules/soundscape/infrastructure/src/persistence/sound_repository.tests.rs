@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use chrono::Utc;
-use sea_orm::{DatabaseConnection, SqlxSqliteConnector};
+use sea_orm::{ConnectionTrait, DatabaseConnection, SqlxSqliteConnector};
 use soundscape_application::ports::{MixRepository, NewMix, NewSound, SoundRepository};
 use soundscape_domain::{MixItem, STORED_CONTENT_TYPE};
 use sqlx::{
@@ -213,4 +213,38 @@ async fn mixes_are_not_limited_to_three_sounds() {
         5,
         "the schema must not cap a mix at three sounds"
     );
+}
+
+#[tokio::test]
+async fn deleting_a_builtin_sound_records_a_tombstone() {
+    let database = TestDatabase::open().await;
+    let sounds = SeaOrmSoundRepository::new(database.connection.clone());
+
+    let builtin = sounds.create(sound("Rain", "soundscape/rain.opus")).await.unwrap();
+    database
+        .connection
+        .execute(sea_orm::Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::Sqlite,
+            "UPDATE soundscape_sounds SET builtin_id = ? WHERE id = ?",
+            vec!["rain:rain".into(), builtin.id.into()],
+        ))
+        .await
+        .unwrap();
+    let uploaded = sounds.create(sound("Wind", "soundscape/wind.opus")).await.unwrap();
+
+    sounds.delete_with_mix_items(builtin.id).await.unwrap().unwrap();
+    sounds.delete_with_mix_items(uploaded.id).await.unwrap().unwrap();
+
+    let tombstones = database
+        .connection
+        .query_all(sea_orm::Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT builtin_id FROM soundscape_builtin_tombstones".to_owned(),
+        ))
+        .await
+        .unwrap()
+        .iter()
+        .map(|row| row.try_get::<String>("", "builtin_id").unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(tombstones, vec!["rain:rain".to_owned()], "only the built-in delete is tombstoned");
 }

@@ -79,6 +79,15 @@ impl SoundRepository for SeaOrmSoundRepository {
             return Ok(None);
         };
         let tx = self.db.begin().await.map_err(|e| e.to_string())?;
+        let builtin_id = tx
+            .query_one(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                "SELECT builtin_id FROM soundscape_sounds WHERE id=?",
+                [id.into()],
+            ))
+            .await
+            .map_err(|e| e.to_string())?
+            .and_then(|row| row.try_get::<String>("", "builtin_id").ok());
         tx.execute(Statement::from_sql_and_values(
             DatabaseBackend::Sqlite,
             "DELETE FROM soundscape_mix_items WHERE sound_id=?",
@@ -127,6 +136,17 @@ impl SoundRepository for SeaOrmSoundRepository {
         ))
         .await
         .map_err(|e| e.to_string())?;
+        // A removed built-in must stay removed: record its builtin_id so the
+        // startup seeder skips it instead of resurrecting the row (FR-029).
+        if let Some(builtin_id) = builtin_id {
+            tx.execute(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                "INSERT OR IGNORE INTO soundscape_builtin_tombstones(builtin_id, deleted_at) VALUES(?, ?)",
+                [builtin_id.into(), chrono::Utc::now().to_rfc3339().into()],
+            ))
+            .await
+            .map_err(|e| e.to_string())?;
+        }
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(sound)
     }

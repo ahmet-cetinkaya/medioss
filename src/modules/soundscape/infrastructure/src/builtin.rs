@@ -81,6 +81,20 @@ async fn seed(
         if exists.is_some() {
             continue;
         }
+        // An admin removed this built-in on an earlier run; removal must stick
+        // (FR-029), so the seeder does not resurrect tombstoned sounds.
+        let tombstoned = db
+            .query_one(Statement::from_sql_and_values(
+                sea_orm::DatabaseBackend::Sqlite,
+                "SELECT builtin_id FROM soundscape_builtin_tombstones WHERE builtin_id = ?",
+                vec![builtin_id.clone().into()],
+            ))
+            .await
+            .map_err(|e| SeedError::Db(e.to_string()))?
+            .is_some();
+        if tombstoned {
+            continue;
+        }
         let bytes = tokio::fs::read(dir.join(&entry.file)).await?;
         let extension = Path::new(&entry.file)
             .extension()
