@@ -36,6 +36,10 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
+    // Local convenience: load ./.env if present. Real environment variables
+    // always win (dotenv_override is off), so production env files cannot
+    // shadow an operator's explicit settings. A missing file is fine.
+    let _ = dotenvy::dotenv();
     let cli = <Cli as clap::Parser>::parse();
     match cli.command {
         Some(Commands::ResetPassword { email }) => {

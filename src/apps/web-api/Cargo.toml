@@ -20,6 +20,7 @@ url = "2"
 time = "0.3"
 clap = { workspace = true }
 rand.workspace = true
+dotenvy = "0.15"
 identity-application = { path = "../../modules/identity/application" }
 meditation-application = { path = "../../modules/meditation/application" }
 meditation-domain = { path = "../../modules/meditation/domain" }
