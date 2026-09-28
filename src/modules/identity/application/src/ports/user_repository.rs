@@ -8,6 +8,8 @@ use super::{CredentialChange, InitialAdminRegistration, MemberRegistration, Repo
 pub trait UserRepository: Send + Sync {
     async fn count(&self) -> Result<u64, RepositoryError>;
 
+    async fn list(&self) -> Result<Vec<User>, RepositoryError>;
+
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError>;
 
     async fn find_by_id(&self, id: UserId) -> Result<Option<User>, RepositoryError>;

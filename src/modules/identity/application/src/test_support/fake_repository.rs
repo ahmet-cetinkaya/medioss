@@ -118,6 +118,13 @@ impl UserRepository for FakeRepository {
         Ok(count)
     }
 
+    async fn list(&self) -> Result<Vec<User>, RepositoryError> {
+        let state = self.state.lock().unwrap();
+        let mut users: Vec<User> = state.users.values().cloned().collect();
+        users.sort_by(|a, b| a.email().as_str().cmp(b.email().as_str()));
+        Ok(users)
+    }
+
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError> {
         Ok(self
             .state

@@ -66,6 +66,10 @@ impl UserRepository for EmptyRepository {
         Ok(0)
     }
 
+    async fn list(&self) -> Result<Vec<User>, RepositoryError> {
+        Ok(Vec::new())
+    }
+
     async fn find_by_email(&self, _email: &Email) -> Result<Option<User>, RepositoryError> {
         Ok(None)
     }
@@ -354,4 +358,173 @@ fn api_error_mapping_table() {
         let response = super::ApiError::from(error).into_response_status();
         assert_eq!(response, expected);
     }
+}
+
+struct SeededRepository {
+    inner: EmptyRepository,
+    users: Vec<User>,
+}
+
+#[async_trait::async_trait]
+impl UserRepository for SeededRepository {
+    async fn count(&self) -> Result<u64, RepositoryError> {
+        Ok(self.users.len() as u64)
+    }
+
+    async fn list(&self) -> Result<Vec<User>, RepositoryError> {
+        let mut users = self.users.clone();
+        users.sort_by(|a, b| a.email().as_str().cmp(b.email().as_str()));
+        Ok(users)
+    }
+
+    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError> {
+        self.inner.find_by_email(email).await
+    }
+
+    async fn find_by_id(&self, id: kernel::UserId) -> Result<Option<User>, RepositoryError> {
+        self.inner.find_by_id(id).await
+    }
+
+    async fn insert_initial_admin_if_uninitialized(
+        &self,
+        registration: identity_application::ports::InitialAdminRegistration,
+    ) -> Result<User, RepositoryError> {
+        self.inner
+            .insert_initial_admin_if_uninitialized(registration)
+            .await
+    }
+
+    async fn insert_member(
+        &self,
+        registration: identity_application::ports::MemberRegistration,
+    ) -> Result<User, RepositoryError> {
+        self.inner.insert_member(registration).await
+    }
+
+    async fn apply_credential_change(
+        &self,
+        credential_change: identity_application::ports::CredentialChange,
+    ) -> Result<User, RepositoryError> {
+        self.inner.apply_credential_change(credential_change).await
+    }
+}
+
+#[async_trait::async_trait]
+impl LoginThrottleRepository for SeededRepository {
+    async fn failed_attempts(
+        &self,
+        normalized_identifier: &str,
+    ) -> Result<Option<FailedAttempts>, RepositoryError> {
+        self.inner.failed_attempts(normalized_identifier).await
+    }
+
+    async fn record_failed_attempt(
+        &self,
+        normalized_identifier: &str,
+        attempted_at: chrono::DateTime<chrono::Utc>,
+    ) -> Result<FailedAttempts, RepositoryError> {
+        self.inner
+            .record_failed_attempt(normalized_identifier, attempted_at)
+            .await
+    }
+
+    async fn clear_failed_attempts(
+        &self,
+        normalized_identifier: &str,
+    ) -> Result<(), RepositoryError> {
+        self.inner
+            .clear_failed_attempts(normalized_identifier)
+            .await
+    }
+}
+
+fn seeded_app(users: Vec<User>) -> axum::Router {
+    let dependencies = Arc::new(IdentityDependencies {
+        repository: Arc::new(SeededRepository {
+            inner: EmptyRepository,
+            users,
+        }),
+        hasher: Arc::new(NullHasher),
+        clock: Arc::new(NullClock),
+        admission: Arc::new(NullAdmission),
+        dummy_password_hash: PasswordHash::from_stored("null:dummy".to_owned()),
+        session_secret: Arc::new("session-secret-value".to_owned()),
+        medioss_origin: Arc::new("https://medioss.example".to_owned()),
+    });
+    identity_router::<SeededRepository, NullHasher, NullClock, NullAdmission>()
+        .with_state(dependencies)
+        .layer(tower_sessions::SessionManagerLayer::new(
+            tower_sessions::MemoryStore::default(),
+        ))
+}
+
+fn user(id: i64, email: &str, role: Role) -> User {
+    User::new_permanent(
+        kernel::UserId::new(id),
+        Email::parse(email).unwrap(),
+        PasswordHash::from_stored("null:x".to_owned()),
+        role,
+        chrono::Utc::now(),
+    )
+}
+
+#[tokio::test]
+async fn users_list_returns_sorted_users_for_admin() {
+    let router = seeded_app(vec![
+        user(2, "zoe@example.com", Role::Member),
+        user(1, "adam@example.com", Role::Admin),
+    ]);
+    let mut request = Request::get("/identity/users").body(Body::empty()).unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let listed: Vec<serde_json::Value> = serde_json::from_slice(&body).unwrap();
+    let emails: Vec<&str> = listed
+        .iter()
+        .map(|u| u["email"].as_str().unwrap())
+        .collect();
+    assert_eq!(emails, vec!["adam@example.com", "zoe@example.com"]);
+}
+
+#[tokio::test]
+async fn users_list_forbids_members() {
+    let router = seeded_app(vec![user(2, "member@example.com", Role::Member)]);
+    let mut request = Request::get("/identity/users").body(Body::empty()).unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(2), Role::Member));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn users_list_requires_authentication() {
+    let router = seeded_app(vec![]);
+    let response = router
+        .oneshot(Request::get("/identity/users").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn users_create_forbids_members_at_the_route_level() {
+    let router = seeded_app(vec![user(2, "member@example.com", Role::Member)]);
+    let mut request = Request::post("/identity/users")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            r#"{"email":"new@example.com","password":"long-enough"}"#,
+        ))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(2), Role::Member));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }

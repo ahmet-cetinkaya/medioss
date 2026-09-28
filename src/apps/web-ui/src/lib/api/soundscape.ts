@@ -1,3 +1,5 @@
+import { request } from "./request";
+
 export interface SoundscapeCategory {
   id: number;
   name: string;
@@ -30,26 +32,6 @@ export interface SoundscapeMix {
   unavailable_sounds?: string[];
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    credentials: "same-origin",
-    ...init,
-    headers: {
-      ...(init?.body && !(init.body instanceof FormData)
-        ? { "content-type": "application/json" }
-        : {}),
-      ...init?.headers,
-    },
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    throw new Error(body.error ?? `request failed (${response.status})`);
-  }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
-}
 
 export const fetchSoundscapeCategories = () =>
   request<SoundscapeCategory[]>("/api/soundscape/categories");

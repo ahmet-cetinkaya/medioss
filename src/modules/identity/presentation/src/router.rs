@@ -16,7 +16,7 @@ use axum::{
 use identity_application::{
     commands::{change_password, create_user, setup_admin, Authenticate},
     ports::{Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository},
-    queries::is_setup_required,
+    queries::{is_setup_required, list_users},
     ApplicationError,
 };
 use identity_domain::{Email, IdentityError, PasswordHash, RawPassword, User};
@@ -53,6 +53,7 @@ where
         .route("/identity/logout", post(logout))
         .route("/identity/me", get(me))
         .route("/identity/users", post(users))
+        .route("/identity/users", get(users_list))
         .route("/identity/me/password", post(me_password))
 }
 
@@ -203,6 +204,40 @@ where
     )
     .await?;
     Ok((StatusCode::CREATED, Json(user_response(&user))))
+}
+
+#[derive(Serialize)]
+struct UserListItem {
+    id: i64,
+    email: String,
+    role: String,
+    must_change_password: bool,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+async fn users_list<R, H, C, A>(
+    _actor: AdminActor,
+    State(_dependencies): State<SharedDependencies<R, H, C, A>>,
+) -> Result<Json<Vec<UserListItem>>, ApiError>
+where
+    R: UserRepository + LoginThrottleRepository + 'static,
+    H: PasswordHasher + 'static,
+    C: Clock + 'static,
+    A: LoginAdmission + 'static,
+{
+    let users = list_users(_dependencies.repository.as_ref()).await?;
+    Ok(Json(
+        users
+            .into_iter()
+            .map(|user| UserListItem {
+                id: user.id().value(),
+                email: user.email().as_str().to_owned(),
+                role: role_to_str(user.role()).to_owned(),
+                must_change_password: user.must_change_password(),
+                created_at: user.created_at(),
+            })
+            .collect(),
+    ))
 }
 
 async fn me_password<R, H, C, A>(
@@ -393,6 +428,28 @@ where
             .cloned()
             .map(CurrentActor)
             .ok_or(ApiError(ApplicationError::InvalidCredentials))
+    }
+}
+
+/// Admin-only gate: same actor lookup as `CurrentActor`, plus a role check.
+/// The extractor is the enforcement; handlers do not need the actor value.
+#[allow(dead_code)]
+struct AdminActor(Actor);
+
+impl<S: Send + Sync> FromRequestParts<S> for AdminActor {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let actor = parts
+            .extensions
+            .get::<Actor>()
+            .cloned()
+            .ok_or(ApiError(ApplicationError::InvalidCredentials))?;
+        if actor.role() == Role::Admin {
+            Ok(Self(actor))
+        } else {
+            Err(ApiError(ApplicationError::Forbidden))
+        }
     }
 }
 

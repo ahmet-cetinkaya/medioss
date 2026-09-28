@@ -6,10 +6,9 @@ use identity_application::ports::{
 };
 use identity_domain::{Email, FailedAttempts, PasswordHash, Role, User};
 use kernel::UserId;
-use sea_orm::sea_query::Expr;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
-    PaginatorTrait, QueryFilter, Set, TransactionTrait,
+    sea_query::Expr, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
+    EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait,
 };
 
 use crate::persistence::{login_attempts, users};
@@ -106,6 +105,17 @@ impl UserRepository for SeaOrmUserRepository {
             .count(&self.db)
             .await
             .map_err(|_| RepositoryError::OperationFailed)
+    }
+
+    async fn list(&self) -> Result<Vec<User>, RepositoryError> {
+        users::Entity::find()
+            .order_by_asc(users::Column::Email)
+            .all(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?
+            .into_iter()
+            .map(restore_user)
+            .collect()
     }
 
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError> {

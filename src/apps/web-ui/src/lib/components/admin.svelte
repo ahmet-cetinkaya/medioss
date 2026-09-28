@@ -4,6 +4,7 @@
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
 	import * as Card from "$lib/components/ui/card";
+	import { createUser, fetchUsers, type IdentityUser } from "$lib/api/identity";
 	import {
 		addMember,
 		assignCategory,
@@ -57,6 +58,14 @@
 	let soundscapeName = $state("");
 	let soundscapeCategoryId = $state<number | null>(null);
 
+	let users = $state<IdentityUser[]>([]);
+	let newUserEmail = $state("");
+	let newUserPassword = $state("");
+	let creatingUser = $state(false);
+	let usersError = $state("");
+	let createdPassword = $state("");
+	let createdEmail = $state("");
+
 	onMount(async () => {
 		try {
 			me = await fetchMe();
@@ -79,10 +88,39 @@
 		meditations = library;
 		categories = cats;
 		programs = progs;
-		[soundscapeCategories, soundscapeSounds] = await Promise.all([
+		[soundscapeCategories, soundscapeSounds, users] = await Promise.all([
 			fetchSoundscapeCategories(),
 			fetchSounds(),
+			fetchUsers(),
 		]);
+	}
+
+	async function submitNewUser(event: SubmitEvent) {
+		event.preventDefault();
+		usersError = "";
+		createdPassword = "";
+		createdEmail = "";
+		creatingUser = true;
+		try {
+			await createUser(newUserEmail.trim(), newUserPassword);
+			createdEmail = newUserEmail.trim();
+			createdPassword = newUserPassword;
+			newUserEmail = "";
+			newUserPassword = "";
+			users = await fetchUsers();
+		} catch (failure) {
+			const status = (failure as { status?: number }).status;
+			if (status === 409) {
+				usersError = "Bu e-posta adresi zaten kayıtlı.";
+			} else if (status === 400) {
+				usersError = "Geçici şifre en az 8 karakter olmalı ve e-posta geçerli olmalı.";
+			} else {
+				usersError =
+					failure instanceof Error ? failure.message : "Kullanıcı oluşturulamadı";
+			}
+		} finally {
+			creatingUser = false;
+		}
 	}
 
 	async function createSoundCategory() {
@@ -251,6 +289,72 @@
 
 	{#if error}<p class="mb-4 text-destructive">{error}</p>{/if}
 	{#if message}<p class="mb-4 text-sm text-muted-foreground">{message}</p>{/if}
+
+	<Card.Root class="mb-8">
+		<Card.Header><Card.Title>Users</Card.Title>
+			<Card.Description>Create accounts and review who has access.</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<form class="grid gap-4" onsubmit={submitNewUser}>
+				<div class="grid gap-2">
+					<Label for="new-user-email">Email</Label>
+					<Input
+						id="new-user-email"
+						type="email"
+						bind:value={newUserEmail}
+						placeholder="member@example.com"
+						required
+					/>
+				</div>
+				<div class="grid gap-2">
+					<Label for="new-user-password">Temporary password</Label>
+					<Input
+						id="new-user-password"
+						bind:value={newUserPassword}
+						placeholder="min. 8 characters"
+						minlength={8}
+						required
+					/>
+				</div>
+				{#if usersError}<p class="text-sm text-destructive">{usersError}</p>{/if}
+				<Button type="submit" disabled={!newUserEmail || !newUserPassword || creatingUser}>
+					{creatingUser ? "Creating…" : "Create user"}
+				</Button>
+			</form>
+			{#if createdPassword}
+				<div class="mt-4 rounded-md border bg-muted/50 p-4 text-sm">
+					<p class="font-medium">{createdEmail} created.</p>
+					<p class="mt-1">Temporary password (shown once):</p>
+					<code class="mt-1 block select-all font-mono">{createdPassword}</code>
+					<p class="mt-2 text-muted-foreground">
+						Share it securely — the user must change it on first login.
+					</p>
+				</div>
+			{/if}
+			{#if users.length > 0}
+				<table class="mt-6 w-full text-sm">
+					<thead>
+						<tr class="border-b text-left">
+							<th class="py-2">Email</th>
+							<th class="py-2">Role</th>
+							<th class="py-2">Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each users as user (user.id)}
+							<tr class="border-b">
+								<td class="py-2">{user.email}</td>
+								<td class="py-2">{user.role}</td>
+								<td class="py-2">
+									{user.must_change_password ? "must change password" : "active"}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 
 	<Card.Root class="mb-8">
 		<Card.Header><Card.Title>Upload meditation audio</Card.Title>
