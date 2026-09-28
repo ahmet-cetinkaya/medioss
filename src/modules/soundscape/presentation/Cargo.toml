@@ -13,3 +13,7 @@ soundscape-domain = { path = "../domain" }
 tokio.workspace = true
 tokio-util.workspace = true
 tower.workspace = true
+
+[dev-dependencies]
+chrono.workspace = true
+tower = { workspace = true, features = ["util"] }

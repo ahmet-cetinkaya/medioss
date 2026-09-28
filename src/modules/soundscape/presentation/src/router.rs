@@ -160,9 +160,11 @@ pub fn soundscape_router() -> Router<SharedDependencies> {
         )
         .route(
             "/soundscape/sounds",
-            get(list_sounds).post(upload_sound).layer(axum::extract::DefaultBodyLimit::max(
-                commands::sounds::MAX_UPLOAD_BYTES,
-            )),
+            get(list_sounds)
+                .post(upload_sound)
+                .layer(axum::extract::DefaultBodyLimit::max(
+                    commands::sounds::MAX_UPLOAD_BYTES,
+                )),
         )
         .route(
             "/soundscape/sounds/{id}",
