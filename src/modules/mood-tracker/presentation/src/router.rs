@@ -105,10 +105,7 @@ fn history_cursor(
 
 fn cursor(
     value: Option<&str>,
-) -> Result<
-    Option<(chrono::DateTime<chrono::Utc>, queries::TimelineKind, i64)>,
-    ApiError,
-> {
+) -> Result<Option<(chrono::DateTime<chrono::Utc>, queries::TimelineKind, i64)>, ApiError> {
     let Some(value) = value else {
         return Ok(None);
     };
@@ -309,9 +306,7 @@ async fn timeline(
         // Keyset continuation: keep only events strictly after the cursor
         // tuple. Survives deletions between pages and keeps equal-timestamp
         // events split deterministically by (kind, id).
-        events.retain(|event| {
-            (event.recorded_at, event.kind, event.id) > (at, kind, id)
-        });
+        events.retain(|event| (event.recorded_at, event.kind, event.id) > (at, kind, id));
     }
     let has_more = events.len() > usize::from(limit);
     events.truncate(usize::from(limit));

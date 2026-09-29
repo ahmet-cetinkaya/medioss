@@ -55,11 +55,7 @@ impl MeditationTimelineSource for MeditationTimelineAdapter {
         for session in self.sessions.list_for_user(user_id).await? {
             // Deleting a meditation does not sweep completed sessions, so
             // orphaned session rows would otherwise break the whole timeline.
-            let Some(meditation) = self
-                .meditations
-                .find_by_id(session.meditation_id)
-                .await?
-            else {
+            let Some(meditation) = self.meditations.find_by_id(session.meditation_id).await? else {
                 tracing::warn!(
                     session_id = session.id,
                     meditation_id = session.meditation_id,
