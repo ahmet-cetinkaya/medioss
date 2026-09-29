@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use kernel::UserId;
 use mood_tracker_domain::{MoodEntry, MoodScore};
 
-use crate::ports::{Clock, MoodEntryRepository, Page, PageRequest};
+use crate::ports::{Clock, MoodEntryRepository, Page};
 
 #[derive(Clone)]
 pub struct FixedClock(pub DateTime<Utc>);
@@ -88,25 +88,6 @@ impl MoodEntryRepository for FakeMoodEntryRepository {
         };
         entries.remove(index);
         Ok(true)
-    }
-
-    async fn list_for_user(
-        &self,
-        user_id: UserId,
-        page: PageRequest,
-    ) -> Result<Page<MoodEntry>, String> {
-        let mut items = self.list_all_for_user(user_id).await?;
-        if let Some((at, id)) = page.cursor {
-            items.retain(|entry| (entry.recorded_at(), entry.id()) < (at, id));
-        }
-        let limit = usize::from(page.limit);
-        let has_more = items.len() > limit;
-        items.truncate(limit);
-        let next_cursor = has_more.then(|| {
-            let last = items.last().unwrap();
-            (last.recorded_at(), last.id())
-        });
-        Ok(Page { items, next_cursor })
     }
 
     async fn list_all_for_user(&self, user_id: UserId) -> Result<Vec<MoodEntry>, String> {

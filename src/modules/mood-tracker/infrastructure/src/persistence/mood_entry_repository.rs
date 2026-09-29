@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kernel::UserId;
-use mood_tracker_application::ports::{MoodEntryRepository, Page, PageRequest};
+use mood_tracker_application::ports::{MoodEntryRepository, Page};
 use mood_tracker_domain::{MoodEntry, MoodScore};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter,
-    QueryOrder, QuerySelect, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
+    QuerySelect, Set,
 };
 
 use crate::persistence::entities as table;
@@ -62,20 +62,6 @@ impl MoodEntryRepository for SeaOrmMoodEntryRepository {
         .and_then(to_domain)
     }
 
-    async fn find_owned(
-        &self,
-        user_id: UserId,
-        entry_id: i64,
-    ) -> Result<Option<MoodEntry>, String> {
-        table::Entity::find_by_id(entry_id)
-            .filter(table::Column::UserId.eq(user_id.value()))
-            .one(&self.db)
-            .await
-            .map_err(|error| error.to_string())?
-            .map(to_domain)
-            .transpose()
-    }
-
     async fn update(
         &self,
         user_id: UserId,
@@ -112,45 +98,6 @@ impl MoodEntryRepository for SeaOrmMoodEntryRepository {
             .map_err(|error| error.to_string())?
             .rows_affected
             == 1)
-    }
-
-    async fn list_for_user(
-        &self,
-        user_id: UserId,
-        page: PageRequest,
-    ) -> Result<Page<MoodEntry>, String> {
-        let mut query = table::Entity::find().filter(table::Column::UserId.eq(user_id.value()));
-        if let Some((at, id)) = page.cursor {
-            query = query.filter(
-                Condition::any()
-                    .add(table::Column::RecordedAt.lt(at.to_rfc3339()))
-                    .add(
-                        Condition::all()
-                            .add(table::Column::RecordedAt.eq(at.to_rfc3339()))
-                            .add(table::Column::Id.lt(id)),
-                    ),
-            );
-        }
-        let mut models = query
-            .order_by_desc(table::Column::RecordedAt)
-            .order_by_desc(table::Column::Id)
-            .limit(u64::from(page.limit) + 1)
-            .all(&self.db)
-            .await
-            .map_err(|error| error.to_string())?;
-        let has_more = models.len() > usize::from(page.limit);
-        models.truncate(usize::from(page.limit));
-        let items: Vec<_> = models
-            .into_iter()
-            .map(to_domain)
-            .collect::<Result<_, _>>()?;
-        let next_cursor = has_more.then(|| {
-            let last = items
-                .last()
-                .expect("page has items when it has a continuation");
-            (last.recorded_at(), last.id())
-        });
-        Ok(Page { items, next_cursor })
     }
 
     async fn list_all_for_user(&self, user_id: UserId) -> Result<Vec<MoodEntry>, String> {
