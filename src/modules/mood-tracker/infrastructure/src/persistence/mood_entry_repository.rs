@@ -1,11 +1,10 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kernel::UserId;
-use mood_tracker_application::ports::{MoodEntryRepository, Page};
+use mood_tracker_application::ports::MoodEntryRepository;
 use mood_tracker_domain::{MoodEntry, MoodScore};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
 };
 
 use crate::persistence::entities as table;
