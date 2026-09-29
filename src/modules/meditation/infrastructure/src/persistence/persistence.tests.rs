@@ -308,6 +308,10 @@ async fn notes_stay_author_scoped_and_newest_first() {
         .await
         .unwrap()
         .is_empty());
+    let owner_wide = notes.list_for_user(user_a()).await.unwrap();
+    assert_eq!(owner_wide.len(), 2);
+    assert_eq!(owner_wide[0].text, "newer");
+    assert!(notes.list_for_user(user_b()).await.unwrap().is_empty());
 
     // B cannot touch A's note.
     assert!(!notes

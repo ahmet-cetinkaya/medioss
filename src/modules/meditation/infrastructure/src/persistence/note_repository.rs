@@ -73,6 +73,19 @@ impl NoteRepository for SeaOrmNoteRepository {
             .collect()
     }
 
+    async fn list_for_user(&self, user_id: UserId) -> Result<Vec<Note>, String> {
+        table::Entity::find()
+            .filter(table::Column::UserId.eq(user_id.value()))
+            .order_by_desc(table::Column::CreatedAt)
+            .order_by_desc(table::Column::Id)
+            .all(&self.db)
+            .await
+            .map_err(|error| error.to_string())?
+            .into_iter()
+            .map(to_domain)
+            .collect()
+    }
+
     async fn update(
         &self,
         note_id: i64,
