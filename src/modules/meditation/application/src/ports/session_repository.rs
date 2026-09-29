@@ -29,4 +29,7 @@ pub trait SessionRepository: Send + Sync {
 
     /// How many sessions the user has for this meditation.
     async fn count_for(&self, user_id: UserId, meditation_id: i64) -> Result<i64, String>;
+
+    /// All completed sessions belonging to one user.
+    async fn list_for_user(&self, user_id: UserId) -> Result<Vec<MeditationSession>, String>;
 }

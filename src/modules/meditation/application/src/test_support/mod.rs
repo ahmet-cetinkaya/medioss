@@ -670,6 +670,18 @@ impl SessionRepository for FakeSessionRepository {
             .filter(|session| session.user_id == user_id && session.meditation_id == meditation_id)
             .count() as i64)
     }
+
+    async fn list_for_user(&self, user_id: UserId) -> Result<Vec<MeditationSession>, String> {
+        Ok(self
+            .0
+            .sessions
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|session| session.user_id == user_id)
+            .cloned()
+            .collect())
+    }
 }
 
 /// NoteRepository fake with author scoping.

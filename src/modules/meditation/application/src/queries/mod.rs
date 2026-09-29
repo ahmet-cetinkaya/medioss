@@ -3,6 +3,7 @@ mod get_continue_program;
 mod get_daily_suggestion;
 mod get_meditation;
 mod get_playback_state;
+mod get_user_statistics;
 mod list_categories;
 mod list_library;
 mod list_notes;
@@ -14,6 +15,9 @@ pub use get_continue_program::{get_continue_program, ContinueProgram};
 pub use get_daily_suggestion::{get_daily_suggestion, DailySuggestion};
 pub use get_meditation::get_meditation;
 pub use get_playback_state::get_playback_state;
+pub use get_user_statistics::{
+    get_user_statistics, StatisticsDay, StatisticsRange, UserStatistics,
+};
 pub use list_categories::list_categories;
 pub use list_library::list_library;
 pub use list_notes::list_notes;

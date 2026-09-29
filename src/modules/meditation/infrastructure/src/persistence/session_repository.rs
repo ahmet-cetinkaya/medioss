@@ -91,4 +91,15 @@ impl SessionRepository for SeaOrmSessionRepository {
             .map_err(|e| e.to_string())
             .map(|count| count as i64)
     }
+
+    async fn list_for_user(&self, user_id: UserId) -> Result<Vec<MeditationSession>, String> {
+        table::Entity::find()
+            .filter(table::Column::UserId.eq(user_id.value()))
+            .all(&self.db)
+            .await
+            .map_err(|error| error.to_string())?
+            .into_iter()
+            .map(to_domain)
+            .collect()
+    }
 }
