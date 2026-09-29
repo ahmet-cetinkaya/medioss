@@ -32,11 +32,17 @@ pub async fn get_timeline<M, S>(
     range: MoodRange,
     tz_offset_minutes: i16,
     now: DateTime<Utc>,
+    limit: u16,
 ) -> Result<Vec<TimelineEvent>, ApplicationError>
 where
     M: MoodEntryRepository + ?Sized,
     S: MeditationTimelineSource + ?Sized,
 {
+    if !(1..=100).contains(&limit) {
+        return Err(ApplicationError::InvalidInput(
+            "page size must be between 1 and 100",
+        ));
+    }
     let offset = FixedOffset::east_opt(i32::from(tz_offset_minutes) * 60)
         .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
     let today = now.with_timezone(&offset).date_naive();
