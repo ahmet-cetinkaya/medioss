@@ -52,6 +52,11 @@
 	<main class="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-6">
 		<h1 class="text-4xl font-semibold tracking-tight">MediOSS</h1>
 		<p class="text-lg">A private, self-hosted space for meditation and rest.</p>
+		<div class="flex flex-wrap gap-2">
+			<Button onclick={() => (window.location.href = "/mood")}>Mood tracker</Button>
+			<Button variant="outline" onclick={() => (window.location.href = "/history")}>History</Button>
+			<Button variant="outline" onclick={() => (window.location.href = "/stats")}>Statistics</Button>
+		</div>
 		{#if continueProgram}
 			<section class="grid gap-2">
 				<h2 class="text-sm font-medium text-muted-foreground">Continue program</h2>
