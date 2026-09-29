@@ -34,32 +34,42 @@ impl MeditationTimelineSource for MeditationTimelineAdapter {
     async fn list_for_user(&self, user_id: UserId) -> Result<Vec<MeditationTimelineEvent>, String> {
         let mut events = Vec::new();
         for note in self.notes.list_for_user(user_id).await? {
-            let name = self
-                .meditations
-                .find_by_id(note.meditation_id)
-                .await?
-                .ok_or_else(|| "meditation missing for note".to_owned())?
-                .name()
-                .to_owned();
+            // Notes are swept when a meditation is deleted, but keep the
+            // timeline resilient if an orphan ever appears.
+            let Some(meditation) = self.meditations.find_by_id(note.meditation_id).await? else {
+                tracing::warn!(
+                    note_id = note.id,
+                    meditation_id = note.meditation_id,
+                    "skipping timeline note whose meditation is missing"
+                );
+                continue;
+            };
             events.push(MeditationTimelineEvent {
                 id: note.id,
-                meditation_name: name,
+                meditation_name: meditation.name().to_owned(),
                 note: Some(note.text),
                 recorded_at: note.created_at,
                 kind: MeditationTimelineEventKind::Note,
             });
         }
         for session in self.sessions.list_for_user(user_id).await? {
-            let name = self
+            // Deleting a meditation does not sweep completed sessions, so
+            // orphaned session rows would otherwise break the whole timeline.
+            let Some(meditation) = self
                 .meditations
                 .find_by_id(session.meditation_id)
                 .await?
-                .ok_or_else(|| "meditation missing for session".to_owned())?
-                .name()
-                .to_owned();
+            else {
+                tracing::warn!(
+                    session_id = session.id,
+                    meditation_id = session.meditation_id,
+                    "skipping timeline session whose meditation is missing"
+                );
+                continue;
+            };
             events.push(MeditationTimelineEvent {
                 id: session.id,
-                meditation_name: name,
+                meditation_name: meditation.name().to_owned(),
                 note: None,
                 recorded_at: session.finished_at,
                 kind: MeditationTimelineEventKind::CompletedSession,
