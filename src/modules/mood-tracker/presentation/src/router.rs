@@ -33,6 +33,12 @@ struct RangeQuery {
     limit: Option<u16>,
     cursor: Option<String>,
 }
+
+#[derive(Deserialize)]
+struct StatisticsQuery {
+    range: Option<String>,
+    tz_offset_minutes: Option<i16>,
+}
 #[derive(Serialize)]
 struct EntryResponse {
     id: i64,
@@ -52,8 +58,8 @@ impl From<mood_tracker_domain::MoodEntry> for EntryResponse {
         }
     }
 }
-fn range(query: &RangeQuery) -> Result<MoodRange, ApiError> {
-    match query.range.as_deref().unwrap_or("all") {
+fn range(range: Option<&str>) -> Result<MoodRange, ApiError> {
+    match range.unwrap_or("all") {
         "today" => Ok(MoodRange::Today),
         "last7" => Ok(MoodRange::Last7Days),
         "last30" => Ok(MoodRange::Last30Days),
@@ -63,9 +69,11 @@ fn range(query: &RangeQuery) -> Result<MoodRange, ApiError> {
         ))),
     }
 }
-fn offset(query: &RangeQuery) -> Result<i16, ApiError> {
-    let value = query.tz_offset_minutes.unwrap_or(0);
-    if !(-1440..=1440).contains(&value) {
+fn offset(tz_offset_minutes: Option<i16>) -> Result<i16, ApiError> {
+    let value = tz_offset_minutes.unwrap_or(0);
+    // chrono requires a strictly sub-24h offset; ±1440 would always fail
+    // FixedOffset::east_opt, so the inclusive bound is 1439.
+    if !(-1439..=1439).contains(&value) {
         Err(ApiError::Application(ApplicationError::InvalidInput(
             "invalid timezone offset",
         )))
@@ -195,8 +203,8 @@ async fn list(
     let page = queries::get_mood_history(
         deps.entries.as_ref(),
         actor.user_id(),
-        range(&query)?,
-        offset(&query)?,
+        range(query.range.as_deref())?,
+        offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
         query.limit.unwrap_or(50),
         history_cursor(query.cursor.as_deref())?,
@@ -232,13 +240,13 @@ struct Trend {
 async fn statistics(
     State(deps): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
-    Query(query): Query<RangeQuery>,
+    Query(query): Query<StatisticsQuery>,
 ) -> Result<Json<StatisticsResponse>, ApiError> {
     let stats = queries::get_mood_statistics(
         deps.entries.as_ref(),
         actor.user_id(),
-        range(&query)?,
-        offset(&query)?,
+        range(query.range.as_deref())?,
+        offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
     )
     .await
@@ -285,19 +293,15 @@ async fn timeline(
     Query(query): Query<RangeQuery>,
 ) -> Result<Json<TimelinePageResponse>, ApiError> {
     let limit = query.limit.unwrap_or(50);
-    if !(1..=100).contains(&limit) {
-        return Err(ApiError::Application(ApplicationError::InvalidInput(
-            "page size must be between 1 and 100",
-        )));
-    }
     let cursor = cursor(query.cursor.as_deref())?;
     let mut events = queries::get_timeline(
         deps.entries.as_ref(),
         deps.meditation.as_ref(),
         actor.user_id(),
-        range(&query)?,
-        offset(&query)?,
+        range(query.range.as_deref())?,
+        offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
+        limit,
     )
     .await
     .map_err(ApiError::Application)?;
