@@ -1,17 +1,41 @@
-use chrono::Utc;
+use chrono::{Duration, TimeZone, Utc};
 use kernel::UserId;
 
 use super::*;
 use crate::commands::{create_program, upload_meditation};
-use crate::ports::PlaybackStateRepository;
+use crate::ports::{PlaybackStateRepository, SessionRepository};
 use crate::test_support::{
     FakeBlobStore, FakeConverter, FakeCoverValidator, FakeMeditationRepository,
-    FakeMembershipRepository, FakePlaybackRepository, FakeProgramRepository, FakeValidator,
-    FixedClock, RepoState,
+    FakeMembershipRepository, FakePlaybackRepository, FakeProgramRepository, FakeSessionRepository,
+    FakeValidator, FixedClock, RepoState,
 };
 
 fn user_a() -> UserId {
     UserId::new(1)
+}
+
+fn at(day: u32, hour: u32, minute: u32) -> chrono::DateTime<Utc> {
+    Utc.with_ymd_and_hms(2026, 9, day, hour, minute, 0)
+        .single()
+        .expect("test instant")
+}
+
+async fn record(
+    sessions: &FakeSessionRepository,
+    user_id: UserId,
+    meditation_id: i64,
+    started_at: chrono::DateTime<Utc>,
+    minutes: i64,
+) {
+    sessions
+        .record_if_new(
+            user_id,
+            meditation_id,
+            started_at,
+            started_at + Duration::minutes(minutes),
+        )
+        .await
+        .expect("session");
 }
 
 struct Deps {
@@ -125,6 +149,111 @@ async fn continue_program_falls_back_past_a_deleted_meditations_touch() {
         .expect("query")
         .expect("some");
     assert_eq!(found.meditation_id, live.id());
+}
+
+#[tokio::test]
+async fn user_statistics_aggregate_days_ranges_and_all_time_streaks() {
+    let state = RepoState::new();
+    let sessions = FakeSessionRepository(state);
+    let user = user_a();
+    record(
+        &sessions,
+        user,
+        99,
+        Utc.with_ymd_and_hms(2026, 8, 6, 9, 0, 0)
+            .single()
+            .expect("test instant"),
+        40,
+    )
+    .await;
+    record(&sessions, user, 1, at(1, 9, 0), 25).await;
+    record(&sessions, user, 2, at(1, 10, 0), 35).await;
+    record(&sessions, user, 3, at(2, 9, 0), 10).await;
+    record(&sessions, user, 4, at(3, 9, 0), 10).await;
+    record(&sessions, user, 5, at(4, 9, 0), 10).await;
+    record(&sessions, user, 6, at(5, 9, 0), 10).await;
+    record(&sessions, user, 7, at(7, 9, 0), 50).await;
+
+    let now = at(6, 12, 0);
+    let all = get_user_statistics(&sessions, user, StatisticsRange::AllTime, 0, now)
+        .await
+        .expect("all statistics");
+    assert_eq!(all.total_minutes, 140);
+    assert_eq!(all.total_days, 6);
+    assert_eq!(all.current_streak, 5);
+    assert_eq!(all.longest_streak, 5);
+    assert_eq!(
+        all.calendar[0],
+        StatisticsDay {
+            date: Utc
+                .with_ymd_and_hms(2026, 8, 6, 0, 0, 0)
+                .single()
+                .expect("test instant")
+                .date_naive(),
+            minutes: 40,
+        }
+    );
+
+    let last_30 = get_user_statistics(&sessions, user, StatisticsRange::Last30Days, 0, now)
+        .await
+        .expect("last 30 statistics");
+    assert_eq!(last_30.total_minutes, 100);
+    assert_eq!(last_30.total_days, 5);
+    assert_eq!(last_30.current_streak, 5);
+
+    let today = get_user_statistics(&sessions, user, StatisticsRange::Today, 0, now)
+        .await
+        .expect("today statistics");
+    assert_eq!(today.total_minutes, 0);
+    assert_eq!(today.total_days, 0);
+    assert!(today.calendar.is_empty());
+    assert!(!last_30
+        .calendar
+        .iter()
+        .any(|day| day.date == at(7, 0, 0).date_naive()));
+}
+
+#[tokio::test]
+async fn user_statistics_isolated_by_user_and_uses_local_start_day() {
+    let state = RepoState::new();
+    let sessions = FakeSessionRepository(state);
+    let user = user_a();
+    record(&sessions, user, 1, at(1, 22, 30), 90).await;
+    record(&sessions, user, 3, at(3, 9, 0), 0).await;
+    record(&sessions, UserId::new(2), 2, at(2, 9, 0), 60).await;
+
+    let statistics =
+        get_user_statistics(&sessions, user, StatisticsRange::AllTime, 180, at(3, 12, 0))
+            .await
+            .expect("statistics");
+    assert_eq!(statistics.total_minutes, 90);
+    assert_eq!(statistics.total_days, 2);
+    assert_eq!(
+        statistics.calendar,
+        vec![
+            StatisticsDay {
+                date: at(2, 0, 0).date_naive(),
+                minutes: 90
+            },
+            StatisticsDay {
+                date: at(3, 0, 0).date_naive(),
+                minutes: 0
+            },
+        ]
+    );
+
+    let empty = get_user_statistics(
+        &sessions,
+        UserId::new(3),
+        StatisticsRange::AllTime,
+        0,
+        at(3, 12, 0),
+    )
+    .await
+    .expect("empty statistics");
+    assert_eq!(empty.total_minutes, 0);
+    assert_eq!(empty.total_days, 0);
+    assert!(empty.calendar.is_empty());
 }
 
 #[tokio::test]

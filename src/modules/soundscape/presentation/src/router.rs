@@ -385,8 +385,9 @@ async fn stream_sound(
         .open_range(&sound.storage_key, start, length)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
+    use tokio_util::compat::FuturesAsyncReadCompatExt;
     let mut response = Response::new(AxumBody::from_stream(tokio_util::io::ReaderStream::new(
-        reader,
+        reader.compat(),
     )));
     *response.status_mut() = status;
     response.headers_mut().insert(

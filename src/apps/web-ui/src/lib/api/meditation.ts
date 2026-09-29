@@ -60,6 +60,30 @@ export interface PlaybackState {
   completed: boolean;
 }
 
+export type StatisticsRange = "today" | "last30" | "all";
+
+export interface StatisticsDay {
+  date: string;
+  minutes: number;
+}
+
+export interface UserStatistics {
+  range: StatisticsRange;
+  total_minutes: number;
+  total_days: number;
+  current_streak: number;
+  longest_streak: number;
+  calendar: StatisticsDay[];
+}
+
+export function fetchStatistics(
+  range: StatisticsRange,
+): Promise<UserStatistics> {
+  const tzOffsetMinutes = -new Date().getTimezoneOffset();
+  return request<UserStatistics>(
+    `/api/meditation/statistics?range=${range}&tz_offset_minutes=${tzOffsetMinutes}`,
+  );
+}
 
 export async function fetchLibrary(): Promise<Meditation[]> {
   return request<Meditation[]>("/api/meditation/library");

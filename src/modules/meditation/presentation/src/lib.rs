@@ -9,6 +9,8 @@ pub mod handlers_notes;
 pub mod handlers_playback;
 #[path = "handlers_programs.rs"]
 pub mod handlers_programs;
+#[path = "handlers_statistics.rs"]
+pub mod handlers_statistics;
 
 pub mod extractors;
 pub mod response;

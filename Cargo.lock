@@ -2310,6 +2310,7 @@ version = "0.0.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "futures-io",
  "kernel",
  "soundscape-domain",
  "thiserror 2.0.21",
@@ -2343,6 +2344,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -2825,6 +2827,7 @@ checksum = "494815d09bf52b5548659851081238f0ca39ff638363907596da739561c62c52"
 dependencies = [
  "bytes",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "pin-project-lite",
  "tokio",

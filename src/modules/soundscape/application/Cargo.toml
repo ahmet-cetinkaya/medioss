@@ -8,7 +8,7 @@ chrono.workspace = true
 kernel = { path = "../../../kernel" }
 soundscape-domain = { path = "../domain" }
 thiserror.workspace = true
-tokio.workspace = true
+futures-io.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

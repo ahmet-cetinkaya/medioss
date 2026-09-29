@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use tokio::io::AsyncRead;
+use futures_io::AsyncRead;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AudioFormat {
