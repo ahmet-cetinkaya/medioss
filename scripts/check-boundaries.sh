@@ -31,7 +31,7 @@ def crate_index: members
 # Domain and application crates are governed by an ALLOWLIST, so an unreviewed
 # dependency fails closed. Anything outside this list, `kernel`, and the crate's
 # own lower layer is a violation (ARCHITECTURE.md "Dependency Rules").
-readonly LAYER_NEUTRAL_DEPS='["serde","thiserror","async-trait","chrono","uuid"]'
+readonly LAYER_NEUTRAL_DEPS='["serde","thiserror","async-trait","chrono","uuid","futures-io"]'
 readonly PRESENTATION_FORBIDDEN='["sea-orm","sqlx","rusqlite","diesel","walkdir","fs_extra","fs-err","tempfile"]'
 # `kernel` and `media-store` sit beside the module graph and beside each other.
 readonly SHARED_FORBIDDEN='["kernel","media-store","web-api","axum","sea-orm"]'

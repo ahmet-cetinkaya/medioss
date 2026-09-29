@@ -197,7 +197,12 @@ impl BlobStore for MediaStoreBlobs {
             .await
             .map_err(|e| e.to_string())?;
         let content_type = content_type_for(key.as_str());
-        Ok((BlobReader(Box::new(stream)), content_type.to_owned(), size))
+        use tokio_util::compat::TokioAsyncReadCompatExt;
+        Ok((
+            BlobReader(Box::new(stream.compat())),
+            content_type.to_owned(),
+            size,
+        ))
     }
     async fn delete(&self, key: &str) -> Result<(), String> {
         let key = media_store::StorageKey::parse_with_separator(key).map_err(|e| e.to_string())?;

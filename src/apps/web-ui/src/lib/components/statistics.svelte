@@ -37,10 +37,12 @@
 	}
 
 	function dateLabel(date: string) {
-		return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+		const [year, month, day] = date.split("-").map(Number);
+		return new Intl.DateTimeFormat(undefined, {
 			month: "short",
 			day: "numeric",
-		});
+			timeZone: "UTC",
+		}).format(new Date(Date.UTC(year, month - 1, day)));
 	}
 
 	onMount(load);
