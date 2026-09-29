@@ -14,7 +14,7 @@
 
 <main class="mx-auto min-h-screen w-full max-w-3xl px-4 py-10">
 	<header class="mb-8 flex items-baseline justify-between"><h1 class="text-3xl font-semibold tracking-tight">History</h1><Button variant="outline" size="sm" onclick={() => (window.location.href = "/mood")}>Mood tracker</Button></header>
-	<div class="mb-6 flex flex-wrap gap-2" aria-label="Timeline range">{#each ranges as option}<Button variant={range === option.value ? "default" : "outline"} size="sm" onclick={() => { range = option.value; void load(); }}>{option.label}</Button>{/each}</div>
+	<div class="mb-6 flex flex-wrap gap-2" aria-label="Timeline range">{#each ranges as option}<Button variant={range === option.value ? "default" : "outline"} size="sm" aria-pressed={range === option.value} onclick={() => { range = option.value; void load(); }}>{option.label}</Button>{/each}</div>
 	{#if error}<p class="mb-4 text-destructive">{error}</p>{/if}
 	{#if loading}<p class="text-muted-foreground">Loading timeline…</p>{:else if events.length === 0}<p class="text-muted-foreground">Your mood and meditation history will appear here.</p>{:else}<div class="space-y-3">{#each events as event}<Card.Root><Card.Content class="p-4"><p class="font-semibold">{event.kind === "Mood" ? `Mood ${event.score}/5` : event.kind === "MeditationNote" ? `Meditation note: ${event.title}` : `Completed meditation: ${event.title}`}</p><p class="text-sm text-muted-foreground">{date(event.recorded_at)}</p>{#if event.note}<p class="mt-2 whitespace-pre-wrap">{event.note}</p>{/if}</Card.Content></Card.Root>{/each}{#if nextCursor}<Button variant="outline" onclick={loadMore}>Load more timeline</Button>{/if}</div>{/if}
 </main>
