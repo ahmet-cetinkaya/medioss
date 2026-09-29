@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use kernel::UserId;
 use mood_tracker_domain::{MoodEntry, MoodScore};
 
-use crate::ports::{Clock, MoodEntryRepository, Page};
+use crate::ports::{Clock, MoodEntryRepository};
 
 #[derive(Clone)]
 pub struct FixedClock(pub DateTime<Utc>);
@@ -34,20 +34,6 @@ impl MoodEntryRepository for FakeMoodEntryRepository {
         let entry = MoodEntry::new(id, user_id, score, note, recorded_at, recorded_at);
         entries.push(entry.clone());
         Ok(entry)
-    }
-
-    async fn find_owned(
-        &self,
-        user_id: UserId,
-        entry_id: i64,
-    ) -> Result<Option<MoodEntry>, String> {
-        Ok(self
-            .0
-            .lock()
-            .unwrap()
-            .iter()
-            .find(|entry| entry.user_id() == user_id && entry.id() == entry_id)
-            .cloned())
     }
 
     async fn update(

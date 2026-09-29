@@ -74,7 +74,9 @@ fn offset(query: &RangeQuery) -> Result<i16, ApiError> {
     }
 }
 
-fn cursor(value: Option<&str>) -> Result<Option<(chrono::DateTime<chrono::Utc>, i64)>, ApiError> {
+fn history_cursor(
+    value: Option<&str>,
+) -> Result<Option<(chrono::DateTime<chrono::Utc>, i64)>, ApiError> {
     let Some(value) = value else {
         return Ok(None);
     };
@@ -91,6 +93,45 @@ fn cursor(value: Option<&str>) -> Result<Option<(chrono::DateTime<chrono::Utc>, 
         .parse()
         .map_err(|_| ApiError::Application(ApplicationError::InvalidInput("invalid cursor")))?;
     Ok(Some((timestamp, id)))
+}
+
+fn cursor(
+    value: Option<&str>,
+) -> Result<
+    Option<(chrono::DateTime<chrono::Utc>, queries::TimelineKind, i64)>,
+    ApiError,
+> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let (timestamp, rest) =
+        value
+            .split_once(':')
+            .ok_or(ApiError::Application(ApplicationError::InvalidInput(
+                "invalid cursor",
+            )))?;
+    let (kind, id) =
+        rest.rsplit_once(':')
+            .ok_or(ApiError::Application(ApplicationError::InvalidInput(
+                "invalid cursor",
+            )))?;
+    let timestamp = chrono::DateTime::parse_from_rfc3339(timestamp)
+        .map_err(|_| ApiError::Application(ApplicationError::InvalidInput("invalid cursor")))?
+        .with_timezone(&chrono::Utc);
+    let kind = match kind {
+        "Mood" => queries::TimelineKind::Mood,
+        "MeditationNote" => queries::TimelineKind::MeditationNote,
+        "MeditationSession" => queries::TimelineKind::MeditationSession,
+        _ => {
+            return Err(ApiError::Application(ApplicationError::InvalidInput(
+                "invalid cursor",
+            )))
+        }
+    };
+    let id = id
+        .parse()
+        .map_err(|_| ApiError::Application(ApplicationError::InvalidInput("invalid cursor")))?;
+    Ok(Some((timestamp, kind, id)))
 }
 
 async fn create(
@@ -158,7 +199,7 @@ async fn list(
         offset(&query)?,
         deps.clock.now().await,
         query.limit.unwrap_or(50),
-        cursor(query.cursor.as_deref())?,
+        history_cursor(query.cursor.as_deref())?,
     )
     .await
     .map_err(ApiError::Application)?;
@@ -249,7 +290,7 @@ async fn timeline(
             "page size must be between 1 and 100",
         )));
     }
-    let cursor = query.cursor.as_deref();
+    let cursor = cursor(query.cursor.as_deref())?;
     let mut events = queries::get_timeline(
         deps.entries.as_ref(),
         deps.meditation.as_ref(),
@@ -260,28 +301,24 @@ async fn timeline(
     )
     .await
     .map_err(ApiError::Application)?;
-    let encoded = |event: &queries::TimelineEvent| {
-        format!(
-            "{}:{:?}:{}",
-            event.recorded_at.to_rfc3339(),
-            event.kind,
-            event.id
-        )
-    };
-    if let Some(cursor) = cursor {
-        let index = events
-            .iter()
-            .position(|event| encoded(event) == cursor)
-            .ok_or(ApiError::Application(ApplicationError::InvalidInput(
-                "invalid cursor",
-            )))?;
-        events.drain(..=index);
+    if let Some((at, kind, id)) = cursor {
+        // Keyset continuation: keep only events strictly after the cursor
+        // tuple. Survives deletions between pages and keeps equal-timestamp
+        // events split deterministically by (kind, id).
+        events.retain(|event| {
+            (event.recorded_at, event.kind, event.id) > (at, kind, id)
+        });
     }
     let has_more = events.len() > usize::from(limit);
     events.truncate(usize::from(limit));
     let next_cursor = has_more.then(|| {
         let last = events.last().expect("continuation implies a final event");
-        encoded(last)
+        format!(
+            "{}:{:?}:{}",
+            last.recorded_at.to_rfc3339(),
+            last.kind,
+            last.id
+        )
     });
     Ok(Json(TimelinePageResponse {
         items: events
