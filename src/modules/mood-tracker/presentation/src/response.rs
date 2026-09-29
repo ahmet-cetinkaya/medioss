@@ -34,9 +34,13 @@ impl IntoResponse for ApiError {
     }
 }
 pub fn ensure_browser_origin(headers: &HeaderMap, origin: &str) -> Result<(), ApiError> {
-    let supplied = headers.get("origin").and_then(|value| value.to_str().ok());
-    if supplied.is_some_and(|value| value != origin) {
-        return Err(ApiError::StatusCode(StatusCode::FORBIDDEN));
-    }
-    Ok(())
+    // Fail closed: a missing Origin is not proven to be a same-origin browser
+    // request, so reject it like a mismatched one. Compare case-insensitively;
+    // scheme and host are ASCII case-insensitive per RFC 3986.
+    headers
+        .get("origin")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.eq_ignore_ascii_case(origin))
+        .ok_or(ApiError::StatusCode(StatusCode::FORBIDDEN))
+        .map(|_| ())
 }
