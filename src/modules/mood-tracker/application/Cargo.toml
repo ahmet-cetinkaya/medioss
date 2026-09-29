@@ -1,0 +1,16 @@
+[package]
+name = "mood-tracker-application"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+kernel = { path = "../../../kernel" }
+mood-tracker-domain = { path = "../domain" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[features]
+test-support = []

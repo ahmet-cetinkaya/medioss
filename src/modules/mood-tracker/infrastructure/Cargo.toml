@@ -1,0 +1,17 @@
+[package]
+name = "mood-tracker-infrastructure"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+kernel = { path = "../../../kernel" }
+mood-tracker-application = { path = "../application" }
+mood-tracker-domain = { path = "../domain" }
+sea-orm.workspace = true
+sea-orm-migration.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+sqlx.workspace = true
+tokio.workspace = true

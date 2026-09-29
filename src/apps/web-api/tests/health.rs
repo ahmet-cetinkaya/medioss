@@ -45,6 +45,9 @@ async fn test_state() -> (AppState, TempDir) {
     soundscape_infrastructure::migrations::migrate(&connection)
         .await
         .expect("soundscape migrations");
+    mood_tracker_infrastructure::migrations::migrate(&connection)
+        .await
+        .expect("mood tracker migrations");
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.expect("session store migrations");
 
@@ -58,10 +61,15 @@ async fn test_state() -> (AppState, TempDir) {
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
     );
+    let mood_tracker = web_api::mood_tracker::mood_tracker_dependencies(
+        connection.clone(),
+        Arc::new("http://localhost".to_owned()),
+    );
     let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
         meditation,
+        mood_tracker,
         soundscape,
         Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             connection,
