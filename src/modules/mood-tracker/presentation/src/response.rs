@@ -22,11 +22,19 @@ impl IntoResponse for ApiError {
                 let status = match error {
                     ApplicationError::InvalidInput(_) => StatusCode::BAD_REQUEST,
                     ApplicationError::NotFound => StatusCode::NOT_FOUND,
-                    ApplicationError::Repository(_) => StatusCode::SERVICE_UNAVAILABLE,
+                    ApplicationError::Repository(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 };
                 (
                     status,
-                    Json(serde_json::json!({"error": error.to_string()})),
+                    // Keep repository internals out of the response body;
+                    // only input errors carry their message to the client.
+                    Json(serde_json::json!({
+                        "error": if matches!(error, ApplicationError::InvalidInput(_)) {
+                            error.to_string()
+                        } else {
+                            "internal error".to_owned()
+                        }
+                    })),
                 )
                     .into_response()
             }
