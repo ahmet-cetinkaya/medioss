@@ -94,28 +94,27 @@ Goal: multi-user instances become pleasant to run and richer to use.
 
 ### M6 — Multi-User & Admin
 
-- Admin dashboard: list/disable/remove users, instance user limit
-- Aggregate, non-content instance usage view for the admin (active user counts, storage use — never another user's content, per PRD: Instance Insight)
+- Admin dashboard: list/disable/remove users
 - Account and data deletion: user-initiated and admin-initiated, wiping all database records and `media/{user_id}/` (PRD: Account & Data Deletion)
 - Per-user storage quotas
-- Profile settings: display name, password change, preferences
+- Profile settings: display name, avatar, password change
 
 **Exit criterion:** two concurrent users cannot see each other's media, moods, or sessions — verified by an automated isolation test suite. Deleting an account leaves zero database rows and zero media files for that user.
 
 ### M7 — Library & Mixer Depth
 
-- Meditation: categories, tags, full-text search, streak tracking, sleep timer
-- Soundscape: 5 simultaneous sounds, presets (save/load named mixes), extended fade timers (5–120 min)
+- Meditation: full-text search over titles and categories (tags and duration filters remain maybe-level; see M9+)
+- Soundscape: unlimited simultaneous sounds, saved mixes, 5–120 min fade timers (delivered by spec 0003)
+- Player: Media Session API hardware/lock-screen controls
 
-**Exit criterion:** search returns correct results over a 100+ item library; a saved preset restores the exact mix.
+**Exit criterion:** search returns correct results over a 100+ item library; hardware media keys control playback on a real device.
 
-### M8 — Mood Analytics & Offline
+### M8 — Data Portability
 
-- Mood trends: weekly/monthly charts, tag correlations
+- Mood trends: weekly/monthly charts (delivered by spec 0006)
 - CSV/JSON export and import of the caller's own data (lossless round-trip, enabling instance migration)
-- PWA offline mode: previously loaded meditations playable without network; mood logs queue and sync
 
-**Exit criterion:** export → import round-trip on a fresh instance reproduces the original data; airplane-mode playback of a cached meditation works on a real mobile device.
+**Exit criterion:** export → import round-trip on a fresh instance reproduces the original data.
 
 ---
 
@@ -128,8 +127,9 @@ Goal: long-tail quality and optional integrations. Scope here is intentionally l
 - Accessibility audit to WCAG 2.1 AA and fixes
 - Daily reminder notifications (in-app/PWA local only, per PRD Non-Goals)
 - Advanced insights (meditation ↔ mood correlation views)
-- TOTP two-factor authentication
-- Optional SMTP-based password reset for operators who configure a mail server
+- Aggregate, non-content admin instance insight (active user counts, storage use; never another user's content) — moved from M6 by user decision 2026-09-30
+- Meditation tag system and duration filters
+- Notification preferences (in-app reminders; local only, per PRD Non-Goals)
 - Performance pass: startup time, memory ceiling, 10k+ mood entries
 
 **Exit criterion:** re-scoped at Phase 2 completion; each adopted item gets its own milestone with an explicit criterion before work starts.
