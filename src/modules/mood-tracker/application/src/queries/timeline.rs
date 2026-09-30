@@ -33,6 +33,7 @@ pub async fn get_timeline<M, S>(
     tz_offset_minutes: i16,
     now: DateTime<Utc>,
     limit: u16,
+    notes_only: bool,
 ) -> Result<Vec<TimelineEvent>, ApplicationError>
 where
     M: MoodEntryRepository + ?Sized,
@@ -61,7 +62,7 @@ where
         .await
         .map_err(ApplicationError::Repository)?
         .into_iter()
-        .filter(|entry| includes(entry.recorded_at()))
+        .filter(|entry| includes(entry.recorded_at()) && (!notes_only || entry.note().is_some()))
         .map(|entry| TimelineEvent {
             id: entry.id(),
             kind: TimelineKind::Mood,
@@ -77,7 +78,7 @@ where
             .await
             .map_err(ApplicationError::Repository)?
             .into_iter()
-            .filter(|entry| includes(entry.recorded_at))
+            .filter(|entry| includes(entry.recorded_at) && (!notes_only || entry.note.is_some()))
             .map(|entry| TimelineEvent {
                 id: entry.id,
                 kind: match entry.kind {

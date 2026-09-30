@@ -32,6 +32,7 @@ struct RangeQuery {
     tz_offset_minutes: Option<i16>,
     limit: Option<u16>,
     cursor: Option<String>,
+    notes_only: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -299,6 +300,7 @@ async fn timeline(
         offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
         limit,
+        query.notes_only.unwrap_or(false),
     )
     .await
     .map_err(ApiError::Application)?;

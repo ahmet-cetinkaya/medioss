@@ -51,7 +51,11 @@ export const deleteMood = (id: number) =>
   request<void>(`/api/mood/${id}`, { method: "DELETE" });
 export const moodStatistics = (range: MoodRange) =>
   request<MoodStatistics>(`/api/mood/statistics?${query(range)}`);
-export const timeline = (range: MoodRange, cursor?: string) =>
+export const timeline = (
+  range: MoodRange,
+  cursor?: string,
+  notesOnly?: boolean,
+) =>
   request<TimelinePage>(
-    `/api/timeline?${query(range)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+    `/api/timeline?${query(range)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}${notesOnly ? "&notes_only=true" : ""}`,
   );
