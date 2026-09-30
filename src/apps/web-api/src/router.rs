@@ -23,6 +23,8 @@ pub fn router(state: AppState) -> Router {
 
     let meditation =
         meditation_presentation::meditation_router().with_state(state.meditation.clone());
+    let mood_tracker =
+        mood_tracker_presentation::mood_tracker_router().with_state(state.mood_tracker.clone());
     let soundscape =
         soundscape_presentation::soundscape_router().with_state(state.soundscape.clone());
 
@@ -30,6 +32,7 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(health))
         .merge(identity)
         .merge(meditation)
+        .merge(mood_tracker)
         .merge(soundscape)
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),

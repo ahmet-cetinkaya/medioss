@@ -26,6 +26,9 @@ meditation-application = { path = "../../modules/meditation/application" }
 meditation-domain = { path = "../../modules/meditation/domain" }
 meditation-infrastructure = { path = "../../modules/meditation/infrastructure" }
 meditation-presentation = { path = "../../modules/meditation/presentation" }
+mood-tracker-application = { path = "../../modules/mood-tracker/application" }
+mood-tracker-infrastructure = { path = "../../modules/mood-tracker/infrastructure" }
+mood-tracker-presentation = { path = "../../modules/mood-tracker/presentation" }
 soundscape-application = { path = "../../modules/soundscape/application" }
 soundscape-infrastructure = { path = "../../modules/soundscape/infrastructure" }
 soundscape-presentation = { path = "../../modules/soundscape/presentation" }

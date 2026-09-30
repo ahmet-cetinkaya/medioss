@@ -730,6 +730,25 @@ impl NoteRepository for FakeNoteRepository {
         Ok(rows)
     }
 
+    async fn list_for_user(&self, user_id: UserId) -> Result<Vec<Note>, String> {
+        let mut rows: Vec<Note> = self
+            .0
+            .notes
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|note| note.user_id == user_id)
+            .cloned()
+            .collect();
+        rows.sort_by(|left, right| {
+            right
+                .created_at
+                .cmp(&left.created_at)
+                .then_with(|| right.id.cmp(&left.id))
+        });
+        Ok(rows)
+    }
+
     async fn update(
         &self,
         note_id: i64,

@@ -1418,6 +1418,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "mood-tracker-application"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "mood-tracker-domain",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "mood-tracker-domain"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "kernel",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "mood-tracker-infrastructure"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "kernel",
+ "mood-tracker-application",
+ "mood-tracker-domain",
+ "sea-orm",
+ "sea-orm-migration",
+ "sqlx",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "mood-tracker-presentation"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "kernel",
+ "mood-tracker-application",
+ "mood-tracker-domain",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
+]
+
+[[package]]
 name = "multer"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3250,6 +3303,9 @@ dependencies = [
  "meditation-domain",
  "meditation-infrastructure",
  "meditation-presentation",
+ "mood-tracker-application",
+ "mood-tracker-infrastructure",
+ "mood-tracker-presentation",
  "rand 0.9.5",
  "sea-orm",
  "serde",

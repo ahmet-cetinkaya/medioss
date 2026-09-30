@@ -29,6 +29,9 @@ pub trait NoteRepository: Send + Sync {
     /// Lists the author's notes for one meditation, newest first.
     async fn list_for(&self, user_id: UserId, meditation_id: i64) -> Result<Vec<Note>, String>;
 
+    /// Lists every note owned by one author, newest first.
+    async fn list_for_user(&self, user_id: UserId) -> Result<Vec<Note>, String>;
+
     /// Updates the author's note on the named meditation; `false` when
     /// unknown, not the author, or belonging to a different meditation.
     async fn update(

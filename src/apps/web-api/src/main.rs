@@ -89,6 +89,9 @@ async fn main() {
     if let Err(err) = soundscape_infrastructure::migrations::migrate(&database.connection).await {
         fail(format!("soundscape migration failed: {err}"));
     }
+    if let Err(err) = mood_tracker_infrastructure::migrations::migrate(&database.connection).await {
+        fail(format!("mood tracker migration failed: {err}"));
+    }
     match soundscape_infrastructure::builtin::seed_if_present(
         &database.connection,
         &config.data_dir.join("media"),
@@ -109,6 +112,10 @@ async fn main() {
         &config.data_dir,
         std::sync::Arc::new(config.medioss_origin.clone()),
     );
+    let mood_tracker = web_api::mood_tracker::mood_tracker_dependencies(
+        database.connection.clone(),
+        std::sync::Arc::new(config.medioss_origin.clone()),
+    );
     let soundscape = web_api::soundscape::soundscape_dependencies(
         database.connection.clone(),
         &config.data_dir,
@@ -118,6 +125,7 @@ async fn main() {
         Arc::new(config),
         std::sync::Arc::new(session_store),
         meditation,
+        mood_tracker,
         soundscape,
         std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             database.connection,

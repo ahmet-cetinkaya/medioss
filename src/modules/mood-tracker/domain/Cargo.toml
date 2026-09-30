@@ -1,0 +1,8 @@
+[package]
+name = "mood-tracker-domain"
+edition.workspace = true
+
+[dependencies]
+chrono.workspace = true
+kernel = { path = "../../../kernel" }
+thiserror.workspace = true
