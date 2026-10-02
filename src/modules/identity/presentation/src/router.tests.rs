@@ -383,27 +383,39 @@ fn api_error_mapping_table() {
 
 struct SeededRepository {
     inner: EmptyRepository,
-    users: Vec<User>,
+    users: std::sync::Mutex<Vec<User>>,
 }
 
 #[async_trait::async_trait]
 impl UserRepository for SeededRepository {
     async fn count(&self) -> Result<u64, RepositoryError> {
-        Ok(self.users.len() as u64)
+        Ok(self.users.lock().unwrap().len() as u64)
     }
 
     async fn list(&self) -> Result<Vec<User>, RepositoryError> {
-        let mut users = self.users.clone();
+        let mut users = self.users.lock().unwrap().clone();
         users.sort_by(|a, b| a.email().as_str().cmp(b.email().as_str()));
         Ok(users)
     }
 
     async fn find_by_email(&self, email: &Email) -> Result<Option<User>, RepositoryError> {
-        self.inner.find_by_email(email).await
+        Ok(self
+            .users
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|user| user.email().as_str() == email.as_str())
+            .cloned())
     }
 
     async fn find_by_id(&self, id: kernel::UserId) -> Result<Option<User>, RepositoryError> {
-        self.inner.find_by_id(id).await
+        Ok(self
+            .users
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|user| user.id() == id)
+            .cloned())
     }
 
     async fn insert_initial_admin_if_uninitialized(
@@ -434,15 +446,31 @@ impl UserRepository for SeededRepository {
         id: kernel::UserId,
         disabled: bool,
     ) -> Result<(), RepositoryError> {
-        self.inner.set_disabled(id, disabled).await
+        let mut users = self.users.lock().unwrap();
+        let Some(current) = users.iter_mut().find(|user| user.id() == id) else {
+            return Err(RepositoryError::UserNotFound);
+        };
+        *current = current.clone().with_disabled(disabled);
+        Ok(())
     }
 
     async fn delete_user(&self, id: kernel::UserId) -> Result<bool, RepositoryError> {
-        self.inner.delete_user(id).await
+        let mut users = self.users.lock().unwrap();
+        let before = users.len();
+        users.retain(|user| user.id() != id);
+        Ok(users.len() != before)
     }
 
     async fn count_active_admins(&self) -> Result<u64, RepositoryError> {
-        self.inner.count_active_admins().await
+        Ok(u64::try_from(
+            self.users
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|user| !user.is_disabled() && matches!(user.role(), Role::Admin))
+                .count(),
+        )
+        .unwrap_or_default())
     }
 
     async fn delete_login_attempts(&self, normalized_email: &str) -> Result<(), RepositoryError> {
@@ -483,7 +511,7 @@ fn seeded_app(users: Vec<User>) -> axum::Router {
     let dependencies = Arc::new(IdentityDependencies {
         repository: Arc::new(SeededRepository {
             inner: EmptyRepository,
-            users,
+            users: std::sync::Mutex::new(users),
         }),
         hasher: Arc::new(NullHasher),
         clock: Arc::new(NullClock),
@@ -580,6 +608,166 @@ async fn users_create_forbids_members_at_the_route_level() {
     request
         .extensions_mut()
         .insert(kernel::Actor::new(kernel::UserId::new(2), Role::Member));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn user_status_disables_and_reenables_for_admin() {
+    let router = seeded_app(vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member),
+    ]);
+    let mut request = Request::patch("/identity/users/2/status")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"disabled":true}"#))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    let mut request = Request::patch("/identity/users/2/status")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"disabled":false}"#))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn user_status_refuses_last_active_admin() {
+    let router = seeded_app(vec![user(1, "admin@example.com", Role::Admin)]);
+    let mut request = Request::patch("/identity/users/1/status")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"disabled":true}"#))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn user_status_rejects_members_and_anonymous() {
+    let router = seeded_app(vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member),
+    ]);
+    let mut request = Request::patch("/identity/users/1/status")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"disabled":true}"#))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(2), Role::Member));
+    let response = router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let request = Request::patch("/identity/users/1/status")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"disabled":true}"#))
+        .unwrap();
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn user_delete_removes_member_for_admin() {
+    let router = seeded_app(vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member),
+    ]);
+    let mut request = Request::delete("/identity/users/2")
+        .header("origin", "https://medioss.example")
+        .body(Body::empty())
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn user_delete_refuses_last_admin_without_purging() {
+    let router = seeded_app(vec![user(1, "admin@example.com", Role::Admin)]);
+    let mut request = Request::delete("/identity/users/1")
+        .header("origin", "https://medioss.example")
+        .body(Body::empty())
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let mut request = Request::get("/identity/users").body(Body::empty()).unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let listed: Vec<serde_json::Value> = serde_json::from_slice(&body).unwrap();
+    assert_eq!(listed.len(), 1, "refused delete must keep the user row");
+}
+
+#[tokio::test]
+async fn me_delete_removes_own_account_and_flushes_session() {
+    let router = seeded_app(vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member),
+    ]);
+    let mut request = Request::delete("/identity/me")
+        .header("origin", "https://medioss.example")
+        .body(Body::empty())
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(2), Role::Member));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn me_delete_refuses_last_active_admin() {
+    let router = seeded_app(vec![user(1, "admin@example.com", Role::Admin)]);
+    let mut request = Request::delete("/identity/me")
+        .header("origin", "https://medioss.example")
+        .body(Body::empty())
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn lifecycle_mutations_require_browser_origin() {
+    let router = seeded_app(vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member),
+    ]);
+    let mut request = Request::delete("/identity/users/2")
+        .body(Body::empty())
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
     let response = router.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }
