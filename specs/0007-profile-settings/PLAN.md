@@ -1,5 +1,5 @@
 ---
-status: approved
+status: completed
 spec: specs/0007-profile-settings/SPEC.md
 capability: profile-settings
 ---
