@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { fetchMeProfile } from "$lib/api/identity";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
 	import {
 		fetchContinueProgram,
 		fetchDailySuggestion,
-		fetchMe,
 		fetchRecentPrograms,
 		meditationProgressLabel,
 		programProgressLabel,
@@ -16,14 +16,20 @@
 
 	let role = $state<string | null>(null);
 	let ready = $state(false);
+	let displayName = $state<string | null>(null);
+	let hasAvatar = $state(false);
+	let myId = $state<number | null>(null);
 	let continueProgram = $state<ContinueProgram | null>(null);
 	let dailySuggestion = $state<Meditation | null>(null);
 	let recentPrograms = $state<RecentProgram[]>([]);
 
 	onMount(async () => {
 		try {
-			const me = await fetchMe();
+			const me = await fetchMeProfile();
+			myId = me.id;
 			role = me.role;
+			displayName = me.display_name;
+			hasAvatar = me.has_avatar;
 		} catch {
 			window.location.assign("/login");
 			return;
@@ -50,7 +56,18 @@
 
 {#if ready}
 	<main class="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-6">
-		<h1 class="text-4xl font-semibold tracking-tight">MediOSS</h1>
+		<div class="flex items-center gap-3">
+			{#if hasAvatar}
+				<img src={`/api/identity/avatar/${myId}`} alt="Avatar" class="h-12 w-12 rounded-full object-cover" />
+			{:else}
+				<div class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-medium">
+					{(displayName ?? "").charAt(0).toLocaleUpperCase("tr")}
+				</div>
+			{/if}
+			<div class="grid">
+				<h1 class="text-4xl font-semibold tracking-tight">MediOSS</h1>
+			</div>
+		</div>
 		<p class="text-lg">A private, self-hosted space for meditation and rest.</p>
 		<div class="flex flex-wrap gap-2">
 			<Button onclick={() => (window.location.href = "/mood")}>Mood tracker</Button>

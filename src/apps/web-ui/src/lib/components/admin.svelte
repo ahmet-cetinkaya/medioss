@@ -372,7 +372,7 @@
 				<table class="mt-6 w-full text-sm">
 					<thead>
 						<tr class="border-b text-left">
-							<th class="py-2">Email</th>
+							<th class="py-2">User</th>
 							<th class="py-2">Role</th>
 							<th class="py-2">Status</th>
 							<th class="py-2 text-right">Actions</th>
@@ -381,7 +381,25 @@
 					<tbody>
 						{#each users as user (user.id)}
 							<tr class="border-b">
-								<td class="py-2">{user.email}</td>
+								<td class="py-2">
+									<div class="flex items-center gap-2">
+										{#if user.has_avatar}
+											<img
+												src={`/api/identity/avatar/${user.id}`}
+												alt=""
+												class="h-8 w-8 rounded-full object-cover"
+											/>
+										{:else}
+											<div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+												{(user.display_name ?? user.email).charAt(0).toLocaleUpperCase("tr")}
+											</div>
+										{/if}
+										<div class="grid">
+											<span>{user.display_name ?? user.email}</span>
+											<span class="text-xs text-muted-foreground">{user.email}</span>
+										</div>
+									</div>
+								</td>
 								<td class="py-2">{user.role}</td>
 								<td class="py-2">
 									{#if user.disabled}<span class="text-destructive">disabled</span>{:else if user.must_change_password}must change password{:else}active{/if}
