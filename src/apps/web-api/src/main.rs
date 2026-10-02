@@ -121,9 +121,19 @@ async fn main() {
         &config.data_dir,
         std::sync::Arc::new(config.medioss_origin.clone()),
     );
+    let session_store = std::sync::Arc::new(session_store);
+    let deletion: std::sync::Arc<dyn identity_presentation::UserDeletionListener> =
+        std::sync::Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
+            std::sync::Arc::clone(&meditation.notes),
+            std::sync::Arc::clone(&meditation.playback),
+            std::sync::Arc::clone(&meditation.sessions),
+            std::sync::Arc::clone(&soundscape.mixes),
+            std::sync::Arc::clone(&mood_tracker.entries),
+            config.data_dir.join("media"),
+        ));
     let state = web_api::state::AppState::new(
         Arc::new(config),
-        std::sync::Arc::new(session_store),
+        session_store,
         meditation,
         mood_tracker,
         soundscape,
@@ -131,6 +141,7 @@ async fn main() {
             database.connection,
         )),
         hasher,
+        deletion,
     );
     if let Err(err) = axum::serve(listener, router(state)).await {
         fail(format!("server error: {err}"));

@@ -25,6 +25,7 @@ pub struct TimelineEvent {
     pub recorded_at: DateTime<Utc>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_timeline<M, S>(
     moods: &M,
     meditation: &S,

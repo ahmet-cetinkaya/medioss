@@ -56,6 +56,7 @@
 			<Button onclick={() => (window.location.href = "/mood")}>Mood tracker</Button>
 			<Button variant="outline" onclick={() => (window.location.href = "/history")}>History</Button>
 			<Button variant="outline" onclick={() => (window.location.href = "/stats")}>Statistics</Button>
+			<Button variant="outline" onclick={() => (window.location.href = "/settings")}>Settings</Button>
 		</div>
 		{#if continueProgram}
 			<section class="grid gap-2">

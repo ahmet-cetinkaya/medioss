@@ -21,6 +21,8 @@ pub enum ApplicationError {
     PasswordHasher,
     #[error("repository operation failed")]
     Repository,
+    #[error("operation would leave the instance without an active admin")]
+    LastActiveAdmin,
 }
 
 impl From<IdentityError> for ApplicationError {

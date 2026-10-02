@@ -65,6 +65,15 @@ async fn test_state() -> (AppState, TempDir) {
         connection.clone(),
         Arc::new("http://localhost".to_owned()),
     );
+    let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
+        Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
+            meditation.notes.clone(),
+            meditation.playback.clone(),
+            meditation.sessions.clone(),
+            soundscape.mixes.clone(),
+            mood_tracker.entries.clone(),
+            std::path::PathBuf::from(data_dir).join("media"),
+        ));
     let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
@@ -75,6 +84,7 @@ async fn test_state() -> (AppState, TempDir) {
             connection,
         )),
         identity_infrastructure::BoundedArgon2PasswordHasher::new(),
+        deletion,
     );
 
     (state, static_dir)

@@ -93,4 +93,11 @@ impl MoodEntryRepository for FakeMoodEntryRepository {
         });
         Ok(entries)
     }
+
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String> {
+        let mut rows = self.0.lock().unwrap();
+        let before = rows.len();
+        rows.retain(|entry| entry.user_id() != user_id);
+        Ok((before - rows.len()) as u64)
+    }
 }

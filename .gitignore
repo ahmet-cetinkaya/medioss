@@ -13,6 +13,7 @@ Desktop.ini
 *.sublime-workspace
 
 # Project Tools
+.agents/
 .claude/
 .serena/
 .specify/

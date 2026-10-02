@@ -28,4 +28,12 @@ pub trait UserRepository: Send + Sync {
         &self,
         credential_change: CredentialChange,
     ) -> Result<User, RepositoryError>;
+
+    async fn set_disabled(&self, id: UserId, disabled: bool) -> Result<(), RepositoryError>;
+
+    async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError>;
+
+    async fn count_active_admins(&self) -> Result<u64, RepositoryError>;
+
+    async fn delete_login_attempts(&self, normalized_email: &str) -> Result<(), RepositoryError>;
 }

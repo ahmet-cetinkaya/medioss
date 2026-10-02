@@ -54,6 +54,10 @@ pub trait MixRepository: Send + Sync {
     async fn create(&self, mix: NewMix) -> Result<Mix, String>;
     async fn replace(&self, id: i64, mix: NewMix) -> Result<Option<Mix>, String>;
     async fn delete_for(&self, id: i64, user_id: UserId) -> Result<bool, String>;
+
+    /// Deletes every mix of one user, including mix items (account
+    /// deletion path).
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String>;
 }
 
 #[async_trait]

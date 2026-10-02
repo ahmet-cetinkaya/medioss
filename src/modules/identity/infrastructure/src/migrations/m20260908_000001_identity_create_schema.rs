@@ -17,6 +17,7 @@ impl MigrationTrait for Migration {
                     must_change_password INTEGER NOT NULL DEFAULT 0 CHECK (must_change_password IN (0, 1)),
                     auth_version INTEGER NOT NULL DEFAULT 0,
                     password_expires_at TEXT NULL,
+                    disabled INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
                     created_at TEXT NOT NULL,
                     UNIQUE (email)
                 );",

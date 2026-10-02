@@ -71,6 +71,7 @@ fn restore_user(model: users::Model) -> Result<User, RepositoryError> {
         u64::try_from(model.auth_version).map_err(|_| RepositoryError::OperationFailed)?,
         must_change,
         expires,
+        model.disabled,
     )
     .map_err(|_| RepositoryError::OperationFailed)
 }
@@ -84,6 +85,7 @@ fn insert_model(user: &User, email_raw: &str) -> users::ActiveModel {
         // New users are constructed with auth_version 0, far inside i64 range.
         auth_version: Set(i64::try_from(user.auth_version()).unwrap_or_default()),
         password_expires_at: Set(user.password_expires_at().map(|value| to_rfc3339(&value))),
+        disabled: Set(user.is_disabled()),
         created_at: Set(to_rfc3339(&user.created_at())),
         ..Default::default()
     }
@@ -195,6 +197,45 @@ impl UserRepository for SeaOrmUserRepository {
             }
         })?;
         restore_user(inserted)
+    }
+
+    async fn set_disabled(&self, id: UserId, disabled: bool) -> Result<(), RepositoryError> {
+        let result = users::Entity::update_many()
+            .col_expr(users::Column::Disabled, Expr::value(disabled))
+            .filter(users::Column::Id.eq(id.value()))
+            .exec(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?;
+        if result.rows_affected == 0 {
+            return Err(RepositoryError::UserNotFound);
+        }
+        Ok(())
+    }
+
+    async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError> {
+        let result = users::Entity::delete_by_id(id.value())
+            .exec(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?;
+        Ok(result.rows_affected > 0)
+    }
+
+    async fn count_active_admins(&self) -> Result<u64, RepositoryError> {
+        users::Entity::find()
+            .filter(users::Column::Role.eq(ROLE_ADMIN))
+            .filter(users::Column::Disabled.eq(false))
+            .count(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)
+    }
+
+    async fn delete_login_attempts(&self, normalized_email: &str) -> Result<(), RepositoryError> {
+        login_attempts::Entity::delete_many()
+            .filter(login_attempts::Column::NormalizedIdentifier.eq(normalized_email))
+            .exec(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?;
+        Ok(())
     }
 
     async fn apply_credential_change(

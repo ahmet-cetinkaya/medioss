@@ -31,4 +31,7 @@ pub trait MoodEntryRepository: Send + Sync {
     async fn delete(&self, user_id: UserId, entry_id: i64) -> Result<bool, String>;
 
     async fn list_all_for_user(&self, user_id: UserId) -> Result<Vec<MoodEntry>, String>;
+
+    /// Deletes every mood entry of one user (account deletion path).
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String>;
 }

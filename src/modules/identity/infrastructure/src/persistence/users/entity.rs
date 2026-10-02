@@ -13,6 +13,8 @@ pub struct Model {
     pub must_change_password: bool,
     pub auth_version: i64,
     pub password_expires_at: Option<String>,
+    #[sea_orm(column_type = "Boolean")]
+    pub disabled: bool,
     pub created_at: String,
 }
 

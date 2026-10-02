@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 
 use crate::session_keys::{SESSION_AUTH_VERSION_KEY, SESSION_USER_ID_KEY};
+use crate::users_lifecycle::{me_delete, user_delete, user_status};
 
 /// Everything a handler needs, injected by web-api's composition root.
 pub struct IdentityDependencies<R, H, C, A> {
@@ -35,6 +36,7 @@ pub struct IdentityDependencies<R, H, C, A> {
     pub dummy_password_hash: PasswordHash,
     pub session_secret: Arc<String>,
     pub medioss_origin: Arc<String>,
+    pub deletion: Arc<dyn crate::users_lifecycle::UserDeletionListener>,
 }
 
 pub type SharedDependencies<R, H, C, A> = Arc<IdentityDependencies<R, H, C, A>>;
@@ -54,6 +56,12 @@ where
         .route("/identity/me", get(me))
         .route("/identity/users", post(users))
         .route("/identity/users", get(users_list))
+        .route(
+            "/identity/users/{id}/status",
+            axum::routing::patch(user_status),
+        )
+        .route("/identity/users/{id}", axum::routing::delete(user_delete))
+        .route("/identity/me", axum::routing::delete(me_delete))
         .route("/identity/me/password", post(me_password))
 }
 
@@ -212,6 +220,7 @@ struct UserListItem {
     email: String,
     role: String,
     must_change_password: bool,
+    disabled: bool,
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -234,6 +243,7 @@ where
                 email: user.email().as_str().to_owned(),
                 role: role_to_str(user.role()).to_owned(),
                 must_change_password: user.must_change_password(),
+                disabled: user.is_disabled(),
                 created_at: user.created_at(),
             })
             .collect(),
@@ -281,7 +291,7 @@ fn user_response(user: &User) -> UserResponse {
     }
 }
 
-fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
+pub(crate) fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
     match headers.get("origin").and_then(|value| value.to_str().ok()) {
         Some(origin) if origin.eq_ignore_ascii_case(expected) => Ok(()),
         // A missing or mismatched Origin is rejected: fail closed rather
@@ -339,6 +349,11 @@ impl IntoResponse for ApiError {
                 None,
             ),
             ApplicationError::Forbidden => (StatusCode::FORBIDDEN, "forbidden".to_owned(), None),
+            ApplicationError::LastActiveAdmin => (
+                StatusCode::BAD_REQUEST,
+                "operation would leave the instance without an active admin".to_owned(),
+                None,
+            ),
             ApplicationError::SetupAlreadyCompleted => (
                 StatusCode::CONFLICT,
                 "setup already completed".to_owned(),
@@ -434,7 +449,7 @@ where
 /// Admin-only gate: same actor lookup as `CurrentActor`, plus a role check.
 /// The extractor is the enforcement; handlers do not need the actor value.
 #[allow(dead_code)]
-struct AdminActor(Actor);
+pub struct AdminActor(pub Actor);
 
 impl<S: Send + Sync> FromRequestParts<S> for AdminActor {
     type Rejection = ApiError;
