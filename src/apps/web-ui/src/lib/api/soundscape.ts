@@ -32,7 +32,6 @@ export interface SoundscapeMix {
   unavailable_sounds?: string[];
 }
 
-
 export const fetchSoundscapeCategories = () =>
   request<SoundscapeCategory[]>("/api/soundscape/categories");
 export const createSoundscapeCategory = (name: string) =>
