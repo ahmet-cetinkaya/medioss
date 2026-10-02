@@ -106,4 +106,4 @@ Avatars are user-uploaded image files (jpg/png/webp, ≤ 2 MB), resized server-s
 
 ## Deviations
 
-None.
+- FR-031/SC-002: the declared-size pre-check is not implemented; the running byte counter is the only size guard. axum 0.8 `Field` exposes no reliable declared length, and the counter rejects oversized payloads before decoding, preserving the contract (413, nothing written). Verified live: a 3 MB upload returns 413; multipart reader errors over the limit are also mapped to 413.
