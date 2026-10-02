@@ -66,3 +66,23 @@ fn unknown_target_is_not_found() {
 
     assert_eq!(result, Err(ApplicationError::UserNotFound));
 }
+
+#[test]
+fn deleting_a_user_clears_their_throttle_rows_regardless_of_email_case() {
+    let repository = FakeRepository::new();
+    let mixed = User::new_permanent(
+        UserId::new(2),
+        Email::parse("Member@QA.local").unwrap(),
+        PasswordHash::from_stored("hash".to_owned()),
+        Role::Member,
+        FixedClock::new().now(),
+    );
+    repository.seed_user(user(1, Role::Admin, false));
+    repository.seed_user(mixed);
+    repository.set_failed_attempts("member@qa.local", 3);
+    let admin = Actor::new(UserId::new(1), Role::Admin);
+
+    block_on(delete_user_as_admin(&repository, &admin, UserId::new(2))).unwrap();
+
+    assert_eq!(repository.failed_attempts("member@qa.local"), 0);
+}
