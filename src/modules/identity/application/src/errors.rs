@@ -23,6 +23,8 @@ pub enum ApplicationError {
     Repository,
     #[error("operation would leave the instance without an active admin")]
     LastActiveAdmin,
+    #[error("request payload is too large")]
+    PayloadTooLarge,
 }
 
 impl From<IdentityError> for ApplicationError {

@@ -37,6 +37,7 @@ pub struct IdentityDependencies<R, H, C, A> {
     pub session_secret: Arc<String>,
     pub medioss_origin: Arc<String>,
     pub deletion: Arc<dyn crate::users_lifecycle::UserDeletionListener>,
+    pub avatar_store: Arc<dyn identity_application::ports::AvatarStore>,
 }
 
 pub type SharedDependencies<R, H, C, A> = Arc<IdentityDependencies<R, H, C, A>>;
@@ -63,6 +64,19 @@ where
         .route("/identity/users/{id}", axum::routing::delete(user_delete))
         .route("/identity/me", axum::routing::delete(me_delete))
         .route("/identity/me/password", post(me_password))
+        .route(
+            "/identity/me/profile",
+            axum::routing::patch(crate::profile::me_profile),
+        )
+        .route(
+            "/identity/me/avatar",
+            axum::routing::put(crate::profile::me_avatar_put),
+        )
+        .route(
+            "/identity/me/avatar",
+            axum::routing::delete(crate::profile::me_avatar_delete),
+        )
+        .route("/identity/avatar/{id}", get(crate::profile::avatar_get))
 }
 
 #[derive(Serialize)]
@@ -100,6 +114,8 @@ struct UserResponse {
     email: String,
     role: String,
     must_change_password: bool,
+    display_name: Option<String>,
+    has_avatar: bool,
 }
 
 async fn setup<R, H, C, A>(
@@ -184,6 +200,8 @@ async fn me(CurrentPrincipal(principal): CurrentPrincipal) -> Result<Json<UserRe
         email: principal.email,
         role: role_to_str(principal.role).to_owned(),
         must_change_password: principal.must_change_password,
+        display_name: principal.display_name,
+        has_avatar: principal.has_avatar,
     }))
 }
 
@@ -222,6 +240,8 @@ struct UserListItem {
     must_change_password: bool,
     disabled: bool,
     created_at: chrono::DateTime<chrono::Utc>,
+    display_name: Option<String>,
+    has_avatar: bool,
 }
 
 async fn users_list<R, H, C, A>(
@@ -245,6 +265,8 @@ where
                 must_change_password: user.must_change_password(),
                 disabled: user.is_disabled(),
                 created_at: user.created_at(),
+                display_name: user.display_name().map(|name| name.as_str().to_owned()),
+                has_avatar: user.avatar().is_some(),
             })
             .collect(),
     ))
@@ -288,6 +310,8 @@ fn user_response(user: &User) -> UserResponse {
         email: user.email().as_str().to_owned(),
         role: role_to_str(user.role()).to_owned(),
         must_change_password: user.must_change_password(),
+        display_name: user.display_name().map(|name| name.as_str().to_owned()),
+        has_avatar: user.avatar().is_some(),
     }
 }
 
@@ -349,6 +373,11 @@ impl IntoResponse for ApiError {
                 None,
             ),
             ApplicationError::Forbidden => (StatusCode::FORBIDDEN, "forbidden".to_owned(), None),
+            ApplicationError::PayloadTooLarge => (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "payload too large".to_owned(),
+                None,
+            ),
             ApplicationError::LastActiveAdmin => (
                 StatusCode::BAD_REQUEST,
                 "operation would leave the instance without an active admin".to_owned(),
@@ -477,6 +506,8 @@ pub struct Principal {
     pub role: Role,
     pub must_change_password: bool,
     pub auth_version: u64,
+    pub display_name: Option<String>,
+    pub has_avatar: bool,
 }
 
 pub struct CurrentPrincipal(pub Principal);

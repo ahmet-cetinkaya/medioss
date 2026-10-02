@@ -4,7 +4,7 @@ edition.workspace = true
 
 [dependencies]
 async-trait.workspace = true
-axum.workspace = true
+axum = { workspace = true, features = ["multipart"] }
 chrono.workspace = true
 identity-application = { path = "../application" }
 identity-domain = { path = "../domain" }

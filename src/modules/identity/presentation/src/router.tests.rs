@@ -58,6 +58,43 @@ impl LoginAdmission for NullAdmission {
     }
 }
 
+struct NullAvatarStore;
+
+#[async_trait::async_trait]
+impl identity_application::ports::AvatarStore for NullAvatarStore {
+    async fn normalize(
+        &self,
+        _bytes: Vec<u8>,
+    ) -> Result<(Vec<u8>, &'static str), identity_application::ports::AvatarStoreError> {
+        Err(identity_application::ports::AvatarStoreError::InvalidPayload)
+    }
+
+    async fn write(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+        _bytes: &[u8],
+    ) -> Result<(), identity_application::ports::AvatarStoreError> {
+        Ok(())
+    }
+
+    async fn read(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+    ) -> Result<Vec<u8>, identity_application::ports::AvatarStoreError> {
+        Ok(Vec::new())
+    }
+
+    async fn remove(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+    ) -> Result<(), identity_application::ports::AvatarStoreError> {
+        Ok(())
+    }
+}
+
 struct EmptyRepository;
 
 #[async_trait::async_trait]
@@ -104,6 +141,15 @@ impl UserRepository for EmptyRepository {
         _id: kernel::UserId,
         _disabled: bool,
     ) -> Result<(), RepositoryError> {
+        Err(RepositoryError::OperationFailed)
+    }
+
+    async fn set_profile(
+        &self,
+        _id: kernel::UserId,
+        _display_name: Option<identity_domain::DisplayName>,
+        _avatar_ext: Option<identity_domain::AvatarRef>,
+    ) -> Result<User, RepositoryError> {
         Err(RepositoryError::OperationFailed)
     }
 
@@ -158,6 +204,7 @@ fn dependencies() -> SharedDependencies<EmptyRepository, NullHasher, NullClock, 
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
         deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
+        avatar_store: std::sync::Arc::new(NullAvatarStore),
     })
 }
 
@@ -338,6 +385,8 @@ fn principal_role_serializes_as_lowercase_string() {
         role: Role::Admin,
         must_change_password: false,
         auth_version: 0,
+        display_name: None,
+        has_avatar: false,
     };
     assert_eq!(principal.role, Role::Admin);
 }
@@ -454,6 +503,23 @@ impl UserRepository for SeededRepository {
         Ok(())
     }
 
+    async fn set_profile(
+        &self,
+        id: kernel::UserId,
+        display_name: Option<identity_domain::DisplayName>,
+        avatar_ext: Option<identity_domain::AvatarRef>,
+    ) -> Result<User, RepositoryError> {
+        let mut users = self.users.lock().unwrap();
+        let Some(current) = users.iter_mut().find(|user| user.id() == id) else {
+            return Err(RepositoryError::UserNotFound);
+        };
+        *current = current
+            .clone()
+            .with_display_name(display_name)
+            .with_avatar(avatar_ext);
+        Ok(current.clone())
+    }
+
     async fn delete_user(&self, id: kernel::UserId) -> Result<bool, RepositoryError> {
         let mut users = self.users.lock().unwrap();
         let before = users.len();
@@ -520,6 +586,7 @@ fn seeded_app(users: Vec<User>) -> axum::Router {
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
         deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
+        avatar_store: std::sync::Arc::new(NullAvatarStore),
     });
     identity_router::<SeededRepository, NullHasher, NullClock, NullAdmission>()
         .with_state(dependencies)
