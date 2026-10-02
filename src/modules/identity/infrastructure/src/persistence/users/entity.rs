@@ -15,6 +15,8 @@ pub struct Model {
     pub password_expires_at: Option<String>,
     #[sea_orm(column_type = "Boolean")]
     pub disabled: bool,
+    pub display_name: Option<String>,
+    pub avatar_ext: Option<String>,
     pub created_at: String,
 }
 

@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use identity_domain::{Email, FailedAttempts, IdentityError, Role, User};
+use identity_domain::{AvatarRef, DisplayName, Email, FailedAttempts, IdentityError, Role, User};
 use kernel::UserId;
 
 use super::{email, password, FakeHasher, FixedClock};
@@ -278,6 +278,32 @@ impl UserRepository for FakeRepository {
             ..state.clone()
         };
         Ok(())
+    }
+
+    async fn set_profile(
+        &self,
+        id: UserId,
+        display_name: Option<DisplayName>,
+        avatar_ext: Option<AvatarRef>,
+    ) -> Result<User, RepositoryError> {
+        let mut state = self.state.lock().unwrap();
+        let current = state
+            .users
+            .values()
+            .find(|user| user.id() == id)
+            .cloned()
+            .ok_or(RepositoryError::UserNotFound)?;
+        let changed = current
+            .clone()
+            .with_display_name(display_name)
+            .with_avatar(avatar_ext);
+        let mut users = state.users.clone();
+        users.insert(current.email().as_str().to_owned(), changed.clone());
+        *state = FakeRepositoryState {
+            users,
+            ..state.clone()
+        };
+        Ok(changed)
     }
 
     async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError> {

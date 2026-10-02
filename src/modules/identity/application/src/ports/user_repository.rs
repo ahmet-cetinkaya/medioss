@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use identity_domain::{Email, User};
+use identity_domain::{AvatarRef, DisplayName, Email, User};
 use kernel::UserId;
 
 use super::{CredentialChange, InitialAdminRegistration, MemberRegistration, RepositoryError};
@@ -30,6 +30,13 @@ pub trait UserRepository: Send + Sync {
     ) -> Result<User, RepositoryError>;
 
     async fn set_disabled(&self, id: UserId, disabled: bool) -> Result<(), RepositoryError>;
+
+    async fn set_profile(
+        &self,
+        id: UserId,
+        display_name: Option<DisplayName>,
+        avatar_ext: Option<AvatarRef>,
+    ) -> Result<User, RepositoryError>;
 
     async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError>;
 
