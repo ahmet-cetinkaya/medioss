@@ -46,6 +46,7 @@ impl AppState {
         soundscape: soundscape_presentation::SharedDependencies,
         repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
         hasher: identity_infrastructure::BoundedArgon2PasswordHasher,
+        deletion: Arc<dyn identity_presentation::UserDeletionListener>,
     ) -> Self {
         let dummy_password_hash = hasher.dummy_password_hash();
         let identity_dependencies: SharedDependencies<
@@ -61,6 +62,7 @@ impl AppState {
             dummy_password_hash,
             session_secret: Arc::new(config.session_secret.expose().to_owned()),
             medioss_origin: Arc::new(config.medioss_origin.clone()),
+            deletion,
         });
         Self {
             config,

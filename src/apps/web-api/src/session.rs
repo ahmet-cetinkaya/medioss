@@ -46,7 +46,8 @@ pub async fn resolve_actor(
             }
         };
 
-        let matched = user.filter(|user| user.auth_version() == auth_version);
+        let matched =
+            user.filter(|user| user.auth_version() == auth_version && !user.is_disabled());
         match matched {
             Some(user) => {
                 parts.extensions.insert(user.actor());
