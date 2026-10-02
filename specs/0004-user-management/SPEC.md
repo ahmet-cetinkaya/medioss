@@ -65,10 +65,10 @@ The user's lifecycle also **ends** here: an admin can disable or delete an accou
 - FR-003: WHEN a member-role user tries to access the admin page THE SYSTEM SHALL show the page empty/inaccessible and reject it without making API calls (the API already returns 403; the UI hides without touching anything).
 - FR-004: WHEN the admin page loads THE SYSTEM SHALL be able to fetch current users (id, email, role, must_change_password, creation time) in alphabetical email order; the list endpoint is open to admin access only.
 - FR-005: WHEN the temporary-password display area is used THE SYSTEM SHALL display the password only once at creation time and make it inaccessible in later renders and page reloads; the password is not stored persistently on the admin's screen.
-- FR-006: WHEN an admin disables a member account THE SYSTEM SHALL reject login attempts with `401` (generic shape), terminate that account's active sessions immediately, and persist a disabled flag that re-enable can clear.
-- FR-007: WHEN an admin or the account owner issues a valid delete THE SYSTEM SHALL remove, in one transaction or an ordered sequence ending in the user row, every database row referencing that user across all module tables and wipe `media/{user_id}/` on disk, returning `204`.
-- FR-008: WHEN the last active admin would be disabled or deleted THE SYSTEM SHALL reject the request with `400` and keep the account intact.
-- FR-009: WHEN a self-delete completes THE SYSTEM SHALL flush the caller's session so further requests get `401`.
+- FR-026: WHEN an admin disables a member account THE SYSTEM SHALL reject login attempts with `401` (generic shape), terminate that account's active sessions immediately, and persist a disabled flag that re-enable can clear.
+- FR-027: WHEN an admin or the account owner issues a valid delete THE SYSTEM SHALL remove, in one transaction or an ordered sequence ending in the user row, every database row referencing that user across all module tables and wipe `media/{user_id}/` on disk, returning `204`.
+- FR-028: WHEN the last active admin would be disabled or deleted THE SYSTEM SHALL reject the request with `400` and keep the account intact.
+- FR-029: WHEN a self-delete completes THE SYSTEM SHALL flush the caller's session so further requests get `401`.
 
 ## Success Criteria
 
