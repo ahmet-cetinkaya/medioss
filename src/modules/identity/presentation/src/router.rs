@@ -220,6 +220,7 @@ struct UserListItem {
     email: String,
     role: String,
     must_change_password: bool,
+    disabled: bool,
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -242,6 +243,7 @@ where
                 email: user.email().as_str().to_owned(),
                 role: role_to_str(user.role()).to_owned(),
                 must_change_password: user.must_change_password(),
+                disabled: user.is_disabled(),
                 created_at: user.created_at(),
             })
             .collect(),

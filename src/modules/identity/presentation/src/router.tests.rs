@@ -510,9 +510,14 @@ fn user(id: i64, email: &str, role: Role) -> User {
     )
 }
 
+fn disabled_user(id: i64, email: &str, role: Role) -> User {
+    user(id, email, role).with_disabled(true)
+}
+
 #[tokio::test]
 async fn users_list_returns_sorted_users_for_admin() {
     let router = seeded_app(vec![
+        disabled_user(3, "mid@example.com", Role::Member),
         user(2, "zoe@example.com", Role::Member),
         user(1, "adam@example.com", Role::Admin),
     ]);
@@ -530,7 +535,15 @@ async fn users_list_returns_sorted_users_for_admin() {
         .iter()
         .map(|u| u["email"].as_str().unwrap())
         .collect();
-    assert_eq!(emails, vec!["adam@example.com", "zoe@example.com"]);
+    assert_eq!(
+        emails,
+        vec!["adam@example.com", "mid@example.com", "zoe@example.com"]
+    );
+    let flags: Vec<bool> = listed
+        .iter()
+        .map(|u| u["disabled"].as_bool().unwrap())
+        .collect();
+    assert_eq!(flags, vec![false, true, false]);
 }
 
 #[tokio::test]
