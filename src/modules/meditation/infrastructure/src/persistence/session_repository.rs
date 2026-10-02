@@ -102,4 +102,14 @@ impl SessionRepository for SeaOrmSessionRepository {
             .map(to_domain)
             .collect()
     }
+
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String> {
+        let rows = table::Entity::delete_many()
+            .filter(table::Column::UserId.eq(user_id.value()))
+            .exec(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+            .rows_affected;
+        Ok(rows)
+    }
 }

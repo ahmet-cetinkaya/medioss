@@ -171,4 +171,25 @@ impl MixRepository for SeaOrmMixRepository {
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(r.rows_affected() > 0)
     }
+
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String> {
+        let tx = self.db.begin().await.map_err(|e| e.to_string())?;
+        tx.execute(Statement::from_sql_and_values(
+            DatabaseBackend::Sqlite,
+            "DELETE FROM soundscape_mix_items WHERE mix_id IN (SELECT id FROM soundscape_mixes WHERE user_id=?)",
+            [user_id.value().into()],
+        ))
+        .await
+        .map_err(|e| e.to_string())?;
+        let r = tx
+            .execute(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                "DELETE FROM soundscape_mixes WHERE user_id=?",
+                [user_id.value().into()],
+            ))
+            .await
+            .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(r.rows_affected())
+    }
 }

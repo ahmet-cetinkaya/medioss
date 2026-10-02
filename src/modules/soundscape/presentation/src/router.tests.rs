@@ -174,6 +174,10 @@ impl MixRepository for FakeMixes {
         mixes.retain(|m| !(m.id == id && m.user_id == user_id.value()));
         Ok(mixes.len() != before)
     }
+
+    async fn delete_all_for_user(&self, _user_id: UserId) -> Result<u64, String> {
+        Ok(0)
+    }
 }
 
 struct FakeValidator;

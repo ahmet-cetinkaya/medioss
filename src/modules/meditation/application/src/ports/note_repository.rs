@@ -55,4 +55,7 @@ pub trait NoteRepository: Send + Sync {
     /// Deletes every note on a meditation (admin meditation delete);
     /// returns the number removed.
     async fn delete_for_meditation(&self, meditation_id: i64) -> Result<u64, String>;
+
+    /// Deletes every note of one user (account deletion path).
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String>;
 }

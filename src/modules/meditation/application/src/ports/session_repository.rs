@@ -32,4 +32,7 @@ pub trait SessionRepository: Send + Sync {
 
     /// All completed sessions belonging to one user.
     async fn list_for_user(&self, user_id: UserId) -> Result<Vec<MeditationSession>, String>;
+
+    /// Deletes every session of one user (account deletion path).
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String>;
 }

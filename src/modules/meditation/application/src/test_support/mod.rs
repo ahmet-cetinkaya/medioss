@@ -682,6 +682,13 @@ impl SessionRepository for FakeSessionRepository {
             .cloned()
             .collect())
     }
+
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String> {
+        let mut rows = self.0.sessions.lock().unwrap();
+        let before = rows.len();
+        rows.retain(|session| session.user_id != user_id);
+        Ok((before - rows.len()) as u64)
+    }
 }
 
 /// NoteRepository fake with author scoping.
@@ -788,6 +795,13 @@ impl NoteRepository for FakeNoteRepository {
         rows.retain(|note| note.meditation_id != meditation_id);
         Ok((len - rows.len()) as u64)
     }
+
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String> {
+        let mut rows = self.0.notes.lock().unwrap();
+        let len = rows.len();
+        rows.retain(|note| note.user_id != user_id);
+        Ok((len - rows.len()) as u64)
+    }
 }
 
 /// PlaybackStateRepository fake.
@@ -875,5 +889,14 @@ impl PlaybackStateRepository for FakePlaybackRepository {
             .filter(|(touched_user, _, _)| *touched_user == user_id.value())
             .map(|(_, meditation_id, touched_at)| (*meditation_id, *touched_at))
             .collect())
+    }
+
+    async fn delete_all_for_user(&self, user_id: UserId) -> Result<u64, String> {
+        let mut rows = self.0.playback.lock().unwrap();
+        let before = rows.len();
+        rows.retain(|key, _| key.0 != user_id.value());
+        let mut touches = self.0.playback_touches.lock().unwrap();
+        touches.retain(|(existing_user, _, _)| *existing_user != user_id.value());
+        Ok((before - rows.len()) as u64)
     }
 }
