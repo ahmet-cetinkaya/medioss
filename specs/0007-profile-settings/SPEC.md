@@ -1,5 +1,5 @@
 ---
-status: living
+status: in_progress
 capability: profile-settings
 plan: specs/0007-profile-settings/PLAN.md
 supersedes:
