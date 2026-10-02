@@ -329,7 +329,7 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
         == 0
 }
 
-pub struct ApiError(pub ApplicationError);
+pub struct ApiError(ApplicationError);
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {

@@ -94,7 +94,7 @@ where
         .deletion
         .on_user_deleted(target)
         .await
-        .map_err(|_| ApiError(ApplicationError::Repository))?;
+        .map_err(|_| ApiError::from(ApplicationError::Repository))?;
     delete_user_as_admin(dependencies.repository.as_ref(), &actor, target).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -119,7 +119,7 @@ where
         .deletion
         .on_user_deleted(actor.user_id())
         .await
-        .map_err(|_| ApiError(ApplicationError::Repository))?;
+        .map_err(|_| ApiError::from(ApplicationError::Repository))?;
     delete_own_account(dependencies.repository.as_ref(), &actor).await?;
     session.flush().await?;
     Ok(StatusCode::NO_CONTENT)
