@@ -13,7 +13,6 @@ use soundscape_application::ports::MixRepository;
 use tower_sessions_sqlx_store::SqliteStore;
 
 pub struct CrossModuleUserDeletion {
-    session_store: Arc<SqliteStore>,
     meditation_notes: Arc<dyn NoteRepository>,
     meditation_playback: Arc<dyn PlaybackStateRepository>,
     meditation_sessions: Arc<dyn SessionRepository>,
@@ -25,7 +24,6 @@ pub struct CrossModuleUserDeletion {
 impl CrossModuleUserDeletion {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        session_store: Arc<SqliteStore>,
         meditation_notes: Arc<dyn NoteRepository>,
         meditation_playback: Arc<dyn PlaybackStateRepository>,
         meditation_sessions: Arc<dyn SessionRepository>,
@@ -34,7 +32,6 @@ impl CrossModuleUserDeletion {
         media_root: std::path::PathBuf,
     ) -> Self {
         Self {
-            session_store,
             meditation_notes,
             meditation_playback,
             meditation_sessions,
@@ -45,15 +42,10 @@ impl CrossModuleUserDeletion {
     }
 
     async fn purge_sessions(&self, user_id: UserId) -> Result<(), String> {
-        // The session table stores its payload as a JSON blob; user_id is
-        // not a column. Best effort: delete sessions whose data references
-        // the user id. The lazy path (resolve_actor drops sessions of
-        // unknown users) guarantees the observable contract regardless.
-        let pool = &self.session_store;
-        let _ = pool; // SqliteStore exposes no direct query API; see below.
-                      // tower-sessions-sqlx-store keeps its pool private, so direct SQL
-                      // would need a second connection. The lazy path is the guarantee;
-                      // expiry cleans the rest.
+        // Sessions carry no user_id column and the store exposes no
+        // direct query API; resolve_actor drops sessions of unknown users
+        // lazily and expiry cleans the rest, so the observable contract
+        // (next request 401) holds without a direct purge.
         tracing::debug!(
             user_id = user_id.value(),
             "session purge deferred to lazy invalidation"

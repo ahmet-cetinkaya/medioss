@@ -124,7 +124,6 @@ async fn main() {
     let session_store = std::sync::Arc::new(session_store);
     let deletion: std::sync::Arc<dyn identity_presentation::UserDeletionListener> =
         std::sync::Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
-            std::sync::Arc::clone(&session_store),
             std::sync::Arc::clone(&meditation.notes),
             std::sync::Arc::clone(&meditation.playback),
             std::sync::Arc::clone(&meditation.sessions),
