@@ -8,7 +8,7 @@ use crate::{
 
 pub async fn replace_avatar(
     repository: &impl UserRepository,
-    store: &impl AvatarStore,
+    store: &dyn AvatarStore,
     actor: &Actor,
     bytes: Vec<u8>,
 ) -> Result<identity_domain::User, ApplicationError> {
@@ -43,7 +43,7 @@ pub async fn replace_avatar(
 
 pub async fn clear_avatar(
     repository: &impl UserRepository,
-    store: &impl AvatarStore,
+    store: &dyn AvatarStore,
     actor: &Actor,
 ) -> Result<(), ApplicationError> {
     let user = repository
@@ -65,7 +65,7 @@ pub async fn clear_avatar(
 
 pub async fn read_avatar(
     repository: &impl UserRepository,
-    store: &impl AvatarStore,
+    store: &dyn AvatarStore,
     requested: UserId,
     reader: &Actor,
 ) -> Result<(Vec<u8>, AvatarRef), ApplicationError> {
