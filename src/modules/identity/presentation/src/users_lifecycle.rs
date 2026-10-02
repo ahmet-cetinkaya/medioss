@@ -16,7 +16,7 @@ use identity_application::{
     ports::{Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository},
     ApplicationError,
 };
-use kernel::{Role, UserId};
+use kernel::UserId;
 use serde::Deserialize;
 use tower_sessions::Session;
 

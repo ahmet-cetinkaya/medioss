@@ -10,7 +10,6 @@ use kernel::UserId;
 use meditation_application::ports::{NoteRepository, PlaybackStateRepository, SessionRepository};
 use mood_tracker_application::ports::MoodEntryRepository;
 use soundscape_application::ports::MixRepository;
-use tower_sessions_sqlx_store::SqliteStore;
 
 pub struct CrossModuleUserDeletion {
     meditation_notes: Arc<dyn NoteRepository>,
