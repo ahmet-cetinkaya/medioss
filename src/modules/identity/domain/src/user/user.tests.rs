@@ -148,6 +148,8 @@ fn restored_users_reject_inconsistent_credential_state() {
         false,
         Some(created_at() + TimeDelta::hours(24)),
         false,
+        None,
+        None,
     );
 
     assert_eq!(result, Err(IdentityError::InvalidCredentialState));

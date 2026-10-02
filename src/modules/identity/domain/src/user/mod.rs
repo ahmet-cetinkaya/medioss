@@ -1,3 +1,5 @@
+mod avatar_ref;
+mod display_name;
 mod email;
 mod identity_error;
 mod password_hash;
@@ -5,6 +7,8 @@ mod raw_password;
 #[allow(clippy::module_inception)]
 mod user;
 
+pub use avatar_ref::AvatarRef;
+pub use display_name::DisplayName;
 pub use email::Email;
 pub use identity_error::IdentityError;
 pub use kernel::Role;
