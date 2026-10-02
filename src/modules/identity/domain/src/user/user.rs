@@ -17,6 +17,7 @@ pub struct User {
     auth_version: u64,
     must_change_password: bool,
     password_expires_at: Option<DateTime<Utc>>,
+    disabled: bool,
 }
 
 impl User {
@@ -36,6 +37,7 @@ impl User {
             auth_version: 0,
             must_change_password: false,
             password_expires_at: None,
+            disabled: false,
         }
     }
 
@@ -57,6 +59,7 @@ impl User {
             auth_version: 0,
             must_change_password: true,
             password_expires_at: Some(password_expires_at),
+            disabled: false,
         })
     }
 
@@ -70,6 +73,7 @@ impl User {
         auth_version: u64,
         must_change_password: bool,
         password_expires_at: Option<DateTime<Utc>>,
+        disabled: bool,
     ) -> Result<Self, IdentityError> {
         if must_change_password != password_expires_at.is_some() {
             return Err(IdentityError::InvalidCredentialState);
@@ -84,6 +88,7 @@ impl User {
             auth_version,
             must_change_password,
             password_expires_at,
+            disabled,
         })
     }
 
@@ -117,6 +122,14 @@ impl User {
 
     pub fn password_expires_at(&self) -> Option<DateTime<Utc>> {
         self.password_expires_at
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
+    pub fn with_disabled(self, disabled: bool) -> Self {
+        Self { disabled, ..self }
     }
 
     pub fn actor(&self) -> Actor {
