@@ -1,7 +1,7 @@
 use identity_domain::{Email, PasswordHash, Role, User};
 use kernel::{Actor, UserId};
 
-use super::delete_own_account;
+use super::{delete_own_account, ensure_can_delete_own_account};
 use crate::{
     ports::Clock,
     test_support::{block_on, FakeRepository, FixedClock},
@@ -54,4 +54,16 @@ fn admin_deletes_themselves_when_another_admin_remains() {
 
     assert_eq!(repository.user_count(), 1);
     assert!(repository.user_by_id(UserId::new(1)).is_none());
+}
+
+#[test]
+fn ensure_refuses_last_admin_without_deleting() {
+    let repository = FakeRepository::new();
+    repository.seed_user(user(1, Role::Admin));
+    let admin = Actor::new(UserId::new(1), Role::Admin);
+
+    let result = block_on(ensure_can_delete_own_account(&repository, &admin));
+
+    assert_eq!(result, Err(ApplicationError::LastActiveAdmin));
+    assert_eq!(repository.user_count(), 1);
 }

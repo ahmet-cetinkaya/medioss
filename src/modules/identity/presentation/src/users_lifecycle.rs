@@ -9,7 +9,10 @@ use axum::{
     Json,
 };
 use identity_application::{
-    commands::{delete_own_account, delete_user_as_admin, set_user_status},
+    commands::{
+        delete_own_account, delete_user_as_admin, ensure_admin_can_delete_user,
+        ensure_can_delete_own_account, set_user_status,
+    },
     ports::{Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository},
     ApplicationError,
 };
@@ -87,16 +90,16 @@ where
         return Err(ApiError(ApplicationError::Forbidden));
     }
     let target = UserId::new(id);
-    // Purge module data first: if this fails, the user row stays intact.
+    // Guards first: a refused request (last admin, unknown target) must
+    // never destroy the target's data.
+    ensure_admin_can_delete_user(dependencies.repository.as_ref(), &actor, target).await?;
     dependencies
         .deletion
         .on_user_deleted(target)
         .await
         .map_err(|_| ApiError(ApplicationError::Repository))?;
-    match delete_user_as_admin(dependencies.repository.as_ref(), &actor, target).await {
-        Ok(()) => Ok(StatusCode::NO_CONTENT),
-        Err(error) => Err(ApiError(error)),
-    }
+    delete_user_as_admin(dependencies.repository.as_ref(), &actor, target).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn me_delete<R, H, C, A>(
@@ -112,6 +115,9 @@ where
     A: LoginAdmission + 'static,
 {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
+    // Guards first: a refused self-deletion (last admin) must never
+    // destroy the caller's data.
+    ensure_can_delete_own_account(dependencies.repository.as_ref(), &actor).await?;
     dependencies
         .deletion
         .on_user_deleted(actor.user_id())

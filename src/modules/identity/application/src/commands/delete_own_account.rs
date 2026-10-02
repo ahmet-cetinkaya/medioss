@@ -1,11 +1,14 @@
 use kernel::Actor;
 
-use crate::{ports::UserRepository, ApplicationError};
+use crate::{
+    commands::delete_user_as_admin::ensure_not_last_active_admin, ports::UserRepository,
+    ApplicationError,
+};
 
-/// Deletes the caller's own account. Refused when the caller is the last
-/// active admin. Cross-module data purge is orchestrated by the caller
-/// (web-api) before the user row is removed.
-pub async fn delete_own_account(
+/// Runs every guard for a self-deletion without mutating anything. The
+/// composition root calls this before purging module data, so a refused
+/// request (last active admin) never destroys the caller's data.
+pub async fn ensure_can_delete_own_account(
     repository: &impl UserRepository,
     actor: &Actor,
 ) -> Result<(), ApplicationError> {
@@ -14,17 +17,25 @@ pub async fn delete_own_account(
         .await
         .map_err(ApplicationError::from)?
         .ok_or(ApplicationError::UserNotFound)?;
-    if user.role() == kernel::Role::Admin && !user.is_disabled() {
-        let active_admins = repository
-            .count_active_admins()
-            .await
-            .map_err(ApplicationError::from)?;
-        if active_admins <= 1 {
-            return Err(ApplicationError::LastActiveAdmin);
-        }
-    }
+    ensure_not_last_active_admin(repository, &user).await
+}
+
+/// Deletes the caller's own account. Refused when the caller is the last
+/// active admin. Callers must run [`ensure_can_delete_own_account`] (and
+/// their purge step) before this; the guard runs again here so the
+/// command stays safe when called directly.
+pub async fn delete_own_account(
+    repository: &impl UserRepository,
+    actor: &Actor,
+) -> Result<(), ApplicationError> {
+    ensure_can_delete_own_account(repository, actor).await?;
+    let user = repository
+        .find_by_id(actor.user_id())
+        .await
+        .map_err(ApplicationError::from)?
+        .ok_or(ApplicationError::UserNotFound)?;
     repository
-        .delete_login_attempts(user.email().as_str())
+        .delete_login_attempts(&user.email().as_str().trim().to_lowercase())
         .await
         .map_err(ApplicationError::from)?;
     let deleted = repository
