@@ -449,7 +449,7 @@ where
 /// Admin-only gate: same actor lookup as `CurrentActor`, plus a role check.
 /// The extractor is the enforcement; handlers do not need the actor value.
 #[allow(dead_code)]
-struct AdminActor(Actor);
+pub(crate) struct AdminActor(pub Actor);
 
 impl<S: Send + Sync> FromRequestParts<S> for AdminActor {
     type Rejection = ApiError;

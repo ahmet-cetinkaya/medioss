@@ -20,7 +20,9 @@ use kernel::{Role, UserId};
 use serde::Deserialize;
 use tower_sessions::Session;
 
-use crate::router::{ensure_browser_origin, ApiError, CurrentActor, SharedDependencies};
+use crate::router::{
+    ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies,
+};
 
 /// Purges other modules' data and media for a user. The composition root
 /// implements this; it runs only after all identity guards pass, so a
@@ -48,7 +50,7 @@ pub struct UserStatusRequest {
 
 pub async fn user_status<R, H, C, A>(
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
-    CurrentActor(actor): CurrentActor,
+    actor: AdminActor,
     headers: HeaderMap,
     Path(id): Path<i64>,
     Json(request): Json<UserStatusRequest>,
@@ -60,12 +62,9 @@ where
     A: LoginAdmission + 'static,
 {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
-    if actor.role() != Role::Admin {
-        return Err(ApiError(ApplicationError::Forbidden));
-    }
     set_user_status(
         dependencies.repository.as_ref(),
-        &actor,
+        &actor.0,
         UserId::new(id),
         request.disabled,
     )
@@ -75,7 +74,7 @@ where
 
 pub async fn user_delete<R, H, C, A>(
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
-    CurrentActor(actor): CurrentActor,
+    actor: AdminActor,
     headers: HeaderMap,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, ApiError>
@@ -86,9 +85,7 @@ where
     A: LoginAdmission + 'static,
 {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
-    if actor.role() != Role::Admin {
-        return Err(ApiError(ApplicationError::Forbidden));
-    }
+    let actor = actor.0;
     let target = UserId::new(id);
     // Guards first: a refused request (last admin, unknown target) must
     // never destroy the target's data.
