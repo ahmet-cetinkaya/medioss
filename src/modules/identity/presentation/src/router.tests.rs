@@ -984,7 +984,7 @@ async fn avatar_upload_normalizes_persists_and_replaces() {
         vec![user(1, "member@example.com", Role::Member)],
         store.clone(),
     );
-    let upload = |router: &axum::Router| {
+    let upload = || {
         let mut request = Request::put("/identity/me/avatar")
             .header("origin", "https://medioss.example")
             .header("content-type", "multipart/form-data; boundary=b")
@@ -998,10 +998,10 @@ async fn avatar_upload_normalizes_persists_and_replaces() {
         request
     };
 
-    let response = router.clone().oneshot(upload(&router)).await.unwrap();
+    let response = router.clone().oneshot(upload()).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
 
-    let response = router.clone().oneshot(upload(&router)).await.unwrap();
+    let response = router.clone().oneshot(upload()).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
 
     assert_eq!(*store.written.lock().unwrap(), vec!["webp", "webp"]);

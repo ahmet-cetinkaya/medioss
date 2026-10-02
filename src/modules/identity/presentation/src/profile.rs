@@ -74,7 +74,7 @@ where
     while let Some(mut field) = multipart
         .next_field()
         .await
-        .map_err(|_| ApiError::from(identity_application::ApplicationError::Repository))?
+        .map_err(|_| ApiError::from(ApplicationError::PayloadTooLarge))?
     {
         if field.name() != Some("file") {
             return Err(ApiError::from(
@@ -85,7 +85,7 @@ where
         while let Some(chunk) = field
             .chunk()
             .await
-            .map_err(|_| ApiError::from(identity_application::ApplicationError::Repository))?
+            .map_err(|_| ApiError::from(ApplicationError::PayloadTooLarge))?
         {
             buffer.extend_from_slice(&chunk);
             if buffer.len() > MAX_AVATAR_BYTES {
