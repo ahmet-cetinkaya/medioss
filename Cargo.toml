@@ -16,6 +16,7 @@ edition = "2021"
 
 [workspace.dependencies]
 axum = "0.8"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat", "io"] }
 serde = { version = "1", features = ["derive"] }

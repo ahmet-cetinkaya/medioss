@@ -131,6 +131,9 @@ async fn main() {
             std::sync::Arc::clone(&mood_tracker.entries),
             config.data_dir.join("media"),
         ));
+    let avatar_store = Arc::new(web_api::avatar_store::FileAvatarStore::new(
+        config.data_dir.join("media"),
+    ));
     let state = web_api::state::AppState::new(
         Arc::new(config),
         session_store,
@@ -142,6 +145,7 @@ async fn main() {
         )),
         hasher,
         deletion,
+        avatar_store,
     );
     if let Err(err) = axum::serve(listener, router(state)).await {
         fail(format!("server error: {err}"));

@@ -1,3 +1,4 @@
+pub mod avatar_store;
 pub mod bootstrap;
 pub mod config;
 pub mod meditation;

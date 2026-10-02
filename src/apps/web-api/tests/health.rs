@@ -72,7 +72,7 @@ async fn test_state() -> (AppState, TempDir) {
             meditation.sessions.clone(),
             soundscape.mixes.clone(),
             mood_tracker.entries.clone(),
-            std::path::PathBuf::from(data_dir).join("media"),
+            std::path::PathBuf::from(&data_dir).join("media"),
         ));
     let state = AppState::new(
         Arc::new(config),
@@ -85,6 +85,9 @@ async fn test_state() -> (AppState, TempDir) {
         )),
         identity_infrastructure::BoundedArgon2PasswordHasher::new(),
         deletion,
+        Arc::new(web_api::avatar_store::FileAvatarStore::new(
+            std::path::PathBuf::from(data_dir).join("media"),
+        )),
     );
 
     (state, static_dir)
