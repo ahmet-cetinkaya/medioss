@@ -100,6 +100,26 @@ fn replace_persists_and_unlinks_the_previous_file() {
 }
 
 #[test]
+fn replace_and_clear_keep_the_display_name() {
+    let repository = FakeRepository::new();
+    let named = user(2, Role::Member).with_display_name(Some(
+        identity_domain::DisplayName::parse("Ahmet QA").unwrap(),
+    ));
+    repository.seed_user(named);
+    store_avatar(&repository, "webp");
+    let store = CountingAvatarStore::accepting();
+    let actor = Actor::new(UserId::new(2), Role::Member);
+
+    let updated = block_on(replace_avatar(&repository, &store, &actor, vec![7])).unwrap();
+    assert_eq!(updated.display_name().map(|n| n.as_str()), Some("Ahmet QA"));
+
+    block_on(clear_avatar(&repository, &store, &actor)).unwrap();
+    let cleared = repository.user_by_id(UserId::new(2)).unwrap();
+    assert_eq!(cleared.display_name().map(|n| n.as_str()), Some("Ahmet QA"));
+    assert_eq!(cleared.avatar(), None);
+}
+
+#[test]
 fn replace_rejects_invalid_payloads_and_writes_nothing() {
     let repository = FakeRepository::new();
     repository.seed_user(user(2, Role::Member));

@@ -26,7 +26,7 @@ pub async fn replace_avatar(
     let previous = user.avatar();
 
     let updated = repository
-        .set_profile(actor.user_id(), None, Some(avatar))
+        .set_profile(actor.user_id(), user.display_name().cloned(), Some(avatar))
         .await
         .map_err(ApplicationError::from)?;
 
@@ -54,7 +54,7 @@ pub async fn clear_avatar(
 
     if let Some(avatar) = user.avatar() {
         repository
-            .set_profile(actor.user_id(), None, None)
+            .set_profile(actor.user_id(), user.display_name().cloned(), None)
             .await
             .map_err(ApplicationError::from)?;
         let _ = store.remove(actor.user_id(), avatar).await;
