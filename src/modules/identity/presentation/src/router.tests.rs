@@ -98,6 +98,26 @@ impl UserRepository for EmptyRepository {
     ) -> Result<User, RepositoryError> {
         Err(RepositoryError::OperationFailed)
     }
+
+    async fn set_disabled(
+        &self,
+        _id: kernel::UserId,
+        _disabled: bool,
+    ) -> Result<(), RepositoryError> {
+        Err(RepositoryError::OperationFailed)
+    }
+
+    async fn delete_user(&self, _id: kernel::UserId) -> Result<bool, RepositoryError> {
+        Ok(false)
+    }
+
+    async fn count_active_admins(&self) -> Result<u64, RepositoryError> {
+        Ok(0)
+    }
+
+    async fn delete_login_attempts(&self, _normalized_email: &str) -> Result<(), RepositoryError> {
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -137,6 +157,7 @@ fn dependencies() -> SharedDependencies<EmptyRepository, NullHasher, NullClock, 
         dummy_password_hash: PasswordHash::from_stored("null:dummy".to_owned()),
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
+        deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
     })
 }
 
@@ -407,6 +428,26 @@ impl UserRepository for SeededRepository {
     ) -> Result<User, RepositoryError> {
         self.inner.apply_credential_change(credential_change).await
     }
+
+    async fn set_disabled(
+        &self,
+        id: kernel::UserId,
+        disabled: bool,
+    ) -> Result<(), RepositoryError> {
+        self.inner.set_disabled(id, disabled).await
+    }
+
+    async fn delete_user(&self, id: kernel::UserId) -> Result<bool, RepositoryError> {
+        self.inner.delete_user(id).await
+    }
+
+    async fn count_active_admins(&self) -> Result<u64, RepositoryError> {
+        self.inner.count_active_admins().await
+    }
+
+    async fn delete_login_attempts(&self, normalized_email: &str) -> Result<(), RepositoryError> {
+        self.inner.delete_login_attempts(normalized_email).await
+    }
 }
 
 #[async_trait::async_trait]
@@ -450,6 +491,7 @@ fn seeded_app(users: Vec<User>) -> axum::Router {
         dummy_password_hash: PasswordHash::from_stored("null:dummy".to_owned()),
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
+        deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
     });
     identity_router::<SeededRepository, NullHasher, NullClock, NullAdmission>()
         .with_state(dependencies)
