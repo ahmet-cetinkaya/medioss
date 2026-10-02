@@ -75,6 +75,16 @@ impl FakeRepository {
         self.state.lock().unwrap().users.len()
     }
 
+    pub(crate) fn user_by_id(&self, id: UserId) -> Option<User> {
+        self.state
+            .lock()
+            .unwrap()
+            .users
+            .values()
+            .find(|user| user.id() == id)
+            .cloned()
+    }
+
     pub(crate) fn user_by_email(&self, email: &str) -> User {
         self.state.lock().unwrap().users[email].clone()
     }
@@ -248,6 +258,64 @@ impl UserRepository for FakeRepository {
             ..next_state
         };
         Ok(changed)
+    }
+
+    async fn set_disabled(&self, id: UserId, disabled: bool) -> Result<(), RepositoryError> {
+        let mut state = self.state.lock().unwrap();
+        let current = state
+            .users
+            .values()
+            .find(|user| user.id() == id)
+            .cloned()
+            .ok_or(RepositoryError::UserNotFound)?;
+        let mut users = state.users.clone();
+        users.insert(
+            current.email().as_str().to_owned(),
+            current.with_disabled(disabled),
+        );
+        *state = FakeRepositoryState {
+            users,
+            ..state.clone()
+        };
+        Ok(())
+    }
+
+    async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError> {
+        let mut state = self.state.lock().unwrap();
+        let Some(current) = state.users.values().find(|user| user.id() == id).cloned() else {
+            return Ok(false);
+        };
+        let mut users = state.users.clone();
+        users.remove(current.email().as_str());
+        *state = FakeRepositoryState {
+            users,
+            ..state.clone()
+        };
+        Ok(true)
+    }
+
+    async fn count_active_admins(&self) -> Result<u64, RepositoryError> {
+        Ok(u64::try_from(
+            self.state
+                .lock()
+                .unwrap()
+                .users
+                .values()
+                .filter(|user| !user.is_disabled() && matches!(user.role(), Role::Admin))
+                .count(),
+        )
+        .unwrap_or_default())
+    }
+
+    async fn delete_login_attempts(&self, normalized_email: &str) -> Result<(), RepositoryError> {
+        let mut state = self.state.lock().unwrap();
+        let mut failed_attempts = state.failed_attempts.clone();
+        failed_attempts.remove(normalized_email);
+        *state = FakeRepositoryState {
+            failed_attempts,
+            ..state.clone()
+        };
+        Ok(())
     }
 }
 

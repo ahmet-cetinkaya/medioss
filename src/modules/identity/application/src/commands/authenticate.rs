@@ -94,6 +94,14 @@ where
         });
 
         if is_password_valid && is_credential_active {
+            if user.as_ref().is_some_and(User::is_disabled) {
+                // A disabled account must look exactly like unknown
+                // credentials: no oracle about the account's state.
+                self.repository
+                    .record_failed_attempt(&normalized_identifier, attempted_at)
+                    .await?;
+                return Err(ApplicationError::InvalidCredentials);
+            }
             self.repository
                 .clear_failed_attempts(&normalized_identifier)
                 .await?;
