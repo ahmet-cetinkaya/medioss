@@ -4,7 +4,7 @@
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
 	import * as Card from "$lib/components/ui/card";
-	import { createUser, fetchUsers, type IdentityUser } from "$lib/api/identity";
+	import { createUser, deleteUser, fetchUsers, setUserStatus, type IdentityUser } from "$lib/api/identity";
 	import {
 		addMember,
 		assignCategory,
@@ -65,6 +65,8 @@
 	let usersError = $state("");
 	let createdPassword = $state("");
 	let createdEmail = $state("");
+	let lifecycleBusy = $state<number | null>(null);
+	let lifecycleError = $state("");
 
 	onMount(async () => {
 		try {
@@ -93,6 +95,40 @@
 			fetchSounds(),
 			fetchUsers(),
 		]);
+	}
+
+	async function toggleDisabled(user: IdentityUser) {
+		lifecycleError = "";
+		lifecycleBusy = user.id;
+		try {
+			await setUserStatus(user.id, !user.disabled);
+			users = await fetchUsers();
+		} catch (failure) {
+			lifecycleError = lifecycleMessage(failure);
+		} finally {
+			lifecycleBusy = null;
+		}
+	}
+
+	async function removeUser(user: IdentityUser) {
+		lifecycleError = "";
+		if (!window.confirm(`"${user.email}" kalıcı olarak silinecek: tüm verisi ve medyaları geri getirilemez. Onaylıyor musunuz?`)) return;
+		lifecycleBusy = user.id;
+		try {
+			await deleteUser(user.id);
+			users = await fetchUsers();
+		} catch (failure) {
+			lifecycleError = lifecycleMessage(failure);
+		} finally {
+			lifecycleBusy = null;
+		}
+	}
+
+	function lifecycleMessage(failure: unknown): string {
+		const status = (failure as { status?: number }).status;
+		if (status === 400) return "Bu işlem son aktif yöneticiyi ortadan kaldırırdı.";
+		if (status === 403) return "Bu işlem için yönetici yetkisi gerekir.";
+		return "İşlem başarısız oldu.";
 	}
 
 	async function submitNewUser(event: SubmitEvent) {
@@ -317,6 +353,7 @@
 					/>
 				</div>
 				{#if usersError}<p class="text-sm text-destructive">{usersError}</p>{/if}
+				{#if lifecycleError}<p class="text-sm text-destructive">{lifecycleError}</p>{/if}
 				<Button type="submit" disabled={!newUserEmail || !newUserPassword || creatingUser}>
 					{creatingUser ? "Creating…" : "Create user"}
 				</Button>
@@ -338,6 +375,7 @@
 							<th class="py-2">Email</th>
 							<th class="py-2">Role</th>
 							<th class="py-2">Status</th>
+							<th class="py-2 text-right">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -346,7 +384,11 @@
 								<td class="py-2">{user.email}</td>
 								<td class="py-2">{user.role}</td>
 								<td class="py-2">
-									{user.must_change_password ? "must change password" : "active"}
+									{#if user.disabled}<span class="text-destructive">disabled</span>{:else if user.must_change_password}must change password{:else}active{/if}
+								</td>
+								<td class="py-2 text-right">
+									<Button variant="outline" size="sm" disabled={lifecycleBusy === user.id} onclick={() => void toggleDisabled(user)}>{user.disabled ? "Enable" : "Disable"}</Button>
+									<Button variant="outline" size="sm" class="ml-2" disabled={lifecycleBusy === user.id} onclick={() => void removeUser(user)}>Delete</Button>
 								</td>
 							</tr>
 						{/each}
