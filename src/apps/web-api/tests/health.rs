@@ -120,6 +120,157 @@ fn assert_json_content_type(response: &Response<Body>) {
     );
 }
 
+fn multipart_avatar(png: Vec<u8>) -> Vec<u8> {
+    let boundary = "----mediossqa";
+    let mut body = Vec::new();
+    body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+    body.extend_from_slice(
+        b"content-disposition: form-data; name=\"file\"; filename=\"a.png\"\r\ncontent-type: image/png\r\n\r\n",
+    );
+    body.extend_from_slice(&png);
+    body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+    body
+}
+
+#[tokio::test]
+async fn deleting_a_user_wipes_their_avatar_file() {
+    let (state, guard) = test_state().await;
+    let app = router(state);
+    let origin = "http://localhost";
+
+    let png = {
+        let image = image::DynamicImage::new_rgb8(8, 8);
+        let mut bytes = Vec::new();
+        image
+            .write_to(
+                &mut std::io::Cursor::new(&mut bytes),
+                image::ImageFormat::Png,
+            )
+            .expect("encode png");
+        bytes
+    };
+
+    let setup = app
+        .clone()
+        .oneshot(
+            Request::post("/api/identity/setup")
+                .header("origin", origin)
+                .header("x-setup-secret", "test-setup-secret")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"root@local.test","password":"correct-horse-1"}"#.to_owned(),
+                ))
+                .expect("build"),
+        )
+        .await
+        .expect("setup response");
+    assert_eq!(setup.status(), StatusCode::CREATED);
+
+    let login = app
+        .clone()
+        .oneshot(
+            Request::post("/api/identity/login")
+                .header("origin", origin)
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"root@local.test","password":"correct-horse-1"}"#.to_owned(),
+                ))
+                .expect("build"),
+        )
+        .await
+        .expect("login response");
+    assert_eq!(login.status(), StatusCode::OK);
+    let cookie = login
+        .headers()
+        .get("set-cookie")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .expect("session cookie")
+        .to_owned();
+
+    let create = app
+        .clone()
+        .oneshot(
+            Request::post("/api/identity/users")
+                .header("origin", origin)
+                .header("cookie", &cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"member@local.test","password":"member-horse-1"}"#.to_owned(),
+                ))
+                .expect("build"),
+        )
+        .await
+        .expect("create response");
+    assert_eq!(create.status(), StatusCode::CREATED);
+    let member: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(create.into_body(), usize::MAX)
+            .await
+            .expect("create body"),
+    )
+    .expect("member json");
+    let member_id = member["id"].as_i64().expect("member id");
+
+    let member_login = app
+        .clone()
+        .oneshot(
+            Request::post("/api/identity/login")
+                .header("origin", origin)
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"member@local.test","password":"member-horse-1"}"#.to_owned(),
+                ))
+                .expect("build"),
+        )
+        .await
+        .expect("member login response");
+    let member_cookie = member_login
+        .headers()
+        .get("set-cookie")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .expect("member session cookie")
+        .to_owned();
+
+    let upload = app
+        .clone()
+        .oneshot(
+            Request::put("/api/identity/me/avatar")
+                .header("origin", origin)
+                .header("cookie", &member_cookie)
+                .header(
+                    "content-type",
+                    "multipart/form-data; boundary=----mediossqa",
+                )
+                .body(Body::from(multipart_avatar(png)))
+                .expect("build"),
+        )
+        .await
+        .expect("upload response");
+    assert_eq!(upload.status(), StatusCode::CREATED);
+
+    let member_media = guard.path().join("media").join(member_id.to_string());
+    assert!(member_media.join("avatar.webp").exists() || member_media.join("avatar.png").exists());
+
+    let delete = app
+        .clone()
+        .oneshot(
+            Request::delete(format!("/api/identity/users/{member_id}"))
+                .header("origin", origin)
+                .header("cookie", &cookie)
+                .body(Body::empty())
+                .expect("build"),
+        )
+        .await
+        .expect("delete response");
+    assert_eq!(delete.status(), StatusCode::NO_CONTENT);
+
+    assert!(
+        !member_media.exists(),
+        "user media dir must be wiped on delete"
+    );
+}
+
 #[tokio::test]
 async fn health_endpoint_returns_ok() {
     let response = get("/api/health").await;
