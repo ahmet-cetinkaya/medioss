@@ -149,17 +149,23 @@ pub struct LibraryQuery {
     pub q: Option<String>,
 }
 
+const MAX_QUERY_CHARS: usize = 200;
+
 pub async fn library(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
     axum::extract::Query(query): axum::extract::Query<LibraryQuery>,
 ) -> Result<Json<Vec<MeditationResponse>>, ApiError> {
+    let q = query.q.as_deref();
+    if q.is_some_and(|q| q.chars().count() > MAX_QUERY_CHARS) {
+        return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST));
+    }
     let listed = queries::list_library(
         deps.meditations.as_ref(),
         deps.memberships.as_ref(),
         deps.programs.as_ref(),
         deps.categories.as_ref(),
-        query.q.as_deref(),
+        q,
     )
     .await
     .map_err(ApiError::Application)?;

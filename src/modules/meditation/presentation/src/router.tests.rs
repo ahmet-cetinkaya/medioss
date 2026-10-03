@@ -298,6 +298,35 @@ async fn library_search_blank_or_absent_q_returns_everything() {
 }
 
 #[tokio::test]
+async fn library_search_rejects_overlong_query_with_400() {
+    let app = app();
+    seed_search_library(&app).await;
+    let long = "a".repeat(201);
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/library?q={long}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let exact = "a".repeat(200);
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/library?q={exact}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
 async fn library_search_no_match_returns_empty_list() {
     let app = app();
     seed_search_library(&app).await;

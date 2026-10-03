@@ -35,6 +35,16 @@
 	let startedAt: string | null = null;
 	let completionSent = false;
 
+	$effect(() => {
+		if (
+			meditation &&
+			typeof navigator !== "undefined" &&
+			"mediaSession" in navigator
+		) {
+			navigator.mediaSession.metadata = new MediaMetadata({ title: meditation.name });
+		}
+	});
+
 	onMount(async () => {
 		const params = new URLSearchParams(window.location.search);
 		const id = Number(params.get("id"));
@@ -126,9 +136,7 @@
 	function setupMediaSession() {
 		if (typeof navigator === "undefined" || !("mediaSession" in navigator) || !audio) return;
 		if (meditation) {
-			navigator.mediaSession.metadata = new MediaMetadata({
-				title: meditation.name,
-			});
+			navigator.mediaSession.metadata = new MediaMetadata({ title: meditation.name });
 		}
 		navigator.mediaSession.setActionHandler("play", () => void audio!.play());
 		navigator.mediaSession.setActionHandler("pause", () => audio!.pause());
