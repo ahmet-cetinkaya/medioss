@@ -5,12 +5,16 @@ This roadmap turns the [PRD's implementation phases](./PRD.md#implementation-pha
 Business modules are created on demand, milestone by milestone, following the `src/modules/<module>/{domain,application,infrastructure,presentation}` pattern. Module names below are working names; final boundaries are decided when each module is built (see the draft note in ARCHITECTURE.md).
 
 ```text
-M0 ── M1 ── M2 ── M3 ── M4 ── M5      Phase 1: MVP
-                              │
-                              ├── M6 ── M7 ── M8    Phase 2: Enhanced
-                              │
-                              └────────── M9+       Phase 3: Polish & Expansion
+M0 ── M1 ── M2 ── M3 ── M4                  Phase 1: MVP
+                       │
+                       └── M5 ── M6 ── M7 ── M8   Phase 2: Enhanced
+                                                 │
+                                                 └── M9 ── v0.1.0          Release
+
+M10+                                           Phase 3: Polish & Expansion
 ```
+
+Execution order (scope decision, 2026-10-03; renumbered so numbers follow execution): M5 (multi-user) → M6 (library depth) → M7 (data portability) → M8 (UI design) → M9 (release). Milestone numbers were renumbered on 2026-10-03; older specs may still reference the previous numbering.
 
 ---
 
@@ -76,23 +80,13 @@ Implements the module documented throughout ARCHITECTURE.md.
 
 **Exit criterion:** E2E test — create a mood log in under 3 requests; history returns only the caller's entries.
 
-### M5 — MVP Hardening & Release
-
-- Mobile-responsive pass across all flows (PRD design principles)
-- Backup/restore procedure tested against a populated `$MEDIOSS_DATA_DIR`
-- Error states, empty states, and loading states in the UI
-- Seed-content documentation (where operators can source public-domain audio)
-- Version `0.1.0` tag, release image, and a validated [DEPLOYMENT.md](./DEPLOYMENT.md) walkthrough on a clean VPS
-
-**Exit criterion:** PRD Phase 1 checklist fully checked; a non-author deploys a working instance from the docs alone in under 5 minutes.
-
 ---
 
 ## Phase 2: Enhanced Features
 
 Goal: multi-user instances become pleasant to run and richer to use.
 
-### M6 — Multi-User & Admin
+### M5 — Multi-User & Admin
 
 - Admin dashboard: list/disable/remove users
 - Account and data deletion: user-initiated and admin-initiated, wiping all database records and `media/{user_id}/` (PRD: Account & Data Deletion)
@@ -101,20 +95,42 @@ Goal: multi-user instances become pleasant to run and richer to use.
 
 **Exit criterion:** two concurrent users cannot see each other's media, moods, or sessions — verified by an automated isolation test suite. Deleting an account leaves zero database rows and zero media files for that user.
 
-### M7 — Library & Mixer Depth
+### M6 — Library & Mixer Depth
 
-- Meditation: full-text search over titles and categories (tags and duration filters remain maybe-level; see M9+)
+- Meditation: full-text search over titles and categories (tags and duration filters remain maybe-level; see M10+)
 - Soundscape: unlimited simultaneous sounds, saved mixes, 5–120 min fade timers (delivered by spec 0003)
-- Player: Media Session API hardware/lock-screen controls
+- Player: Media Session API hardware/lock-screen controls **Exit criterion:** search returns correct results over a 100+ item library; hardware media keys control playback on a real device.
 
-**Exit criterion:** search returns correct results over a 100+ item library; hardware media keys control playback on a real device.
-
-### M8 — Data Portability
+### M7 — Data Portability
 
 - Mood trends: weekly/monthly charts (delivered by spec 0006)
 - CSV/JSON export and import of the caller's own data (lossless round-trip, enabling instance migration)
 
 **Exit criterion:** export → import round-trip on a fresh instance reproduces the original data.
+
+### M8 — UI Design (Full Design Pass)
+
+Closes Phase 2. Until it ships, the UI stays at functional basic level — no design work lands earlier.
+
+- Visual design implemented from scratch across every flow (auth, home, meditation, soundscape, mood, statistics, admin, profile settings)
+- Mobile-responsive pass across all flows (PRD design principles) — absorbed from M9 (Hardening)
+- Error, empty, and loading states across the UI — absorbed from M9 (Hardening)
+
+**Exit criterion:** every user flow carries the final design and is usable from a 360 px viewport up; a manual walkthrough of each flow on a real mobile and desktop browser shows no unstyled or broken states.
+
+---
+
+## Release: v0.1.0
+
+Runs after M8; operational only.
+
+### M9 — MVP Hardening & Release
+
+- Backup/restore procedure tested against a populated `$MEDIOSS_DATA_DIR`
+- Seed-content documentation (where operators can source public-domain audio)
+- Version `0.1.0` tag, release image, and a validated [DEPLOYMENT.md](./DEPLOYMENT.md) walkthrough on a clean VPS
+
+**Exit criterion:** PRD Phase 1 checklist fully checked; a non-author deploys a working instance from the docs alone in under 5 minutes.
 
 ---
 
@@ -122,12 +138,12 @@ Goal: multi-user instances become pleasant to run and richer to use.
 
 Goal: long-tail quality and optional integrations. Scope here is intentionally loose and re-planned after Phase 2 ships.
 
-### M9+ — Candidates (ordered by current expectation, not commitment)
+### M10+ — Candidates (ordered by current expectation, not commitment)
 
 - Accessibility audit to WCAG 2.1 AA and fixes
 - Daily reminder notifications (in-app/PWA local only, per PRD Non-Goals)
 - Advanced insights (meditation ↔ mood correlation views)
-- Aggregate, non-content admin instance insight (active user counts, storage use; never another user's content) — moved from M6 by user decision 2026-09-30
+- Aggregate, non-content admin instance insight (active user counts, storage use; never another user's content) — moved from M5 (previously M6) by user decision 2026-09-30
 - Meditation tag system and duration filters
 - Notification preferences (in-app reminders; local only, per PRD Non-Goals)
 - Performance pass: startup time, memory ceiling, 10k+ mood entries
