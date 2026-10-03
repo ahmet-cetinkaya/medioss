@@ -3,7 +3,7 @@ use std::fmt;
 use chrono::{DateTime, TimeDelta, Utc};
 use kernel::{Actor, Role, UserId};
 
-use super::{Email, IdentityError, PasswordHash};
+use super::{AvatarRef, DisplayName, Email, IdentityError, PasswordHash};
 
 const TEMPORARY_PASSWORD_LIFETIME: TimeDelta = TimeDelta::hours(24);
 
@@ -18,6 +18,8 @@ pub struct User {
     must_change_password: bool,
     password_expires_at: Option<DateTime<Utc>>,
     disabled: bool,
+    display_name: Option<DisplayName>,
+    avatar: Option<AvatarRef>,
 }
 
 impl User {
@@ -38,6 +40,8 @@ impl User {
             must_change_password: false,
             password_expires_at: None,
             disabled: false,
+            display_name: None,
+            avatar: None,
         }
     }
 
@@ -60,6 +64,8 @@ impl User {
             must_change_password: true,
             password_expires_at: Some(password_expires_at),
             disabled: false,
+            display_name: None,
+            avatar: None,
         })
     }
 
@@ -74,6 +80,8 @@ impl User {
         must_change_password: bool,
         password_expires_at: Option<DateTime<Utc>>,
         disabled: bool,
+        display_name: Option<DisplayName>,
+        avatar: Option<AvatarRef>,
     ) -> Result<Self, IdentityError> {
         if must_change_password != password_expires_at.is_some() {
             return Err(IdentityError::InvalidCredentialState);
@@ -89,6 +97,8 @@ impl User {
             must_change_password,
             password_expires_at,
             disabled,
+            display_name,
+            avatar,
         })
     }
 
@@ -128,8 +138,27 @@ impl User {
         self.disabled
     }
 
+    pub fn display_name(&self) -> Option<&DisplayName> {
+        self.display_name.as_ref()
+    }
+
+    pub fn avatar(&self) -> Option<AvatarRef> {
+        self.avatar
+    }
+
     pub fn with_disabled(self, disabled: bool) -> Self {
         Self { disabled, ..self }
+    }
+
+    pub fn with_display_name(self, display_name: Option<DisplayName>) -> Self {
+        Self {
+            display_name,
+            ..self
+        }
+    }
+
+    pub fn with_avatar(self, avatar: Option<AvatarRef>) -> Self {
+        Self { avatar, ..self }
     }
 
     pub fn actor(&self) -> Actor {

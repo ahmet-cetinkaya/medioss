@@ -57,6 +57,8 @@ pub async fn resolve_actor(
                     role: user.role(),
                     must_change_password: user.must_change_password(),
                     auth_version: user.auth_version(),
+                    display_name: user.display_name().map(|name| name.as_str().to_owned()),
+                    has_avatar: user.avatar().is_some(),
                 });
             }
             None => {

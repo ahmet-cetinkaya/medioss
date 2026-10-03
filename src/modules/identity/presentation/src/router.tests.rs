@@ -58,6 +58,100 @@ impl LoginAdmission for NullAdmission {
     }
 }
 
+struct RecordingAvatarStore {
+    normalize_result: std::sync::Mutex<
+        Result<(Vec<u8>, &'static str), identity_application::ports::AvatarStoreError>,
+    >,
+    written: std::sync::Mutex<Vec<&'static str>>,
+    removed: std::sync::Mutex<Vec<&'static str>>,
+    read_result: std::sync::Mutex<Vec<u8>>,
+}
+
+impl RecordingAvatarStore {
+    fn accepting() -> Self {
+        Self {
+            normalize_result: std::sync::Mutex::new(Ok((vec![1, 2, 3], "webp"))),
+            written: std::sync::Mutex::new(Vec::new()),
+            removed: std::sync::Mutex::new(Vec::new()),
+            read_result: std::sync::Mutex::new(vec![9, 9]),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl identity_application::ports::AvatarStore for RecordingAvatarStore {
+    async fn normalize(
+        &self,
+        _bytes: Vec<u8>,
+    ) -> Result<(Vec<u8>, &'static str), identity_application::ports::AvatarStoreError> {
+        self.normalize_result.lock().unwrap().clone()
+    }
+
+    async fn write(
+        &self,
+        _id: kernel::UserId,
+        avatar: identity_domain::AvatarRef,
+        _bytes: &[u8],
+    ) -> Result<(), identity_application::ports::AvatarStoreError> {
+        self.written.lock().unwrap().push(avatar.extension());
+        Ok(())
+    }
+
+    async fn read(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+    ) -> Result<Vec<u8>, identity_application::ports::AvatarStoreError> {
+        Ok(self.read_result.lock().unwrap().clone())
+    }
+
+    async fn remove(
+        &self,
+        _id: kernel::UserId,
+        avatar: identity_domain::AvatarRef,
+    ) -> Result<(), identity_application::ports::AvatarStoreError> {
+        self.removed.lock().unwrap().push(avatar.extension());
+        Ok(())
+    }
+}
+
+struct NullAvatarStore;
+
+#[async_trait::async_trait]
+impl identity_application::ports::AvatarStore for NullAvatarStore {
+    async fn normalize(
+        &self,
+        _bytes: Vec<u8>,
+    ) -> Result<(Vec<u8>, &'static str), identity_application::ports::AvatarStoreError> {
+        Err(identity_application::ports::AvatarStoreError::InvalidPayload)
+    }
+
+    async fn write(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+        _bytes: &[u8],
+    ) -> Result<(), identity_application::ports::AvatarStoreError> {
+        Ok(())
+    }
+
+    async fn read(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+    ) -> Result<Vec<u8>, identity_application::ports::AvatarStoreError> {
+        Ok(Vec::new())
+    }
+
+    async fn remove(
+        &self,
+        _id: kernel::UserId,
+        _avatar: identity_domain::AvatarRef,
+    ) -> Result<(), identity_application::ports::AvatarStoreError> {
+        Ok(())
+    }
+}
+
 struct EmptyRepository;
 
 #[async_trait::async_trait]
@@ -104,6 +198,15 @@ impl UserRepository for EmptyRepository {
         _id: kernel::UserId,
         _disabled: bool,
     ) -> Result<(), RepositoryError> {
+        Err(RepositoryError::OperationFailed)
+    }
+
+    async fn set_profile(
+        &self,
+        _id: kernel::UserId,
+        _display_name: Option<identity_domain::DisplayName>,
+        _avatar_ext: Option<identity_domain::AvatarRef>,
+    ) -> Result<User, RepositoryError> {
         Err(RepositoryError::OperationFailed)
     }
 
@@ -158,6 +261,7 @@ fn dependencies() -> SharedDependencies<EmptyRepository, NullHasher, NullClock, 
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
         deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
+        avatar_store: std::sync::Arc::new(NullAvatarStore),
     })
 }
 
@@ -338,6 +442,8 @@ fn principal_role_serializes_as_lowercase_string() {
         role: Role::Admin,
         must_change_password: false,
         auth_version: 0,
+        display_name: None,
+        has_avatar: false,
     };
     assert_eq!(principal.role, Role::Admin);
 }
@@ -454,6 +560,23 @@ impl UserRepository for SeededRepository {
         Ok(())
     }
 
+    async fn set_profile(
+        &self,
+        id: kernel::UserId,
+        display_name: Option<identity_domain::DisplayName>,
+        avatar_ext: Option<identity_domain::AvatarRef>,
+    ) -> Result<User, RepositoryError> {
+        let mut users = self.users.lock().unwrap();
+        let Some(current) = users.iter_mut().find(|user| user.id() == id) else {
+            return Err(RepositoryError::UserNotFound);
+        };
+        *current = current
+            .clone()
+            .with_display_name(display_name)
+            .with_avatar(avatar_ext);
+        Ok(current.clone())
+    }
+
     async fn delete_user(&self, id: kernel::UserId) -> Result<bool, RepositoryError> {
         let mut users = self.users.lock().unwrap();
         let before = users.len();
@@ -508,6 +631,13 @@ impl LoginThrottleRepository for SeededRepository {
 }
 
 fn seeded_app(users: Vec<User>) -> axum::Router {
+    seeded_app_with(users, Arc::new(NullAvatarStore))
+}
+
+fn seeded_app_with(
+    users: Vec<User>,
+    avatar_store: Arc<dyn identity_application::ports::AvatarStore>,
+) -> axum::Router {
     let dependencies = Arc::new(IdentityDependencies {
         repository: Arc::new(SeededRepository {
             inner: EmptyRepository,
@@ -520,6 +650,7 @@ fn seeded_app(users: Vec<User>) -> axum::Router {
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
         deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
+        avatar_store,
     });
     identity_router::<SeededRepository, NullHasher, NullClock, NullAdmission>()
         .with_state(dependencies)
@@ -770,4 +901,267 @@ async fn lifecycle_mutations_require_browser_origin() {
         .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
     let response = router.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn profile_patch_sets_changes_and_clears_the_name() {
+    let router = seeded_app(vec![user(1, "member@example.com", Role::Member)]);
+    let request = |body: &str| {
+        let mut request = Request::patch("/identity/me/profile")
+            .header("origin", "https://medioss.example")
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_owned()))
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+        request
+    };
+
+    let response = router
+        .clone()
+        .oneshot(request(r#"{"display_name":"  Ada  "}"#))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(profile["display_name"], "Ada");
+
+    let response = router
+        .clone()
+        .oneshot(request(r#"{"display_name":"Ada L."}"#))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let response = router
+        .clone()
+        .oneshot(request(r#"{"display_name":"   "}"#))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let profile: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(profile["display_name"].is_null());
+}
+
+#[tokio::test]
+async fn profile_patch_rejects_oversized_names_and_anonymous_calls() {
+    let router = seeded_app(vec![user(1, "member@example.com", Role::Member)]);
+    let long = "a".repeat(65);
+
+    let mut request = Request::patch("/identity/me/profile")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            serde_json::json!({ "display_name": long }).to_string(),
+        ))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+    let response = router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let request = Request::patch("/identity/me/profile")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"display_name":"Ada"}"#.to_owned()))
+        .unwrap();
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn avatar_upload_normalizes_persists_and_replaces() {
+    let store = Arc::new(RecordingAvatarStore::accepting());
+    let router = seeded_app_with(
+        vec![user(1, "member@example.com", Role::Member)],
+        store.clone(),
+    );
+    let upload = || {
+        let mut request = Request::put("/identity/me/avatar")
+            .header("origin", "https://medioss.example")
+            .header("content-type", "multipart/form-data; boundary=b")
+            .body(Body::from(
+                "--b\r\ncontent-disposition: form-data; name=\"file\"; filename=\"a\"\r\n\r\nimg\r\n--b--\r\n".to_owned(),
+            ))
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+        request
+    };
+
+    let response = router.clone().oneshot(upload()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let response = router.clone().oneshot(upload()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    assert_eq!(*store.written.lock().unwrap(), vec!["webp", "webp"]);
+    assert_eq!(*store.removed.lock().unwrap(), Vec::<&str>::new());
+}
+
+#[tokio::test]
+async fn avatar_upload_rejects_wrong_or_missing_multipart_field_with_400() {
+    let store = Arc::new(RecordingAvatarStore::accepting());
+    let router = seeded_app_with(
+        vec![user(1, "member@example.com", Role::Member)],
+        store.clone(),
+    );
+
+    for field in ["name=\"not_file\"", "filename=\"a\""] {
+        let mut request = Request::put("/identity/me/avatar")
+            .header("origin", "https://medioss.example")
+            .header("content-type", "multipart/form-data; boundary=b")
+            .body(Body::from(format!(
+                "--b\r\ncontent-disposition: form-data; {field}\r\n\r\nimg\r\n--b--\r\n"
+            )))
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+        let response = router.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "field: {field}");
+    }
+    assert!(store.written.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn avatar_upload_rejects_invalid_payloads_without_writing() {
+    let store = Arc::new(RecordingAvatarStore {
+        normalize_result: std::sync::Mutex::new(Err(
+            identity_application::ports::AvatarStoreError::InvalidPayload,
+        )),
+        written: std::sync::Mutex::new(Vec::new()),
+        removed: std::sync::Mutex::new(Vec::new()),
+        read_result: std::sync::Mutex::new(Vec::new()),
+    });
+    let router = seeded_app_with(
+        vec![user(1, "member@example.com", Role::Member)],
+        store.clone(),
+    );
+
+    let mut request = Request::put("/identity/me/avatar")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "multipart/form-data; boundary=b")
+        .body(Body::from(
+            "--b\r\ncontent-disposition: form-data; name=\"file\"; filename=\"a\"\r\n\r\nnot-an-image\r\n--b--\r\n".to_owned(),
+        ))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert!(store.written.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn avatar_serving_is_owner_or_admin_only() {
+    let store = Arc::new(RecordingAvatarStore::accepting());
+    let users = vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member)
+            .with_avatar(Some(identity_domain::AvatarRef::Webp)),
+        user(3, "other@example.com", Role::Member),
+    ];
+    let router = seeded_app_with(users, store);
+    let get = |actor: kernel::Actor| {
+        let mut request = Request::get("/identity/avatar/2")
+            .body(Body::empty())
+            .unwrap();
+        request.extensions_mut().insert(actor);
+        request
+    };
+
+    let response = router
+        .clone()
+        .oneshot(get(kernel::Actor::new(
+            kernel::UserId::new(2),
+            Role::Member,
+        )))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let response = router
+        .clone()
+        .oneshot(get(kernel::Actor::new(kernel::UserId::new(1), Role::Admin)))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let response = router
+        .clone()
+        .oneshot(get(kernel::Actor::new(
+            kernel::UserId::new(3),
+            Role::Member,
+        )))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    let response = router
+        .oneshot(
+            Request::get("/identity/avatar/2")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn avatar_delete_is_idempotent() {
+    let store = Arc::new(RecordingAvatarStore::accepting());
+    let users = vec![user(1, "member@example.com", Role::Member)
+        .with_avatar(Some(identity_domain::AvatarRef::Webp))];
+    let router = seeded_app_with(users, store);
+    let delete = || {
+        let mut request = Request::delete("/identity/me/avatar")
+            .header("origin", "https://medioss.example")
+            .body(Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+        request
+    };
+
+    let response = router.clone().oneshot(delete()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    let response = router.oneshot(delete()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn me_and_users_list_expose_profile_fields() {
+    let users = vec![
+        user(1, "admin@example.com", Role::Admin),
+        user(2, "member@example.com", Role::Member)
+            .with_display_name(Some(identity_domain::DisplayName::parse("Ada").unwrap()))
+            .with_avatar(Some(identity_domain::AvatarRef::Webp)),
+    ];
+    let router = seeded_app(users);
+
+    let mut request = Request::get("/identity/users").body(Body::empty()).unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Admin));
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let listed: Vec<serde_json::Value> = serde_json::from_slice(&body).unwrap();
+    assert_eq!(listed[1]["display_name"], "Ada");
+    assert_eq!(listed[1]["has_avatar"], true);
+    assert_eq!(listed[0]["display_name"], serde_json::Value::Null);
+    assert_eq!(listed[0]["has_avatar"], false);
 }

@@ -20,6 +20,8 @@ pub enum IdentityError {
     LoginThrottled { retry_after: Duration },
     #[error("initial setup has already been completed")]
     SetupAlreadyCompleted,
+    #[error("profile payload is invalid")]
+    InvalidProfile,
     #[error("credential state is invalid")]
     InvalidCredentialState,
     #[error("login throttle state is invalid")]

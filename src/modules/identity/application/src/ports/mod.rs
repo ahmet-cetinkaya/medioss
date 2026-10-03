@@ -1,3 +1,4 @@
+mod avatar_store;
 mod clock;
 mod credential_change;
 mod initial_admin_registration;
@@ -9,6 +10,7 @@ mod password_hasher_error;
 mod repository_error;
 mod user_repository;
 
+pub use avatar_store::{AvatarStore, AvatarStoreError};
 pub use clock::Clock;
 pub use credential_change::CredentialChange;
 pub use initial_admin_registration::InitialAdminRegistration;

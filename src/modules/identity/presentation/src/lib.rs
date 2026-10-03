@@ -1,3 +1,4 @@
+pub mod profile;
 pub mod router;
 pub mod session_keys;
 pub mod users_lifecycle;

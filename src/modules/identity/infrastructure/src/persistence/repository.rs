@@ -4,7 +4,7 @@ use identity_application::ports::{
     CredentialChange, InitialAdminRegistration, LoginThrottleRepository, MemberRegistration,
     RepositoryError, UserRepository,
 };
-use identity_domain::{Email, FailedAttempts, PasswordHash, Role, User};
+use identity_domain::{AvatarRef, DisplayName, Email, FailedAttempts, PasswordHash, Role, User};
 use kernel::UserId;
 use sea_orm::{
     sea_query::Expr, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
@@ -72,6 +72,16 @@ fn restore_user(model: users::Model) -> Result<User, RepositoryError> {
         must_change,
         expires,
         model.disabled,
+        model
+            .display_name
+            .map(|value| DisplayName::parse(value).map_err(|_| RepositoryError::OperationFailed))
+            .transpose()?,
+        match model.avatar_ext.as_deref() {
+            Some(raw) => {
+                Some(AvatarRef::from_extension(raw).map_err(|_| RepositoryError::OperationFailed)?)
+            }
+            None => None,
+        },
     )
     .map_err(|_| RepositoryError::OperationFailed)
 }
@@ -86,6 +96,8 @@ fn insert_model(user: &User, email_raw: &str) -> users::ActiveModel {
         auth_version: Set(i64::try_from(user.auth_version()).unwrap_or_default()),
         password_expires_at: Set(user.password_expires_at().map(|value| to_rfc3339(&value))),
         disabled: Set(user.is_disabled()),
+        display_name: Set(user.display_name().map(|name| name.as_str().to_owned())),
+        avatar_ext: Set(user.avatar().map(|avatar| avatar.extension().to_owned())),
         created_at: Set(to_rfc3339(&user.created_at())),
         ..Default::default()
     }
@@ -210,6 +222,31 @@ impl UserRepository for SeaOrmUserRepository {
             return Err(RepositoryError::UserNotFound);
         }
         Ok(())
+    }
+
+    async fn set_profile(
+        &self,
+        id: UserId,
+        display_name: Option<DisplayName>,
+        avatar_ext: Option<AvatarRef>,
+    ) -> Result<User, RepositoryError> {
+        let existing = users::Entity::find_by_id(id.value())
+            .one(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?
+            .ok_or(RepositoryError::UserNotFound)?;
+
+        let mut model: users::ActiveModel = existing.into();
+        model.display_name = Set(display_name.map(|name| name.as_str().to_owned()));
+        model.avatar_ext = Set(avatar_ext.map(|avatar| avatar.extension().to_owned()));
+        model
+            .update(&self.db)
+            .await
+            .map_err(|_| RepositoryError::OperationFailed)?;
+
+        self.find_by_id(id)
+            .await?
+            .ok_or(RepositoryError::UserNotFound)
     }
 
     async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError> {

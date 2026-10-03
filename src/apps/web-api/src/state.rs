@@ -47,6 +47,7 @@ impl AppState {
         repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
         hasher: identity_infrastructure::BoundedArgon2PasswordHasher,
         deletion: Arc<dyn identity_presentation::UserDeletionListener>,
+        avatar_store: Arc<crate::avatar_store::FileAvatarStore>,
     ) -> Self {
         let dummy_password_hash = hasher.dummy_password_hash();
         let identity_dependencies: SharedDependencies<
@@ -63,6 +64,7 @@ impl AppState {
             session_secret: Arc::new(config.session_secret.expose().to_owned()),
             medioss_origin: Arc::new(config.medioss_origin.clone()),
             deletion,
+            avatar_store,
         });
         Self {
             config,

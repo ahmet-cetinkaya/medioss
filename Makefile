@@ -2,53 +2,85 @@
 DATA_DIR ?= $(CURDIR)/.data
 UI_DIR := src/apps/web-ui
 STATIC_DIR := src/apps/web-api/static
+UI_SETUP := cd $(UI_DIR) && bun install --frozen-lockfile
+PRETTIER := bunx --bun --package prettier --package prettier-plugin-svelte prettier
 
 # `cargo fmt`/`cargo clippy` ship with rustup on CI runners but are separate
 # packages on Nix, so run them directly when present and pull them in otherwise.
 # $(1) = cargo subcommand line, $(2) = package providing it
 cargo-gate = if cargo $(firstword $(1)) --version >/dev/null 2>&1; then cargo $(1); else nix-shell -p $(2) --run "cargo $(1)"; fi
 
-.PHONY: format ui build run dev up down logs test
+.PHONY: help format build-ui build-service build dev-ui dev-service dev run lint test docker-build up down restart logs clean
 
-# Format all supported files in-place
-# The pattern stays quoted so prettier expands `**` itself; /bin/sh has no
-# globstar and would silently degrade it to `*/*.md`, skipping README.md.
+help:
+	@printf '%s\n' \
+		'make format         Format Rust, Astro, Svelte, TypeScript, CSS, and Markdown' \
+		'make dev            Run Astro and Axum with hot reload' \
+		'make build          Build the frontend and release Rust binary' \
+		'make lint           Check formatting, frontend files, Clippy, and boundaries' \
+		'make test           Run frontend and workspace Rust tests' \
+		'make docker-build   Build the production Docker image' \
+		'make docker-up      Build and start the Docker Compose service' \
+		'make docker-down    Stop and remove Docker Compose containers' \
+		'make docker-restart Restart the Docker Compose service' \
+		'make docker-logs    Follow Docker Compose logs'
+
 format:
-	prettier --write '**/*.md'
+	$(UI_SETUP) && $(PRETTIER) --write '**/*.{astro,svelte,ts,tsx,css,md}'
 	@$(call cargo-gate,fmt --all,rustfmt)
 
-# Build the Astro bundle into the API's static directory
-ui:
-	cd $(UI_DIR) && { [ -d node_modules ] || npm ci; } && npm run build
+build-ui:
+	$(UI_SETUP) && bun run build
 	rm -rf $(STATIC_DIR)
 	mkdir -p $(STATIC_DIR)
 	cp -r $(UI_DIR)/dist/. $(STATIC_DIR)/
 
-# Build the release binary with the UI bundle baked into static/
-build: ui
-	cargo build --release
+build-service:
+	cargo build --release --workspace
 
-# Start the whole app locally from one process (http://localhost:3000)
-run: ui
+build: build-ui build-service
+
+# Run both servers in one terminal; Ctrl-C stops both processes.
+dev-ui:
+	$(UI_SETUP) && bun run dev
+
+dev-service:
+	@if command -v cargo-watch >/dev/null 2>&1; then \
+		MEDIOSS_DATA_DIR=$(DATA_DIR) cargo watch -x 'run -p web-api'; \
+	else \
+		MEDIOSS_DATA_DIR=$(DATA_DIR) nix-shell -p cargo-watch --run "cargo watch -x 'run -p web-api'"; \
+	fi
+
+dev:
+	@trap 'kill 0' INT TERM EXIT; \
+		$(MAKE) dev-ui & \
+		$(MAKE) dev-service & \
+		wait
+
+run: build
 	MEDIOSS_DATA_DIR=$(DATA_DIR) cargo run -p web-api
 
-# Frontend dev server with hot reload; run `make run` alongside it for the API
-dev:
-	cd $(UI_DIR) && { [ -d node_modules ] || npm ci; } && npm run dev
-
-# Start the app in Docker exactly as deployed (http://localhost:3000)
-up:
-	docker compose up -d --build
-
-down:
-	docker compose down
-
-logs:
-	docker compose logs -f
-
-# Run the same gates as CI, in the same order
-test:
+lint:
+	$(UI_SETUP) && $(PRETTIER) --check '**/*.{astro,svelte,ts,tsx,css,md}'
 	@$(call cargo-gate,fmt --all --check,rustfmt)
 	@$(call cargo-gate,clippy --workspace --all-targets -- -D warnings,clippy)
+	./scripts/check-boundaries.sh
+
+test:
+	$(UI_SETUP) && bun test
 	cargo test --workspace
-	./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
+	./scripts/check-boundaries.sh --self-test
+
+docker-build:
+	docker compose build
+docker-up:
+	docker compose up -d --build
+docker-down:
+	docker compose down
+docker-restart:
+	docker compose up -d --build --force-recreate
+docker-logs:
+	docker compose logs -f
+
+clean:
+	rm -rf target $(STATIC_DIR) $(UI_DIR)/dist
