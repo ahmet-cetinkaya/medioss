@@ -18,8 +18,6 @@ impl MigrationTrait for Migration {
                     auth_version INTEGER NOT NULL DEFAULT 0,
                     password_expires_at TEXT NULL,
                     disabled INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
-                    display_name TEXT NULL,
-                    avatar_ext TEXT NULL CHECK (avatar_ext IN ('webp', 'png')),
                     created_at TEXT NOT NULL,
                     UNIQUE (email)
                 );",

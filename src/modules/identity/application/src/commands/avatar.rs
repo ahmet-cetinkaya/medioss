@@ -25,15 +25,19 @@ pub async fn replace_avatar(
         .ok_or(ApplicationError::UserNotFound)?;
     let previous = user.avatar();
 
-    let updated = repository
-        .set_profile(actor.user_id(), user.display_name().cloned(), Some(avatar))
-        .await
-        .map_err(ApplicationError::from)?;
-
     store
         .write(actor.user_id(), avatar, &encoded)
         .await
         .map_err(|_| ApplicationError::Repository)?;
+    let updated = repository
+        .set_profile(actor.user_id(), user.display_name().cloned(), Some(avatar))
+        .await;
+    if let Err(error) = updated {
+        let _ = store.remove(actor.user_id(), avatar).await;
+        return Err(ApplicationError::from(error));
+    }
+    let updated = updated?;
+
     if let Some(previous) = previous.filter(|previous| *previous != avatar) {
         let _ = store.remove(actor.user_id(), previous).await;
     }

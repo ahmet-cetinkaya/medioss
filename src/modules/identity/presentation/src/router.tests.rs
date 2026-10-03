@@ -1009,6 +1009,31 @@ async fn avatar_upload_normalizes_persists_and_replaces() {
 }
 
 #[tokio::test]
+async fn avatar_upload_rejects_wrong_or_missing_multipart_field_with_400() {
+    let store = Arc::new(RecordingAvatarStore::accepting());
+    let router = seeded_app_with(
+        vec![user(1, "member@example.com", Role::Member)],
+        store.clone(),
+    );
+
+    for field in ["name=\"not_file\"", "filename=\"a\""] {
+        let mut request = Request::put("/identity/me/avatar")
+            .header("origin", "https://medioss.example")
+            .header("content-type", "multipart/form-data; boundary=b")
+            .body(Body::from(format!(
+                "--b\r\ncontent-disposition: form-data; {field}\r\n\r\nimg\r\n--b--\r\n"
+            )))
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+        let response = router.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "field: {field}");
+    }
+    assert!(store.written.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
 async fn avatar_upload_rejects_invalid_payloads_without_writing() {
     let store = Arc::new(RecordingAvatarStore {
         normalize_result: std::sync::Mutex::new(Err(

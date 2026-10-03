@@ -77,9 +77,9 @@ where
         .map_err(|_| ApiError::from(ApplicationError::PayloadTooLarge))?
     {
         if field.name() != Some("file") {
-            return Err(ApiError::from(
-                identity_application::ApplicationError::Repository,
-            ));
+            return Err(ApiError::from(ApplicationError::InvalidInput(
+                identity_domain::IdentityError::InvalidProfile,
+            )));
         }
         let mut buffer = Vec::new();
         while let Some(chunk) = field
@@ -95,7 +95,11 @@ where
         bytes = Some(buffer);
     }
 
-    let bytes = bytes.ok_or(ApiError::from(ApplicationError::Repository))?;
+    let bytes = bytes.ok_or_else(|| {
+        ApiError::from(ApplicationError::InvalidInput(
+            identity_domain::IdentityError::InvalidProfile,
+        ))
+    })?;
     replace_avatar(
         dependencies.repository.as_ref(),
         dependencies.avatar_store.as_ref(),

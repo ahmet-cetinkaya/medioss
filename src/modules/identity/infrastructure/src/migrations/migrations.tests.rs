@@ -91,7 +91,13 @@ async fn migration_is_idempotent_and_uses_a_globally_namespaced_history_entry() 
             .fetch_all(&database.pool)
             .await
             .unwrap();
-    assert_eq!(applied, ["m20260908_000001_identity_create_schema"]);
+    assert_eq!(
+        applied,
+        [
+            "m20260908_000001_identity_create_schema",
+            "m20261002_000001_identity_profile_columns",
+        ]
+    );
 }
 
 #[tokio::test]

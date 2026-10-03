@@ -17,8 +17,10 @@
 	let role = $state<string | null>(null);
 	let ready = $state(false);
 	let displayName = $state<string | null>(null);
+	let email = $state<string | null>(null);
 	let hasAvatar = $state(false);
 	let myId = $state<number | null>(null);
+	let avatarCacheTag = $state(Date.now());
 	let continueProgram = $state<ContinueProgram | null>(null);
 	let dailySuggestion = $state<Meditation | null>(null);
 	let recentPrograms = $state<RecentProgram[]>([]);
@@ -29,6 +31,7 @@
 			myId = me.id;
 			role = me.role;
 			displayName = me.display_name;
+			email = me.email;
 			hasAvatar = me.has_avatar;
 		} catch {
 			window.location.assign("/login");
@@ -58,10 +61,14 @@
 	<main class="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-6">
 		<div class="flex items-center gap-3">
 			{#if hasAvatar}
-				<img src={`/api/identity/avatar/${myId}`} alt="Avatar" class="h-12 w-12 rounded-full object-cover" />
+				<img
+					src={`/api/identity/avatar/${myId}?v=${avatarCacheTag}`}
+					alt="Avatar"
+					class="h-12 w-12 rounded-full object-cover"
+				/>
 			{:else}
 				<div class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-medium">
-					{(displayName ?? "").charAt(0).toLocaleUpperCase("tr")}
+					{(displayName ?? email ?? "?").charAt(0).toLocaleUpperCase("tr")}
 				</div>
 			{/if}
 			<div class="grid">

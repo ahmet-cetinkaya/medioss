@@ -34,13 +34,16 @@ impl AvatarStore for FileAvatarStore {
             return Err(AvatarStoreError::InvalidPayload);
         }
 
-        let loaded = image::load_from_memory_with_format(&bytes, format)
-            .map_err(|_| AvatarStoreError::InvalidPayload)?;
-        let square = center_square(loaded).resize_to_fill(
-            MAX_AVATAR_DIMENSION,
-            MAX_AVATAR_DIMENSION,
-            image::imageops::FilterType::Lanczos3,
-        );
+        let loaded = decode_with_limits(&bytes, format)?;
+        let square = tokio::task::spawn_blocking(move || {
+            center_square(loaded).resize_to_fill(
+                MAX_AVATAR_DIMENSION,
+                MAX_AVATAR_DIMENSION,
+                image::imageops::FilterType::Lanczos3,
+            )
+        })
+        .await
+        .map_err(|_| AvatarStoreError::Storage)?;
 
         let mut webp = Vec::new();
         if square
@@ -99,12 +102,39 @@ fn center_square(image: image::DynamicImage) -> image::DynamicImage {
     image.crop_imm((width - side) / 2, (height - side) / 2, side, side)
 }
 
+const MAX_DECODE_DIMENSION: u32 = 8192;
+const MAX_DECODE_ALLOC: u64 = 128 * 1024 * 1024;
+
+fn decode_with_limits(
+    bytes: &[u8],
+    format: image::ImageFormat,
+) -> Result<image::DynamicImage, AvatarStoreError> {
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|_| AvatarStoreError::InvalidPayload)?;
+    if reader.format() != Some(format) {
+        return Err(AvatarStoreError::InvalidPayload);
+    }
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_DECODE_DIMENSION);
+    limits.max_image_height = Some(MAX_DECODE_DIMENSION);
+    limits.max_alloc = Some(MAX_DECODE_ALLOC);
+    reader.limits(limits);
+    reader
+        .decode()
+        .map_err(|_| AvatarStoreError::InvalidPayload)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn png_bytes(width: u32, height: u32) -> Vec<u8> {
-        let image = image::DynamicImage::new_rgb8(width, height);
+        let image = if width * height > 1_000_000 {
+            image::DynamicImage::new_luma8(width, height)
+        } else {
+            image::DynamicImage::new_rgb8(width, height)
+        };
         let mut bytes = Vec::new();
         image
             .write_to(
@@ -146,6 +176,15 @@ mod tests {
                 .normalize(vec![0x89, 0x50, 0x4E, 0x47, 0x00, 0x00, 0x00])
                 .await
                 .unwrap_err(),
+            AvatarStoreError::InvalidPayload
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_dimension_bombs_before_allocating() {
+        let bomb = png_bytes(9_000, 9_000);
+        assert_eq!(
+            store().normalize(bomb).await.unwrap_err(),
             AvatarStoreError::InvalidPayload
         );
     }
