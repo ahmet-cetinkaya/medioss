@@ -7,15 +7,18 @@
 	import {
 		createNote,
 		deleteNote,
+		fetchMeditation,
 		fetchNotes,
 		fetchPlaybackState,
 		postCompletion,
 		postPosition,
 		putCompleted,
+		type Meditation,
 		type Note,
 	} from "$lib/api/meditation";
 
 	let meditationId = $state<number | null>(null);
+	let meditation = $state<Meditation | null>(null);
 	let audio: HTMLAudioElement | undefined = $state();
 	let error = $state("");
 	let notes = $state<Note[]>([]);
@@ -42,7 +45,8 @@
 		meditationId = id;
 		document.addEventListener("pagehide", flushOnHide);
 		try {
-			const state = await fetchPlaybackState(id);
+			const [state, meta] = await Promise.all([fetchPlaybackState(id), fetchMeditation(id)]);
+			meditation = meta;
 			completed = state.completed;
 			notes = await fetchNotes(id);
 			// Resume from the stored position; a completed meditation starts
@@ -95,6 +99,7 @@
 
 	function onPlay() {
 		if (startedAt === null) startedAt = new Date().toISOString();
+		syncMediaSessionState();
 	}
 
 	// Final position flush on tab close: sendBeacon carries the last position
@@ -111,6 +116,40 @@
 	function setRate(next: number) {
 		speed = next;
 		if (audio) audio.playbackRate = next;
+	}
+
+	function syncMediaSessionState() {
+		if (typeof navigator === "undefined" || !("mediaSession" in navigator) || !audio) return;
+		navigator.mediaSession.playbackState = audio.paused ? "paused" : "playing";
+	}
+
+	function setupMediaSession() {
+		if (typeof navigator === "undefined" || !("mediaSession" in navigator) || !audio) return;
+		if (meditation) {
+			navigator.mediaSession.metadata = new MediaMetadata({
+				title: meditation.name,
+			});
+		}
+		navigator.mediaSession.setActionHandler("play", () => void audio!.play());
+		navigator.mediaSession.setActionHandler("pause", () => audio!.pause());
+		navigator.mediaSession.setActionHandler("seekbackward", () => {
+			audio!.currentTime = Math.max(0, audio!.currentTime - 10);
+		});
+		navigator.mediaSession.setActionHandler("seekforward", () => {
+			audio!.currentTime = Math.min(audio!.duration || 0, audio!.currentTime + 10);
+		});
+		navigator.mediaSession.setActionHandler("seekto", (details) => {
+			if (details.seekTime !== undefined && audio!.duration) {
+				audio!.currentTime = Math.min(details.seekTime, audio!.duration);
+			}
+		});
+		navigator.mediaSession.setActionHandler("stop", () => {
+			audio!.pause();
+			audio!.currentTime = 0;
+			syncMediaSessionState();
+		});
+		navigator.mediaSession.setActionHandler("previoustrack", () => {});
+		navigator.mediaSession.setActionHandler("nexttrack", () => {});
 	}
 
 	async function toggleCompleted() {
@@ -169,9 +208,13 @@
 			controls
 			class="w-full"
 			ontimeupdate={onTimeUpdate}
-			onpause={onPause}
+			onpause={() => {
+				onPause();
+				syncMediaSessionState();
+			}}
 			onended={onEnded}
 			onplay={onPlay}
+			onloadedmetadata={setupMediaSession}
 		></audio>
 
 		<div class="mt-4 flex flex-wrap items-center gap-2">

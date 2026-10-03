@@ -1,11 +1,10 @@
-use crate::ports::{MembershipRepository, PlaybackStateRepository, Program, ProgramRepository};
+mod continue_program;
+
+use crate::ports::{MembershipRepository, PlaybackStateRepository, ProgramRepository};
 use crate::ApplicationError;
 use kernel::UserId;
 
-pub struct ContinueProgram {
-    pub program: Program,
-    pub meditation_id: i64,
-}
+pub use self::continue_program::ContinueProgram;
 
 pub async fn get_continue_program<K, M, P>(
     playback: &K,

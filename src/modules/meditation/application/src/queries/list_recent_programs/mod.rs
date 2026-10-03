@@ -1,16 +1,11 @@
-//! "Recently experienced" programs: the caller's touched meditations,
-//! deduped to their home program, most recent first.
-use crate::ports::{MembershipRepository, PlaybackStateRepository, Program, ProgramRepository};
+mod recent_program;
+
+use crate::ports::{MembershipRepository, PlaybackStateRepository, ProgramRepository};
 use crate::ApplicationError;
-use chrono::{DateTime, Utc};
+
 use kernel::UserId;
 
-pub struct RecentProgram {
-    pub program: Program,
-    /// When the caller most recently touched this program \u2014 feeds the
-    /// history timeline's date grouping.
-    pub last_touched_at: DateTime<Utc>,
-}
+pub use self::recent_program::RecentProgram;
 
 pub async fn list_recent_programs<K, M, P>(
     playback: &K,

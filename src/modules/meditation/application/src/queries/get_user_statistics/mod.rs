@@ -1,3 +1,7 @@
+mod statistics_day;
+mod statistics_range;
+mod user_statistics;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Duration, FixedOffset, NaiveDate, Utc};
@@ -5,27 +9,9 @@ use kernel::UserId;
 
 use crate::{ports::SessionRepository, ApplicationError};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StatisticsRange {
-    Today,
-    Last30Days,
-    AllTime,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StatisticsDay {
-    pub date: NaiveDate,
-    pub minutes: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UserStatistics {
-    pub total_minutes: i64,
-    pub total_days: i64,
-    pub current_streak: i64,
-    pub longest_streak: i64,
-    pub calendar: Vec<StatisticsDay>,
-}
+pub use self::statistics_day::StatisticsDay;
+pub use self::statistics_range::StatisticsRange;
+pub use self::user_statistics::UserStatistics;
 
 pub async fn get_user_statistics<R>(
     sessions: &R,
