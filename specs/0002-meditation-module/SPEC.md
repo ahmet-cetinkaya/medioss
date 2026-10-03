@@ -150,6 +150,26 @@ Each user's home page surfaces three personal entry points into the shared libra
 - Given the history page, when it renders the full recently-experienced list, then entries are grouped into a vertical timeline by the calendar day they were last touched, newest day first, each entry showing the program's cover, title, description, progress, and the local time of the touch.
 - Given a program surfaced by any of these three sections, when it is rendered, then it shows the same progress percentage or completed indicator every other program surface shows — never omitted.
 
+### US13 — Member finds a meditation by typing (Priority: P1)
+
+A signed-in user on the library page types into a search box; the list narrows to meditations whose own name matches, or which belong to a program or category whose name matches, case-insensitively and diacritics-insensitively for the Turkish alphabet. An empty query returns the full library.
+
+**Independent test:** with a library containing "Sabah Nefesi", a program "Odak" and a category "Uyku", the queries `nefes`, `SABAH`, `odak`, `uyku` each surface the right meditations; `xyzzy` returns an empty list rendered as an empty state, not an error.
+
+- Given an authenticated user on the library page, when they submit a non-empty query, then only meditations matching the query in their own name, their program's name, or their category's name are shown.
+- Given an authenticated user, when they clear the query, then the full library returns unchanged.
+- Given an authenticated user, when their query matches nothing, then an explicit empty state is shown — not an error.
+
+### US14 — Hardware media keys control playback (Priority: P1)
+
+A member starts a meditation on a device whose OS exposes media controls (hardware play/pause key, lock-screen widget, Bluetooth headset button). Play, pause, seek, and stop operate the active meditation player; the OS surface shows the meditation's name and program. On a browser without Media Session support, everything works exactly as today.
+
+**Independent test:** in a supported browser, starting playback populates the OS media surface (title = meditation name); `navigator.mediaSession.playbackState` reflects play/pause; `previoustrack`/`nexttrack` do nothing (explicit no-op handlers); without support, the player behaves identically to today.
+
+- Given a supported browser and an active meditation, when playback starts or pauses, then the OS media surface reflects the state and its play/pause control drives the player.
+- Given a supported browser and an active meditation, when the user seeks or stops from the OS surface, then the player seeks to that position or returns to idle.
+- Given an unsupported browser, when the user uses the player, then behavior is byte-for-byte today's (FR-015..FR-021 unchanged).
+
 ## Requirements
 
 ### ADDED
@@ -201,6 +221,14 @@ Each user's home page surfaces three personal entry points into the shared libra
 - FR-045: WHEN a user's recently-experienced programs are listed THE SYSTEM SHALL return their distinct touched programs ordered by most recent touch, each program appearing once at its most recent touch, honoring an optional result-count limit for the home page's 5-item strip versus the unlimited history page.
 - FR-046: WHEN the history page renders a user's recently-experienced programs THE SYSTEM SHALL group them into a timeline by the calendar day each was last touched, newest day first, entries within a day ordered newest touch first.
 
+- FR-047: WHEN an authenticated user requests the library with a non-empty `q` parameter THE SYSTEM SHALL return only meditations whose own name, program name, or category name contains every whitespace-separated term of `q`, matched case-insensitively and diacritics-insensitively for the Turkish alphabet (substring semantics; no FTS engine).
+- FR-048: WHEN an authenticated user requests the library with an absent, empty, or whitespace-only `q` parameter THE SYSTEM SHALL return the full library exactly as FR-007 does today.
+- FR-049: WHEN a search query matches no meditation THE SYSTEM SHALL return an empty list (HTTP 200), never an error.
+- FR-050: WHEN playback starts, pauses, or stops on a browser with Media Session support THE SYSTEM SHALL update `navigator.mediaSession.playbackState` accordingly and attach play/pause/seekbackward/seekforward/seekto/stop action handlers that drive the active meditation player.
+- FR-051: WHEN a meditation becomes the active track on a browser with Media Session support THE SYSTEM SHALL set the session's metadata to the meditation's name and its program's name.
+- FR-052: WHEN the browser lacks Media Session support THE SYSTEM SHALL leave all current player behavior untouched and raise no error.
+- FR-053: WHEN `previoustrack` or `nexttrack` controls fire THE SYSTEM SHALL treat them as no-ops (single-track player; explicit no-op handlers prevent OS fallback behavior).
+
 ### PRESERVED
 
 - PB-1: The identity capability keeps behaving exactly as specified in specs/0001-identity-module: setup, login with throttling, session lifecycle, password change, and admin user creation keep their E2E suite green after meditation routes are mounted alongside them.
@@ -230,6 +258,9 @@ Each user's home page surfaces three personal entry points into the shared libra
 - SC-019: After playing a meditation partway, the home page's "Continue program" names the program it first belongs to and links to it; a user who has never played anything sees no such section.
 - SC-020: Calling the daily-suggestion endpoint twice on the same date returns the identical meditation both times; calling it against an empty library returns no content.
 - SC-021: After touching meditations across six distinct programs, the home page's "recently experienced" strip shows exactly 5 most-recently-touched programs and a link to the history page, which shows all 6 grouped into a timeline by calendar day, newest first.
+- SC-022: Route test: with 120 seeded meditations (names covering plain, uppercase, Turkish-diacritic, and program/category-name-only matches), `q=sabah` returns exactly the meditations whose own/program/category name matches case- and diacritic-insensitively; `q=` and absent `q` return all 120; `q=xyzzy` returns `[]` with 200; `q=  ` (whitespace-only) returns all 120.
+- SC-023: Manual QA on a real device: hardware play/pause key and lock-screen control start/pause the active meditation; the OS surface shows the meditation and program name; seek from the OS surface moves playback.
+- SC-024: The existing player suite passes unchanged (position, completion, speed) — the Media Session integration adds no regression.
 
 - An upload with a missing or nonexistent `program_id` — rejected with 400 before anything is stored (US1).
 - Joining a second, third, etc. program for an already-uploaded meditation — adds only a membership row; the stored file stays under its first program's folder (US7).
@@ -238,6 +269,9 @@ Each user's home page surfaces three personal entry points into the shared libra
 
 ## Edge Cases
 
+- Multi-term search queries: every whitespace-separated term must match somewhere across the meditation's own name, its program names, or its category names — "sabah nefes" matches an item containing both terms, not either alone (FR-047).
+- Turkish casing in search: "İZMİR" matches "izmir"; dotless ı folds to i (FR-047).
+- Media Session seek clamps to the audio's duration, as the in-player seek does today (FR-050).
 - Upload aborted by the client mid-body → no partial record, no orphan bytes (with FR-003's abort path).
 - Declared Content-Length smaller than the actual body → mid-stream cap enforcement rejects (FR-003).
 - Upload of exactly 100MB → accepted; the cap is inclusive (FR-001).
@@ -260,6 +294,8 @@ Each user's home page surfaces three personal entry points into the shared libra
 
 ## Assumptions
 
+- Library search is server-side over already-joined names (no FTS engine, no new index); substring semantics per FR-047 suffice at 100–1000 items (user decision 2026-10-03: substring matching, server-side filtering).
+- Media Session integration is web-player-only; native wrappers are out of scope.
 - Content management (upload, meditation delete, program and category CRUD) is restricted to the admin role; regular users read the shared library and manage only their own practice data. Per-user uploads arrive in a later milestone.
 - Accepted upload types are MP3, WAV, and OGG, validated from the actual bytes (format/container signature), per the PRD; the 100MB per-file cap comes from the PRD and applies to the uploaded original (the converted Opus is naturally smaller).
 - Opus is a lossy codec: "without quality loss" is implemented as transparent-quality encoding (inaudible in listening). WAV sources get a transparent encode; MP3/Vorbis sources necessarily take one additional lossy generation, kept inaudible by a high-quality setting. The exact encoder settings are a plan concern.
@@ -293,7 +329,7 @@ Each user's home page surfaces three personal entry points into the shared libra
 - Reordering program members manually (drag-and-drop) — later milestone.
 - More than one category per program, or categories on meditations themselves (categories apply to programs only).
 - Editing meditation names after upload, editing audio files — not in roadmap M2.
-- Search and filtering, streak counting, total-time statistics, calendar view (M7). A recently-experienced timeline ("History") and per-meditation progress percentages shipped ahead of schedule and are covered by US12/FR-041..046.
+- Streak counting, total-time statistics, calendar view (M7, new numbering = M10+ candidates). Search shipped as US13/FR-047..049; a recently-experienced timeline ("History") and per-meditation progress percentages are covered by US12/FR-041..046.
 - Sleep timer and fade-out (M3/M7).
 - Auto-play next in program (M7).
 - Offline/PWA access to media (M8).

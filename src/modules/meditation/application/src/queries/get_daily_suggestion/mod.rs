@@ -1,18 +1,11 @@
-//! Picks "today's" suggested meditation: the same pick for every user all
-//! day, deterministic from the date so it does not need its own storage.
-use crate::ports::{Clock, MeditationRepository, MembershipRepository, Program, ProgramRepository};
+mod daily_suggestion;
+
+use crate::ports::{Clock, MeditationRepository, MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 use chrono::Datelike;
 
-pub struct DailySuggestion {
-    pub meditation: meditation_domain::Meditation,
-    /// The meditation's home program, when it belongs to one — used to
-    /// borrow a cover image for the suggestion card.
-    pub program: Option<Program>,
-}
+pub use self::daily_suggestion::DailySuggestion;
 
-/// Returns the day's suggested meditation, or `None` when the library is
-/// empty.
 pub async fn get_daily_suggestion<R, C, M, P>(
     repository: &R,
     clock: &C,

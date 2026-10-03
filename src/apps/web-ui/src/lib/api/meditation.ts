@@ -85,8 +85,15 @@ export function fetchStatistics(
   );
 }
 
-export async function fetchLibrary(): Promise<Meditation[]> {
-  return request<Meditation[]>("/api/meditation/library");
+export async function fetchMeditation(id: number): Promise<Meditation> {
+	return request<Meditation>(`/api/meditation/${id}`);
+}
+
+export async function fetchLibrary(query?: string): Promise<Meditation[]> {
+  const q = query?.trim();
+  return request<Meditation[]>(
+    `/api/meditation/library${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+  );
 }
 
 export async function fetchPrograms(): Promise<Program[]> {

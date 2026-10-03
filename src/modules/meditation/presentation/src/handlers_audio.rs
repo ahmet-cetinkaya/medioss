@@ -144,13 +144,31 @@ pub async fn upload(
 }
 
 /// `GET /meditation/library` — the shared library, newest first.
+#[derive(serde::Deserialize)]
+pub struct LibraryQuery {
+    pub q: Option<String>,
+}
+
+const MAX_QUERY_CHARS: usize = 200;
+
 pub async fn library(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
+    axum::extract::Query(query): axum::extract::Query<LibraryQuery>,
 ) -> Result<Json<Vec<MeditationResponse>>, ApiError> {
-    let listed = queries::list_library(deps.meditations.as_ref())
-        .await
-        .map_err(ApiError::Application)?;
+    let q = query.q.as_deref();
+    if q.is_some_and(|q| q.chars().count() > MAX_QUERY_CHARS) {
+        return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST));
+    }
+    let listed = queries::list_library(
+        deps.meditations.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
+        deps.categories.as_ref(),
+        q,
+    )
+    .await
+    .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
     for meditation in &listed {
         responses.push(with_playback(deps.playback.as_ref(), actor.user_id(), meditation).await);

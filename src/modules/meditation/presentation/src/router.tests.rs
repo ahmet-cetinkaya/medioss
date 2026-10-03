@@ -192,6 +192,148 @@ async fn json_body(
     .await
 }
 
+async fn seed_search_library(app: &TestApp) {
+    use meditation_application::ports::{
+        CategoryRepository, MeditationRepository, MembershipRepository, ProgramRepository,
+    };
+    let meditations = FakeMeditationRepository(app.state.clone());
+    let programs = FakeProgramRepository(app.state.clone());
+    let categories = FakeCategoryRepository(app.state.clone());
+    let memberships = FakeMembershipRepository(app.state.clone());
+    let now = Utc::now();
+    for i in 0..120 {
+        let name = match i % 6 {
+            0 => "Morning Breathing",
+            1 => "Café Quietude",
+            2 => "Evening Calm",
+            3 => "Dreamscape",
+            4 => "Breathing Exercise",
+            _ => "Forest Walk",
+        };
+        meditations
+            .insert(
+                name.to_owned(),
+                "audio/ogg",
+                1000,
+                format!("k/{name}/{i}"),
+                1000,
+                now,
+            )
+            .await
+            .unwrap();
+    }
+    let focus = programs
+        .insert("Focus Program".to_owned(), None, now)
+        .await
+        .unwrap()
+        .id;
+    let sleep = categories.insert("Sleep".to_owned(), now).await.unwrap();
+    let home = programs
+        .insert("Home Collection".to_owned(), None, now)
+        .await
+        .unwrap()
+        .id;
+    programs.set_category(home, Some(sleep.id)).await.unwrap();
+    memberships.add(focus, 3, now).await.unwrap();
+    memberships.add(home, 5, now).await.unwrap();
+}
+
+async fn library_q(app: &TestApp, query: &str) -> Vec<serde_json::Value> {
+    let (status, _, body) = call(
+        app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/library{query}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    serde_json::from_slice(&body).unwrap()
+}
+
+#[tokio::test]
+async fn library_search_filters_by_name_program_and_category() {
+    let app = app();
+    seed_search_library(&app).await;
+
+    let ids: Vec<i64> = library_q(&app, "?q=focus")
+        .await
+        .iter()
+        .filter_map(|item| item["id"].as_i64())
+        .collect();
+    assert_eq!(ids, vec![3]);
+
+    let ids: Vec<i64> = library_q(&app, "?q=SLEEP")
+        .await
+        .iter()
+        .filter_map(|item| item["id"].as_i64())
+        .collect();
+    assert_eq!(ids, vec![5]);
+
+    let names: Vec<String> = library_q(&app, "?q=morning")
+        .await
+        .iter()
+        .filter_map(|item| item["name"].as_str().map(str::to_owned))
+        .collect();
+    assert_eq!(names.len(), 20);
+    assert!(names.iter().all(|name| name == "Morning Breathing"));
+
+    let cafe: Vec<String> = library_q(&app, "?q=cafe%20quietude")
+        .await
+        .iter()
+        .filter_map(|item| item["name"].as_str().map(str::to_owned))
+        .collect();
+    assert_eq!(cafe.len(), 20);
+}
+
+#[tokio::test]
+async fn library_search_blank_or_absent_q_returns_everything() {
+    let app = app();
+    seed_search_library(&app).await;
+    for query in ["", "?q=", "?q=%20%20"] {
+        let listed = library_q(&app, query).await;
+        assert_eq!(listed.len(), 120, "query: {query}");
+    }
+}
+
+#[tokio::test]
+async fn library_search_rejects_overlong_query_with_400() {
+    let app = app();
+    seed_search_library(&app).await;
+    let long = "a".repeat(201);
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/library?q={long}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let exact = "a".repeat(200);
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/library?q={exact}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn library_search_no_match_returns_empty_list() {
+    let app = app();
+    seed_search_library(&app).await;
+    let listed = library_q(&app, "?q=xyzzy").await;
+    assert!(listed.is_empty());
+}
+
 async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditation {
     // A ready Ogg-Opus-shaped blob the fakes accept.
     let mut bytes = b"OggS".to_vec();

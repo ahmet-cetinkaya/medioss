@@ -4,15 +4,33 @@
 	import * as Card from "$lib/components/ui/card";
 	import {
 		fetchCategories,
+		fetchLibrary,
 		fetchPrograms,
+		meditationProgressLabel,
 		programProgressLabel,
 		type Category,
+		type Meditation,
 		type Program,
 	} from "$lib/api/meditation";
 
 	let programs = $state<Program[]>([]);
 	let categories = $state<Category[]>([]);
 	let error = $state("");
+	let query = $state("");
+	let searching = $state(false);
+	let results = $state<Meditation[]>([]);
+
+	async function search() {
+		searching = true;
+		error = "";
+		try {
+			results = await fetchLibrary(query.trim() || undefined);
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : "search failed";
+		} finally {
+			searching = false;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -56,7 +74,42 @@
 		<p class="text-destructive">{error}</p>
 	{/if}
 
-	{#if groups.length === 0 && !error}
+	<form
+		class="mb-6 flex gap-2"
+		onsubmit={(event) => {
+			event.preventDefault();
+			search();
+		}}
+	>
+		<input
+			type="search"
+			bind:value={query}
+			placeholder="Search meditations, programs, categories…"
+			class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+		/>
+		<Button type="submit" size="sm" disabled={searching}>
+			{searching ? "Searching…" : "Search"}
+		</Button>
+	</form>
+
+	{#if query.trim()}
+		{#if !searching && results.length === 0 && !error}
+			<p class="text-muted-foreground">No meditations match "{query.trim()}".</p>
+		{:else}
+			<ul class="space-y-2">
+				{#each results as meditation (meditation.id)}
+				<li class="rounded-md border p-3">
+					<a href="/meditation/{meditation.id}" class="font-medium hover:underline">
+						{meditation.name}
+					</a>
+					<span class="ml-2 text-sm text-muted-foreground">
+						{meditationProgressLabel(meditation)} · {Math.round(meditation.duration_ms / 1000 / 60)} min
+					</span>
+				</li>
+			{/each}
+			</ul>
+		{/if}
+	{:else if groups.length === 0 && !error}
 		<p class="text-muted-foreground">
 			No programs yet. An admin can create them under Admin.
 		</p>

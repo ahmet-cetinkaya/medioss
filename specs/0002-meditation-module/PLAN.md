@@ -1,6 +1,6 @@
 # Implementation Plan: M2 — Meditation Module
 
-**Spec**: `specs/0002-meditation-module/SPEC.md` (status: in_progress 2026-09-26) **Date**: 2026-09-26 | **Status**: in_progress (execution started via `/ac:run` 2026-09-26) | **Suggested branch**: `feat/m2-meditation-module`
+**Spec**: `specs/0002-meditation-module/SPEC.md` (status: in_progress 2026-09-26; extended 2026-10-03 with M6 items US13/US14, FR-047..053, SC-022..024) **Date**: 2026-09-26 | **Status**: in_progress (execution started via `/ac:run` 2026-09-26; M6 extension executed 2026-10-03 (tasks 14-16 complete; SC-023 hardware QA pending on a real device)) | **Suggested branch**: M2 was `feat/m2-meditation-module`; M6 extension: `feat/m6-library-search-media-session`
 
 ## Goal
 
@@ -42,12 +42,14 @@ Deliver the admin-curated shared meditation library per spec 0002: admin-only up
 - **D11 — web-ui**: library page (program cards grouped under category headings, uncategorized last, per-user progress, cover/placeholder); program detail (member list with completed indicator); admin upload page (Title Case prefill: strip extension, `_`/`-` → space, capitalize words; editable field); admin program/category management; player page (audio element, speed selector 0.5–2.0 in 0.25 steps, seek bar, resume from playback-state); position posts throttled to every 5s of playback plus pause/unload (`navigator.sendBeacon` for unload); completion post when `currentTime >= duration - 1s`; completed toggle; notes CRUD under the player; download anchor to the download route.
 - **D12 — E2E battery** (`src/apps/web-api/tests`, real binary, CI): pins the D5 route names and covers SC-001/003/004/005/006/016/017 as listed in Traceability. CI workflow gains ffmpeg/ffprobe in the image if not already present.
 - **D13 — Delete semantics**: admin meditation delete removes metadata + bytes + memberships + **all users'** notes on it (FR-014); program delete removes program + memberships + cover bytes only (FR-028); category delete leaves programs uncategorized (FR-032). Regular-user practice rows for a deleted meditation are removed with it (spec edge).
+- **D14 — Library search (user decision 2026-10-03: server-side, substring)**: `GET /meditation/library` gains optional `q`. Matching runs in the application layer over meditation-name + program-names + category-names joined by the repository — not SQL `LIKE` (SQLite LIKE is ASCII-case-insensitive only; Turkish fold impossible in SQL portably). One shared fold function lowercases and maps the Turkish set (İ→i, ı→i, Ş→s, ş→s, Ğ→g, ğ→g, Ü→u, ü→u, Ö→o, ö→o, Ç→c, ç→c) on both query terms and haystack; pitfall: Rust `"İ".to_lowercase()` yields `i` + U+0307 combining dot, so İ is mapped before `to_lowercase`. Whitespace-split terms are ANDed (FR-047). No FTS engine, no index — the joined list is already loaded per request.
+- **D15 — Media Session (FR-050..053)**: integration lives only in `player.svelte` behind `if ("mediaSession" in navigator)`. On track activation: `setActionHandler` for play/pause/seekbackward/seekforward/seekto/stop driving the existing audio element, plus explicit no-op `previoustrack`/`nexttrack` handlers (prevents OS fallback); metadata = meditation name + program name; `playbackState` synced on play/pause/stop; `setPositionState` on loadedmetadata/time updates where supported, seek clamped to duration. Unsupported browsers skip the block entirely — zero diff to current behavior (FR-052).
 
 ## Scope
 
-**In**: all of spec 0002 — 40 FR, 17 SC, 3 PB: admin upload with Opus conversion, shared library, programs/categories/covers, streaming + Range, download, per-user position/completed/sessions/notes, web-ui pages + player, E2E battery, docs note, CI green.
+**In**: all of spec 0002 — 53 FR, 24 SC, 3 PB: admin upload with Opus conversion, shared library, programs/categories/covers, streaming + Range, download, per-user position/completed/sessions/notes, web-ui pages + player, E2E battery, docs note, CI green; **M6 extension (2026-10-03)**: server-side library search (FR-047..049) and Media Session hardware controls (FR-050..053).
 
-**Out**: the spec's Out of Scope list — per-user uploads/libraries, member reordering, multiple categories per program, post-upload rename, search/filter/streaks/statistics/calendar (M7), sleep timer (M3), auto-play (M7), offline/PWA (M8), original-file retention, sharing/export, soundscape (M3), seed content (M5), account-deletion wipe (M6), server-side duration extraction.
+**Out**: the spec's Out of Scope list — per-user uploads/libraries, member reordering, multiple categories per program, post-upload rename, streaks/statistics/calendar (M10+ candidates), sleep timer (delivered with M3 soundscape), auto-play and offline/PWA (M10+ candidates), original-file retention, sharing/export, seed content (M9), account-deletion wipe (shipped with M5 user management), server-side duration extraction, tag/duration filters and relevance ranking (M10+).
 
 ## Tasks
 
@@ -66,6 +68,9 @@ Convention: a task is done when its acceptance criteria hold AND the green bar p
 11. **web-ui: player, notes, download** — per D11. _Depends: 10._ AC: build green; SC-007 and SC-010 QA checklist executed in a real browser against a dev server.
 12. **E2E battery + CI** — real-binary tests covering SC-001, SC-003, SC-004, SC-005, SC-006, SC-016, SC-017 and pinning D5 route names; add ffmpeg/ffprobe to the CI image if missing. _Depends: 9 (parallel with 10–11; final gate after 11)._ AC: battery green in CI; full workspace green bar in one run (SC-008/SC-009).
 13. **Docs: deployment prerequisite** — DEPLOYMENT.md gains ffmpeg/ffprobe as host prerequisites and the media namespace layout note under `$MEDIOSS_DATA_DIR`. _Depends: 4._ AC: DEPLOYMENT.md updated; no other docs changed.
+14. **Application: library search** — the shared Turkish fold helper (D14) in the meditation application layer; `list_library` use-case gains an optional `q: Option<&str>` that whitespace-splits, folds, AND-matches over meditation name + joined program names + category names; whitespace-only `q` treated as None. _Depends: 2 (existing use-cases)._ AC: use-case unit tests with fakes — 120-item fake library seeded with plain/uppercase/Turkish-diacritic/program-name-only/category-name-only fixtures; `sabah` returns the exact expected subset; multi-term AND semantics asserted ("sabah nefes" matches both-terms only); empty/whitespace `q` returns all; no-match returns empty.
+15. **Presentation + UI: search surface** — `GET /meditation/library` accepts optional `q` query param, passes through to the use-case (FR-047..049); `api/meditation.ts` library call gains optional `q`; `library.svelte` gains a functional-basic search input (no redesign — sequencing decision 2026-10-03) that fetches on submit and renders an explicit empty state. _Depends: 14._ AC: router tests — `q=sabah` filters (case/diacritic variants), absent/empty/whitespace `q` returns full list, no-match → 200 `[]`; 120-item router test covering SC-022; `bun run build` green.
+16. **UI: Media Session in player** — D15 integration confined to `player.svelte`: metadata (meditation + program name), play/pause/seekto/seekbackward/seekforward/stop handlers, no-op previoustrack/nexttrack, `playbackState` sync, position state with duration clamp; fully guarded by `"mediaSession" in navigator`. _Depends: none (frontend-only)._ AC: `bun run build` green; existing player suite unchanged; manual QA checklist executed (SC-023) — hardware play/pause, lock-screen controls, OS seek; browser without support verified identical (SC-024).
 
 ## Traceability
 
@@ -131,6 +136,16 @@ Convention: a task is done when its acceptance criteria hold AND the green bar p
 | SC-015 toggle invariant | 6 | router test |
 | SC-016 WAV→Opus | 4, 12 | converter test + E2E |
 | SC-017 download | 5, 12 | router test + E2E |
+| FR-047 search filter | 14, 15 | use-case + router tests (120-item, SC-022) |
+| FR-048 empty q = full library | 14, 15 | router test |
+| FR-049 no-match → 200 [] | 14, 15 | router test |
+| FR-050 media session handlers | 16 | manual QA (SC-023) |
+| FR-051 session metadata | 16 | manual QA (SC-023) |
+| FR-052 unsupported browser unchanged | 16 | manual QA (SC-024) + guard in code |
+| FR-053 prev/next no-op | 16 | manual QA + explicit handlers |
+| SC-022 120-item search | 15 | router test |
+| SC-023 hardware controls QA | 16 | manual QA checklist |
+| SC-024 player regression | 16 | existing suite green + manual QA |
 
 ## QA / Evidence Expectations
 
@@ -144,8 +159,9 @@ Convention: a task is done when its acceptance criteria hold AND the green bar p
 1. Green bar in one run: `cargo fmt --check`, clippy `-D warnings`, `cargo test --workspace`, boundary check.
 2. `cd src/apps/web-ui && bun run build` green.
 3. E2E battery green against the real binary in CI (ffmpeg present in the CI image).
-4. Browser QA checklist fully checked (SC-007, SC-010, SC-012, SC-013).
+4. Browser QA checklist fully checked (SC-007, SC-010, SC-012, SC-013; M6: SC-023, SC-024).
 5. DEPLOYMENT.md lists ffmpeg/ffprobe prerequisites.
+6. M6: live check on the dev server — search box filters (Turkish fold spot-check), hardware media keys drive playback.
 
 ## Blockers
 
@@ -153,4 +169,4 @@ None. ffmpeg is a documented host prerequisite (D2, tasks 9/12/13), not a user d
 
 ## User-owned decisions pending
 
-None — spec 0002 approved 2026-09-26; all defaults live in its Assumptions.
+None — spec 0002 approved 2026-09-26; M6 extension decisions (substring matching, server-side filtering) recorded 2026-10-03. Plan tasks 14–16 await explicit `/ac:run` approval.

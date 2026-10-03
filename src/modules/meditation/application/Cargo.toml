@@ -3,6 +3,7 @@ name = "meditation-application"
 edition.workspace = true
 
 [dependencies]
+unicode-normalization = "0.1"
 async-trait.workspace = true
 chrono.workspace = true
 meditation-domain = { path = "../domain" }
