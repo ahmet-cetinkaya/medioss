@@ -6,12 +6,13 @@ pub fn to_csv(entries: &[MoodRecord]) -> Result<Vec<u8>, String> {
         .write_record(["recorded_at", "score", "note"])
         .map_err(|e| e.to_string())?;
     for e in entries {
+        let note = e.note.clone().unwrap_or_default();
+        let note = match note.starts_with(['=', '+', '-', '@']) {
+            true => format!("'{note}"),
+            false => note,
+        };
         writer
-            .write_record(&[
-                e.recorded_at.to_rfc3339(),
-                e.score.to_string(),
-                e.note.clone().unwrap_or_default(),
-            ])
+            .write_record(&[e.recorded_at.to_rfc3339(), e.score.to_string(), note])
             .map_err(|e| e.to_string())?;
     }
     writer.into_inner().map_err(|e| e.to_string())
@@ -36,7 +37,13 @@ pub fn mood_records_from_csv(bytes: &[u8]) -> Result<Vec<MoodRecord>, String> {
         let score: u8 = score_raw
             .parse()
             .map_err(|e| format!("invalid score '{score_raw}': {e}"))?;
-        let note = (!note_raw.is_empty()).then_some(note_raw);
+        let note = match note_raw.strip_prefix('\'') {
+            Some(rest) if rest.starts_with(['=', '+', '-', '@']) && !note_raw.starts_with("''") => {
+                rest.to_string()
+            }
+            _ => note_raw,
+        };
+        let note = (!note.is_empty()).then_some(note);
         records.push(MoodRecord {
             score,
             note,
