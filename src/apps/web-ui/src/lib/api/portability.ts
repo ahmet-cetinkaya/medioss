@@ -3,6 +3,7 @@ export interface ImportReport {
   mood_duplicates_skipped: number;
   practice_linked: number;
   practice_skipped: number;
+  practice_duplicates_skipped: number;
 }
 
 export async function importData(file: File): Promise<ImportReport> {

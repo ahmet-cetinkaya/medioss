@@ -210,7 +210,8 @@
 				<p class="text-sm text-muted-foreground">
 					Mood kayıtları eklendi: {importReport.mood_created}, yinelenen atlandı:
 					{importReport.mood_duplicates_skipped}; alıştırma kayıtları eşleşti:
-					{importReport.practice_linked}, eşleşmedi: {importReport.practice_skipped}.
+					{importReport.practice_linked}, eşleşmedi: {importReport.practice_skipped}, yinelenen:
+					{importReport.practice_duplicates_skipped}.
 				</p>
 			{/if}
 			{#if importError}<p class="text-sm text-destructive">{importError}</p>{/if}
