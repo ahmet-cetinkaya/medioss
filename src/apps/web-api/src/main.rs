@@ -112,6 +112,10 @@ async fn main() {
         &config.data_dir,
         std::sync::Arc::new(config.medioss_origin.clone()),
     );
+    let portability = web_api::portability::portability_dependencies(
+        database.connection.clone(),
+        std::sync::Arc::new(config.medioss_origin.clone()),
+    );
     let mood_tracker = web_api::mood_tracker::mood_tracker_dependencies(
         database.connection.clone(),
         std::sync::Arc::new(config.medioss_origin.clone()),
@@ -140,6 +144,7 @@ async fn main() {
         meditation,
         mood_tracker,
         soundscape,
+        portability,
         std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             database.connection,
         )),

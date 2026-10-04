@@ -13,6 +13,7 @@ pub struct AppState {
     pub meditation: meditation_presentation::SharedDependencies,
     pub mood_tracker: mood_tracker_presentation::SharedDependencies,
     pub soundscape: soundscape_presentation::SharedDependencies,
+    pub portability: portability_presentation::SharedDependencies,
     pub identity: Arc<IdentityServices>,
     pub identity_dependencies: SharedDependencies<
         identity_infrastructure::SeaOrmUserRepository,
@@ -30,6 +31,7 @@ impl Clone for AppState {
             meditation: Arc::clone(&self.meditation),
             mood_tracker: Arc::clone(&self.mood_tracker),
             soundscape: Arc::clone(&self.soundscape),
+            portability: self.portability.clone(),
             identity: Arc::clone(&self.identity),
             identity_dependencies: Arc::clone(&self.identity_dependencies),
         }
@@ -44,6 +46,7 @@ impl AppState {
         meditation: meditation_presentation::SharedDependencies,
         mood_tracker: mood_tracker_presentation::SharedDependencies,
         soundscape: soundscape_presentation::SharedDependencies,
+        portability: portability_presentation::SharedDependencies,
         repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
         hasher: identity_infrastructure::BoundedArgon2PasswordHasher,
         deletion: Arc<dyn identity_presentation::UserDeletionListener>,
@@ -71,6 +74,7 @@ impl AppState {
             meditation,
             mood_tracker,
             soundscape,
+            portability,
             session_store,
             identity: Arc::new(IdentityServices { repository }),
             identity_dependencies,

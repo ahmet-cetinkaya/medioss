@@ -1,0 +1,6 @@
+[package]
+name = "portability-domain"
+edition.workspace = true
+
+[dependencies]
+kernel = { path = "../../../kernel" }
