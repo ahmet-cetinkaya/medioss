@@ -1,0 +1,14 @@
+[package]
+name = "portability-application"
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+kernel = { path = "../../../kernel" }
+portability-domain = { path = "../domain" }
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
