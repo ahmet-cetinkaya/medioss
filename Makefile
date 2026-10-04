@@ -1,4 +1,6 @@
 # Runtime data root (SQLite + media). Override: make run DATA_DIR=/srv/medioss
+# Server port. Override: make run PORT=3001
+PORT ?= 3000
 DATA_DIR ?= $(CURDIR)/.data
 UI_DIR := src/apps/web-ui
 STATIC_DIR := src/apps/web-api/static
@@ -58,7 +60,11 @@ dev:
 		wait
 
 run: build
-	MEDIOSS_DATA_DIR=$(DATA_DIR) cargo run -p web-api
+	@if ss -ltn "sport = :$(PORT)" | grep -q ":$(PORT)"; then \
+		echo "make: port $(PORT) is busy — stop the process (ss -ltnp 'sport = :$(PORT)') or run: make run PORT=<other>"; \
+		exit 1; \
+	fi
+	MEDIOSS_DATA_DIR=$(DATA_DIR) PORT=$(PORT) cargo run -p web-api
 
 lint:
 	$(UI_SETUP) && $(PRETTIER) --check '**/*.{astro,svelte,ts,tsx,css,md}'
