@@ -10,6 +10,8 @@
 		updateDisplayName,
 		uploadAvatar,
 	} from "$lib/api/identity";
+	import { importData } from "$lib/api/portability";
+	import type { ImportReport } from "$lib/api/portability";
 
 	let email = $state("");
 	let confirmText = $state("");
@@ -22,6 +24,29 @@
 	let hasAvatar = $state(false);
 	let avatarVersion = $state(0);
 	let myId = $state<number | null>(null);
+	let importFile = $state<File | null>(null);
+	let importBusy = $state(false);
+	let importError = $state("");
+	let importReport = $state<ImportReport | null>(null);
+
+	async function onImportChosen(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		importFile = input.files?.[0] ?? null;
+	}
+
+	async function runImport() {
+		if (!importFile) return;
+		importBusy = true;
+		importError = "";
+		importReport = null;
+		try {
+			importReport = await importData(importFile);
+		} catch (failure) {
+			importError = failure instanceof Error ? failure.message : "İçe aktarma başarısız oldu.";
+		} finally {
+			importBusy = false;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -154,6 +179,41 @@
 					{profileBusy ? "Kaydediliyor…" : "Görünen adı kaydet"}
 				</Button>
 			</div>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>Your data</Card.Title>
+			<Card.Description>
+				Verilerinizi JSON (tüm veriler) veya CSV (yalnızca mood kayıtları) olarak indirin;
+				daha önce dışa aktarılmış bir dosyayı geri yükleyin.
+			</Card.Description>
+		</Card.Header>
+		<Card.Content class="grid gap-4">
+			<div class="flex flex-wrap gap-2">
+				<Button variant="outline" asChild>
+					<a href="/api/portability/export/json">Download JSON</a>
+				</Button>
+				<Button variant="outline" asChild>
+					<a href="/api/portability/export/csv">Download CSV</a>
+				</Button>
+			</div>
+			<div class="grid gap-2">
+				<label class="text-sm font-medium" for="import-file">Import a previous export</label>
+				<Input id="import-file" type="file" accept=".json,.csv" onchange={onImportChosen} />
+				<Button disabled={!importFile || importBusy} onclick={() => void runImport()}>
+					{importBusy ? "Importing…" : "Import"}
+				</Button>
+			</div>
+			{#if importReport}
+				<p class="text-sm text-muted-foreground">
+					Mood kayıtları eklendi: {importReport.mood_created}, yinelenen atlandı:
+					{importReport.mood_duplicates_skipped}; alıştırma kayıtları eşleşti:
+					{importReport.practice_linked}, eşleşmedi: {importReport.practice_skipped}.
+				</p>
+			{/if}
+			{#if importError}<p class="text-sm text-destructive">{importError}</p>{/if}
 		</Card.Content>
 	</Card.Root>
 
