@@ -146,7 +146,7 @@
 			<div class="flex items-center gap-4">
 				{#if hasAvatar}
 					<img
-						src={`/api/identity/avatar/{myId}?v={avatarVersion}`}
+						src={`/api/identity/avatar/${myId}?v=${avatarVersion}`}
 						alt="Avatar"
 						class="h-16 w-16 rounded-full object-cover"
 					/>
