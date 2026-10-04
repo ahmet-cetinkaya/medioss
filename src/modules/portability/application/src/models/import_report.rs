@@ -4,4 +4,5 @@ pub struct ImportReport {
     pub mood_duplicates_skipped: u32,
     pub practice_linked: u32,
     pub practice_skipped: u32,
+    pub practice_duplicates_skipped: u32,
 }

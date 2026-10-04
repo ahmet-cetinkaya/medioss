@@ -196,6 +196,7 @@ async fn round_trip_reproduces_history_exactly() {
         doc,
         fresh.as_ref(),
         fresh.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
@@ -229,6 +230,7 @@ async fn second_import_of_same_file_creates_nothing() {
         doc.clone(),
         store.as_ref(),
         store.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
@@ -241,6 +243,7 @@ async fn second_import_of_same_file_creates_nothing() {
         doc,
         store.as_ref(),
         store.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
@@ -289,6 +292,7 @@ async fn practice_records_for_missing_meditations_are_skipped_and_counted() {
         doc,
         store.as_ref(),
         store.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
@@ -310,11 +314,13 @@ async fn invalid_document_rejects_with_zero_writes() {
         bad_score,
         store.as_ref(),
         store.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
     .await
-    .unwrap_err();
+    .unwrap_err()
+    .to_string();
     assert!(err.contains("outside 1-5"), "{err}");
 
     let mut bad_version = document(vec![entry(3, None, 10)], PracticeSnapshot::default());
@@ -324,11 +330,13 @@ async fn invalid_document_rejects_with_zero_writes() {
         bad_version,
         store.as_ref(),
         store.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
     .await
-    .unwrap_err();
+    .unwrap_err()
+    .to_string();
     assert!(err.contains("format version"), "{err}");
 
     let future = document(vec![entry(3, None, -60)], PracticeSnapshot::default());
@@ -337,11 +345,13 @@ async fn invalid_document_rejects_with_zero_writes() {
         future,
         store.as_ref(),
         store.as_ref(),
+        &FakePracticeSource,
         &practice,
         &library(),
     )
     .await
-    .unwrap_err();
+    .unwrap_err()
+    .to_string();
     assert!(err.contains("future"), "{err}");
 
     assert!(store.entries.lock().unwrap().is_empty());
@@ -361,4 +371,137 @@ async fn export_lists_own_records_through_ports() {
     assert_eq!(doc.format_version, 1);
     assert_eq!(doc.mood_entries.len(), 1);
     assert_eq!(doc.mood_entries[0].score, 5);
+}
+
+#[derive(Default)]
+struct StatefulPractice {
+    snapshot: std::sync::Mutex<PracticeSnapshot>,
+}
+
+#[async_trait::async_trait]
+impl OwnPracticeRecords for StatefulPractice {
+    async fn list_for_user(&self, _user: UserId) -> Result<PracticeSnapshot, String> {
+        Ok(self.snapshot.lock().unwrap().clone())
+    }
+}
+
+#[tokio::test]
+async fn repeat_import_reports_practice_as_duplicates_without_writing() {
+    let store = Arc::new(FakeMoodStore::default());
+    let practice = FakePracticeSink::default();
+    let source = StatefulPractice::default();
+    let doc = document(
+        vec![],
+        snapshot(
+            vec![SessionRecord {
+                meditation_name: "Café Quietude".into(),
+                meditation_duration_ms: 120_000,
+                started_at: ts(90),
+                finished_at: ts(80),
+            }],
+            vec![NoteRecord {
+                meditation_name: "Evening Calm".into(),
+                meditation_duration_ms: 300_000,
+                text: "rest".into(),
+                created_at: ts(70),
+            }],
+            vec![PlaybackRecord {
+                meditation_name: "Café Quietude".into(),
+                meditation_duration_ms: 120_000,
+                position_ms: 10_000,
+                completed: false,
+            }],
+        ),
+    );
+
+    let doc_for_seed = doc.clone();
+    let first = crate::import::import_document(
+        user(),
+        doc.clone(),
+        store.as_ref(),
+        store.as_ref(),
+        &source,
+        &practice,
+        &library(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        (first.practice_linked, first.practice_duplicates_skipped),
+        (3, 0)
+    );
+    {
+        let mut snap = source.snapshot.lock().unwrap();
+        snap.sessions = doc_for_seed.practice.sessions.clone();
+        snap.notes = doc_for_seed.practice.notes.clone();
+        snap.playback = doc_for_seed.practice.playback.clone();
+    }
+
+    let second = crate::import::import_document(
+        user(),
+        doc,
+        store.as_ref(),
+        store.as_ref(),
+        &source,
+        &practice,
+        &library(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        (second.practice_linked, second.practice_duplicates_skipped),
+        (0, 3)
+    );
+    assert_eq!(practice.calls.lock().unwrap().len(), 3);
+}
+
+#[tokio::test]
+async fn oversized_mood_note_and_empty_practice_note_reject_with_zero_writes() {
+    let store = Arc::new(FakeMoodStore::default());
+    let practice = FakePracticeSink::default();
+
+    let big = "x".repeat(10_001);
+    let over = document(vec![entry(3, Some(&big), 10)], PracticeSnapshot::default());
+    let err = crate::import::import_document(
+        user(),
+        over,
+        store.as_ref(),
+        store.as_ref(),
+        &FakePracticeSource,
+        &practice,
+        &library(),
+    )
+    .await
+    .unwrap_err()
+    .to_string();
+    assert!(err.contains("10000"), "{err}");
+
+    let empty = document(
+        vec![],
+        snapshot(
+            vec![],
+            vec![NoteRecord {
+                meditation_name: "Evening Calm".into(),
+                meditation_duration_ms: 300_000,
+                text: "   ".into(),
+                created_at: ts(60),
+            }],
+            vec![],
+        ),
+    );
+    let err = crate::import::import_document(
+        user(),
+        empty,
+        store.as_ref(),
+        store.as_ref(),
+        &FakePracticeSource,
+        &practice,
+        &library(),
+    )
+    .await
+    .unwrap_err()
+    .to_string();
+    assert!(err.contains("not be empty"), "{err}");
+
+    assert!(practice.calls.lock().unwrap().is_empty());
 }
