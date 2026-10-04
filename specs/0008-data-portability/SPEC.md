@@ -75,7 +75,7 @@ Import behavior:
 - **FR-008 (US4):** WHEN an import file is malformed, uses an unknown format version, or contains a record that fails validation THE SYSTEM SHALL reject the entire import with a clear message and write nothing.
 - **FR-009 (US3):** WHEN an imported practice record's meditation (by name and duration) exists on the target instance THE SYSTEM SHALL attach the record to that meditation.
 - **FR-010 (US3):** WHEN an imported practice record's meditation does not exist on the target instance THE SYSTEM SHALL skip that record, continue the import, and include it in the skipped count.
-- **FR-011 (US4):** WHEN an import succeeds THE SYSTEM SHALL report per-kind counts: mood entries created, mood duplicates skipped, practice records linked, practice records skipped as unmatchable.
+- **FR-011 (US4):** WHEN an import succeeds THE SYSTEM SHALL report per-kind counts: mood entries created, mood duplicates skipped, practice records linked, practice records skipped as unmatchable, and practice records skipped as duplicates of records the user already has.
 - **FR-012 (US4):** WHEN imported data is written THE SYSTEM SHALL leave history, analytics, charts, and the unified timeline consistent with natively recorded data on the next successful view.
 
 Boundaries and privacy:
@@ -124,6 +124,10 @@ Boundaries and privacy:
 - **PRESERVED:** Spec 0006's mood behavior is unchanged: history ordering, edit and delete semantics, analytics ranges, charts, and the unified timeline keep working exactly as shipped for natively recorded entries.
 - **PRESERVED:** Spec 0007's profile settings keep their shipped behavior; this capability adds a data section alongside them without altering display name or avatar flows.
 - **PRESERVED:** Privacy boundaries from specs 0004/0006 hold: mood notes and practice data remain invisible to administrators and other users, including through the new export surface.
+
+## Deviations
+
+- Review fix (2026-10-04, PR #11 review M3): ImportReport gained `practice_duplicates_skipped` and repeat imports skip practice records that already exist, extending SC-003's no-inflation guarantee from mood-only to practice data. FR-011 amended accordingly.
 
 ## Clarifications
 
