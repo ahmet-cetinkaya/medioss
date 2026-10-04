@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
+    http::header,
     http::{HeaderName, Request, StatusCode},
     Router,
 };
@@ -207,6 +208,25 @@ impl OpusConverter for FakeConverter {
     }
 }
 
+struct TestReader {
+    bytes: Vec<u8>,
+    pos: usize,
+}
+
+impl futures_io::AsyncRead for TestReader {
+    fn poll_read(
+        mut self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+        buf: &mut [u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        let remaining = &self.bytes[self.pos..];
+        let n = remaining.len().min(buf.len());
+        buf[..n].copy_from_slice(&remaining[..n]);
+        self.pos += n;
+        std::task::Poll::Ready(Ok(n))
+    }
+}
+
 struct FakeStore;
 #[async_trait::async_trait]
 impl BlobStore for FakeStore {
@@ -225,7 +245,14 @@ impl BlobStore for FakeStore {
         _start: u64,
         _length: u64,
     ) -> Result<(BlobReader, String, u64), String> {
-        Err("not needed".into())
+        Ok((
+            BlobReader(Box::new(TestReader {
+                bytes: b"rain-bytes".to_vec(),
+                pos: 0,
+            })),
+            "audio/ogg".into(),
+            b"rain-bytes".len() as u64,
+        ))
     }
     async fn delete(&self, _key: &str) -> Result<(), String> {
         Ok(())
@@ -457,6 +484,28 @@ async fn mutations_require_matching_origin() {
     request.extensions_mut().insert(member_actor());
     let response = app.router.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn download_is_an_attachment_named_after_the_sound() {
+    let app = app();
+    let (status, headers, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/soundscape/sounds/1/download",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    let disposition = headers
+        .iter()
+        .find(|(name, _)| name == header::CONTENT_DISPOSITION)
+        .expect("disposition present");
+    assert!(disposition.1.starts_with("attachment; filename="));
+    assert!(disposition.1.ends_with(".ogg\""));
+    assert_eq!(body, b"rain-bytes");
 }
 
 #[tokio::test]

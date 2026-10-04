@@ -15,5 +15,6 @@ tokio-util.workspace = true
 tower.workspace = true
 
 [dev-dependencies]
+futures-io.workspace = true
 chrono.workspace = true
 tower = { workspace = true, features = ["util"] }

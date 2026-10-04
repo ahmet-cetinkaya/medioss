@@ -148,6 +148,65 @@ impl From<soundscape_domain::Mix> for MixDto {
     }
 }
 
+/// GET /soundscape/sounds/{id}/download — the stored audio as an attachment
+/// named after the sound. Extension follows the stored content type.
+async fn download_sound(
+    Path(id): Path<i64>,
+    State(deps): State<SharedDependencies>,
+    CurrentActor(_actor): CurrentActor,
+) -> Result<Response, StatusCode> {
+    let sound = deps
+        .sounds
+        .find(id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    let (BlobReader(reader), _, total) = deps
+        .store
+        .open_range(&sound.storage_key, 0, u64::MAX)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+    use tokio::io::AsyncReadExt;
+    use tokio_util::compat::FuturesAsyncReadCompatExt;
+    let mut bytes = Vec::with_capacity(total.min(64 * 1024 * 1024) as usize);
+    reader
+        .compat()
+        .read_to_end(&mut bytes)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let name: String = sound
+        .name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let name = name.trim_matches('-');
+    let extension = match sound.content_type.as_str() {
+        "audio/mpeg" => "mp3",
+        "audio/wav" | "audio/x-wav" => "wav",
+        "audio/ogg" => "ogg",
+        _ => "bin",
+    };
+    let disposition = format!("attachment; filename=\"{name}.{extension}\"");
+    let mut response = Response::new(AxumBody::from(bytes));
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_str(&sound.content_type)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    );
+    if let Ok(value) = HeaderValue::from_str(&disposition) {
+        response
+            .headers_mut()
+            .insert(header::CONTENT_DISPOSITION, value);
+    }
+    Ok(response)
+}
+
 pub fn soundscape_router() -> Router<SharedDependencies> {
     Router::new()
         .route(
@@ -171,6 +230,7 @@ pub fn soundscape_router() -> Router<SharedDependencies> {
             put(update_sound).delete(delete_sound),
         )
         .route("/soundscape/sounds/{id}/audio", get(stream_sound))
+        .route("/soundscape/sounds/{id}/download", get(download_sound))
         .route("/soundscape/mixes", get(list_mixes).post(create_mix))
         .route(
             "/soundscape/mixes/{id}",
