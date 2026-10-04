@@ -550,6 +550,7 @@
 							<a href="/player/?id={meditation.id}">
 								<Button variant="outline" size="sm" type="button">Play</Button>
 							</a>
+							<a href="/api/meditation/{meditation.id}/download" class="self-center text-sm underline">Download</a>
 						</div>
 					</li>
 				{/each}
@@ -574,6 +575,6 @@
 			<Label for="sound-file">Audio file</Label><Input id="sound-file" type="file" accept="audio/*,.mp3,.wav,.ogg" onchange={(event) => { soundscapeFile = (event.currentTarget as HTMLInputElement).files?.[0] ?? null; }} required />
 			<Button type="submit">Upload sound</Button>
 		</form>
-		<ul class="grid gap-2">{#each soundscapeSounds as sound (sound.id)}<li class="flex flex-wrap items-center justify-between gap-2 rounded border p-3"><span>{sound.name} · {soundscapeCategories.find((category) => category.id === sound.category_id)?.name ?? "Unknown"}{#if sound.builtin}<span class="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">built-in</span>{/if}</span><span class="flex gap-2"><Button size="sm" variant="outline" onclick={() => editSound(sound)}>Edit</Button><Button size="sm" variant="destructive" onclick={() => removeSound(sound)}>Delete</Button></span></li>{/each}</ul>
+		<ul class="grid gap-2">{#each soundscapeSounds as sound (sound.id)}<li class="flex flex-wrap items-center justify-between gap-2 rounded border p-3"><span>{sound.name} · {soundscapeCategories.find((category) => category.id === sound.category_id)?.name ?? "Unknown"}{#if sound.builtin}<span class="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">built-in</span>{/if}</span><span class="flex gap-2"><Button size="sm" variant="outline" onclick={() => editSound(sound)}>Edit</Button><Button size="sm" variant="destructive" onclick={() => removeSound(sound)}>Delete</Button><a class="self-center text-sm underline" href="/api/soundscape/sounds/{sound.id}/download">Download</a></span></li>{/each}</ul>
 	</section>
 </main>

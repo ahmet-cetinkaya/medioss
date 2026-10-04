@@ -105,6 +105,7 @@
 					<span class="ml-2 text-sm text-muted-foreground">
 						{meditationProgressLabel(meditation)} · {Math.round(meditation.duration_ms / 1000 / 60)} min
 					</span>
+					<a class="ml-2 text-sm underline" href="/api/meditation/{meditation.id}/download">Download</a>
 				</li>
 			{/each}
 			</ul>
