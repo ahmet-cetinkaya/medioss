@@ -47,6 +47,10 @@ dev-ui:
 	$(UI_SETUP) && bun run dev
 
 dev-service:
+	@if ss -ltn "sport = :$(PORT)" | grep -q ":$(PORT)"; then \
+		echo "make: port $(PORT) is busy — stop the process (ss -ltnp 'sport = :$(PORT)') or run: make dev PORT=<other>"; \
+		exit 1; \
+	fi
 	@if command -v cargo-watch >/dev/null 2>&1; then \
 		MEDIOSS_DATA_DIR=$(DATA_DIR) cargo watch -x 'run -p web-api'; \
 	else \
