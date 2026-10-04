@@ -58,10 +58,7 @@ dev-service:
 	fi
 
 dev:
-	@trap 'kill 0' INT TERM EXIT; \
-		$(MAKE) dev-ui & \
-		$(MAKE) dev-service & \
-		wait
+	./scripts/dev.sh
 
 run: build
 	@if ss -ltn "sport = :$(PORT)" | grep -q ":$(PORT)"; then \
