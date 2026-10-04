@@ -65,6 +65,7 @@ async fn test_state() -> (AppState, TempDir) {
         connection.clone(),
         Arc::new("http://localhost".to_owned()),
     );
+    let portability = web_api::portability::portability_dependencies(connection.clone());
     let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
         Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
             meditation.notes.clone(),
@@ -80,6 +81,7 @@ async fn test_state() -> (AppState, TempDir) {
         meditation,
         mood_tracker,
         soundscape,
+        portability,
         Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             connection,
         )),
