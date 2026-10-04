@@ -2,7 +2,7 @@ use crate::export_format;
 use crate::extractors::CurrentActor;
 use crate::mood_csv;
 use axum::extract::{Multipart, State};
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Json;
@@ -22,10 +22,12 @@ pub struct SharedDependencies {
     pub meditations: Arc<dyn portability_application::ports::meditation_lookup::MeditationLookup>,
     pub profile:
         Arc<dyn portability_application::ports::display_name_resolver::DisplayNameResolver>,
+    pub medioss_origin: Arc<String>,
 }
 
 fn internal(e: String) -> Response {
-    (StatusCode::INTERNAL_SERVER_ERROR, e).into_response()
+    tracing::error!(error = %e, "portability operation failed");
+    (StatusCode::INTERNAL_SERVER_ERROR, "internal error").into_response()
 }
 
 fn bad_request(e: String) -> Response {
@@ -85,11 +87,24 @@ pub async fn export_csv(
     }
 }
 
+fn ensure_browser_origin(headers: &HeaderMap, origin: &str) -> Result<(), StatusCode> {
+    headers
+        .get("origin")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.eq_ignore_ascii_case(origin))
+        .ok_or(StatusCode::FORBIDDEN)
+        .map(|_| ())
+}
+
 pub async fn import(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
+    headers: HeaderMap,
     multipart: Multipart,
 ) -> Response {
+    if let Err(status) = ensure_browser_origin(&headers, &deps.medioss_origin) {
+        return (status, "cross-origin requests are not allowed").into_response();
+    }
     let bytes = match read_import_file(multipart).await {
         Ok(b) => b,
         Err((status, message)) => return (status, message).into_response(),
@@ -110,13 +125,17 @@ pub async fn import(
         document,
         deps.mood_source.as_ref(),
         deps.mood_sink.as_ref(),
+        deps.practice_source.as_ref(),
         deps.practice_sink.as_ref(),
         deps.meditations.as_ref(),
     )
     .await
     {
         Ok(report) => (StatusCode::OK, Json(report)).into_response(),
-        Err(e) => internal(e),
+        Err(portability_application::import::ImportFailure::Validation(message)) => {
+            (StatusCode::BAD_REQUEST, message).into_response()
+        }
+        Err(e) => internal(e.to_string()),
     }
 }
 
@@ -158,5 +177,10 @@ pub fn router() -> axum::Router<SharedDependencies> {
     axum::Router::new()
         .route("/portability/export/json", get(export_json))
         .route("/portability/export/csv", get(export_csv))
-        .route("/portability/import", post(import))
+        .route(
+            "/portability/import",
+            post(import).layer(axum::extract::DefaultBodyLimit::max(
+                IMPORT_FILE_CAP_BYTES + 64 * 1024,
+            )),
+        )
 }

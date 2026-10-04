@@ -205,7 +205,10 @@ impl MeditationLookup for Library {
     }
 }
 
-pub fn portability_dependencies(db: DatabaseConnection) -> SharedDependencies {
+pub fn portability_dependencies(
+    db: DatabaseConnection,
+    medioss_origin: Arc<String>,
+) -> SharedDependencies {
     SharedDependencies {
         mood_source: Arc::new(MoodRecords {
             entries: SeaOrmMoodEntryRepository::new(db.clone()),
@@ -228,6 +231,7 @@ pub fn portability_dependencies(db: DatabaseConnection) -> SharedDependencies {
         meditations: Arc::new(Library {
             meditations: SeaOrmMeditationRepository::new(db.clone()),
         }),
+        medioss_origin,
         profile: Arc::new(ProfileNames {
             users: identity_infrastructure::SeaOrmUserRepository::new(db),
         }),
