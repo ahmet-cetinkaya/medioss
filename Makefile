@@ -5,7 +5,7 @@ DATA_DIR ?= $(CURDIR)/.data
 UI_DIR := src/apps/web-ui
 STATIC_DIR := src/apps/web-api/static
 UI_SETUP := cd $(UI_DIR) && bun install --frozen-lockfile
-PRETTIER := bunx --bun --package prettier --package prettier-plugin-svelte prettier
+PRETTIER := bunx --bun prettier
 
 # `cargo fmt`/`cargo clippy` ship with rustup on CI runners but are separate
 # packages on Nix, so run them directly when present and pull them in otherwise.
