@@ -4,7 +4,7 @@ use sea_orm::{
     ConnectionTrait, DatabaseBackend, DatabaseConnection, QueryResult, Statement, TransactionTrait,
 };
 use soundscape_application::ports::{NewSound, SoundRepository};
-use soundscape_domain::Sound;
+use soundscape_domain::{Sound, SoundIcon};
 
 pub struct SeaOrmSoundRepository {
     db: DatabaseConnection,
@@ -38,32 +38,78 @@ fn to_sound(row: &QueryResult) -> Result<Sound, String> {
         .try_get::<Option<String>>("", "builtin_id")
         .map_err(|e| e.to_string())?
         .is_some();
+    sound.icon_key = row
+        .try_get::<Option<String>>("", "icon_key")
+        .map_err(|e| e.to_string())?;
+    let storage_key = row
+        .try_get::<Option<String>>("", "icon_storage_key")
+        .map_err(|e| e.to_string())?;
+    let content_type = row
+        .try_get::<Option<String>>("", "icon_content_type")
+        .map_err(|e| e.to_string())?;
+    sound.icon = storage_key
+        .zip(content_type)
+        .map(|(storage_key, content_type)| SoundIcon {
+            storage_key,
+            content_type,
+        });
     Ok(sound)
 }
 #[async_trait]
 impl SoundRepository for SeaOrmSoundRepository {
     async fn list(&self) -> Result<Vec<Sound>, String> {
-        self.db.query_all(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id FROM soundscape_sounds ORDER BY category_id,name COLLATE NOCASE,id".to_owned())).await.map_err(|e|e.to_string())?.iter().map(to_sound).collect()
+        self.db.query_all(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds ORDER BY category_id,name COLLATE NOCASE,id".to_owned())).await.map_err(|e|e.to_string())?.iter().map(to_sound).collect()
     }
     async fn find(&self, id: i64) -> Result<Option<Sound>, String> {
-        let row=self.db.query_one(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id FROM soundscape_sounds WHERE id=?",[id.into()])).await.map_err(|e|e.to_string())?;
+        let row=self.db.query_one(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds WHERE id=?",[id.into()])).await.map_err(|e|e.to_string())?;
         row.as_ref().map(to_sound).transpose()
     }
     async fn create(&self, s: NewSound) -> Result<Sound, String> {
-        self.db.execute(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"INSERT INTO soundscape_sounds(name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at) VALUES(?,?,?,?,?,?,?)",[s.name.into(),s.category_id.into(),s.content_type.into(),s.size_bytes.into(),s.storage_key.into(),s.duration_ms.into(),s.created_at.to_rfc3339().into()])).await.map_err(|e|e.to_string())?;
-        let row=self.db.query_one(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id FROM soundscape_sounds ORDER BY id DESC LIMIT 1".to_owned())).await.map_err(|e|e.to_string())?;
+        self.db.execute(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"INSERT INTO soundscape_sounds(name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,icon_key) VALUES(?,?,?,?,?,?,?,?)",[s.name.into(),s.category_id.into(),s.content_type.into(),s.size_bytes.into(),s.storage_key.into(),s.duration_ms.into(),s.created_at.to_rfc3339().into(),s.icon_key.into()])).await.map_err(|e|e.to_string())?;
+        let row=self.db.query_one(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds ORDER BY id DESC LIMIT 1".to_owned())).await.map_err(|e|e.to_string())?;
         row.as_ref()
             .map(to_sound)
             .transpose()?
             .ok_or_else(|| "sound insert missing".into())
     }
-    async fn update(&self, id: i64, name: &str, category_id: i64) -> Result<Option<Sound>, String> {
+    async fn update(
+        &self,
+        id: i64,
+        name: &str,
+        category_id: i64,
+        icon_key: Option<&str>,
+    ) -> Result<Option<Sound>, String> {
         let r = self
             .db
             .execute(Statement::from_sql_and_values(
                 DatabaseBackend::Sqlite,
-                "UPDATE soundscape_sounds SET name=?,category_id=? WHERE id=?",
-                [name.trim().into(), category_id.into(), id.into()],
+                "UPDATE soundscape_sounds SET name=?,category_id=?,icon_key=? WHERE id=?",
+                [
+                    name.trim().into(),
+                    category_id.into(),
+                    icon_key.map(str::to_owned).into(),
+                    id.into(),
+                ],
+            ))
+            .await
+            .map_err(|e| e.to_string())?;
+        if r.rows_affected() == 0 {
+            Ok(None)
+        } else {
+            self.find(id).await
+        }
+    }
+    async fn set_icon(&self, id: i64, icon: Option<SoundIcon>) -> Result<Option<Sound>, String> {
+        let (key, content_type) = match icon {
+            Some(icon) => (Some(icon.storage_key), Some(icon.content_type)),
+            None => (None, None),
+        };
+        let r = self
+            .db
+            .execute(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                "UPDATE soundscape_sounds SET icon_storage_key=?,icon_content_type=? WHERE id=?",
+                [key.into(), content_type.into(), id.into()],
             ))
             .await
             .map_err(|e| e.to_string())?;

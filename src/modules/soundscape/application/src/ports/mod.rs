@@ -3,7 +3,7 @@ pub mod media;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kernel::UserId;
-use soundscape_domain::{Mix, Sound, SoundCategory};
+use soundscape_domain::{Mix, Sound, SoundCategory, SoundIcon};
 
 #[derive(Debug, Clone)]
 pub struct NewSound {
@@ -14,6 +14,7 @@ pub struct NewSound {
     pub storage_key: String,
     pub duration_ms: i64,
     pub created_at: DateTime<Utc>,
+    pub icon_key: Option<String>,
 }
 #[derive(Debug, Clone)]
 pub struct NewMix {
@@ -43,7 +44,15 @@ pub trait SoundRepository: Send + Sync {
     async fn list(&self) -> Result<Vec<Sound>, String>;
     async fn find(&self, id: i64) -> Result<Option<Sound>, String>;
     async fn create(&self, sound: NewSound) -> Result<Sound, String>;
-    async fn update(&self, id: i64, name: &str, category_id: i64) -> Result<Option<Sound>, String>;
+    async fn update(
+        &self,
+        id: i64,
+        name: &str,
+        category_id: i64,
+        icon_key: Option<&str>,
+    ) -> Result<Option<Sound>, String>;
+    /// Sets or clears (`None`) the uploaded icon image location.
+    async fn set_icon(&self, id: i64, icon: Option<SoundIcon>) -> Result<Option<Sound>, String>;
     async fn delete_with_mix_items(&self, id: i64) -> Result<Option<Sound>, String>;
 }
 
