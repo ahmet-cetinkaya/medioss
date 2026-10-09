@@ -1,8 +1,11 @@
 ---
-import Base from "../layouts/Base.astro";
-import Settings from "$lib/components/settings.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import SettingsPage from "$lib/screens/settings/settings-page.svelte";
 ---
 
-<Base title="Settings · MediOSS">
-	<Settings client:load />
-</Base>
+<AppLayout screen="settings">
+  <SettingsPage client:only="svelte"
+    ><AppSkeleton slot="fallback" /></SettingsPage
+  >
+</AppLayout>

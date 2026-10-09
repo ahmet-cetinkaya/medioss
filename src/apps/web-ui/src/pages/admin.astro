@@ -1,8 +1,9 @@
 ---
-import Base from "../layouts/Base.astro";
-import Admin from "$lib/components/admin.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import AdminPage from "$lib/screens/admin/admin-page.svelte";
 ---
 
-<Base title="MediOSS — Admin">
-	<Admin client:load />
-</Base>
+<AppLayout screen="admin">
+  <AdminPage client:only="svelte"><AppSkeleton slot="fallback" /></AdminPage>
+</AppLayout>

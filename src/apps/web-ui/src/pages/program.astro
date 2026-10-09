@@ -1,8 +1,10 @@
 ---
-import Base from "../layouts/Base.astro";
-import ProgramDetail from "$lib/components/program-detail.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import ProgramPage from "$lib/screens/program/program-page.svelte";
 ---
 
-<Base title="MediOSS — Program">
-	<ProgramDetail client:load />
-</Base>
+<AppLayout screen="program">
+  <ProgramPage client:only="svelte"><AppSkeleton slot="fallback" /></ProgramPage
+  >
+</AppLayout>

@@ -1,23 +1,47 @@
 ---
+import "@fontsource/poppins/latin-400.css";
+import "@fontsource/poppins/latin-500.css";
+import "@fontsource/poppins/latin-600.css";
+import "@fontsource/poppins/latin-700.css";
+import "@fontsource/poppins/latin-ext-400.css";
+import "@fontsource/poppins/latin-ext-500.css";
+import "@fontsource/poppins/latin-ext-600.css";
+import "@fontsource/poppins/latin-ext-700.css";
 import "../styles/global.css";
+import { localeBootScript } from "$lib/i18n/locale-boot";
+import { ClientRouter } from "astro:transitions";
 
+// `lang="en"` is the static default; the inline boot script sets the
+// detected or stored language before first paint (plan D3, FR-116), and the
+// islands keep it current. `class` goes on <html> (AppLayout's
+// scroll-padding, plan D10).
 interface Props {
-	title: string;
-	description?: string;
+  title: string;
+  description?: string;
+  class?: string;
 }
 
-const { title, description = "MediOSS — a private, self-hosted space for meditation and rest." } = Astro.props;
+const {
+  title,
+  description = "MediOSS — a private, self-hosted space for meditation and rest.",
+  class: htmlClass,
+} = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="description" content={description} />
-		<title>{title}</title>
-	</head>
-	<body class="min-h-screen bg-background text-foreground antialiased">
-		<slot />
-	</body>
+<html lang="en" class={htmlClass}>
+  <head>
+    <meta charset="utf-8" />
+    <script is:inline set:html={localeBootScript} />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, interactive-widget=resizes-content"
+    />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <ClientRouter />
+  </head>
+  <body class="min-h-screen bg-background text-foreground antialiased">
+    <slot />
+  </body>
 </html>

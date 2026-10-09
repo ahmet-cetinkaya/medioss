@@ -1,8 +1,10 @@
 ---
 import AuthLayout from "../layouts/AuthLayout.astro";
-import LoginForm from "$lib/components/login-form.svelte";
+import AuthSkeleton from "../layouts/AuthSkeleton.astro";
+import LoginPage from "$lib/screens/login/login-page.svelte";
+import { screenTitleMessages } from "$lib/i18n/common.messages";
 ---
 
-<AuthLayout title="MediOSS — Sign in">
-	<LoginForm client:load />
+<AuthLayout title={screenTitleMessages.login}>
+  <LoginPage client:only="svelte"><AuthSkeleton slot="fallback" /></LoginPage>
 </AuthLayout>

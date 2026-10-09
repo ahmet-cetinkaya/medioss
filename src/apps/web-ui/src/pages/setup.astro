@@ -1,8 +1,10 @@
 ---
 import AuthLayout from "../layouts/AuthLayout.astro";
-import SetupForm from "$lib/components/setup-form.svelte";
+import AuthSkeleton from "../layouts/AuthSkeleton.astro";
+import SetupPage from "$lib/screens/setup/setup-page.svelte";
+import { screenTitleMessages } from "$lib/i18n/common.messages";
 ---
 
-<AuthLayout title="MediOSS — First-run setup">
-	<SetupForm client:load />
+<AuthLayout title={screenTitleMessages.setup}>
+  <SetupPage client:only="svelte"><AuthSkeleton slot="fallback" /></SetupPage>
 </AuthLayout>
