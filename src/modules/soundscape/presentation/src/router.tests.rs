@@ -13,13 +13,17 @@ use soundscape_application::ports::{
     media::{AudioFormat, AudioValidator, BlobReader, BlobStore, OpusConverter, StoredAudio},
     CategoryDelete, CategoryRepository, Clock, MixRepository, NewMix, NewSound, SoundRepository,
 };
-use soundscape_domain::{Mix, Sound, SoundCategory};
+use soundscape_domain::{Mix, Sound, SoundCategory, SoundIcon};
 use tower::ServiceExt;
 
 use crate::{soundscape_router, SoundscapeDependencies};
 
 fn member_actor() -> Actor {
     Actor::new(UserId::new(2), Role::Member)
+}
+
+fn admin_actor() -> Actor {
+    Actor::new(UserId::new(1), Role::Admin)
 }
 
 fn another_member_actor() -> Actor {
@@ -92,16 +96,32 @@ impl SoundRepository for FakeSounds {
             sound.created_at,
         )
         .map_err(|e| e.to_string())?;
+        let mut created = created;
+        created.icon_key = sound.icon_key;
         sounds.push(created.clone());
         Ok(created)
     }
     async fn update(
         &self,
-        _id: i64,
-        _name: &str,
-        _category_id: i64,
+        id: i64,
+        name: &str,
+        category_id: i64,
+        icon_key: Option<&str>,
     ) -> Result<Option<Sound>, String> {
-        Err("not needed".into())
+        let mut sounds = self.0.sounds.lock().unwrap();
+        Ok(sounds.iter_mut().find(|s| s.id == id).map(|sound| {
+            sound.name = name.into();
+            sound.category_id = category_id;
+            sound.icon_key = icon_key.map(str::to_owned);
+            sound.clone()
+        }))
+    }
+    async fn set_icon(&self, id: i64, icon: Option<SoundIcon>) -> Result<Option<Sound>, String> {
+        let mut sounds = self.0.sounds.lock().unwrap();
+        Ok(sounds.iter_mut().find(|s| s.id == id).map(|sound| {
+            sound.icon = icon;
+            sound.clone()
+        }))
     }
     async fn delete_with_mix_items(&self, _id: i64) -> Result<Option<Sound>, String> {
         Err("not needed".into())
@@ -227,34 +247,43 @@ impl futures_io::AsyncRead for TestReader {
     }
 }
 
-struct FakeStore;
+#[derive(Default)]
+struct FakeStore(std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>);
 #[async_trait::async_trait]
 impl BlobStore for FakeStore {
     async fn put(
         &self,
         _folder: &str,
-        _stem: &str,
-        _ext: &str,
-        _bytes: &[u8],
+        stem: &str,
+        ext: &str,
+        bytes: &[u8],
     ) -> Result<String, String> {
-        Ok("soundscape/fake.opus".into())
+        let key = format!("soundscape/{stem}.{ext}");
+        self.0.lock().unwrap().insert(key.clone(), bytes.to_vec());
+        Ok(key)
     }
     async fn open_range(
         &self,
-        _key: &str,
+        key: &str,
         _start: u64,
         _length: u64,
     ) -> Result<(BlobReader, String, u64), String> {
+        let bytes = self
+            .0
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .unwrap_or_else(|| b"rain-bytes".to_vec());
+        let len = bytes.len() as u64;
         Ok((
-            BlobReader(Box::new(TestReader {
-                bytes: b"rain-bytes".to_vec(),
-                pos: 0,
-            })),
+            BlobReader(Box::new(TestReader { bytes, pos: 0 })),
             "audio/ogg".into(),
-            b"rain-bytes".len() as u64,
+            len,
         ))
     }
-    async fn delete(&self, _key: &str) -> Result<(), String> {
+    async fn delete(&self, key: &str) -> Result<(), String> {
+        self.0.lock().unwrap().remove(key);
         Ok(())
     }
 }
@@ -301,7 +330,7 @@ fn app() -> TestApp {
         mixes: Arc::new(FakeMixes(state.clone())),
         validator: Arc::new(FakeValidator),
         converter: Arc::new(FakeConverter),
-        store: Arc::new(FakeStore),
+        store: Arc::new(FakeStore::default()),
         clock: Arc::new(FixedClock),
         medioss_origin: Arc::new("http://localhost".into()),
     };
@@ -541,4 +570,150 @@ fn ignores_malformed_and_rejects_unsatisfiable_ranges() {
         crate::router::parse_range("bytes=99-100", 10),
         Some(Err(()))
     );
+}
+
+// --- icons -------------------------------------------------------------
+
+const PNG: &[u8] = b"\x89PNG\r\n\x1a\nfake-png-body";
+
+fn icon_form(bytes: &[u8]) -> (Vec<(&'static str, &'static str)>, Body) {
+    let mut body =
+        b"--XB\r\nContent-Disposition: form-data; name=\"icon\"; filename=\"i\"\r\n\r\n".to_vec();
+    body.extend_from_slice(bytes);
+    body.extend_from_slice(b"\r\n--XB--\r\n");
+    (
+        vec![("content-type", "multipart/form-data; boundary=XB")],
+        Body::from(body),
+    )
+}
+
+async fn put_icon(app: &TestApp, bytes: &[u8]) -> (StatusCode, Vec<u8>) {
+    let (headers, body) = icon_form(bytes);
+    let (status, _, body) = call(
+        app,
+        Some(admin_actor()),
+        "PUT",
+        "/soundscape/sounds/1/icon",
+        headers,
+        body,
+    )
+    .await;
+    (status, body)
+}
+
+#[tokio::test]
+async fn icon_upload_roundtrip_serves_the_image_and_flags_the_sound() {
+    let app = app();
+    let (status, body) = put_icon(&app, PNG).await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    assert!(String::from_utf8_lossy(&body).contains("\"has_icon\":true"));
+
+    let (status, headers, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/soundscape/sounds/1/icon",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, PNG);
+    let content_type = headers.iter().find(|(n, _)| n == header::CONTENT_TYPE);
+    assert_eq!(content_type.unwrap().1, "image/png");
+
+    let (status, _, body) = call(
+        &app,
+        Some(admin_actor()),
+        "DELETE",
+        "/soundscape/sounds/1/icon",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(String::from_utf8_lossy(&body).contains("\"has_icon\":false"));
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/soundscape/sounds/1/icon",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn icon_upload_refuses_wrong_type_svg_and_oversize() {
+    let app = app();
+    let (status, _) = put_icon(&app, b"GIF89a-not-allowed").await;
+    assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    let (status, _) = put_icon(&app, b"<svg xmlns='http://www.w3.org/2000/svg'/>").await;
+    assert_eq!(status, StatusCode::UNSUPPORTED_MEDIA_TYPE, "svg is refused");
+    let mut big = PNG.to_vec();
+    big.resize(1024 * 1024 + 1, 0);
+    let (status, _) = put_icon(&app, &big).await;
+    assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn icon_mutations_are_admin_only() {
+    let app = app();
+    let (headers, body) = icon_form(PNG);
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "PUT",
+        "/soundscape/sounds/1/icon",
+        headers,
+        body,
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn admin_edits_icon_key_and_it_is_validated() {
+    let app = app();
+    let (headers, body) = json(r#"{"name":"Rain","category_id":1,"icon_key":"rain"}"#);
+    let (status, _, body) = call(
+        &app,
+        Some(admin_actor()),
+        "PUT",
+        "/soundscape/sounds/1",
+        headers,
+        body,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", String::from_utf8_lossy(&body));
+    assert!(String::from_utf8_lossy(&body).contains("\"icon_key\":\"rain\""));
+
+    let (headers, body) = json(r#"{"name":"Rain","category_id":1,"icon_key":"Bad Key!"}"#);
+    let (status, _, _) = call(
+        &app,
+        Some(admin_actor()),
+        "PUT",
+        "/soundscape/sounds/1",
+        headers,
+        body,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn missing_icon_is_404() {
+    let app = app();
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/soundscape/sounds/1/icon",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
