@@ -1,0 +1,72 @@
+/** Glyphs an admin may assign to a sound; the key is stored by the backend. */
+export const SOUND_ICON_KEYS = [
+  "rain",
+  "wind",
+  "fire",
+  "water",
+  "night",
+  "forest",
+  "birds",
+  "thunder",
+  "noise",
+  "heartbeat",
+  "city",
+  "music",
+  "drop",
+  "leaf",
+  "bell",
+  "piano",
+  "guitar",
+  "fan",
+  "airplane",
+  "cricket",
+  "cat",
+  "mountains",
+  "campfire",
+  "snowflake",
+] as const;
+
+export type SoundIconKey = (typeof SOUND_ICON_KEYS)[number];
+
+export const isSoundIconKey = (key: string | null | undefined) =>
+  SOUND_ICON_KEYS.includes(key as SoundIconKey);
+
+export const ICON_NAMES = [
+  "house",
+  "books",
+  "waveform",
+  "smiley",
+  "clock-counter-clockwise",
+  "chart-bar",
+  "gear-six",
+  "shield-check",
+  "shuffle",
+  "sign-out",
+  "user",
+  "play",
+  "pause",
+  "arrow-counter-clockwise",
+  "arrow-clockwise",
+  "arrow-up-right",
+  "arrow-up",
+  "arrow-down",
+  "arrow-left",
+  "download-simple",
+  "upload-simple",
+  "magnifying-glass",
+  "check",
+  "check-circle",
+  "warning-circle",
+  "trash",
+  "pencil-simple",
+  "x",
+  "plus",
+  "dots-three",
+  "caret-down",
+  "timer",
+  "skip-back",
+  "speaker-high",
+  ...SOUND_ICON_KEYS,
+] as const;
+
+export type IconName = (typeof ICON_NAMES)[number];

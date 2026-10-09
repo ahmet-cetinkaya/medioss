@@ -421,6 +421,13 @@ Astro renders every page as static HTML; only genuinely interactive components â
 
 Svelte was chosen over SolidJS deliberately: its compiler emits the smallest per-island runtime (roughly 2 KB gzip versus 8 KB), Svelte 5 with runes is stable while Solid 2.0 is still pre-release, and the ecosystem covers this project's needs directly (shadcn-svelte for accessible components, chart libraries for mood analytics). shadcn-svelte components are copied into the repository rather than installed as a dependency, which fits the self-hosted, no-external-runtime-dependency posture.
 
+**Frontend conventions.**
+
+- Each page mounts a single Svelte island (for example `client:only="svelte"` in `pages/stats.astro`), which may render the app shell (`lib/components/shell/app-shell.svelte`) around the screen. It is still a multi-page app: every route is its own Astro page, and there is no client router.
+- Pure TypeScript logic is tested with `bun test` in a sibling `<name>.test.ts` file. End-to-end tests are `*.e2e.ts` files under `src/apps/web-ui/e2e/`, run by Playwright (`playwright.config.ts`). E2e is deliberately **minimal**: the default run is a short core suite (`e2e/core/`) that covers only the flows most likely to break â€” sign-in gating, one flow per major screen, playback controls. Exhaustive per-requirement suites are not written for routine changes. Retired suites live under `e2e/extended/`, excluded from `testMatch` via `testIgnore`; they can be restored temporarily by moving files back under `e2e/seeded/` when a deep regression pass is wanted.
+- UI text lives in co-located `*.messages.ts` files with `en` and `tr` values.
+- The only client-side storage is the language preference (`localStorage` key `medioss.locale`).
+
 ---
 
 ## Incremental Build Isolation

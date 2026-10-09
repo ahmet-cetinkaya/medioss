@@ -1,0 +1,47 @@
+---
+// Layout for every authenticated screen (plan D1). The page mounts one
+// island, client-only, with the static skeleton as its fallback:
+//
+//   ---
+//   import AppLayout from "../layouts/AppLayout.astro";
+//   import AppSkeleton from "../layouts/AppSkeleton.astro";
+//   import StatsPage from "$lib/screens/stats/stats-page.svelte";
+//   ---
+//
+//   <AppLayout screen="stats">
+//     <StatsPage client:only="svelte">
+//       <AppSkeleton slot="fallback" />
+//     </StatsPage>
+//   </AppLayout>
+//
+// `StatsPage` is a logic-free wrapper that renders
+// `<AppShell screen="stats">{#snippet children()}<StatsContent />{/snippet}</AppShell>`;
+// all loading lives in `StatsContent` (mounted only after the gate).
+// `screen` sets the static English <title> shown before hydration; AppShell
+// replaces it with the active language. <html> gets scroll-padding for the
+// mobile top bar (4 rem) and bottom bar (plus the safe-area inset), so focus
+// is never hidden behind them (FR-089).
+import type { ScreenKey } from "$lib/navigation/routes";
+import { ROUTES } from "$lib/navigation/routes";
+import { shellMessages } from "$lib/components/shell/shell.messages";
+import { brandMessages } from "$lib/i18n/common.messages";
+import { translate } from "$lib/i18n/translate";
+import Base from "./Base.astro";
+
+interface Props {
+  screen: ScreenKey;
+}
+
+const { screen } = Astro.props;
+const title = translate(shellMessages.documentTitle, "en", {
+  screen: translate(ROUTES[screen].title, "en"),
+  product: translate(brandMessages.productName, "en"),
+});
+---
+
+<Base
+  title={title}
+  class="scroll-pt-20 scroll-pb-[calc(6rem+env(safe-area-inset-bottom))] md:scroll-pt-4 md:scroll-pb-4"
+>
+  <slot />
+</Base>

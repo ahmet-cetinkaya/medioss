@@ -1,0 +1,9 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+import AppSkeleton from "../../layouts/AppSkeleton.astro";
+import AdminPage from "$lib/screens/admin/admin-page.svelte";
+---
+
+<AppLayout screen="admin">
+  <AdminPage client:only="svelte"><AppSkeleton slot="fallback" /></AdminPage>
+</AppLayout>

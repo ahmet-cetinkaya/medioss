@@ -30,6 +30,10 @@ Welcome to the MediOSS wellness application documentation. This guide will help 
   - Workspace and directory structure
   - Composition root wiring
   - Security architecture
+- **[Design System](./DESIGN_SYSTEM.md)** - "Soft Glass" UI design language
+  - Tokens: color, typography, spacing, radius, elevation
+  - Layout, components, accessibility rules
+  - Mapping of patterns to MediOSS screens
 
 ## Documentation Overview
 
