@@ -69,6 +69,27 @@ impl CategoryRepository for SeaOrmCategoryRepository {
             .collect()
     }
 
+    async fn rename(
+        &self,
+        id: i64,
+        name: String,
+        _updated_at: DateTime<Utc>,
+    ) -> Result<bool, String> {
+        // The table stores only created_at; the timestamp parameter keeps
+        // the port honest for stores that track updates.
+        let row = table::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?;
+        let Some(model) = row else {
+            return Ok(false);
+        };
+        let mut active: table::ActiveModel = model.into();
+        active.name = Set(name);
+        active.update(&self.db).await.map_err(|e| e.to_string())?;
+        Ok(true)
+    }
+
     async fn delete(&self, id: i64) -> Result<bool, String> {
         let rows = table::Entity::delete_by_id(id)
             .exec(&self.db)

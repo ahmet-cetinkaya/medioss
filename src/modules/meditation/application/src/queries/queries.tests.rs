@@ -96,6 +96,7 @@ impl Deps {
             name,
             program_id,
             b"OggS....OpusHead".to_vec(),
+            None,
         )
         .await
         .expect("upload")
@@ -388,6 +389,7 @@ async fn seeded_list_library() -> (
                 format!("k/{name}/{i}"),
                 1000,
                 now,
+                None,
             )
             .await
             .unwrap();

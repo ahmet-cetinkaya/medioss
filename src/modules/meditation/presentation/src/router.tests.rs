@@ -13,7 +13,7 @@ use kernel::{Actor, Role, UserId};
 use tower::ServiceExt;
 
 use meditation_application::{
-    ports::SessionRepository,
+    ports::{ProgramRepository as _, SessionRepository},
     test_support::{
         FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
         FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository,
@@ -218,6 +218,7 @@ async fn seed_search_library(app: &TestApp) {
                 format!("k/{name}/{i}"),
                 1000,
                 now,
+                None,
             )
             .await
             .unwrap();
@@ -295,6 +296,20 @@ async fn library_search_blank_or_absent_q_returns_everything() {
         let listed = library_q(&app, query).await;
         assert_eq!(listed.len(), 120, "query: {query}");
     }
+}
+
+#[tokio::test]
+async fn library_rows_carry_their_program_id_or_none() {
+    let app = app();
+    seed_search_library(&app).await;
+    let listed = library_q(&app, "").await;
+    let mut with_program: Vec<i64> = listed
+        .iter()
+        .filter(|row| row.get("program_id").is_some())
+        .map(|row| row["id"].as_i64().unwrap())
+        .collect();
+    with_program.sort();
+    assert_eq!(with_program, vec![3, 5]);
 }
 
 #[tokio::test]
@@ -400,6 +415,7 @@ async fn content_management_is_admin_only() {
         ("POST", "/meditation/programs/1/members"),
         ("DELETE", "/meditation/programs/1/members/1"),
         ("PUT", "/meditation/programs/1/category"),
+        ("PUT", "/meditation/programs/1/meditations/order"),
         ("POST", "/meditation/categories"),
         ("DELETE", "/meditation/categories/1"),
     ] {
@@ -777,4 +793,247 @@ async fn cross_origin_writes_are_rejected() {
         .unwrap();
     let response = app.router.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+async fn put_description(
+    app: &TestApp,
+    actor: Option<Actor>,
+    id: i64,
+    json: &str,
+) -> (StatusCode, serde_json::Value) {
+    let (status, _, body) = json_body(
+        app,
+        actor,
+        "PUT",
+        &format!("/meditation/meditations/{id}"),
+        json,
+    )
+    .await;
+    (status, serde_json::from_slice(&body).unwrap_or_default())
+}
+
+#[tokio::test]
+async fn upload_with_description_roundtrips_through_library_and_detail() {
+    let app = app();
+    let program = FakeProgramRepository(app.state.clone())
+        .insert("Holder".to_owned(), None, chrono::Utc::now())
+        .await
+        .unwrap()
+        .id;
+    let program_id = program.to_string();
+    let (content_type, body) = multipart_body(&[
+        ("name", "", b"Described"),
+        ("program_id", "", program_id.as_bytes()),
+        ("description", "", b"  A gentle start  "),
+        ("file", "a.opus", b"OggS....OpusHead"),
+    ]);
+    let (status, _, body) = call(
+        &app,
+        Some(admin_actor()),
+        "POST",
+        "/meditation/audio",
+        vec![("content-type", &content_type)],
+        Body::from(body),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let created: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(created["description"], "A gentle start");
+    let id = created["id"].as_i64().unwrap();
+
+    let (_, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/{id}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    let detail: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(detail["description"], "A gentle start");
+    let listed = library_q(&app, "").await;
+    assert_eq!(listed[0]["description"], "A gentle start");
+}
+
+#[tokio::test]
+async fn meditation_without_description_serializes_null() {
+    let app = app();
+    let seeded = seed_meditation(&app).await;
+    let (_, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/{}", seeded.id()),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    let detail: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(detail["description"].is_null());
+}
+
+#[tokio::test]
+async fn updating_the_description_sets_then_clears_it() {
+    let app = app();
+    let id = seed_meditation(&app).await.id();
+
+    let (status, body) = put_description(
+        &app,
+        Some(admin_actor()),
+        id,
+        r#"{"description":"New text"}"#,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["description"], "New text");
+    assert_eq!(body["id"], id);
+    assert_eq!(body["name"], "Seed");
+
+    for clear in [r#"{"description":null}"#, r#"{"description":""}"#] {
+        put_description(&app, Some(admin_actor()), id, r#"{"description":"x"}"#).await;
+        let (status, body) = put_description(&app, Some(admin_actor()), id, clear).await;
+        assert_eq!(status, StatusCode::OK, "{clear}");
+        assert!(body["description"].is_null(), "{clear}");
+    }
+}
+
+#[tokio::test]
+async fn too_long_description_is_400_with_the_exact_message() {
+    let app = app();
+    let id = seed_meditation(&app).await.id();
+    let long = format!(r#"{{"description":"{}"}}"#, "a".repeat(2001));
+    let (status, body) = put_description(&app, Some(admin_actor()), id, &long).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["error"], "description must be at most 2000 characters");
+
+    let exact = format!(r#"{{"description":"{}"}}"#, "a".repeat(2000));
+    let (status, _) = put_description(&app, Some(admin_actor()), id, &exact).await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn description_update_covers_404_403_and_401() {
+    let app = app();
+    let id = seed_meditation(&app).await.id();
+    let (status, _) =
+        put_description(&app, Some(admin_actor()), 9999, r#"{"description":"x"}"#).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) =
+        put_description(&app, Some(member_actor()), id, r#"{"description":"x"}"#).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _) = put_description(&app, None, id, r#"{"description":"x"}"#).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+async fn seed_ordered_program(app: &TestApp) -> i64 {
+    use meditation_application::ports::{
+        MeditationRepository, MembershipRepository, ProgramRepository,
+    };
+    let meditations = FakeMeditationRepository(app.state.clone());
+    let now = Utc::now();
+    for i in 0..3 {
+        meditations
+            .insert(
+                format!("M{i}"),
+                "audio/ogg",
+                1000,
+                format!("k/{i}"),
+                1000,
+                now,
+                None,
+            )
+            .await
+            .unwrap();
+    }
+    let program = FakeProgramRepository(app.state.clone())
+        .insert("P".to_owned(), None, now)
+        .await
+        .unwrap()
+        .id;
+    let memberships = FakeMembershipRepository(app.state.clone());
+    for id in [1, 2, 3] {
+        memberships.add(program, id, now).await.unwrap();
+    }
+    program
+}
+
+async fn put_order(
+    app: &TestApp,
+    actor: Actor,
+    program: i64,
+    ids: &str,
+) -> (StatusCode, serde_json::Value) {
+    let (status, _, body) = call(
+        app,
+        Some(actor),
+        "PUT",
+        &format!("/meditation/programs/{program}/meditations/order"),
+        vec![("content-type", "application/json")],
+        Body::from(format!(r#"{{"meditation_ids":{ids}}}"#)),
+    )
+    .await;
+    (status, serde_json::from_slice(&body).unwrap_or_default())
+}
+
+async fn member_ids(app: &TestApp, program: i64) -> Vec<i64> {
+    let (status, _, body) = call(
+        app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/programs/{program}/members"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let rows: Vec<serde_json::Value> = serde_json::from_slice(&body).unwrap();
+    rows.iter().map(|row| row["id"].as_i64().unwrap()).collect()
+}
+
+#[tokio::test]
+async fn reorder_roundtrip_changes_member_listing() {
+    let app = app();
+    let program = seed_ordered_program(&app).await;
+    assert_eq!(member_ids(&app, program).await, vec![1, 2, 3]);
+    let (status, body) = put_order(&app, admin_actor(), program, "[3,1,2]").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body,
+        serde_json::json!({"program_id": program, "meditation_ids": [3, 1, 2]})
+    );
+    assert_eq!(member_ids(&app, program).await, vec![3, 1, 2]);
+}
+
+#[tokio::test]
+async fn reorder_rejects_any_set_mismatch() {
+    let app = app();
+    let program = seed_ordered_program(&app).await;
+    for ids in [
+        "[1,2]",
+        "[1,2,3,3]",
+        "[1,1,2]",
+        "[1,2,99]",
+        "[1,2,3,4]",
+        "[]",
+    ] {
+        let (status, body) = put_order(&app, admin_actor(), program, ids).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{ids}");
+        assert_eq!(
+            body["error"],
+            "meditation_ids must contain exactly the program's meditations"
+        );
+    }
+    assert_eq!(member_ids(&app, program).await, vec![1, 2, 3]);
+}
+
+#[tokio::test]
+async fn reorder_unknown_program_is_404_and_member_is_403() {
+    let app = app();
+    let program = seed_ordered_program(&app).await;
+    let (status, _) = put_order(&app, admin_actor(), 999, "[1]").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = put_order(&app, member_actor(), program, "[3,2,1]").await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(member_ids(&app, program).await, vec![1, 2, 3]);
 }

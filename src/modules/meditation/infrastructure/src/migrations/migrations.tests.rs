@@ -84,7 +84,7 @@ async fn up_creates_every_module_table_under_its_own_ledger() {
     }
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        1
+        3
     );
     // Ledger isolation: identity's ledger is untouched.
     assert!(!table_exists(&database.pool, "identity_migrations").await);
@@ -97,7 +97,7 @@ async fn up_is_idempotent_across_restarts() {
     migrate(&database.connection).await.unwrap();
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        1
+        3
     );
 }
 
@@ -117,6 +117,6 @@ async fn down_is_refused_and_leaves_schema_untouched() {
     // The refused down() did not roll the applied migration back either.
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        1
+        3
     );
 }

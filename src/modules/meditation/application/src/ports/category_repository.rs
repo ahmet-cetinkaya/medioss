@@ -25,6 +25,14 @@ pub trait CategoryRepository: Send + Sync {
     /// Lists every category.
     async fn list_all(&self) -> Result<Vec<Category>, String>;
 
+    /// Renames a category; `false` when the identifier is unknown.
+    async fn rename(
+        &self,
+        id: i64,
+        name: String,
+        updated_at: DateTime<Utc>,
+    ) -> Result<bool, String>;
+
     /// Deletes a category; `false` when the identifier is unknown.
     async fn delete(&self, id: i64) -> Result<bool, String>;
 }

@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use meditation_application::ports::{Membership, MembershipRepository};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
+    sea_query::Expr, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+    QueryOrder, Set, TransactionTrait,
 };
 
 use crate::persistence::entities::memberships as table;
@@ -27,6 +28,7 @@ fn to_domain(model: table::Model) -> Result<Membership, String> {
         program_id: model.program_id,
         meditation_id: model.meditation_id,
         added_at,
+        position: model.position,
     })
 }
 
@@ -47,10 +49,18 @@ impl MembershipRepository for SeaOrmMembershipRepository {
         if let Some(model) = existing {
             return Ok(model.id);
         }
+        let position = table::Entity::find()
+            .filter(table::Column::ProgramId.eq(program_id))
+            .order_by_desc(table::Column::Position)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+            .map_or(0, |last| last.position + 1);
         let row = table::ActiveModel {
             program_id: Set(program_id),
             meditation_id: Set(meditation_id),
             added_at: Set(added_at.to_rfc3339()),
+            position: Set(position),
             ..Default::default()
         };
         match row.insert(&self.db).await {
@@ -82,6 +92,7 @@ impl MembershipRepository for SeaOrmMembershipRepository {
     async fn list_by_program(&self, program_id: i64) -> Result<Vec<Membership>, String> {
         table::Entity::find()
             .filter(table::Column::ProgramId.eq(program_id))
+            .order_by_asc(table::Column::Position)
             .order_by_asc(table::Column::Id)
             .all(&self.db)
             .await
@@ -89,6 +100,20 @@ impl MembershipRepository for SeaOrmMembershipRepository {
             .into_iter()
             .map(to_domain)
             .collect()
+    }
+
+    async fn set_order(&self, program_id: i64, meditation_ids: &[i64]) -> Result<(), String> {
+        let txn = self.db.begin().await.map_err(|e| e.to_string())?;
+        for (index, meditation_id) in meditation_ids.iter().enumerate() {
+            table::Entity::update_many()
+                .col_expr(table::Column::Position, Expr::value(index as i64))
+                .filter(table::Column::ProgramId.eq(program_id))
+                .filter(table::Column::MeditationId.eq(*meditation_id))
+                .exec(&txn)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+        txn.commit().await.map_err(|e| e.to_string())
     }
 
     async fn remove_for_meditation(&self, meditation_id: i64) -> Result<u64, String> {

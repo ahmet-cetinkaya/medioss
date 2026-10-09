@@ -11,10 +11,13 @@ mod delete_program;
 mod record_completion;
 mod record_position;
 mod remove_member;
+mod rename_category;
 mod set_completed;
 mod set_program_category;
+mod update_meditation_description;
 mod update_note;
 mod update_program;
+mod update_program_order;
 mod upload_meditation;
 
 pub use add_member::add_member;
@@ -28,10 +31,13 @@ pub use delete_program::delete_program;
 pub use record_completion::record_completion;
 pub use record_position::record_position;
 pub use remove_member::remove_member;
+pub use rename_category::rename_category;
 pub use set_completed::set_completed;
 pub use set_program_category::set_program_category;
+pub use update_meditation_description::update_meditation_description;
 pub use update_note::update_note;
 pub use update_program::update_program;
+pub use update_program_order::update_program_order;
 pub use upload_meditation::upload_meditation;
 
 use crate::ports::MeditationRepository;
@@ -72,6 +78,18 @@ pub(crate) fn validate_name(name: &str) -> Result<(), ApplicationError> {
         ));
     }
     Ok(())
+}
+
+/// Normalizes an optional description (blank clears it) and enforces the
+/// domain length limit.
+pub(crate) fn validate_description(
+    description: Option<&str>,
+) -> Result<Option<String>, ApplicationError> {
+    let text = description.map(str::trim).filter(|text| !text.is_empty());
+    if text.is_some_and(|text| text.chars().count() > meditation_domain::MAX_DESCRIPTION_LENGTH) {
+        return Err(ApplicationError::InvalidDescription);
+    }
+    Ok(text.map(str::to_owned))
 }
 
 #[cfg(test)]

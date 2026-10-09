@@ -4,6 +4,8 @@
 use sea_orm_migration::prelude::*;
 
 mod m20260926_000001_meditation_create_schema;
+mod m20261006_000001_meditation_add_description;
+mod m20261007_000001_meditation_add_membership_position;
 
 pub use m20260926_000001_meditation_create_schema::Migration;
 
@@ -19,7 +21,11 @@ pub struct Migrator;
 
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(Migration)]
+        vec![
+            Box::new(Migration),
+            Box::new(m20261006_000001_meditation_add_description::Migration),
+            Box::new(m20261007_000001_meditation_add_membership_position::Migration),
+        ]
     }
 
     fn migration_table_name() -> DynIden {

@@ -101,3 +101,24 @@ fn storage_key_must_be_non_empty() {
         Err(MeditationError::InvalidStorageKey)
     );
 }
+
+#[test]
+fn description_is_trimmed_cleared_when_blank_and_length_limited() {
+    let base = valid().unwrap();
+    assert_eq!(base.description(), None);
+    let described = base.clone().with_description(Some("  calm  ")).unwrap();
+    assert_eq!(described.description(), Some("calm"));
+    assert_eq!(
+        described
+            .with_description(Some("  "))
+            .unwrap()
+            .description(),
+        None
+    );
+    let at_limit = "a".repeat(2000);
+    assert!(base.clone().with_description(Some(&at_limit)).is_ok());
+    assert_eq!(
+        base.with_description(Some(&"a".repeat(2001))),
+        Err(MeditationError::InvalidDescription)
+    );
+}

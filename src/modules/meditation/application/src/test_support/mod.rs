@@ -311,6 +311,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
         storage_key: String,
         duration_ms: i64,
         created_at: DateTime<Utc>,
+        description: Option<String>,
     ) -> Result<meditation_domain::Meditation, String> {
         let mut rows = self.0.meditations.lock().unwrap();
         let id = RepoState::next_id(&rows, |meditation| meditation.id());
@@ -323,6 +324,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             duration_ms,
             created_at,
         )
+        .and_then(|row| row.with_description(description.as_deref()))
         .map_err(|error| error.to_string())?;
         rows.push(meditation.clone());
         Ok(meditation)
@@ -372,6 +374,18 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             .collect())
     }
 
+    async fn set_description(&self, id: i64, description: Option<&str>) -> Result<bool, String> {
+        let mut rows = self.0.meditations.lock().unwrap();
+        let Some(row) = rows.iter_mut().find(|meditation| meditation.id() == id) else {
+            return Ok(false);
+        };
+        *row = row
+            .clone()
+            .with_description(description)
+            .map_err(|error| error.to_string())?;
+        Ok(true)
+    }
+
     async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {
         let mut rows = self.0.meditations.lock().unwrap();
         let index = rows.iter().position(|meditation| meditation.id() == id);
@@ -387,6 +401,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             rows[index].duration_ms(),
             rows[index].created_at(),
         )
+        .and_then(|row| row.with_description(rows[index].description()))
         .map_err(|error| error.to_string())?;
         rows[index] = replacement;
         Ok(())
@@ -538,6 +553,20 @@ impl CategoryRepository for FakeCategoryRepository {
         Ok(self.0.categories.lock().unwrap().clone())
     }
 
+    async fn rename(
+        &self,
+        id: i64,
+        name: String,
+        _updated_at: DateTime<Utc>,
+    ) -> Result<bool, String> {
+        let mut rows = self.0.categories.lock().unwrap();
+        let Some(category) = rows.iter_mut().find(|category| category.id == id) else {
+            return Ok(false);
+        };
+        category.name = name;
+        Ok(true)
+    }
+
     async fn delete(&self, id: i64) -> Result<bool, String> {
         let mut rows = self.0.categories.lock().unwrap();
         let len = rows.len();
@@ -571,10 +600,17 @@ impl MembershipRepository for FakeMembershipRepository {
             return Ok(index as i64 + 1);
         }
         let row_id = rows.len() as i64 + 1;
+        let position = rows
+            .iter()
+            .filter(|membership| membership.program_id == program_id)
+            .map(|membership| membership.position + 1)
+            .max()
+            .unwrap_or(0);
         rows.push(Membership {
             program_id,
             meditation_id,
             added_at,
+            position,
         });
         Ok(row_id)
     }
@@ -598,8 +634,21 @@ impl MembershipRepository for FakeMembershipRepository {
             .filter(|membership| membership.program_id == program_id)
             .cloned()
             .collect();
-        rows.sort_by_key(|membership| membership.added_at);
+        rows.sort_by_key(|membership| membership.position);
         Ok(rows)
+    }
+
+    async fn set_order(&self, program_id: i64, meditation_ids: &[i64]) -> Result<(), String> {
+        let mut rows = self.0.memberships.lock().unwrap();
+        for (index, id) in meditation_ids.iter().enumerate() {
+            if let Some(row) = rows
+                .iter_mut()
+                .find(|m| m.program_id == program_id && m.meditation_id == *id)
+            {
+                row.position = index as i64;
+            }
+        }
+        Ok(())
     }
 
     async fn remove_for_meditation(&self, meditation_id: i64) -> Result<u64, String> {

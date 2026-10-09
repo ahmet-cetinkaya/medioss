@@ -18,6 +18,9 @@ pub fn valid_content_type(content_type: &str) -> bool {
 /// Maximum accepted name length, in characters.
 const MAX_NAME_LENGTH: usize = 200;
 
+/// Maximum accepted description length, in characters.
+pub const MAX_DESCRIPTION_LENGTH: usize = 2000;
+
 /// Why a [`Meditation`] could not be constructed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 pub enum MeditationError {
@@ -29,6 +32,8 @@ pub enum MeditationError {
     InvalidContentType,
     #[error("meditation storage key must not be empty")]
     InvalidStorageKey,
+    #[error("description must be at most 2000 characters")]
+    InvalidDescription,
 }
 
 /// A curated meditation audio entry in the shared library.
@@ -41,6 +46,7 @@ pub struct Meditation {
     storage_key: String,
     duration_ms: i64,
     created_at: DateTime<Utc>,
+    description: Option<String>,
 }
 
 impl Meditation {
@@ -76,7 +82,24 @@ impl Meditation {
             storage_key: storage_key.to_owned(),
             duration_ms: duration_ms.max(0),
             created_at,
+            description: None,
         })
+    }
+
+    /// Returns the meditation with its description replaced. Blank text
+    /// clears it (`None`); text over the limit is rejected.
+    pub fn with_description(mut self, description: Option<&str>) -> Result<Self, MeditationError> {
+        let description = description.map(str::trim).filter(|text| !text.is_empty());
+        if description.is_some_and(|text| text.chars().count() > MAX_DESCRIPTION_LENGTH) {
+            return Err(MeditationError::InvalidDescription);
+        }
+        self.description = description.map(str::to_owned);
+        Ok(self)
+    }
+
+    /// Optional free-text description; never blank.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
     /// Row identifier.

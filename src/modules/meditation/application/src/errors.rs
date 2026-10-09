@@ -5,6 +5,10 @@ use thiserror::Error;
 pub enum ApplicationError {
     #[error("input is invalid: {0}")]
     InvalidInput(&'static str),
+    #[error("description must be at most 2000 characters")]
+    InvalidDescription,
+    #[error("meditation_ids must contain exactly the program's meditations")]
+    InvalidProgramOrder,
     #[error("the uploaded bytes are not a supported media format")]
     UnsupportedMedia,
     #[error("the payload exceeds the allowed size")]

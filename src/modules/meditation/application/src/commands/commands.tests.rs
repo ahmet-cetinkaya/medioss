@@ -2,7 +2,9 @@ use chrono::{Duration, Utc};
 use kernel::UserId;
 
 use super::*;
-use crate::ports::{PlaybackStateRepository, ProgramRepository, SessionRepository};
+use crate::ports::{
+    MeditationRepository, PlaybackStateRepository, ProgramRepository, SessionRepository,
+};
 use crate::test_support::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
     FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
@@ -65,6 +67,7 @@ impl Deps {
             "Seed",
             program_id,
             b"OggS....OpusHead".to_vec(),
+            None,
         )
         .await
         .expect("seed upload")
@@ -95,6 +98,7 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
         "   ",
         deps.seed_program_id().await,
         b"OggSx".to_vec(),
+        None,
     )
     .await;
     assert!(matches!(blank, Err(ApplicationError::InvalidInput(_))));
@@ -111,6 +115,7 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
         &long_name,
         deps.seed_program_id().await,
         b"OggSx".to_vec(),
+        None,
     )
     .await;
     assert!(matches!(too_long, Err(ApplicationError::InvalidInput(_))));
@@ -126,6 +131,7 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
         "Valid name",
         deps.seed_program_id().await,
         b"not audio at all".to_vec(),
+        None,
     )
     .await;
     assert_eq!(garbage.unwrap_err(), ApplicationError::UnsupportedMedia);
@@ -150,6 +156,7 @@ async fn upload_rejects_payloads_over_the_cap_before_anything_stored() {
         "Big",
         deps.seed_program_id().await,
         oversized,
+        None,
     )
     .await;
     assert_eq!(result.unwrap_err(), ApplicationError::PayloadTooLarge);
@@ -173,6 +180,7 @@ async fn upload_failure_at_the_store_leaves_no_blob() {
         "Valid",
         deps.seed_program_id().await,
         b"OggS....OpusHead".to_vec(),
+        None,
     )
     .await;
     assert!(matches!(result, Err(ApplicationError::Storage(_))));
@@ -197,6 +205,7 @@ async fn upload_failure_after_store_deletes_the_orphaned_blob() {
         "Valid",
         deps.seed_program_id().await,
         b"OggS....OpusHead".to_vec(),
+        None,
     )
     .await;
     assert!(matches!(result, Err(ApplicationError::Repository(_))));
@@ -471,6 +480,7 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
         "Home",
         program.id,
         b"OggS....OpusHead".to_vec(),
+        None,
     )
     .await
     .expect("home upload");
@@ -644,4 +654,57 @@ async fn position_reports_are_validated_and_default_to_zero() {
     .expect("state");
     assert_eq!(fresh.position_ms, 0);
     assert!(!fresh.completed);
+}
+
+#[tokio::test]
+async fn description_is_stored_on_upload_and_updatable() {
+    let deps = Deps::new();
+    let program_id = deps.seed_program_id().await;
+    let uploaded = upload_meditation(
+        &deps.meditations,
+        &deps.memberships,
+        &deps.programs,
+        &FakeValidator,
+        &FakeConverter { fail: false },
+        &deps.store,
+        &deps.clock,
+        "Described",
+        program_id,
+        b"OggS....OpusHead".to_vec(),
+        Some(" hello "),
+    )
+    .await
+    .unwrap();
+    assert_eq!(uploaded.description(), Some("hello"));
+
+    let updated = update_meditation_description(&deps.meditations, uploaded.id(), Some("new"))
+        .await
+        .unwrap();
+    assert_eq!(updated.description(), Some("new"));
+    let cleared = update_meditation_description(&deps.meditations, uploaded.id(), Some(""))
+        .await
+        .unwrap();
+    assert_eq!(cleared.description(), None);
+    let stored = deps
+        .meditations
+        .find_by_id(uploaded.id())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.description(), None);
+}
+
+#[tokio::test]
+async fn description_update_rejects_overlong_text_and_unknown_ids() {
+    let deps = Deps::new();
+    let seeded = deps.seeded_meditation().await;
+    let long = "a".repeat(2001);
+    assert_eq!(
+        update_meditation_description(&deps.meditations, seeded.id(), Some(&long)).await,
+        Err(ApplicationError::InvalidDescription)
+    );
+    assert_eq!(
+        update_meditation_description(&deps.meditations, 999, Some("x")).await,
+        Err(ApplicationError::NotFound)
+    );
 }

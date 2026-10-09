@@ -16,6 +16,11 @@ pub struct CreateCategoryRequest {
     pub name: String,
 }
 
+#[derive(Deserialize)]
+pub struct RenameCategoryRequest {
+    pub name: String,
+}
+
 #[derive(Serialize)]
 pub struct CategoryResponse {
     pub id: i64,
@@ -116,6 +121,27 @@ pub async fn create_category(
     ))
 }
 
+/// `PUT /meditation/categories/{id}` — admin rename; the name stays unique
+/// instance-wide.
+pub async fn rename_category(
+    AdminActor(_actor): AdminActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+    Json(request): Json<RenameCategoryRequest>,
+) -> Result<StatusCode, ApiError> {
+    ensure_browser_origin(&headers, &deps.medioss_origin)?;
+    commands::rename_category(
+        deps.categories.as_ref(),
+        deps.clock.as_ref(),
+        id,
+        &request.name,
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// `DELETE /meditation/categories/{id}` — admin delete; programs become
 /// uncategorized (spec FR-032).
 pub async fn delete_category(
@@ -167,7 +193,7 @@ pub async fn program(
 }
 
 /// `GET /meditation/programs/{id}/members` — the program's meditations, in
-/// the order they were added, each with the caller's own progress.
+/// program order, each with the caller's own progress.
 pub async fn program_members(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
@@ -501,6 +527,40 @@ pub async fn add_member(
     .await
     .map_err(ApiError::Application)?;
     Ok(StatusCode::CREATED)
+}
+
+#[derive(Deserialize)]
+pub struct MemberOrderRequest {
+    pub meditation_ids: Vec<i64>,
+}
+
+#[derive(Serialize)]
+pub struct MemberOrderResponse {
+    pub program_id: i64,
+    pub meditation_ids: Vec<i64>,
+}
+
+/// `PUT /meditation/programs/{id}/meditations/order` — admin reorder.
+pub async fn update_order(
+    AdminActor(_actor): AdminActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+    Json(request): Json<MemberOrderRequest>,
+) -> Result<Json<MemberOrderResponse>, ApiError> {
+    ensure_browser_origin(&headers, &deps.medioss_origin)?;
+    commands::update_program_order(
+        deps.programs.as_ref(),
+        deps.memberships.as_ref(),
+        id,
+        &request.meditation_ids,
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    Ok(Json(MemberOrderResponse {
+        program_id: id,
+        meditation_ids: request.meditation_ids,
+    }))
 }
 
 /// `DELETE /meditation/programs/{id}/members/{meditation_id}` — admin
