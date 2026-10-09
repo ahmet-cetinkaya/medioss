@@ -17,7 +17,7 @@ cargo-gate = if cargo $(firstword $(1)) --version >/dev/null 2>&1; then cargo $(
 help:
 	@printf '%s\n' \
 		'make format         Format Rust, Astro, Svelte, TypeScript, CSS, and Markdown' \
-		'make dev            Run Astro and Axum with hot reload' \
+		'make dev            Hot-reload dev stack: Astro on :4321 (proxies /api to Axum on :3000) + Axum with cargo-watch' \
 		'make build          Build the frontend and release Rust binary' \
 		'make lint           Check formatting, frontend files, Clippy, and boundaries' \
 		'make test           Run frontend and workspace Rust tests' \
@@ -43,8 +43,11 @@ build-service:
 build: build-ui build-service
 
 # Run both servers in one terminal; Ctrl-C stops both processes.
+# The Astro dev server on :4321 proxies /api to the Axum server on $(PORT),
+# so the live UI in the browser talks to the real backend (see
+# astro.config.mjs `server.proxy` and scripts/dev.sh `MEDIOSS_DEV_ORIGIN`).
 dev-ui:
-	$(UI_SETUP) && bun run dev
+	$(UI_SETUP) && ASTRO_API_TARGET=http://localhost:$(PORT) bun run dev
 
 dev-service:
 	@if ss -ltn "sport = :$(PORT)" | grep -q ":$(PORT)"; then \

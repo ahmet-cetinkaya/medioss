@@ -41,6 +41,20 @@ impl IntoResponse for ApiError {
         }
     }
 }
+fn origin_matches(value: &str, origin: &str) -> bool {
+    if value.eq_ignore_ascii_case(origin) {
+        return true;
+    }
+    // Dev-only extra origin (the Astro dev server on :4321 proxying to this
+    // API). Fail-closed: unset/empty env keeps single-origin behavior.
+    if let Ok(extra) = std::env::var("MEDIOSS_DEV_ORIGIN") {
+        let extra = extra.trim();
+        if !extra.is_empty() && value.eq_ignore_ascii_case(extra) {
+            return true;
+        }
+    }
+    false
+}
 pub fn ensure_browser_origin(headers: &HeaderMap, origin: &str) -> Result<(), ApiError> {
     // Fail closed: a missing Origin is not proven to be a same-origin browser
     // request, so reject it like a mismatched one. Compare case-insensitively;
@@ -48,7 +62,7 @@ pub fn ensure_browser_origin(headers: &HeaderMap, origin: &str) -> Result<(), Ap
     headers
         .get("origin")
         .and_then(|value| value.to_str().ok())
-        .filter(|value| value.eq_ignore_ascii_case(origin))
+        .filter(|value| origin_matches(value, origin))
         .ok_or(ApiError::StatusCode(StatusCode::FORBIDDEN))
         .map(|_| ())
 }
