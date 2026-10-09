@@ -110,17 +110,17 @@ fn cursor(
     let Some(value) = value else {
         return Ok(None);
     };
-    let (timestamp, rest) =
+    let (timestamp_and_kind, id) =
         value
-            .split_once(':')
+            .rsplit_once(':')
             .ok_or(ApiError::Application(ApplicationError::InvalidInput(
                 "invalid cursor",
             )))?;
-    let (kind, id) =
-        rest.rsplit_once(':')
-            .ok_or(ApiError::Application(ApplicationError::InvalidInput(
-                "invalid cursor",
-            )))?;
+    let (timestamp, kind) = timestamp_and_kind
+        .rsplit_once(':')
+        .ok_or(ApiError::Application(ApplicationError::InvalidInput(
+            "invalid cursor",
+        )))?;
     let timestamp = chrono::DateTime::parse_from_rfc3339(timestamp)
         .map_err(|_| ApiError::Application(ApplicationError::InvalidInput("invalid cursor")))?
         .with_timezone(&chrono::Utc);
@@ -305,10 +305,15 @@ async fn timeline(
     .await
     .map_err(ApiError::Application)?;
     if let Some((at, kind, id)) = cursor {
-        // Keyset continuation: keep only events strictly after the cursor
-        // tuple. Survives deletions between pages and keeps equal-timestamp
-        // events split deterministically by (kind, id).
-        events.retain(|event| (event.recorded_at, event.kind, event.id) > (at, kind, id));
+        // Keyset continuation over the query's descending order
+        // (recorded_at DESC, kind ASC, id DESC): keep only events strictly
+        // after the cursor tuple. Survives deletions between pages and keeps
+        // equal-timestamp events split deterministically by (kind, id).
+        events.retain(|event| {
+            event.recorded_at < at
+                || (event.recorded_at == at
+                    && (event.kind > kind || (event.kind == kind && event.id < id)))
+        });
     }
     let has_more = events.len() > usize::from(limit);
     events.truncate(usize::from(limit));

@@ -10,6 +10,10 @@ mod router;
 pub use response::{ensure_browser_origin, ApiError};
 pub use router::mood_tracker_router;
 
+#[cfg(test)]
+#[path = "router.tests.rs"]
+mod router_tests;
+
 pub struct MoodTrackerDependencies {
     pub entries: Arc<dyn MoodEntryRepository>,
     pub meditation: Arc<dyn MeditationTimelineSource>,
