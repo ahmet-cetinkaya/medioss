@@ -84,7 +84,7 @@ async fn up_creates_every_module_table_under_its_own_ledger() {
     }
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        3
+        2
     );
     // Ledger isolation: identity's ledger is untouched.
     assert!(!table_exists(&database.pool, "identity_migrations").await);
@@ -97,7 +97,7 @@ async fn up_is_idempotent_across_restarts() {
     migrate(&database.connection).await.unwrap();
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        3
+        2
     );
 }
 
@@ -117,6 +117,65 @@ async fn down_is_refused_and_leaves_schema_untouched() {
     // The refused down() did not roll the applied migration back either.
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        3
+        2
     );
+}
+
+async fn column_names(pool: &SqlitePool, table: &str) -> Vec<String> {
+    sqlx::query_scalar::<_, String>(&format!("SELECT name FROM pragma_table_info('{table}')"))
+        .fetch_all(pool)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn a_failing_migration_rolls_back_and_the_same_database_recovers() {
+    use sea_orm_migration::MigratorTrait;
+
+    // Base schema with only the base ledger row — the state of a database on
+    // the shipped schema — then an obstruction on the migration's SECOND
+    // statement, so the first (adding `description`) succeeds before the run
+    // fails. Without the transaction wrapper, `description` would survive.
+    let database = TestDatabase::open().await;
+    super::Migrator::up(&database.connection, Some(1))
+        .await
+        .unwrap();
+    sqlx::query(
+        "ALTER TABLE meditation_program_memberships \
+         ADD COLUMN position INTEGER NOT NULL DEFAULT 0",
+    )
+    .execute(&database.pool)
+    .await
+    .unwrap();
+
+    migrate(&database.connection).await.unwrap_err();
+
+    assert_eq!(
+        ledger_rows(&database.pool, "meditation_migrations").await,
+        1,
+        "a failed run must not write ledger rows"
+    );
+    let described = column_names(&database.pool, "meditation_meditations").await;
+    assert!(
+        !described.contains(&"description".to_owned()),
+        "the first statement's column must be rolled back: {described:?}"
+    );
+    let positioned = column_names(&database.pool, "meditation_program_memberships").await;
+    assert!(
+        positioned.contains(&"position".to_owned()),
+        "the pre-existing obstruction is untouched"
+    );
+
+    // Clear the obstruction: the same database now migrates cleanly.
+    sqlx::query("ALTER TABLE meditation_program_memberships DROP COLUMN position")
+        .execute(&database.pool)
+        .await
+        .unwrap();
+    migrate(&database.connection).await.unwrap();
+    assert_eq!(
+        ledger_rows(&database.pool, "meditation_migrations").await,
+        2
+    );
+    let described = column_names(&database.pool, "meditation_meditations").await;
+    assert!(described.contains(&"description".to_owned()));
 }

@@ -2,10 +2,14 @@ use crate::icon_defaults::default_icon_key;
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 use sea_orm_migration::prelude::*;
 
-/// Adds the bundled-glyph key and the uploaded-icon location to sounds, then
-/// backfills `icon_key` for existing rows from the shared default mapping.
+/// One migration for every pre-release v1 addition (still pre-1.0.0): the
+/// bundled-glyph key and the uploaded-icon location on sounds, plus the
+/// icon-key backfill for existing rows from the shared default mapping.
+/// `migrate` wraps it in a transaction so a crash mid-run cannot leave schema
+/// without its ledger row.
 #[derive(DeriveMigrationName)]
 pub struct Migration;
+
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -38,7 +42,10 @@ impl MigrationTrait for Migration {
         }
         Ok(())
     }
+
     async fn down(&self, _manager: &SchemaManager) -> Result<(), DbErr> {
-        Ok(())
+        Err(DbErr::Custom(
+            "soundscape migrations are irreversible; restore from a data-dir backup".to_owned(),
+        ))
     }
 }
