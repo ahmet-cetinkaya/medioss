@@ -10,6 +10,7 @@ import {
   navCurrentFor,
   ROUTES,
   SCREEN_ALLOWLIST,
+  isScreenAddress,
   type ScreenKey,
 } from "./routes";
 
@@ -98,5 +99,25 @@ describe("routes", () => {
       "/settings/",
       "/admin/",
     ]);
+  });
+
+  test("screen addresses include the canonical deep paths", () => {
+    for (const path of [
+      "/player/5/",
+      "/admin/meditations/",
+      "/admin/soundscape/",
+      "/admin/meditations/12/",
+    ]) {
+      expect(isScreenAddress(path)).toBe(true);
+    }
+    for (const path of [
+      "/player/abc/",
+      "/player/5/extra/",
+      "/admin/meditations/12/extra/",
+      "/unknown/",
+      "/admin/meditations/abc/",
+    ]) {
+      expect(isScreenAddress(path)).toBe(false);
+    }
   });
 });

@@ -1,6 +1,6 @@
 // Validates the remembered `next` address (plan D2 "Safe next"; spec FR-010, SC-003).
 
-import { directoryPath, SCREEN_ALLOWLIST } from "./routes";
+import { directoryPath, isScreenAddress } from "./routes";
 
 const MAX_LENGTH = 2048;
 // Backslash, C0 controls, DEL, and any whitespace.
@@ -25,6 +25,6 @@ export function safeNext(raw: string | null, origin: string): string | null {
   }
 
   const path = directoryPath(url.pathname);
-  if (!SCREEN_ALLOWLIST.includes(path)) return null;
+  if (!isScreenAddress(path)) return null;
   return path + url.search;
 }

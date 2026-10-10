@@ -48,6 +48,27 @@ describe("redirectToLogin", () => {
     redirectToLogin(loc);
     expect(calls).toEqual(["/login/"]);
   });
+
+  test.each([
+    ["/player/5/", "?t=3"],
+    ["/admin/meditations/12/", ""],
+    ["/admin/soundscape/", ""],
+  ])("remembers the canonical deep path %p%s", (pathname, search) => {
+    const { loc, calls } = stubLocation(pathname, search);
+    redirectToLogin(loc);
+    expect(calls).toEqual([
+      `/login/?next=${encodeURIComponent(pathname + search)}`,
+    ]);
+  });
+
+  test.each([["/player/abc/"], ["/player/5/extra/"]])(
+    "omits next for a malformed deep path %p",
+    (pathname) => {
+      const { loc, calls } = stubLocation(pathname);
+      redirectToLogin(loc);
+      expect(calls).toEqual(["/login/"]);
+    },
+  );
 });
 
 describe("goToLogin", () => {

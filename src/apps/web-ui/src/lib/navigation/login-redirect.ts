@@ -1,7 +1,7 @@
 // The single redirect point to Login (plan D2 "Redirect helper"; spec FR-009).
 // No browser access at module top level: the location defaults lazily.
 
-import { directoryPath, SCREEN_ALLOWLIST } from "./routes";
+import { directoryPath, isScreenAddress } from "./routes";
 
 export type LocationLike = {
   readonly pathname: string;
@@ -26,7 +26,7 @@ export function redirectToLogin(loc: LocationLike = window.location): boolean {
   if (AUTH_PATHS.includes(path)) return false;
   redirected = true;
   loc.replace(
-    SCREEN_ALLOWLIST.includes(path)
+    isScreenAddress(path)
       ? `${LOGIN_PATH}?next=${encodeURIComponent(loc.pathname + loc.search)}`
       : LOGIN_PATH,
   );

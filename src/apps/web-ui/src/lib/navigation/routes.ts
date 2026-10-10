@@ -137,10 +137,21 @@ export const ROUTES: Readonly<Record<ScreenKey, Screen>> = {
   ),
 };
 
-/** The ten screen paths, directory form; the only valid `next` targets. */
+/** The ten screen paths, directory form. */
 export const SCREEN_ALLOWLIST: readonly string[] = Object.values(ROUTES).map(
   (route) => route.path,
 );
+
+const DEEP_SCREEN_PATH = /^\/(player\/\d+|admin\/[\w-]+(?:\/\d+)?)\/?$/;
+
+/**
+ * Whether a directory-form pathname is a screen address the app can return a
+ * user to: a screen root, or one of the canonical deep paths the app itself
+ * produces (`playerHref`, admin sections and their program details).
+ */
+export function isScreenAddress(pathname: string): boolean {
+  return SCREEN_ALLOWLIST.includes(pathname) || DEEP_SCREEN_PATH.test(pathname);
+}
 
 /** A meditation's Player address, e.g. `/player/5/`. */
 export function playerHref(id: number): string {
