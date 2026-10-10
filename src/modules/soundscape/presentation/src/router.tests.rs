@@ -13,7 +13,7 @@ use soundscape_application::ports::{
     media::{AudioFormat, AudioValidator, BlobReader, BlobStore, OpusConverter, StoredAudio},
     CategoryDelete, CategoryRepository, Clock, MixRepository, NewMix, NewSound, SoundRepository,
 };
-use soundscape_domain::{Mix, Sound, SoundCategory, SoundIcon};
+use soundscape_domain::{Mix, Sound, SoundCategory, SoundIcon, MAX_ICON_BYTES};
 use tower::ServiceExt;
 
 use crate::{soundscape_router, SoundscapeDependencies};
@@ -37,6 +37,7 @@ struct FakeState {
     categories: std::sync::Mutex<Vec<SoundCategory>>,
     sounds: std::sync::Mutex<Vec<Sound>>,
     mixes: std::sync::Mutex<Vec<Mix>>,
+    store: std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>,
 }
 
 struct FakeCategories(Arc<FakeState>);
@@ -248,7 +249,7 @@ impl futures_io::AsyncRead for TestReader {
 }
 
 #[derive(Default)]
-struct FakeStore(std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>);
+struct FakeStore(std::sync::Arc<FakeState>);
 #[async_trait::async_trait]
 impl BlobStore for FakeStore {
     async fn put(
@@ -259,17 +260,24 @@ impl BlobStore for FakeStore {
         bytes: &[u8],
     ) -> Result<String, String> {
         let key = format!("soundscape/{stem}.{ext}");
-        self.0.lock().unwrap().insert(key.clone(), bytes.to_vec());
+        self.0
+            .store
+            .lock()
+            .unwrap()
+            .insert(key.clone(), bytes.to_vec());
         Ok(key)
     }
     async fn open_range(
         &self,
         key: &str,
         _start: u64,
+        // Deliberately ignores the requested length, like a store whose blob
+        // changed out-of-band: the reader must bound itself.
         _length: u64,
     ) -> Result<(BlobReader, String, u64), String> {
         let bytes = self
             .0
+            .store
             .lock()
             .unwrap()
             .get(key)
@@ -283,7 +291,7 @@ impl BlobStore for FakeStore {
         ))
     }
     async fn delete(&self, key: &str) -> Result<(), String> {
-        self.0.lock().unwrap().remove(key);
+        self.0.store.lock().unwrap().remove(key);
         Ok(())
     }
 }
@@ -330,7 +338,7 @@ fn app() -> TestApp {
         mixes: Arc::new(FakeMixes(state.clone())),
         validator: Arc::new(FakeValidator),
         converter: Arc::new(FakeConverter),
-        store: Arc::new(FakeStore::default()),
+        store: Arc::new(FakeStore(state.clone())),
         clock: Arc::new(FixedClock),
         medioss_origin: Arc::new("http://localhost".into()),
     };
@@ -716,4 +724,37 @@ async fn missing_icon_is_404() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn an_oversized_stored_icon_is_refused_not_buffered() {
+    let app = app();
+    // Simulate an out-of-band media-store change: the blob behind the icon
+    // grew past the upload limit. Serving must refuse, not buffer it all.
+    {
+        let mut sounds = app.state.sounds.lock().unwrap();
+        let sound = sounds.first_mut().unwrap();
+        sound.icon = Some(SoundIcon {
+            storage_key: "soundscape/icon-1.png".into(),
+            content_type: "image/png".into(),
+        });
+    }
+    let mut oversized = PNG.to_vec();
+    oversized.resize(MAX_ICON_BYTES + 1, 0);
+    app.state
+        .store
+        .lock()
+        .unwrap()
+        .insert("soundscape/icon-1.png".to_owned(), oversized);
+
+    let (status, _, _) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/soundscape/sounds/1/icon",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
 }

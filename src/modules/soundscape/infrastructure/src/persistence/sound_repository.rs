@@ -65,8 +65,17 @@ impl SoundRepository for SeaOrmSoundRepository {
         row.as_ref().map(to_sound).transpose()
     }
     async fn create(&self, s: NewSound) -> Result<Sound, String> {
-        self.db.execute(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"INSERT INTO soundscape_sounds(name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,icon_key) VALUES(?,?,?,?,?,?,?,?)",[s.name.into(),s.category_id.into(),s.content_type.into(),s.size_bytes.into(),s.storage_key.into(),s.duration_ms.into(),s.created_at.to_rfc3339().into(),s.icon_key.into()])).await.map_err(|e|e.to_string())?;
-        let row=self.db.query_one(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds ORDER BY id DESC LIMIT 1".to_owned())).await.map_err(|e|e.to_string())?;
+        // RETURNING binds the returned row to this INSERT: a concurrent create
+        // can never be picked up (and then mutated or deleted) by mistake.
+        let row = self
+            .db
+            .query_one(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                "INSERT INTO soundscape_sounds(name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,icon_key) VALUES(?,?,?,?,?,?,?,?) RETURNING id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type",
+                [s.name.into(), s.category_id.into(), s.content_type.into(), s.size_bytes.into(), s.storage_key.into(), s.duration_ms.into(), s.created_at.to_rfc3339().into(), s.icon_key.into()],
+            ))
+            .await
+            .map_err(|e| e.to_string())?;
         row.as_ref()
             .map(to_sound)
             .transpose()?

@@ -307,3 +307,23 @@ async fn icon_key_and_uploaded_icon_roundtrip() {
     assert!(cleared.icon.is_none());
     assert!(sounds.set_icon(999, None).await.unwrap().is_none());
 }
+
+#[tokio::test]
+async fn concurrent_creates_return_their_own_rows() {
+    let database = TestDatabase::open().await;
+    let sounds = SeaOrmSoundRepository::new(database.connection.clone());
+
+    // Two overlapping admin uploads. `create` must return each request's own
+    // row — a global "highest id" lookup could hand one request the other's
+    // sound, which the icon attach/delete rollback path would then mutate.
+    let (a, b) = tokio::join!(
+        sounds.create(sound("Rain", "soundscape/rain.opus")),
+        sounds.create(sound("Wind", "soundscape/wind.opus")),
+    );
+    let (a, b) = (a.unwrap(), b.unwrap());
+    assert_ne!(a.id, b.id);
+    assert_eq!(a.name, "Rain");
+    assert_eq!(b.name, "Wind");
+    assert_eq!(a.storage_key, "soundscape/rain.opus");
+    assert_eq!(b.storage_key, "soundscape/wind.opus");
+}

@@ -483,18 +483,30 @@ async fn get_icon(
         .map_err(map_error)?;
     let (BlobReader(reader), _, total) = deps
         .store
-        .open_range(&icon.storage_key, 0, u64::MAX)
+        .open_range(
+            &icon.storage_key,
+            0,
+            soundscape_domain::MAX_ICON_BYTES as u64 + 1,
+        )
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
     use tokio::io::AsyncReadExt;
     use tokio_util::compat::FuturesAsyncReadCompatExt;
     let mut bytes =
         Vec::with_capacity(total.min(soundscape_domain::MAX_ICON_BYTES as u64) as usize);
+    // The reader is bounded locally too: a store that ignores the requested
+    // range (or a blob changed out-of-band) cannot force unbounded buffering.
     reader
         .compat()
+        .take(soundscape_domain::MAX_ICON_BYTES as u64 + 1)
         .read_to_end(&mut bytes)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // A stored icon larger than the upload limit means the media store was
+    // changed out-of-band; refuse instead of buffering an arbitrary blob.
+    if bytes.len() > soundscape_domain::MAX_ICON_BYTES {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
     let mut response = Response::new(AxumBody::from(bytes));
     let headers = response.headers_mut();
     headers.insert(
