@@ -17,6 +17,7 @@ Desktop.ini
 .claude/
 .serena/
 .specify/
+.playwright-mcp/
 AGENTS.md
 CLAUDE.md
 graphify-out/
