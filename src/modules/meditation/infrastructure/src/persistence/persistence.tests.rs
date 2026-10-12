@@ -71,6 +71,7 @@ async fn meditation_rows_round_trip_and_list_newest_first() {
             "key-one".to_owned(),
             0,
             Utc::now(),
+            None,
         )
         .await
         .unwrap();
@@ -82,6 +83,7 @@ async fn meditation_rows_round_trip_and_list_newest_first() {
             "key-two".to_owned(),
             0,
             Utc::now() + ChronoDuration::seconds(5),
+            None,
         )
         .await
         .unwrap();
@@ -117,6 +119,30 @@ async fn category_names_are_unique_at_the_database_level() {
 }
 
 #[tokio::test]
+async fn category_rename_maps_unique_constraint_to_duplicate() {
+    let database = TestDatabase::open().await;
+    let repository = SeaOrmCategoryRepository::new(database.connection);
+    let first = repository
+        .insert("Morning".to_owned(), Utc::now())
+        .await
+        .unwrap();
+    repository
+        .insert("Evening".to_owned(), Utc::now())
+        .await
+        .unwrap();
+
+    let error = repository
+        .rename(first.id, "Evening".to_owned(), Utc::now())
+        .await
+        .expect_err("duplicate category name");
+
+    assert_eq!(
+        error,
+        meditation_application::ports::RenameCategoryError::Duplicate
+    );
+}
+
+#[tokio::test]
 async fn memberships_are_idempotent_on_the_pair() {
     let database = TestDatabase::open().await;
     let meditations = SeaOrmMeditationRepository::new(database.connection.clone());
@@ -131,6 +157,7 @@ async fn memberships_are_idempotent_on_the_pair() {
             "k".to_owned(),
             0,
             Utc::now(),
+            None,
         )
         .await
         .unwrap();
@@ -172,6 +199,7 @@ async fn session_triple_is_the_idempotency_key() {
             "k".to_owned(),
             0,
             Utc::now(),
+            None,
         )
         .await
         .unwrap();
@@ -231,6 +259,7 @@ async fn playback_upserts_are_per_user() {
             "k".to_owned(),
             0,
             Utc::now(),
+            None,
         )
         .await
         .unwrap();
@@ -288,6 +317,7 @@ async fn notes_stay_author_scoped_and_newest_first() {
             "k".to_owned(),
             0,
             Utc::now(),
+            None,
         )
         .await
         .unwrap();
@@ -372,4 +402,96 @@ async fn program_category_sweep_nulls_references() {
     );
     let stored = programs.find_by_id(program.id).await.unwrap().unwrap();
     assert_eq!(stored.category_id, None);
+}
+
+#[tokio::test]
+async fn description_persists_updates_and_clears() {
+    let database = TestDatabase::open().await;
+    let repository = SeaOrmMeditationRepository::new(database.connection);
+    let row = repository
+        .insert(
+            "D".to_owned(),
+            "audio/ogg",
+            10,
+            "key-d".to_owned(),
+            0,
+            Utc::now(),
+            Some("about".to_owned()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(row.description(), Some("about"));
+
+    assert!(repository
+        .set_description(row.id(), Some("changed"))
+        .await
+        .unwrap());
+    let found = repository.find_by_id(row.id()).await.unwrap().unwrap();
+    assert_eq!(found.description(), Some("changed"));
+
+    assert!(repository.set_description(row.id(), None).await.unwrap());
+    let found = repository.find_by_id(row.id()).await.unwrap().unwrap();
+    assert_eq!(found.description(), None);
+    assert!(!repository.set_description(999, Some("x")).await.unwrap());
+}
+
+#[tokio::test]
+async fn membership_positions_append_reorder_and_survive_gaps() {
+    let database = TestDatabase::open().await;
+    let meditations = SeaOrmMeditationRepository::new(database.connection.clone());
+    let programs = SeaOrmProgramRepository::new(database.connection.clone());
+    let memberships = SeaOrmMembershipRepository::new(database.connection);
+    let program = programs
+        .insert("P".to_owned(), None, Utc::now())
+        .await
+        .unwrap();
+    let mut ids = Vec::new();
+    for i in 0..4 {
+        let m = meditations
+            .insert(
+                format!("M{i}"),
+                "audio/ogg",
+                1,
+                format!("k/{i}"),
+                1,
+                Utc::now(),
+                None,
+            )
+            .await
+            .unwrap();
+        ids.push(m.id());
+    }
+    for meditation_id in &ids[..3] {
+        memberships
+            .add(program.id, *meditation_id, Utc::now())
+            .await
+            .unwrap();
+    }
+    let order = |l: Vec<meditation_application::ports::Membership>| {
+        l.into_iter().map(|m| m.meditation_id).collect::<Vec<_>>()
+    };
+    assert_eq!(
+        order(memberships.list_by_program(program.id).await.unwrap()),
+        ids[..3]
+    );
+    let reversed: Vec<i64> = ids[..3].iter().rev().copied().collect();
+    memberships.set_order(program.id, &reversed).await.unwrap();
+    assert_eq!(
+        order(memberships.list_by_program(program.id).await.unwrap()),
+        reversed
+    );
+    memberships.remove(program.id, reversed[1]).await.unwrap();
+    memberships
+        .add(program.id, ids[3], Utc::now())
+        .await
+        .unwrap();
+    let listed = memberships.list_by_program(program.id).await.unwrap();
+    assert_eq!(
+        listed.iter().map(|m| m.meditation_id).collect::<Vec<_>>(),
+        vec![reversed[0], reversed[2], ids[3]]
+    );
+    assert_eq!(
+        listed.iter().map(|m| m.position).collect::<Vec<_>>(),
+        vec![0, 2, 3]
+    );
 }

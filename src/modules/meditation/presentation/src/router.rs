@@ -59,7 +59,8 @@ pub fn meditation_router() -> Router<SharedDependencies> {
         )
         .route(
             "/meditation/categories/{id}",
-            delete(crate::handlers_programs::delete_category),
+            put(crate::handlers_programs::rename_category)
+                .delete(crate::handlers_programs::delete_category),
         )
         .route(
             "/meditation/programs",
@@ -105,12 +106,20 @@ pub fn meditation_router() -> Router<SharedDependencies> {
                 .post(crate::handlers_programs::add_member),
         )
         .route(
+            "/meditation/programs/{id}/meditations/order",
+            put(crate::handlers_programs::update_order),
+        )
+        .route(
             "/meditation/programs/{id}/members/{meditation_id}",
             delete(crate::handlers_programs::remove_member),
         )
         .route(
             "/meditation/programs/{id}/category",
             put(crate::handlers_programs::assign_category),
+        )
+        .route(
+            "/meditation/meditations/{id}",
+            put(crate::handlers_audio::update_description),
         )
         .route(
             "/meditation/{id}",

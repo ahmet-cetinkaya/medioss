@@ -1,5 +1,6 @@
 mod m20260908_000001_identity_create_schema;
 mod m20261002_000001_identity_profile_columns;
+mod m20261012_000001_identity_avatar_key;
 
 use sea_orm::DatabaseConnection;
 use sea_orm_migration::{MigrationTrait, MigratorTrait};
@@ -12,6 +13,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20260908_000001_identity_create_schema::Migration),
             Box::new(m20261002_000001_identity_profile_columns::Migration),
+            Box::new(m20261012_000001_identity_avatar_key::Migration),
         ]
     }
 }

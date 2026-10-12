@@ -6,17 +6,29 @@ Desktop.ini
 *.swo
 *~
 
+# Stray home dotfiles accidentally created in the repo root
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.profile
+.ripgreprc
+.zprofile
+.zshrc
+
 # Editors
 .idea/
 .vscode/
 *.sublime-project
 *.sublime-workspace
+.mcp.json
 
 # Project Tools
 .agents/
 .claude/
 .serena/
 .specify/
+.playwright-mcp/
 AGENTS.md
 CLAUDE.md
 graphify-out/

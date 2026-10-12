@@ -54,6 +54,7 @@ fn sound(name: &str, storage_key: &str) -> NewSound {
         storage_key: storage_key.to_owned(),
         duration_ms: 5_000,
         created_at: Utc::now(),
+        icon_key: None,
     }
 }
 
@@ -265,4 +266,64 @@ async fn deleting_a_builtin_sound_records_a_tombstone() {
         vec!["rain:rain".to_owned()],
         "only the built-in delete is tombstoned"
     );
+}
+
+#[tokio::test]
+async fn icon_key_and_uploaded_icon_roundtrip() {
+    let database = TestDatabase::open().await;
+    let sounds = SeaOrmSoundRepository::new(database.connection.clone());
+    let created = sounds
+        .create(NewSound {
+            icon_key: Some("rain".into()),
+            ..sound("Rain", "soundscape/rain.opus")
+        })
+        .await
+        .unwrap();
+    assert_eq!(created.icon_key.as_deref(), Some("rain"));
+    assert!(created.icon.is_none());
+
+    let with_icon = sounds
+        .set_icon(
+            created.id,
+            Some(soundscape_domain::SoundIcon {
+                storage_key: "soundscape/icon.png".into(),
+                content_type: "image/png".into(),
+            }),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(with_icon.icon.unwrap().content_type, "image/png");
+
+    let edited = sounds
+        .update(created.id, "Rain", 1, None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(edited.icon_key, None);
+    assert!(edited.icon.is_some(), "edit leaves the uploaded image");
+
+    let cleared = sounds.set_icon(created.id, None).await.unwrap().unwrap();
+    assert!(cleared.icon.is_none());
+    assert!(sounds.set_icon(999, None).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn concurrent_creates_return_their_own_rows() {
+    let database = TestDatabase::open().await;
+    let sounds = SeaOrmSoundRepository::new(database.connection.clone());
+
+    // Two overlapping admin uploads. `create` must return each request's own
+    // row — a global "highest id" lookup could hand one request the other's
+    // sound, which the icon attach/delete rollback path would then mutate.
+    let (a, b) = tokio::join!(
+        sounds.create(sound("Rain", "soundscape/rain.opus")),
+        sounds.create(sound("Wind", "soundscape/wind.opus")),
+    );
+    let (a, b) = (a.unwrap(), b.unwrap());
+    assert_ne!(a.id, b.id);
+    assert_eq!(a.name, "Rain");
+    assert_eq!(b.name, "Wind");
+    assert_eq!(a.storage_key, "soundscape/rain.opus");
+    assert_eq!(b.storage_key, "soundscape/wind.opus");
 }

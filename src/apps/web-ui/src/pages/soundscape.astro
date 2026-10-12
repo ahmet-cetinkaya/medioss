@@ -1,8 +1,11 @@
 ---
-import Base from "../layouts/Base.astro";
-import Soundscape from "$lib/components/soundscape.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import SoundscapePage from "$lib/screens/soundscape/soundscape-page.svelte";
 ---
 
-<Base title="MediOSS — Soundscape">
-	<Soundscape client:load />
-</Base>
+<AppLayout screen="soundscape">
+  <SoundscapePage client:only="svelte"
+    ><AppSkeleton slot="fallback" /></SoundscapePage
+  >
+</AppLayout>

@@ -1,3 +1,5 @@
+import { request } from "./request";
+
 export interface ImportReport {
   mood_created: number;
   mood_duplicates_skipped: number;
@@ -9,16 +11,13 @@ export interface ImportReport {
 export async function importData(file: File): Promise<ImportReport> {
   const body = new FormData();
   body.append("file", file);
-  const response = await fetch("/api/portability/import", {
-    method: "POST",
-    credentials: "same-origin",
-    body,
-  });
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    throw new Error(payload.error ?? `import failed (${response.status})`);
-  }
-  return (await response.json()) as ImportReport;
+  return request<ImportReport>(
+    "/api/portability/import",
+    { method: "POST", body },
+    { action: "import" },
+  );
 }
+
+/** Same-origin export downloads (attachment responses for `<a href>`). */
+export const exportJsonUrl = () => "/api/portability/export/json";
+export const exportCsvUrl = () => "/api/portability/export/csv";

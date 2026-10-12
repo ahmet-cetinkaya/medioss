@@ -1,8 +1,8 @@
-//! A program's members in add order.
+//! A program's members in program order.
 use crate::ports::{Membership, MembershipRepository};
 use crate::ApplicationError;
 
-/// Lists a program's memberships ordered by `added_at` (spec FR-027).
+/// Lists a program's memberships ordered by `position` (spec FR-027).
 pub async fn list_program_members<M>(
     memberships: &M,
     program_id: i64,

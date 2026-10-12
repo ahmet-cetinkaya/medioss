@@ -15,6 +15,48 @@ pub fn valid_content_type(content_type: &str) -> bool {
     )
 }
 pub const MAX_NAME_LENGTH: usize = 80;
+pub const MAX_ICON_KEY_LENGTH: usize = 64;
+pub const MAX_ICON_BYTES: usize = 1024 * 1024;
+
+/// Stored location of an admin-uploaded icon image.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SoundIcon {
+    pub storage_key: String,
+    pub content_type: String,
+}
+
+/// Normalizes a bundled-glyph key: lowercase `[a-z0-9-]`, at most
+/// `MAX_ICON_KEY_LENGTH`. Blank input means "no key".
+pub fn valid_icon_key(key: &str) -> Result<Option<String>, DomainError> {
+    let key = key.trim();
+    if key.is_empty() {
+        return Ok(None);
+    }
+    let ok = key.len() <= MAX_ICON_KEY_LENGTH
+        && key
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    if ok {
+        Ok(Some(key.to_owned()))
+    } else {
+        Err(DomainError::InvalidIconKey)
+    }
+}
+
+/// Real content type of an icon image from its magic bytes (png, jpeg,
+/// webp). SVG is deliberately unsupported: it is active content, and the
+/// identity avatar pipeline refuses it too.
+pub fn sniff_icon(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
+    if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
+        Some(("image/png", "png"))
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        Some(("image/jpeg", "jpg"))
+    } else if bytes.len() >= 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        Some(("image/webp", "webp"))
+    } else {
+        None
+    }
+}
 /// Maximum number of distinct sounds one mix may contain. Deliberately
 /// generous: layering many ambient sounds is a supported use, and the only
 /// ceiling is a sanity bound against runaway payloads, not a product limit.
@@ -30,6 +72,8 @@ pub enum DomainError {
     InvalidStorageKey,
     #[error("sound content type is not a supported audio type")]
     InvalidContentType,
+    #[error("icon key must be at most {MAX_ICON_KEY_LENGTH} characters of a-z, 0-9 or '-'")]
+    InvalidIconKey,
     #[error("mix may contain at most {MAX_MIX_SOUNDS} distinct sounds")]
     InvalidMixItems,
     #[error("mix item volume must be between 0 and 100")]
@@ -74,6 +118,10 @@ pub struct Sound {
     pub created_at: DateTime<Utc>,
     /// True when the row came from the shipped built-in sound set.
     pub builtin: bool,
+    /// Key of a bundled UI glyph, if one was chosen.
+    pub icon_key: Option<String>,
+    /// Admin-uploaded icon image, if any (wins over `icon_key` in the UI).
+    pub icon: Option<SoundIcon>,
 }
 impl Sound {
     #[allow(clippy::too_many_arguments)] // media metadata fields are naturally flat
@@ -106,6 +154,8 @@ impl Sound {
             duration_ms,
             created_at,
             builtin: false,
+            icon_key: None,
+            icon: None,
         })
     }
 }
@@ -166,6 +216,29 @@ impl Mix {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn icon_key_is_normalized_and_bounded() {
+        assert_eq!(valid_icon_key("  rain "), Ok(Some("rain".into())));
+        assert_eq!(valid_icon_key(" "), Ok(None));
+        assert!(valid_icon_key("Rain").is_err());
+        assert!(valid_icon_key(&"a".repeat(65)).is_err());
+    }
+    #[test]
+    fn icon_sniffing_accepts_raster_and_rejects_svg() {
+        assert_eq!(
+            sniff_icon(b"\x89PNG\r\n\x1a\n..").map(|t| t.0),
+            Some("image/png")
+        );
+        assert_eq!(
+            sniff_icon(&[0xFF, 0xD8, 0xFF, 0xE0]).map(|t| t.0),
+            Some("image/jpeg")
+        );
+        assert_eq!(
+            sniff_icon(b"RIFF\0\0\0\0WEBPVP8 ").map(|t| t.0),
+            Some("image/webp")
+        );
+        assert_eq!(sniff_icon(b"<svg xmlns=''></svg>"), None);
+    }
     #[test]
     fn mix_invariants_reject_duplicates_and_bad_volume() {
         let now = Utc::now();

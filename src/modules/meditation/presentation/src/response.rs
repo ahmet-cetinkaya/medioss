@@ -49,9 +49,12 @@ pub fn application_error_response(error: ApplicationError) -> Response {
     let status = match &error {
         ApplicationError::UnsupportedMedia => StatusCode::UNSUPPORTED_MEDIA_TYPE,
         ApplicationError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
+        ApplicationError::Busy => StatusCode::SERVICE_UNAVAILABLE,
         ApplicationError::NotFound => StatusCode::NOT_FOUND,
         ApplicationError::DuplicateCategory => StatusCode::CONFLICT,
-        ApplicationError::InvalidInput(_) => StatusCode::BAD_REQUEST,
+        ApplicationError::InvalidInput(_)
+        | ApplicationError::InvalidDescription
+        | ApplicationError::InvalidProgramOrder => StatusCode::BAD_REQUEST,
         ApplicationError::Storage(_) => StatusCode::SERVICE_UNAVAILABLE,
         ApplicationError::Repository(_) => StatusCode::INTERNAL_SERVER_ERROR,
     };
@@ -77,12 +80,26 @@ impl IntoResponse for ApiError {
 /// identity's router: a request is accepted only when its Origin header is
 /// present and matches exactly; a missing or mismatched Origin is rejected
 /// (fail closed).
+fn origin_matches(value: &str, origin: &str) -> bool {
+    if value.eq_ignore_ascii_case(origin) {
+        return true;
+    }
+    // Dev-only extra origin (the Astro dev server on :4321 proxying to this
+    // API). Fail-closed: unset/empty env keeps single-origin behavior.
+    if let Ok(extra) = std::env::var("MEDIOSS_DEV_ORIGIN") {
+        let extra = extra.trim();
+        if !extra.is_empty() && value.eq_ignore_ascii_case(extra) {
+            return true;
+        }
+    }
+    false
+}
 pub fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), ApiError> {
     let origin = headers
         .get("origin")
         .and_then(|value| value.to_str().ok())
         .unwrap_or("");
-    if origin.eq_ignore_ascii_case(expected) {
+    if origin_matches(origin, expected) {
         return Ok(());
     }
     Err(ApiError::StatusCode(StatusCode::FORBIDDEN))

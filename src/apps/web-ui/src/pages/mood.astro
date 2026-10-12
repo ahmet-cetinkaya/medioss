@@ -1,8 +1,9 @@
 ---
-import Base from "../layouts/Base.astro";
-import MoodTracker from "$lib/components/mood-tracker.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import MoodPage from "$lib/screens/mood/mood-page.svelte";
 ---
 
-<Base title="MediOSS">
-	<MoodTracker client:load />
-</Base>
+<AppLayout screen="mood">
+  <MoodPage client:only="svelte"><AppSkeleton slot="fallback" /></MoodPage>
+</AppLayout>

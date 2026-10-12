@@ -1,8 +1,9 @@
 ---
-import Base from "../layouts/Base.astro";
-import Statistics from "$lib/components/statistics.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import StatsPage from "$lib/screens/stats/stats-page.svelte";
 ---
 
-<Base title="MediOSS — Statistics">
-	<Statistics client:load />
-</Base>
+<AppLayout screen="stats">
+  <StatsPage client:only="svelte"><AppSkeleton slot="fallback" /></StatsPage>
+</AppLayout>

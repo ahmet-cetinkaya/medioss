@@ -9,6 +9,7 @@ pub struct Model {
     pub program_id: i64,
     pub meditation_id: i64,
     pub added_at: String,
+    pub position: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

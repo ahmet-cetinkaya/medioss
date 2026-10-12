@@ -1,9 +1,9 @@
 ---
-import Base from "../layouts/Base.astro";
-import { Button } from "$lib/components/ui/button/index.js";
-import Home from "$lib/components/home.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import HomePage from "$lib/screens/home/home-page.svelte";
 ---
 
-<Base title="MediOSS">
-	<Home client:load />
-</Base>
+<AppLayout screen="home">
+  <HomePage client:only="svelte"><AppSkeleton slot="fallback" /></HomePage>
+</AppLayout>

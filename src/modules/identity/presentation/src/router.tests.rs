@@ -65,6 +65,7 @@ struct RecordingAvatarStore {
     written: std::sync::Mutex<Vec<&'static str>>,
     removed: std::sync::Mutex<Vec<&'static str>>,
     read_result: std::sync::Mutex<Vec<u8>>,
+    next_key: std::sync::atomic::AtomicU64,
 }
 
 impl RecordingAvatarStore {
@@ -74,6 +75,7 @@ impl RecordingAvatarStore {
             written: std::sync::Mutex::new(Vec::new()),
             removed: std::sync::Mutex::new(Vec::new()),
             read_result: std::sync::Mutex::new(vec![9, 9]),
+            next_key: std::sync::atomic::AtomicU64::new(1),
         }
     }
 }
@@ -90,17 +92,23 @@ impl identity_application::ports::AvatarStore for RecordingAvatarStore {
     async fn write(
         &self,
         _id: kernel::UserId,
-        avatar: identity_domain::AvatarRef,
+        extension: &'static str,
         _bytes: &[u8],
-    ) -> Result<(), identity_application::ports::AvatarStoreError> {
-        self.written.lock().unwrap().push(avatar.extension());
-        Ok(())
+    ) -> Result<identity_domain::AvatarRef, identity_application::ports::AvatarStoreError> {
+        let sequence = self
+            .next_key
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.written.lock().unwrap().push(extension);
+        Ok(
+            identity_domain::AvatarRef::new(format!("avatar-{sequence}.{extension}"), extension)
+                .unwrap(),
+        )
     }
 
     async fn read(
         &self,
         _id: kernel::UserId,
-        _avatar: identity_domain::AvatarRef,
+        _avatar: &identity_domain::AvatarRef,
     ) -> Result<Vec<u8>, identity_application::ports::AvatarStoreError> {
         Ok(self.read_result.lock().unwrap().clone())
     }
@@ -108,7 +116,7 @@ impl identity_application::ports::AvatarStore for RecordingAvatarStore {
     async fn remove(
         &self,
         _id: kernel::UserId,
-        avatar: identity_domain::AvatarRef,
+        avatar: &identity_domain::AvatarRef,
     ) -> Result<(), identity_application::ports::AvatarStoreError> {
         self.removed.lock().unwrap().push(avatar.extension());
         Ok(())
@@ -129,16 +137,16 @@ impl identity_application::ports::AvatarStore for NullAvatarStore {
     async fn write(
         &self,
         _id: kernel::UserId,
-        _avatar: identity_domain::AvatarRef,
+        extension: &'static str,
         _bytes: &[u8],
-    ) -> Result<(), identity_application::ports::AvatarStoreError> {
-        Ok(())
+    ) -> Result<identity_domain::AvatarRef, identity_application::ports::AvatarStoreError> {
+        Ok(identity_domain::AvatarRef::from_extension(extension).unwrap())
     }
 
     async fn read(
         &self,
         _id: kernel::UserId,
-        _avatar: identity_domain::AvatarRef,
+        _avatar: &identity_domain::AvatarRef,
     ) -> Result<Vec<u8>, identity_application::ports::AvatarStoreError> {
         Ok(Vec::new())
     }
@@ -146,7 +154,7 @@ impl identity_application::ports::AvatarStore for NullAvatarStore {
     async fn remove(
         &self,
         _id: kernel::UserId,
-        _avatar: identity_domain::AvatarRef,
+        _avatar: &identity_domain::AvatarRef,
     ) -> Result<(), identity_application::ports::AvatarStoreError> {
         Ok(())
     }
@@ -205,7 +213,7 @@ impl UserRepository for EmptyRepository {
         &self,
         _id: kernel::UserId,
         _display_name: Option<identity_domain::DisplayName>,
-        _avatar_ext: Option<identity_domain::AvatarRef>,
+        _avatar: Option<identity_domain::AvatarRef>,
     ) -> Result<User, RepositoryError> {
         Err(RepositoryError::OperationFailed)
     }
@@ -463,6 +471,10 @@ fn api_error_mapping_table() {
         (ApplicationError::EmailAlreadyExists, StatusCode::CONFLICT),
         (ApplicationError::UserNotFound, StatusCode::UNAUTHORIZED),
         (
+            ApplicationError::ProcessingUnavailable,
+            StatusCode::SERVICE_UNAVAILABLE,
+        ),
+        (
             ApplicationError::PasswordHasher,
             StatusCode::INTERNAL_SERVER_ERROR,
         ),
@@ -564,7 +576,7 @@ impl UserRepository for SeededRepository {
         &self,
         id: kernel::UserId,
         display_name: Option<identity_domain::DisplayName>,
-        avatar_ext: Option<identity_domain::AvatarRef>,
+        avatar: Option<identity_domain::AvatarRef>,
     ) -> Result<User, RepositoryError> {
         let mut users = self.users.lock().unwrap();
         let Some(current) = users.iter_mut().find(|user| user.id() == id) else {
@@ -573,7 +585,7 @@ impl UserRepository for SeededRepository {
         *current = current
             .clone()
             .with_display_name(display_name)
-            .with_avatar(avatar_ext);
+            .with_avatar(avatar);
         Ok(current.clone())
     }
 
@@ -1005,7 +1017,30 @@ async fn avatar_upload_normalizes_persists_and_replaces() {
     assert_eq!(response.status(), StatusCode::CREATED);
 
     assert_eq!(*store.written.lock().unwrap(), vec!["webp", "webp"]);
-    assert_eq!(*store.removed.lock().unwrap(), Vec::<&str>::new());
+    // The second upload stages a fresh key and unlinks the first avatar.
+    assert_eq!(*store.removed.lock().unwrap(), vec!["webp"]);
+}
+
+#[tokio::test]
+async fn avatar_upload_maps_truncated_multipart_to_400() {
+    let router = seeded_app_with(
+        vec![user(1, "member@example.com", Role::Member)],
+        Arc::new(RecordingAvatarStore::accepting()),
+    );
+    let mut request = Request::put("/identity/me/avatar")
+        .header("origin", "https://medioss.example")
+        .header("content-type", "multipart/form-data; boundary=b")
+        .body(Body::from(
+            "--b\r\ncontent-disposition: form-data; name=\"file\"; filename=\"a\"\r\n\r\nimg"
+                .to_owned(),
+        ))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]
@@ -1042,6 +1077,7 @@ async fn avatar_upload_rejects_invalid_payloads_without_writing() {
         written: std::sync::Mutex::new(Vec::new()),
         removed: std::sync::Mutex::new(Vec::new()),
         read_result: std::sync::Mutex::new(Vec::new()),
+        next_key: std::sync::atomic::AtomicU64::new(1),
     });
     let router = seeded_app_with(
         vec![user(1, "member@example.com", Role::Member)],
@@ -1062,6 +1098,53 @@ async fn avatar_upload_rejects_invalid_payloads_without_writing() {
     let response = router.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert!(store.written.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn avatar_upload_maps_normalization_failures_to_operational_statuses() {
+    use identity_application::ports::AvatarStoreError;
+    // Only invalid input stays a client error; every server-side failure
+    // must surface as 5xx, never 400.
+    let cases = [
+        (
+            AvatarStoreError::OutputTooLarge,
+            StatusCode::PAYLOAD_TOO_LARGE,
+        ),
+        (
+            AvatarStoreError::WorkerFailed,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ),
+        (AvatarStoreError::Storage, StatusCode::INTERNAL_SERVER_ERROR),
+        (AvatarStoreError::Busy, StatusCode::SERVICE_UNAVAILABLE),
+    ];
+    for (error, expected) in cases {
+        let store = Arc::new(RecordingAvatarStore {
+            normalize_result: std::sync::Mutex::new(Err(error)),
+            written: std::sync::Mutex::new(Vec::new()),
+            removed: std::sync::Mutex::new(Vec::new()),
+            read_result: std::sync::Mutex::new(Vec::new()),
+            next_key: std::sync::atomic::AtomicU64::new(1),
+        });
+        let router = seeded_app_with(
+            vec![user(1, "member@example.com", Role::Member)],
+            store.clone(),
+        );
+
+        let mut request = Request::put("/identity/me/avatar")
+            .header("origin", "https://medioss.example")
+            .header("content-type", "multipart/form-data; boundary=b")
+            .body(Body::from(
+                "--b\r\ncontent-disposition: form-data; name=\"file\"; filename=\"a\"\r\n\r\nimg\r\n--b--\r\n".to_owned(),
+            ))
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), expected, "{error:?}");
+        assert!(store.written.lock().unwrap().is_empty());
+    }
 }
 
 #[tokio::test]

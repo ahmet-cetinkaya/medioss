@@ -19,16 +19,30 @@ pub struct MeditationResponse {
     pub size_bytes: i64,
     pub duration_ms: i64,
     pub created_at: String,
+    pub description: Option<String>,
     /// Every meditation surface must show progress: `0` and `false` when the
     /// caller never touched this meditation.
     pub completed: bool,
     pub progress_percent: i64,
-    /// Set only on the daily-suggestion response, so its card can borrow the
-    /// home program's cover; absent elsewhere.
+    /// The meditation's home program: set on the daily-suggestion and library
+    /// responses (cover borrowing, \"no program\" detection); absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub program_id: Option<i64>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub program_has_cover: bool,
+    /// The home program as the Player needs it (cover borrowing, link label);
+    /// set on the detail response, absent elsewhere.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program: Option<ProgramSummary>,
+}
+
+/// The part of a program the Player screen renders: its identity, the title
+/// for the program link's label, and whether a cover can be borrowed.
+#[derive(Serialize)]
+pub struct ProgramSummary {
+    pub id: i64,
+    pub title: String,
+    pub has_cover: bool,
 }
 
 pub(crate) fn meditation_response(
@@ -41,10 +55,12 @@ pub(crate) fn meditation_response(
         size_bytes: meditation.size_bytes(),
         duration_ms: meditation.duration_ms(),
         created_at: meditation.created_at().to_rfc3339(),
+        description: meditation.description().map(str::to_owned),
         completed: false,
         progress_percent: 0,
         program_id: None,
         program_has_cover: false,
+        program: None,
     }
 }
 
@@ -94,6 +110,7 @@ pub async fn upload(
     let mut name: Option<String> = None;
     let mut program_id: Option<i64> = None;
     let mut bytes: Option<Vec<u8>> = None;
+    let mut description: Option<String> = None;
 
     while let Some(mut field) = multipart
         .next_field()
@@ -112,6 +129,16 @@ pub async fn upload(
             Some("name") => {
                 let text = crate::response::read_field_capped(&mut field, max_text).await?;
                 name = Some(String::from_utf8_lossy(&text).into_owned());
+            }
+            Some("description") => {
+                // Cap above the 2000-char limit (4 bytes/char) so an
+                // over-long value reaches the command and gets the 400.
+                let text = crate::response::read_field_capped(
+                    &mut field,
+                    meditation_domain::MAX_DESCRIPTION_LENGTH * 4 + 4,
+                )
+                .await?;
+                description = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("file") => {
                 bytes = Some(crate::response::read_field_capped(&mut field, max_bytes).await?);
@@ -137,10 +164,35 @@ pub async fn upload(
         &name,
         program_id,
         bytes,
+        description.as_deref(),
     )
     .await
     .map_err(ApiError::Application)?;
     Ok((StatusCode::CREATED, Json(meditation_response(&meditation))))
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateDescriptionRequest {
+    pub description: Option<String>,
+}
+
+/// `PUT /meditation/meditations/{id}` — admin set/clear of the description.
+pub async fn update_description(
+    AdminActor(_actor): AdminActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+    Json(request): Json<UpdateDescriptionRequest>,
+) -> Result<Json<MeditationResponse>, ApiError> {
+    ensure_browser_origin(&headers, &deps.medioss_origin)?;
+    let updated = commands::update_meditation_description(
+        deps.meditations.as_ref(),
+        id,
+        request.description.as_deref(),
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    Ok(Json(meditation_response(&updated)))
 }
 
 /// `GET /meditation/library` — the shared library, newest first.
@@ -170,24 +222,48 @@ pub async fn library(
     .await
     .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
+    let homes = deps.memberships.home_programs().await.map_err(|e| {
+        ApiError::Application(meditation_application::ApplicationError::Repository(e))
+    })?;
     for meditation in &listed {
-        responses.push(with_playback(deps.playback.as_ref(), actor.user_id(), meditation).await);
+        let mut response = with_playback(deps.playback.as_ref(), actor.user_id(), meditation).await;
+        if let Some((program_id, has_cover)) = homes.get(&meditation.id()) {
+            response.program_id = Some(*program_id);
+            response.program_has_cover = *has_cover;
+        }
+        responses.push(response);
     }
     Ok(Json(responses))
 }
 
-/// `GET /meditation/{id}` — one meditation's metadata.
+/// `GET /meditation/{id}` — one meditation's metadata, with its home program
+/// as a summary the Player can render without further requests.
 pub async fn meditation(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<MeditationResponse>, ApiError> {
-    let found = queries::get_meditation(deps.meditations.as_ref(), id)
-        .await
-        .map_err(ApiError::Application)?;
-    Ok(Json(
-        with_playback(deps.playback.as_ref(), actor.user_id(), &found).await,
-    ))
+    let found = queries::get_meditation_detail(
+        deps.meditations.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
+        id,
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    let mut response =
+        with_playback(deps.playback.as_ref(), actor.user_id(), &found.meditation).await;
+    if let Some(program) = found.program {
+        let has_cover = program.cover_storage_key.is_some();
+        response.program_id = Some(program.id);
+        response.program_has_cover = has_cover;
+        response.program = Some(ProgramSummary {
+            id: program.id,
+            title: program.title,
+            has_cover,
+        });
+    }
+    Ok(Json(response))
 }
 
 /// Fills a meditation response's `completed`/`progress_percent` from the

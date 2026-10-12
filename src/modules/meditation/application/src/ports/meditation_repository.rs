@@ -5,6 +5,7 @@ use meditation_domain::Meditation;
 #[async_trait]
 pub trait MeditationRepository: Send + Sync {
     /// Inserts a new meditation row, assigning its identifier.
+    #[allow(clippy::too_many_arguments)]
     async fn insert(
         &self,
         name: String,
@@ -13,6 +14,7 @@ pub trait MeditationRepository: Send + Sync {
         storage_key: String,
         duration_ms: i64,
         created_at: chrono::DateTime<chrono::Utc>,
+        description: Option<String>,
     ) -> Result<Meditation, String>;
 
     /// Finds a meditation by identifier.
@@ -30,6 +32,9 @@ pub trait MeditationRepository: Send + Sync {
 
     /// Deletes a meditation row; `false` when the identifier is unknown.
     async fn delete(&self, id: i64) -> Result<bool, String>;
+
+    /// Replaces the description (`None` clears it); `false` when unknown.
+    async fn set_description(&self, id: i64, description: Option<&str>) -> Result<bool, String>;
 
     /// Updates the stored location after a file relocation.
     async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String>;

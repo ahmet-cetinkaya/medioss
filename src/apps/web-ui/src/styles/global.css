@@ -2,40 +2,204 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant reduce-transparency (@media (prefers-reduced-transparency: reduce));
 
+/*
+ * "Soft Glass" tokens (docs/DESIGN_SYSTEM.md §3), light theme only.
+ *
+ * Values follow plan decision D9: hues are kept and darkened until WCAG AA
+ * passes over the worst-case composite (shell or panel over the lavender
+ * canvas stop #c9aaf2). src/styles/global-css-contrast.test.ts parses this
+ * block and enforces the ratios, so tune values there, not by eye.
+ *
+ * Syntax the contrast test can read: `#rgb`, `#rrggbb`, `rgb(r g b / a)`,
+ * `transparent`, and `var(--token)` references. Keep color tokens in those
+ * forms.
+ *
+ * Rules the test assumes:
+ * - Text never sits directly on the canvas; it sits on the shell or above.
+ * - --text-faint passes 3:1, not 4.5:1: large text, icons, separators only.
+ * - --accent is a medium purple fill for soft interactions; --accent-strong supplies
+ *   accessible action text and indicators, while --accent-fill is the primary
+ *   white-label fill. The orb stays decorative, with a brighter glass gradient.
+ * - --accent-soft is a text background only over --surface-solid.
+ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Text */
+  --text-strong: #2a2a2a;
+  --text-body: #4a4a4a;
+  --text-muted: #575757; /* §3.1 #7c7c7c was ~2.7:1 on the shell */
+  --text-faint: #6e6e6e; /* darkened from #a3a3a3: large text, icons, separators */
+
+  /* Accent */
+  --accent: #b58ae6; /* orb midtone; use with dark text, never white */
+  --accent-soft: rgb(181 138 230 / 0.12);
+  --accent-strong: #67418f; /* >=4.5:1 text on tested glass; focus and active states */
+  /* Orb glow purple: distinct from the darker button hover and white-safe. */
+  --accent-fill: #7e53ad;
+
+  /* States (muted register, §3.1) */
+  --destructive: #923832;
+  --success: #365e40;
+
+  /* Mood scale (score selector, 1 = worst → 5 = best): red → orange → amber
+     → green → teal, darkened like the states above until each passes twice:
+     as unselected score text on every composited surface (>= 4.5:1) and as
+     the selected fill under a white ink (>= 4.5:1). Both are enforced in
+     src/styles/global-css-contrast.test.ts. */
+  --mood-1: #963834;
+  --mood-2: #8a411c;
+  --mood-3: #73500e;
+  --mood-4: #20613c;
+  --mood-5: #05615b;
+
+  /* Surfaces (§2.2) */
+  --surface-solid: #ffffff;
+  --surface-panel: rgb(255 255 255 / 0.45);
+  --surface-shell: rgb(255 255 255 / 0.35);
+  /* Opaque fills used under reduced transparency or without backdrop-filter (§8) */
+  --surface-shell-opaque: #f7f5f5;
+  --surface-panel-opaque: #fbfafa;
+  --rim: rgb(255 255 255 / 0.75);
+  --divider: rgb(0 0 0 / 0.08);
+  --chip-outline: rgb(255 255 255 / 0.8); /* decorative rim, not a boundary */
+  /* 3:1 boundary for inputs, chips and other controls (WCAG 1.4.11) */
+  --control-border: #6e6e6e;
+  /* Chart marks (bars, points, lines): 3:1 against every surface */
+  --chart-mark: #7e53ad;
+
+  /* Elevation (§2.3): warm, wide, low-opacity shadows */
+  --elevation-0: none;
+  --elevation-1: 0 6px 20px -8px rgb(150 100 120 / 0.18);
+  --elevation-2: 0 16px 40px -16px rgb(150 100 120 / 0.22);
+  --elevation-3: 0 30px 60px -20px rgb(150 100 120 / 0.3);
+
+  /* Gradients (§3.2). Use with bg-(image:--gradient-orb) and friends. */
+  --gradient-canvas: linear-gradient(
+    115deg,
+    #ebc0a6,
+    #eaa8b8,
+    #c9aaf2,
+    #aacdf2,
+    #ebc0a6
+  );
+  /* Brand orb (§2.4): canvas hues condensed into a glass sphere. The deep purple rim
+     stays darker than every canvas stop, so the mark does not dissolve into
+     the page; self-contained gradients avoid backdrop-filter fallbacks. */
+  --orb-highlight: rgb(255 255 255 / 0.95);
+  --orb-core: #eee6ff;
+  --orb-mid: #b58ae6;
+  --orb-rim: #67418f;
+  --gradient-orb:
+    radial-gradient(
+      circle at 32% 24%,
+      var(--orb-highlight),
+      rgb(255 255 255 / 0) 30%
+    ),
+    radial-gradient(
+      circle at 70% 88%,
+      rgb(255 255 255 / 0.35),
+      rgb(255 255 255 / 0) 38%
+    ),
+    radial-gradient(
+      circle at 42% 36%,
+      var(--orb-core),
+      var(--orb-mid) 55%,
+      var(--orb-rim) 100%
+    );
+  --gradient-orb-user:
+    radial-gradient(
+      circle at 32% 24%,
+      var(--orb-highlight),
+      rgb(255 255 255 / 0) 30%
+    ),
+    radial-gradient(
+      circle at 70% 88%,
+      rgb(255 255 255 / 0.3),
+      rgb(255 255 255 / 0) 38%
+    ),
+    radial-gradient(circle at 42% 36%, #d8c8f3, #8f68bd 55%, #4d2c6a 100%);
+  --gradient-image-wash: linear-gradient(
+    to bottom,
+    transparent 45%,
+    rgb(255 255 255 / 0.85)
+  );
+  --gradient-panel-tint: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.55),
+    rgb(246 240 255 / 0.5)
+  );
+
+  /* Motion (§3.7). Author motion with motion-safe: (e.g.
+     motion-safe:transition motion-safe:duration-(--duration-fast)
+     ease-soft); prefers-reduced-motion zeros it globally anyway. */
+  --duration-fast: 150ms;
+  --duration-slow: 300ms;
+
+  /* shadcn variables mapped onto the tokens (§10) */
+  --radius: 2rem; /* panel radius */
+  --background: #e8e6e6; /* canvas base */
+  --foreground: var(--text-strong);
+  --card: var(--surface-panel);
+  --card-foreground: var(--text-strong);
+  --popover: var(--surface-solid);
+  --popover-foreground: var(--text-strong);
+  --primary: var(--accent-fill); /* see --accent-fill */
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-solid);
+  --secondary-foreground: var(--text-strong);
+  --muted: var(--surface-panel);
+  --muted-foreground: var(--text-muted);
+  /* The mid-purple accent keeps dark labels at >= 4.5:1. */
+  --accent-foreground: var(--text-strong);
+  --border: var(--rim);
+  --input: var(--control-border);
+  --ring: var(--accent-strong); /* D9: --accent fails 3:1 as a ring */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--surface-panel);
+  --sidebar-foreground: var(--text-strong);
+  --sidebar-primary: var(--accent-fill);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-solid);
+  --sidebar-accent-foreground: var(--text-strong);
+  --sidebar-border: var(--rim);
+  --sidebar-ring: var(--accent-strong);
+}
+
+/* Reduced transparency (FR-094, §8): glass becomes opaque near-white and
+   stops blurring. The same fills apply where backdrop-filter is
+   unsupported. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --surface-shell: var(--surface-shell-opaque);
+    --surface-panel: var(--surface-panel-opaque);
+    --gradient-panel-tint: linear-gradient(
+      var(--surface-panel-opaque),
+      var(--surface-panel-opaque)
+    );
+  }
+  .glass-shell,
+  .glass-panel {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  :root {
+    --surface-shell: var(--surface-shell-opaque);
+    --surface-panel: var(--surface-panel-opaque);
+    --gradient-panel-tint: linear-gradient(
+      var(--surface-panel-opaque),
+      var(--surface-panel-opaque)
+    );
+  }
 }
 
 .dark {
@@ -81,6 +245,7 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-panel-tint: rgb(246 240 255 / 0.5);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
@@ -110,11 +275,320 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@theme inline {
+  --color-ink-strong: var(--text-strong);
+  --color-ink-body: var(--text-body);
+  --color-ink-muted: var(--text-muted);
+  --color-ink-faint: var(--text-faint);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fill: var(--accent-fill);
+  --color-success: var(--success);
+  --color-mood-1: var(--mood-1);
+  --color-mood-2: var(--mood-2);
+  --color-mood-3: var(--mood-3);
+  --color-mood-4: var(--mood-4);
+  --color-mood-5: var(--mood-5);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-shell: var(--surface-shell);
+  --color-rim: var(--rim);
+  --color-divider: var(--divider);
+  --color-chip-outline: var(--chip-outline);
+  --color-control-border: var(--control-border);
+  --color-chart-mark: var(--chart-mark);
+}
+
+/* Radius (§3.5; rounded-full covers radius-full), typeface (D4), type scale
+   (§3.3) and easing (§3.7). `static` keeps the variables available to
+   hand-written CSS even when no utility uses them. */
+@theme static {
+  --radius-thumb: 1.25rem;
+  --radius-tile: 1.75rem;
+  --radius-panel: 2rem;
+  --radius-shell: 2.5rem;
+
+  --font-sans:
+    "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --text-display: 3.75rem;
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
+  --text-greeting: 2.125rem;
+  --text-greeting--line-height: 1.2;
+  --text-greeting--font-weight: 400;
+  --text-title-lg: 1.5rem;
+  --text-title-lg--line-height: 1.2;
+  --text-title-lg--font-weight: 500;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.3;
+  --text-heading--font-weight: 600;
+  --text-brand: 1.75rem;
+  --text-brand--line-height: 1;
+  --text-brand--font-weight: 500;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5;
+  /* §3.3 "body"; named body-md because --text-body is the body text color */
+  --text-body-md: 0.9375rem;
+  --text-body-md--line-height: 1.7;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.2;
+  --text-label--font-weight: 500;
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.3;
+  --text-overline: 0.6875rem;
+  --text-overline--line-height: 1;
+  --text-overline--font-weight: 500;
+  --text-overline--letter-spacing: 0.06em;
+
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Surface recipes (§2.2, §10): the more interactive, the more opaque. */
+@utility glass-shell {
+  background-color: var(--surface-shell);
+  border: 1.5px solid var(--rim);
+  -webkit-backdrop-filter: blur(32px);
+  backdrop-filter: blur(32px);
+}
+
+@utility glass-panel {
+  background-color: var(--surface-panel);
+  border: 1px solid var(--rim);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+@utility glass-solid {
+  background-color: var(--surface-solid);
+  border: 1px solid var(--surface-solid);
+}
+
+/* Elevation (§2.3): one elevation-3 element per view. */
+@utility elevation-1 {
+  box-shadow: var(--elevation-1);
+}
+
+@utility elevation-2 {
+  box-shadow: var(--elevation-2);
+}
+
+@utility elevation-3 {
+  box-shadow: var(--elevation-3);
+}
+
+/* Focus (§8, D9): 2px --accent-strong, offset 2px; outlines follow
+   border-radius. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+}
+
+/* Generated artwork (§7): blurred radial blobs. Set --aurora-1..3 and
+   --aurora-base per category palette; layer --gradient-image-wash on top
+   where text sits. */
+@utility aurora {
+  background-color: var(--aurora-base, #f6e8ee);
+  background-image:
+    radial-gradient(
+      60% 70% at 20% 25%,
+      var(--aurora-1, #f4b6c8) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      55% 65% at 80% 30%,
+      var(--aurora-2, #c9aaf2) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      70% 60% at 55% 90%,
+      var(--aurora-3, #ffc2a0) 0%,
+      transparent 70%
+    );
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  /* FR-089: at 200% text a long word must wrap, not widen the page. */
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  li,
+  dt,
+  dd,
+  label,
+  legend {
+    overflow-wrap: anywhere;
+  }
   body {
     @apply bg-background text-foreground;
+    background-image: var(--gradient-canvas);
+    background-size: 300% 100%;
+    background-attachment: fixed;
+    background-color: #ebc0a6;
   }
+
+  /* FR-093: no motion when the user asks for less. 0.01ms (not 0) keeps
+     transitionend/animationend firing for code that waits on them. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0s !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* The opaque fallback keeps the vivid canvas when background images are disabled. */
+@keyframes canvas-color-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    animation: canvas-color-drift 90s ease-in-out infinite;
+  }
+}
+
+/* ============================================================================
+   Player focus overlay (owner feedback round 2).
+   Additive block: only the rules below are defined here; nothing above
+   changes. Keep this block self-contained and last in the file.
+   ========================================================================== */
+
+/* Slow "calm breathing": one ~8 s inhale/exhale cycle. The keyframes hold
+   near the extremes (22 % of the cycle within 2 % of each end scale), so
+   the movement reads as gentle breathing rather than a mechanical pulse;
+   cubic-bezier(0.45, 0, 0.55, 1) keeps the turnarounds smooth. Always
+   applied with motion-safe: (FR-093 also pins the duration near zero
+   globally under prefers-reduced-motion, which leaves the element static,
+   as intended). */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  22%,
+  78% {
+    transform: scale(1.05);
+  }
+  50% {
+    transform: scale(1.052);
+  }
+}
+
+@utility animate-breathe {
+  animation: breathe 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* The Player's playback panel while the meditation plays: the same panel
+   element, docked under <body>, floating centered above the blurred
+   backdrop at ~80 % of the viewport. Inside it, the compact cover stays static.
+   The panel keeps its .glass-panel look and adds a solid
+   underfill so its text stays readable over the blur; sizes are clamped so
+   nothing overflows at 320 px. */
+@utility overlay-floating {
+  position: fixed;
+  z-index: 41;
+  inset-inline: 0;
+  margin-inline: auto;
+  top: 50%;
+  translate: 0 -50%;
+  width: min(34rem, 100vw - 2rem);
+  height: auto;
+  max-height: min(80dvh, 100dvh - 12rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background-color: var(--surface-panel-opaque);
+}
+
+/* The blurred backdrop behind the floating player panel (the "rest of the
+   screen" is blurred behind it). Opaque fallbacks follow the §8 pattern of
+   .glass-shell / .glass-panel: no blur and an opaque fill when the user
+   asks for less transparency or backdrop-filter is unsupported. */
+@keyframes focus-overlay-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* The backdrop stacks two layers over an opaque base: the program cover
+   (object-cover, full viewport) at the bottom, then the drifting color wash
+   above it. With a cover the wash is semi-transparent so the cover shows
+   through while the color transition still animates; without a cover (or
+   when it fails to load) the wash is fully opaque. Static by default;
+   drifts slowly (28 s) only when motion is allowed. Under reduced
+   transparency the cover is dropped and the wash is opaque again. */
+@utility focus-overlay-backdrop {
+  background-color: var(--surface-shell-opaque);
+  overflow: hidden;
+}
+
+@utility focus-overlay-wash {
+  background-image: linear-gradient(
+    115deg,
+    #ebc0a6,
+    #eaa8b8,
+    #c9aaf2,
+    #aacdf2,
+    #ebc0a6
+  );
+  background-size: 300% 100%;
+  &[data-over-cover] {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .focus-overlay-wash {
+    animation: focus-overlay-drift 28s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .focus-overlay-cover {
+    display: none;
+  }
+  .focus-overlay-wash[data-over-cover] {
+    opacity: 1;
+  }
+}
+
+/* While the meditation plays in the floating panel, the rest of the page is
+   fully hidden (body gets .player-focus-on from the Player): the app shell,
+   the mobile bars — everything except the color-wash backdrop, the floating
+   panel itself, and any open dialog portals above it (z-50). Pointer events
+   stay on the backdrop, so nothing underneath is clickable or readable. */
+.player-focus-on
+  > *:not([data-player-focus-backdrop]):not([data-player-floating]):not(
+    [data-dialog-portal]
+  ) {
+  visibility: hidden;
+}
+
+.player-focus-on [data-live-announcer] {
+  visibility: visible;
 }

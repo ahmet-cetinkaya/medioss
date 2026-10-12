@@ -8,10 +8,10 @@ mod playback_state_repository;
 mod program_repository;
 mod session_repository;
 
-pub use category_repository::{Category, CategoryRepository};
+pub use category_repository::{Category, CategoryRepository, RenameCategoryError};
 pub use media::{
-    AudioFormat, AudioValidator, BlobStore, Clock, ConvertError, CoverValidator, ImageFormat,
-    OpusConverter, SniffError, StoredAudio, StoredBlob,
+    AudioFormat, AudioValidator, BlobStore, Clock, ConvertError, CoverNormalizationError,
+    CoverValidator, OpusConverter, SniffError, StoredAudio, StoredBlob,
 };
 pub use meditation_repository::MeditationRepository;
 pub use membership_repository::{Membership, MembershipRepository};

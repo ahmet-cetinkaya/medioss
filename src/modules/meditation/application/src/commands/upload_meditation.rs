@@ -1,6 +1,6 @@
 //! Uploads audio into a program folder: sniffs, converts to Opus, stores,
 //! persists the row, and records the first program membership (spec FR-001).
-use crate::commands::{validate_name, MAX_UPLOAD_BYTES};
+use crate::commands::{validate_description, validate_name, MAX_UPLOAD_BYTES};
 use crate::ports::{
     AudioValidator, BlobStore, Clock, ConvertError, MeditationRepository, MembershipRepository,
     OpusConverter, ProgramRepository,
@@ -31,6 +31,7 @@ pub async fn upload_meditation<R, V, C, S, K, M, P>(
     name: &str,
     program_id: i64,
     bytes: Vec<u8>,
+    description: Option<&str>,
 ) -> Result<meditation_domain::Meditation, ApplicationError>
 where
     R: MeditationRepository + ?Sized,
@@ -42,6 +43,7 @@ where
     P: ProgramRepository + ?Sized,
 {
     validate_name(name)?;
+    let description = validate_description(description)?;
     if bytes.len() > MAX_UPLOAD_BYTES {
         return Err(ApplicationError::PayloadTooLarge);
     }
@@ -70,6 +72,7 @@ where
             blob.storage_key.clone(),
             duration_ms,
             clock.now().await,
+            description,
         )
         .await
     {

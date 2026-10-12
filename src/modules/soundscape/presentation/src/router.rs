@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use soundscape_application::{
     commands,
     ports::{
-        media::{AudioValidator, BlobReader, BlobStore, OpusConverter},
+        media::{AudioValidator, BlobReader, BlobStore, ImageNormalizer, OpusConverter},
         CategoryRepository, Clock, MixRepository, SoundRepository,
     },
     ApplicationError,
@@ -28,6 +28,7 @@ pub struct SoundscapeDependencies {
     pub validator: Arc<dyn AudioValidator>,
     pub converter: Arc<dyn OpusConverter>,
     pub store: Arc<dyn BlobStore>,
+    pub image_normalizer: Arc<dyn ImageNormalizer>,
     pub medioss_origin: Arc<String>,
 }
 pub type SharedDependencies = Arc<SoundscapeDependencies>;
@@ -67,11 +68,21 @@ impl<S: Send + Sync> FromRequestParts<S> for AdminActor {
     }
 }
 fn origin(headers: HeaderMap, expected: &str) -> Result<(), StatusCode> {
-    if headers.get("origin").and_then(|value| value.to_str().ok()) == Some(expected) {
-        Ok(())
-    } else {
-        Err(StatusCode::FORBIDDEN)
+    let Some(value) = headers.get("origin").and_then(|v| v.to_str().ok()) else {
+        return Err(StatusCode::FORBIDDEN);
+    };
+    if value.eq_ignore_ascii_case(expected) {
+        return Ok(());
     }
+    // Dev-only extra origin (the Astro dev server on :4321 proxying to this
+    // API). Fail-closed: unset/empty env keeps single-origin behavior.
+    if let Ok(extra) = std::env::var("MEDIOSS_DEV_ORIGIN") {
+        let extra = extra.trim();
+        if !extra.is_empty() && value.eq_ignore_ascii_case(extra) {
+            return Ok(());
+        }
+    }
+    Err(StatusCode::FORBIDDEN)
 }
 
 #[derive(Serialize)]
@@ -99,6 +110,8 @@ struct SoundDto {
     duration_ms: i64,
     created_at: String,
     builtin: bool,
+    icon_key: Option<String>,
+    has_icon: bool,
 }
 impl From<soundscape_domain::Sound> for SoundDto {
     fn from(value: soundscape_domain::Sound) -> Self {
@@ -111,6 +124,8 @@ impl From<soundscape_domain::Sound> for SoundDto {
             duration_ms: value.duration_ms,
             created_at: value.created_at.to_rfc3339(),
             builtin: value.builtin,
+            icon_key: value.icon_key,
+            has_icon: value.icon.is_some(),
         }
     }
 }
@@ -122,6 +137,9 @@ struct Name {
 struct UpdateSound {
     name: String,
     category_id: i64,
+    /// Replaces the stored glyph key; absent, null or blank clears it.
+    #[serde(default)]
+    icon_key: Option<String>,
 }
 #[derive(Deserialize)]
 struct MixInput {
@@ -229,6 +247,12 @@ pub fn soundscape_router() -> Router<SharedDependencies> {
             "/soundscape/sounds/{id}",
             put(update_sound).delete(delete_sound),
         )
+        .route(
+            "/soundscape/sounds/{id}/icon",
+            get(get_icon).put(upload_icon).delete(clear_icon).layer(
+                axum::extract::DefaultBodyLimit::max(2 * soundscape_domain::MAX_ICON_BYTES),
+            ),
+        )
         .route("/soundscape/sounds/{id}/audio", get(stream_sound))
         .route("/soundscape/sounds/{id}/download", get(download_sound))
         .route("/soundscape/mixes", get(list_mixes).post(create_mix))
@@ -296,6 +320,36 @@ async fn list_sounds(
         .map(|items| Json(items.into_iter().map(Into::into).collect()))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
+/// Reads one multipart field in bounded chunks instead of field.bytes():
+/// DefaultBodyLimit aborts the stream when the declared limit is hit, which
+/// lets us answer 413 (too large) instead of a generic 400 (bad multipart).
+async fn read_field(
+    field: &mut axum::extract::multipart::Field<'_>,
+    max: usize,
+) -> Result<Vec<u8>, StatusCode> {
+    let mut data = Vec::new();
+    loop {
+        match field.chunk().await {
+            Ok(Some(chunk)) => {
+                data.extend_from_slice(&chunk);
+                if data.len() > max {
+                    return Err(StatusCode::PAYLOAD_TOO_LARGE);
+                }
+            }
+            Ok(None) => return Ok(data),
+            Err(_) => {
+                // The stream broke at the body limit on an already large
+                // payload means size, not shape; a small payload failing
+                // here really is malformed.
+                return Err(if data.len() >= 2 * 1024 * 1024 {
+                    StatusCode::PAYLOAD_TOO_LARGE
+                } else {
+                    StatusCode::BAD_REQUEST
+                });
+            }
+        }
+    }
+}
 async fn upload_sound(
     State(deps): State<SharedDependencies>,
     headers: HeaderMap,
@@ -307,6 +361,8 @@ async fn upload_sound(
     let mut name = None;
     let mut category_id = None;
     let mut bytes = None;
+    let mut icon_key = None;
+    let mut icon = None;
     while let Some(mut field) = multipart
         .next_field()
         .await
@@ -325,37 +381,21 @@ async fn upload_sound(
                 )
             }
             Some("file") => {
-                // Read in bounded chunks instead of field.bytes(): DefaultBodyLimit
-                // aborts the stream when the declared limit is hit, which lets us
-                // answer 413 (too large) instead of a generic 400 (bad multipart).
-                let mut data = Vec::new();
-                let mut too_large = false;
-                loop {
-                    match field.chunk().await {
-                        Ok(Some(chunk)) => {
-                            data.extend_from_slice(&chunk);
-                            if data.len() > commands::sounds::MAX_UPLOAD_BYTES {
-                                too_large = true;
-                                break;
-                            }
-                        }
-                        Ok(None) => break,
-                        Err(_) => {
-                            // The stream broke at the body limit on an already
-                            // large payload means size, not shape; a small
-                            // payload failing here really is malformed.
-                            return Err(if data.len() >= 2 * 1024 * 1024 {
-                                StatusCode::PAYLOAD_TOO_LARGE
-                            } else {
-                                StatusCode::BAD_REQUEST
-                            });
-                        }
-                    }
-                }
-                if too_large {
-                    return Err(StatusCode::PAYLOAD_TOO_LARGE);
-                }
+                let data = read_field(&mut field, commands::sounds::MAX_UPLOAD_BYTES).await?;
                 bytes = Some(data);
+            }
+            Some("icon_key") => {
+                icon_key = Some(
+                    String::from_utf8(
+                        read_field(&mut field, 256)
+                            .await
+                            .map_err(|_| StatusCode::BAD_REQUEST)?,
+                    )
+                    .map_err(|_| StatusCode::BAD_REQUEST)?,
+                )
+            }
+            Some("icon") => {
+                icon = Some(read_field(&mut field, soundscape_domain::MAX_ICON_BYTES).await?)
             }
             _ => {}
         }
@@ -366,9 +406,12 @@ async fn upload_sound(
         deps.validator.as_ref(),
         deps.converter.as_ref(),
         deps.store.as_ref(),
+        deps.image_normalizer.as_ref(),
         &name.ok_or(StatusCode::BAD_REQUEST)?,
         category_id.ok_or(StatusCode::BAD_REQUEST)?,
         bytes.ok_or(StatusCode::BAD_REQUEST)?,
+        icon_key.as_deref(),
+        icon,
     )
     .await
     .map_err(map_error)?;
@@ -383,12 +426,115 @@ async fn update_sound(
 ) -> Result<Json<SoundDto>, StatusCode> {
     admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
-    deps.sounds
-        .update(id, &input.name, input.category_id)
+    commands::sounds::update_sound(
+        deps.categories.as_ref(),
+        deps.sounds.as_ref(),
+        id,
+        &input.name,
+        input.category_id,
+        input.icon_key.as_deref(),
+    )
+    .await
+    .map(|sound| Json(sound.into()))
+    .map_err(map_error)
+}
+async fn upload_icon(
+    Path(id): Path<i64>,
+    State(deps): State<SharedDependencies>,
+    headers: HeaderMap,
+    AdminActor(actor): AdminActor,
+    mut multipart: Multipart,
+) -> Result<Json<SoundDto>, StatusCode> {
+    admin(&actor)?;
+    origin(headers, &deps.medioss_origin)?;
+    let mut icon = None;
+    while let Some(mut field) = multipart
+        .next_field()
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| StatusCode::BAD_REQUEST)?
+    {
+        if field.name() == Some("icon") {
+            icon = Some(read_field(&mut field, soundscape_domain::MAX_ICON_BYTES).await?);
+        }
+    }
+    commands::sounds::set_sound_icon(
+        deps.sounds.as_ref(),
+        deps.store.as_ref(),
+        deps.image_normalizer.as_ref(),
+        id,
+        icon.ok_or(StatusCode::BAD_REQUEST)?,
+    )
+    .await
+    .map(|sound| Json(sound.into()))
+    .map_err(map_error)
+}
+async fn clear_icon(
+    Path(id): Path<i64>,
+    State(deps): State<SharedDependencies>,
+    headers: HeaderMap,
+    AdminActor(actor): AdminActor,
+) -> Result<Json<SoundDto>, StatusCode> {
+    admin(&actor)?;
+    origin(headers, &deps.medioss_origin)?;
+    commands::sounds::clear_sound_icon(deps.sounds.as_ref(), deps.store.as_ref(), id)
+        .await
         .map(|sound| Json(sound.into()))
-        .ok_or(StatusCode::NOT_FOUND)
+        .map_err(map_error)
+}
+/// GET /soundscape/sounds/{id}/icon — the uploaded icon image; 404 when the
+/// sound has none. Sounds are host content, so any signed-in user may read.
+async fn get_icon(
+    Path(id): Path<i64>,
+    State(deps): State<SharedDependencies>,
+    CurrentActor(_actor): CurrentActor,
+) -> Result<Response, StatusCode> {
+    let icon = soundscape_application::queries::find_sound_icon(deps.sounds.as_ref(), id)
+        .await
+        .map_err(map_error)?;
+    let (BlobReader(reader), _, total) = deps
+        .store
+        .open_range(
+            &icon.storage_key,
+            0,
+            soundscape_domain::MAX_ICON_BYTES as u64 + 1,
+        )
+        .await
+        .map_err(|error| {
+            if error.starts_with("no blob at ") {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        })?;
+    use tokio::io::AsyncReadExt;
+    use tokio_util::compat::FuturesAsyncReadCompatExt;
+    let mut bytes =
+        Vec::with_capacity(total.min(soundscape_domain::MAX_ICON_BYTES as u64) as usize);
+    // The reader is bounded locally too: a store that ignores the requested
+    // range (or a blob changed out-of-band) cannot force unbounded buffering.
+    reader
+        .compat()
+        .take(soundscape_domain::MAX_ICON_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // A stored icon larger than the upload limit means the media store was
+    // changed out-of-band; refuse instead of buffering an arbitrary blob.
+    if bytes.len() > soundscape_domain::MAX_ICON_BYTES {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    let mut response = Response::new(AxumBody::from(bytes));
+    let headers = response.headers_mut();
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_str(&icon.content_type).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    );
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    Ok(response)
 }
 async fn delete_sound(
     Path(id): Path<i64>,
@@ -436,7 +582,7 @@ async fn stream_sound(
                 StatusCode::RANGE_NOT_SATISFIABLE,
                 [(header::CONTENT_RANGE, format!("bytes */{total}"))],
             )
-                .into_response())
+                .into_response());
         }
         None => (StatusCode::OK, 0, total, None),
     };
@@ -592,6 +738,9 @@ fn map_error(error: ApplicationError) -> StatusCode {
         ApplicationError::InvalidInput(_) => StatusCode::BAD_REQUEST,
         ApplicationError::UnsupportedMedia => StatusCode::UNSUPPORTED_MEDIA_TYPE,
         ApplicationError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
-        _ => StatusCode::INTERNAL_SERVER_ERROR,
+        ApplicationError::Busy => StatusCode::SERVICE_UNAVAILABLE,
+        ApplicationError::Storage(_) | ApplicationError::Repository(_) => {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     }
 }

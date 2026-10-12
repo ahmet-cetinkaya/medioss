@@ -143,7 +143,7 @@ impl User {
     }
 
     pub fn avatar(&self) -> Option<AvatarRef> {
-        self.avatar
+        self.avatar.clone()
     }
 
     pub fn with_disabled(self, disabled: bool) -> Self {

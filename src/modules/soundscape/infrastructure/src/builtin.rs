@@ -111,7 +111,7 @@ async fn seed(
             .map_err(|e| SeedError::Media(e.to_string()))?;
         db.execute(Statement::from_sql_and_values(
             sea_orm::DatabaseBackend::Sqlite,
-            "INSERT INTO soundscape_sounds (name, category_id, content_type, size_bytes, storage_key, duration_ms, created_at, builtin_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO soundscape_sounds (name, category_id, content_type, size_bytes, storage_key, duration_ms, created_at, builtin_id, icon_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             vec![
                 display_name(&entry.name).into(),
                 category_id.into(),
@@ -121,6 +121,9 @@ async fn seed(
                 entry.duration_ms.into(),
                 now.clone().into(),
                 builtin_id.into(),
+                crate::icon_defaults::default_icon_key(&slug, &display_name(&entry.name))
+                    .map(str::to_owned)
+                    .into(),
             ],
         ))
         .await

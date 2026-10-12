@@ -36,21 +36,31 @@ const query = (range: MoodRange) =>
 export const listMood = (range: MoodRange, cursor?: string) =>
   request<MoodHistoryPage>(
     `/api/mood?${query(range)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+    undefined,
+    { action: "mood.list" },
   );
 export const createMood = (score: number, note?: string) =>
-  request<MoodEntry>("/api/mood", {
-    method: "POST",
-    body: JSON.stringify({ score, note: note || null }),
-  });
+  request<MoodEntry>(
+    "/api/mood",
+    { method: "POST", body: JSON.stringify({ score, note: note || null }) },
+    { action: "mood.create" },
+  );
 export const updateMood = (id: number, score: number, note?: string) =>
-  request<MoodEntry>(`/api/mood/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ score, note: note || null }),
-  });
+  request<MoodEntry>(
+    `/api/mood/${id}`,
+    { method: "PUT", body: JSON.stringify({ score, note: note || null }) },
+    { action: "mood.update" },
+  );
 export const deleteMood = (id: number) =>
-  request<void>(`/api/mood/${id}`, { method: "DELETE" });
+  request<void>(
+    `/api/mood/${id}`,
+    { method: "DELETE" },
+    { action: "mood.delete" },
+  );
 export const moodStatistics = (range: MoodRange) =>
-  request<MoodStatistics>(`/api/mood/statistics?${query(range)}`);
+  request<MoodStatistics>(`/api/mood/statistics?${query(range)}`, undefined, {
+    action: "mood.statistics",
+  });
 export const timeline = (
   range: MoodRange,
   cursor?: string,
@@ -58,4 +68,6 @@ export const timeline = (
 ) =>
   request<TimelinePage>(
     `/api/timeline?${query(range)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}${notesOnly ? "&notes_only=true" : ""}`,
+    undefined,
+    { action: "timeline.load" },
   );

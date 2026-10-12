@@ -1,0 +1,17 @@
+---
+// Static pre-hydration fallback for Login and Setup (plan D1, FR-013).
+// Text-free and aria-hidden; mirrors UnauthenticatedLayout's centered
+// column. Usage: see AuthLayout.astro.
+---
+
+<div
+  aria-hidden="true"
+  class="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-10"
+  data-auth-skeleton=""
+>
+  <div class="size-10 rounded-full bg-surface-solid/70"></div>
+  <div
+    class="glass-panel h-80 w-full max-w-md rounded-panel motion-safe:animate-pulse"
+  >
+  </div>
+</div>

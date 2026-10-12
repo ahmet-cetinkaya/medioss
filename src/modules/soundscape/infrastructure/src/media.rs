@@ -163,6 +163,9 @@ fn content_type_for(key: &str) -> &'static str {
         "flac" => "audio/flac",
         "mp3" => "audio/mpeg",
         "wav" => "audio/wav",
+        "png" => "image/png",
+        "jpg" => "image/jpeg",
+        "webp" => "image/webp",
         _ => "application/octet-stream",
     }
 }

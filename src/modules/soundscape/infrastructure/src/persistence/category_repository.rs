@@ -51,19 +51,13 @@ impl CategoryRepository for SeaOrmCategoryRepository {
     }
     async fn create(&self, name: &str) -> Result<SoundCategory, String> {
         let slug = slug(name);
+        // RETURNING binds the returned row to this INSERT; a global
+        // last-inserted select could pick up a concurrent category.
         self.db
-            .execute(Statement::from_sql_and_values(
+            .query_one(Statement::from_sql_and_values(
                 sea_orm::DatabaseBackend::Sqlite,
-                "INSERT INTO soundscape_categories(slug,name) VALUES(?,?)",
+                "INSERT INTO soundscape_categories(slug,name) VALUES(?,?) RETURNING id,name,slug",
                 [slug.into(), name.trim().into()],
-            ))
-            .await
-            .map_err(|e| e.to_string())?;
-        self.db
-            .query_one(Statement::from_string(
-                sea_orm::DatabaseBackend::Sqlite,
-                "SELECT id,name,slug FROM soundscape_categories ORDER BY id DESC LIMIT 1"
-                    .to_owned(),
             ))
             .await
             .map_err(|e| e.to_string())?

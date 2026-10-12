@@ -13,6 +13,7 @@ pub struct Model {
     pub storage_key: String,
     pub duration_ms: i64,
     pub created_at: String,
+    pub description: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

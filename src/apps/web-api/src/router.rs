@@ -12,7 +12,6 @@ use crate::{
 
 pub fn router(state: AppState) -> Router {
     let static_files = ServeDir::new(&state.config.static_dir);
-
     let identity = identity_presentation::identity_router::<
         identity_infrastructure::SeaOrmUserRepository,
         identity_infrastructure::BoundedArgon2PasswordHasher,
@@ -46,6 +45,29 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .nest("/api", api)
         .layer(session_layer(&state))
+        .route(
+            "/admin/{*rest}",
+            get({
+                let static_dir = state.config.static_dir.clone();
+                move |path: axum::extract::Path<String>| async move {
+                    let page = if path.split('/').next() == Some("meditations") {
+                        "admin/meditations/index.html"
+                    } else if path.split('/').next() == Some("soundscape") {
+                        "admin/soundscape/index.html"
+                    } else {
+                        "admin/index.html"
+                    };
+                    serve_static_file(&static_dir, page).await
+                }
+            }),
+        )
+        .route(
+            "/player/{*rest}",
+            get({
+                let static_dir = state.config.static_dir.clone();
+                move || async move { serve_static_file(&static_dir, "player/index.html").await }
+            }),
+        )
         .fallback_service(static_files)
         .layer(axum::middleware::from_fn(cache_headers))
         .with_state(state)
@@ -102,4 +124,30 @@ async fn unknown_api_route() -> impl IntoResponse {
         StatusCode::NOT_FOUND,
         Json(serde_json::json!({ "error": "unknown api route" })),
     )
+}
+
+/// Serves one file from the static dir for the Admin SPA fallback.
+async fn serve_static_file(
+    static_dir: &std::path::Path,
+    relative: &str,
+) -> axum::response::Response {
+    let full = static_dir.join(relative);
+    match tokio::fs::read(&full).await {
+        Ok(bytes) => {
+            let content_type = match full.extension().and_then(|e| e.to_str()) {
+                Some("html") => "text/html; charset=utf-8",
+                Some("js") => "text/javascript; charset=utf-8",
+                Some("css") => "text/css; charset=utf-8",
+                Some("svg") => "image/svg+xml",
+                _ => "application/octet-stream",
+            };
+            (
+                StatusCode::OK,
+                [(axum::http::header::CONTENT_TYPE, content_type)],
+                bytes,
+            )
+                .into_response()
+        }
+        Err(_) => (StatusCode::NOT_FOUND, "not found").into_response(),
+    }
 }

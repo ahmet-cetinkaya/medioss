@@ -1,8 +1,9 @@
 ---
-import Base from "../layouts/Base.astro";
-import Player from "$lib/components/player.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import PlayerPage from "$lib/screens/player/player-page.svelte";
 ---
 
-<Base title="MediOSS — Player">
-	<Player client:load />
-</Base>
+<AppLayout screen="player">
+  <PlayerPage client:only="svelte"><AppSkeleton slot="fallback" /></PlayerPage>
+</AppLayout>

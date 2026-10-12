@@ -1,7 +1,7 @@
 use identity_domain::IdentityError;
 use thiserror::Error;
 
-use crate::ports::{PasswordHasherError, RepositoryError};
+use crate::ports::{AvatarStoreError, PasswordHasherError, RepositoryError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 pub enum ApplicationError {
@@ -21,6 +21,8 @@ pub enum ApplicationError {
     PasswordHasher,
     #[error("repository operation failed")]
     Repository,
+    #[error("avatar processing is temporarily unavailable")]
+    ProcessingUnavailable,
     #[error("operation would leave the instance without an active admin")]
     LastActiveAdmin,
     #[error("request payload is too large")]
@@ -36,6 +38,18 @@ impl From<IdentityError> for ApplicationError {
 impl From<PasswordHasherError> for ApplicationError {
     fn from(_: PasswordHasherError) -> Self {
         Self::PasswordHasher
+    }
+}
+
+impl From<AvatarStoreError> for ApplicationError {
+    fn from(error: AvatarStoreError) -> Self {
+        match error {
+            AvatarStoreError::InvalidPayload => Self::InvalidInput(IdentityError::InvalidProfile),
+            AvatarStoreError::OutputTooLarge => Self::PayloadTooLarge,
+            AvatarStoreError::WorkerFailed => Self::Repository,
+            AvatarStoreError::Busy => Self::ProcessingUnavailable,
+            AvatarStoreError::Storage => Self::Repository,
+        }
     }
 }
 

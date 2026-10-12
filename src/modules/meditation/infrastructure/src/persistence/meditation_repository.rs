@@ -33,6 +33,7 @@ fn to_domain(model: table::Model) -> Result<Meditation, String> {
         model.duration_ms,
         created_at,
     )
+    .and_then(|row| row.with_description(model.description.as_deref()))
     .map_err(|error| error.to_string())
 }
 
@@ -46,6 +47,7 @@ impl MeditationRepository for SeaOrmMeditationRepository {
         storage_key: String,
         duration_ms: i64,
         created_at: DateTime<Utc>,
+        description: Option<String>,
     ) -> Result<Meditation, String> {
         let row = table::ActiveModel {
             name: Set(name),
@@ -54,6 +56,7 @@ impl MeditationRepository for SeaOrmMeditationRepository {
             storage_key: Set(storage_key),
             duration_ms: Set(duration_ms),
             created_at: Set(created_at.to_rfc3339()),
+            description: Set(description),
             ..Default::default()
         };
         let model = row.insert(&self.db).await.map_err(|e| e.to_string())?;
@@ -101,6 +104,20 @@ impl MeditationRepository for SeaOrmMeditationRepository {
             .into_iter()
             .map(to_domain)
             .collect::<Result<Vec<_>, _>>()
+    }
+
+    async fn set_description(&self, id: i64, description: Option<&str>) -> Result<bool, String> {
+        let Some(model) = table::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(false);
+        };
+        let mut row: table::ActiveModel = model.into();
+        row.description = Set(description.map(str::to_owned));
+        row.update(&self.db).await.map_err(|e| e.to_string())?;
+        Ok(true)
     }
 
     async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {

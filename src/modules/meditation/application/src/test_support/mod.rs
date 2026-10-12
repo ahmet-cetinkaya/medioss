@@ -6,10 +6,10 @@ use chrono::{DateTime, Utc};
 use kernel::UserId;
 
 use crate::ports::{
-    AudioFormat, AudioValidator, BlobStore, Category, CategoryRepository, Clock, CoverValidator,
-    ImageFormat, MeditationSession, Membership, MembershipRepository, Note, NoteRepository,
-    PlaybackState, PlaybackStateRepository, Program, ProgramRepository, SessionRepository,
-    SniffError, StoredBlob,
+    AudioFormat, AudioValidator, BlobStore, Category, CategoryRepository, Clock,
+    CoverNormalizationError, CoverValidator, MeditationSession, Membership, MembershipRepository,
+    Note, NoteRepository, PlaybackState, PlaybackStateRepository, Program, ProgramRepository,
+    RenameCategoryError, SessionRepository, SniffError, StoredBlob,
 };
 
 /// A clock returning a fixed instant.
@@ -65,20 +65,27 @@ pub struct FakeCoverValidator;
 
 #[async_trait::async_trait]
 impl CoverValidator for FakeCoverValidator {
-    async fn sniff(&self, leading: &[u8]) -> Result<ImageFormat, SniffError> {
-        if leading.len() < 12 {
-            return Err(SniffError::TooShort);
+    async fn normalize(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoverNormalizationError> {
+        if bytes.len() < 12 {
+            return Err(CoverNormalizationError::InvalidPayload);
         }
-        if leading.starts_with(&[0x89, b'P', b'N', b'G']) {
-            return Ok(ImageFormat::Png);
+        if bytes.starts_with(&[0x89, b'P', b'N', b'G'])
+            || bytes.starts_with(&[0xFF, 0xD8, 0xFF])
+            || (bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP")
+        {
+            return Ok(bytes);
         }
-        if leading.starts_with(&[0xFF, 0xD8, 0xFF]) {
-            return Ok(ImageFormat::Jpeg);
-        }
-        if leading.starts_with(b"RIFF") && &leading[8..12] == b"WEBP" {
-            return Ok(ImageFormat::Webp);
-        }
-        Err(SniffError::Unsupported)
+        Err(CoverNormalizationError::InvalidPayload)
+    }
+}
+
+/// Always fails with the configured error, for mapping tests.
+pub struct FailingCoverValidator(pub CoverNormalizationError);
+
+#[async_trait::async_trait]
+impl CoverValidator for FailingCoverValidator {
+    async fn normalize(&self, _bytes: Vec<u8>) -> Result<Vec<u8>, CoverNormalizationError> {
+        Err(self.0)
     }
 }
 
@@ -311,6 +318,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
         storage_key: String,
         duration_ms: i64,
         created_at: DateTime<Utc>,
+        description: Option<String>,
     ) -> Result<meditation_domain::Meditation, String> {
         let mut rows = self.0.meditations.lock().unwrap();
         let id = RepoState::next_id(&rows, |meditation| meditation.id());
@@ -323,6 +331,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             duration_ms,
             created_at,
         )
+        .and_then(|row| row.with_description(description.as_deref()))
         .map_err(|error| error.to_string())?;
         rows.push(meditation.clone());
         Ok(meditation)
@@ -372,6 +381,18 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             .collect())
     }
 
+    async fn set_description(&self, id: i64, description: Option<&str>) -> Result<bool, String> {
+        let mut rows = self.0.meditations.lock().unwrap();
+        let Some(row) = rows.iter_mut().find(|meditation| meditation.id() == id) else {
+            return Ok(false);
+        };
+        *row = row
+            .clone()
+            .with_description(description)
+            .map_err(|error| error.to_string())?;
+        Ok(true)
+    }
+
     async fn set_storage_key(&self, id: i64, key: &str) -> Result<(), String> {
         let mut rows = self.0.meditations.lock().unwrap();
         let index = rows.iter().position(|meditation| meditation.id() == id);
@@ -387,6 +408,7 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             rows[index].duration_ms(),
             rows[index].created_at(),
         )
+        .and_then(|row| row.with_description(rows[index].description()))
         .map_err(|error| error.to_string())?;
         rows[index] = replacement;
         Ok(())
@@ -538,6 +560,26 @@ impl CategoryRepository for FakeCategoryRepository {
         Ok(self.0.categories.lock().unwrap().clone())
     }
 
+    async fn rename(
+        &self,
+        id: i64,
+        name: String,
+        _updated_at: DateTime<Utc>,
+    ) -> Result<bool, RenameCategoryError> {
+        let mut rows = self.0.categories.lock().unwrap();
+        if rows
+            .iter()
+            .any(|category| category.id != id && category.name == name)
+        {
+            return Err(RenameCategoryError::Duplicate);
+        }
+        let Some(category) = rows.iter_mut().find(|category| category.id == id) else {
+            return Ok(false);
+        };
+        category.name = name;
+        Ok(true)
+    }
+
     async fn delete(&self, id: i64) -> Result<bool, String> {
         let mut rows = self.0.categories.lock().unwrap();
         let len = rows.len();
@@ -571,10 +613,17 @@ impl MembershipRepository for FakeMembershipRepository {
             return Ok(index as i64 + 1);
         }
         let row_id = rows.len() as i64 + 1;
+        let position = rows
+            .iter()
+            .filter(|membership| membership.program_id == program_id)
+            .map(|membership| membership.position + 1)
+            .max()
+            .unwrap_or(0);
         rows.push(Membership {
             program_id,
             meditation_id,
             added_at,
+            position,
         });
         Ok(row_id)
     }
@@ -598,8 +647,21 @@ impl MembershipRepository for FakeMembershipRepository {
             .filter(|membership| membership.program_id == program_id)
             .cloned()
             .collect();
-        rows.sort_by_key(|membership| membership.added_at);
+        rows.sort_by_key(|membership| membership.position);
         Ok(rows)
+    }
+
+    async fn set_order(&self, program_id: i64, meditation_ids: &[i64]) -> Result<(), String> {
+        let mut rows = self.0.memberships.lock().unwrap();
+        for (index, id) in meditation_ids.iter().enumerate() {
+            if let Some(row) = rows
+                .iter_mut()
+                .find(|m| m.program_id == program_id && m.meditation_id == *id)
+            {
+                row.position = index as i64;
+            }
+        }
+        Ok(())
     }
 
     async fn remove_for_meditation(&self, meditation_id: i64) -> Result<u64, String> {
@@ -624,6 +686,27 @@ impl MembershipRepository for FakeMembershipRepository {
             .collect();
         rows.sort_by_key(|membership| membership.added_at);
         Ok(rows.first().map(|membership| membership.program_id))
+    }
+
+    async fn home_programs(&self) -> Result<std::collections::HashMap<i64, (i64, bool)>, String> {
+        let mut rows: Vec<Membership> = self.0.memberships.lock().unwrap().clone();
+        rows.sort_by_key(|membership| membership.added_at);
+        let covers: std::collections::HashMap<i64, bool> = self
+            .0
+            .programs
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|program| (program.id, program.cover_storage_key.is_some()))
+            .collect();
+        let mut homes = std::collections::HashMap::new();
+        for membership in rows {
+            homes.entry(membership.meditation_id).or_insert_with(|| {
+                let has_cover = covers.get(&membership.program_id).copied().unwrap_or(false);
+                (membership.program_id, has_cover)
+            });
+        }
+        Ok(homes)
     }
 }
 

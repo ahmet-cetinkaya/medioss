@@ -1,4 +1,4 @@
-use identity_domain::{AvatarRef, IdentityError};
+use identity_domain::AvatarRef;
 use kernel::{Actor, UserId};
 
 use crate::{
@@ -15,9 +15,7 @@ pub async fn replace_avatar(
     let (encoded, ext) = store
         .normalize(bytes)
         .await
-        .map_err(|_| ApplicationError::InvalidInput(IdentityError::InvalidProfile))?;
-    let avatar = AvatarRef::from_extension(ext).map_err(ApplicationError::from)?;
-
+        .map_err(ApplicationError::from)?;
     let user = repository
         .find_by_id(actor.user_id())
         .await
@@ -25,21 +23,25 @@ pub async fn replace_avatar(
         .ok_or(ApplicationError::UserNotFound)?;
     let previous = user.avatar();
 
-    store
-        .write(actor.user_id(), avatar, &encoded)
+    let avatar = store
+        .write(actor.user_id(), ext, &encoded)
         .await
-        .map_err(|_| ApplicationError::Repository)?;
+        .map_err(ApplicationError::from)?;
     let updated = repository
-        .set_profile(actor.user_id(), user.display_name().cloned(), Some(avatar))
+        .set_profile(
+            actor.user_id(),
+            user.display_name().cloned(),
+            Some(avatar.clone()),
+        )
         .await;
     if let Err(error) = updated {
-        let _ = store.remove(actor.user_id(), avatar).await;
+        let _ = store.remove(actor.user_id(), &avatar).await;
         return Err(ApplicationError::from(error));
     }
     let updated = updated?;
 
-    if let Some(previous) = previous.filter(|previous| *previous != avatar) {
-        let _ = store.remove(actor.user_id(), previous).await;
+    if let Some(previous) = previous {
+        let _ = store.remove(actor.user_id(), &previous).await;
     }
 
     Ok(updated)
@@ -61,7 +63,7 @@ pub async fn clear_avatar(
             .set_profile(actor.user_id(), user.display_name().cloned(), None)
             .await
             .map_err(ApplicationError::from)?;
-        let _ = store.remove(actor.user_id(), avatar).await;
+        let _ = store.remove(actor.user_id(), &avatar).await;
     }
 
     Ok(())
@@ -85,7 +87,7 @@ pub async fn read_avatar(
     let avatar = user.avatar().ok_or(ApplicationError::UserNotFound)?;
 
     let bytes = store
-        .read(requested, avatar)
+        .read(requested, &avatar)
         .await
         .map_err(|_| ApplicationError::UserNotFound)?;
 

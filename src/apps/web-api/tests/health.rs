@@ -255,7 +255,15 @@ async fn deleting_a_user_wipes_their_avatar_file() {
     assert_eq!(upload.status(), StatusCode::CREATED);
 
     let member_media = guard.path().join("media").join(member_id.to_string());
-    assert!(member_media.join("avatar.webp").exists() || member_media.join("avatar.png").exists());
+    let uploaded = std::fs::read_dir(&member_media)
+        .expect("member media directory")
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    assert!(
+        uploaded.len() == 1 && uploaded[0].starts_with("avatar-") && uploaded[0].ends_with(".webp"),
+        "expected one staged avatar file, got {uploaded:?}"
+    );
 
     let delete = app
         .clone()

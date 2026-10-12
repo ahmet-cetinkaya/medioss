@@ -87,11 +87,26 @@ pub async fn export_csv(
     }
 }
 
+fn origin_matches(value: &str, origin: &str) -> bool {
+    if value.eq_ignore_ascii_case(origin) {
+        return true;
+    }
+    // Dev-only extra origin (the Astro dev server on :4321 proxying to this
+    // API). Fail-closed: unset/empty env keeps single-origin behavior.
+    if let Ok(extra) = std::env::var("MEDIOSS_DEV_ORIGIN") {
+        let extra = extra.trim();
+        if !extra.is_empty() && value.eq_ignore_ascii_case(extra) {
+            return true;
+        }
+    }
+    false
+}
+
 fn ensure_browser_origin(headers: &HeaderMap, origin: &str) -> Result<(), StatusCode> {
     headers
         .get("origin")
         .and_then(|value| value.to_str().ok())
-        .filter(|value| value.eq_ignore_ascii_case(origin))
+        .filter(|value| origin_matches(value, origin))
         .ok_or(StatusCode::FORBIDDEN)
         .map(|_| ())
 }

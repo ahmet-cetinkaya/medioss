@@ -1,8 +1,10 @@
 ---
-import Base from "../layouts/Base.astro";
-import History from "$lib/components/history.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import HistoryPage from "$lib/screens/history/history-page.svelte";
 ---
 
-<Base title="MediOSS — History">
-	<History client:load />
-</Base>
+<AppLayout screen="history">
+  <HistoryPage client:only="svelte"><AppSkeleton slot="fallback" /></HistoryPage
+  >
+</AppLayout>

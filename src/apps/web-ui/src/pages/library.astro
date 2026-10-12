@@ -1,8 +1,10 @@
 ---
-import Base from "../layouts/Base.astro";
-import Library from "$lib/components/library.svelte";
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import LibraryPage from "$lib/screens/library/library-page.svelte";
 ---
 
-<Base title="MediOSS — Library">
-	<Library client:load />
-</Base>
+<AppLayout screen="library">
+  <LibraryPage client:only="svelte"><AppSkeleton slot="fallback" /></LibraryPage
+  >
+</AppLayout>
