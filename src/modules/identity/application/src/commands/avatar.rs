@@ -27,18 +27,13 @@ pub async fn replace_avatar(
         .write(actor.user_id(), ext, &encoded)
         .await
         .map_err(ApplicationError::from)?;
+    // `set_profile` can fail after committing its update (while re-reading the
+    // user). Keep the new blob so the database can never point at a deleted
+    // key; an orphan is purged on user deletion.
     let updated = repository
-        .set_profile(
-            actor.user_id(),
-            user.display_name().cloned(),
-            Some(avatar.clone()),
-        )
-        .await;
-    if let Err(error) = updated {
-        let _ = store.remove(actor.user_id(), &avatar).await;
-        return Err(ApplicationError::from(error));
-    }
-    let updated = updated?;
+        .set_profile(actor.user_id(), user.display_name().cloned(), Some(avatar))
+        .await
+        .map_err(ApplicationError::from)?;
 
     if let Some(previous) = previous {
         let _ = store.remove(actor.user_id(), &previous).await;

@@ -159,6 +159,7 @@ where
         [
             (header::CONTENT_TYPE, content_type),
             (header::CACHE_CONTROL, "private, max-age=86400"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         bytes,
     )

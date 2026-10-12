@@ -13,6 +13,11 @@ const GREEN_LITERAL_LIMIT: u16 = 256;
 const CHANNEL_TREE_ALPHABET: u32 = 256;
 const DISTANCE_TREE_ALPHABET: u32 = 40;
 const MAX_COLOR_CACHE_BITS: u8 = 11;
+// Brief contention queues; sustained flooding still gets `Busy`.
+#[cfg(not(test))]
+const NORMALIZATION_ADMISSION_WAIT: std::time::Duration = std::time::Duration::from_secs(2);
+#[cfg(test)]
+const NORMALIZATION_ADMISSION_WAIT: std::time::Duration = std::time::Duration::from_millis(200);
 static NORMALIZATION_WORKER: LazyLock<Arc<tokio::sync::Semaphore>> =
     LazyLock::new(|| Arc::new(tokio::sync::Semaphore::new(1)));
 
@@ -39,10 +44,13 @@ pub async fn normalize(
     bytes: Vec<u8>,
     specification: ImageSpec,
 ) -> Result<Vec<u8>, ImageNormalizationError> {
-    let permit = NORMALIZATION_WORKER
-        .clone()
-        .try_acquire_owned()
-        .map_err(|_| ImageNormalizationError::Busy)?;
+    let permit = tokio::time::timeout(
+        NORMALIZATION_ADMISSION_WAIT,
+        NORMALIZATION_WORKER.clone().acquire_owned(),
+    )
+    .await
+    .map_err(|_| ImageNormalizationError::Busy)?
+    .map_err(|_| ImageNormalizationError::WorkerFailed)?;
 
     tokio::task::spawn_blocking(move || {
         let _permit = permit;

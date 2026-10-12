@@ -190,6 +190,28 @@ async fn rejects_requests_while_the_normalizer_is_busy() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn queues_a_request_behind_a_short_lived_holder() {
+    let _lock = NORMALIZATION_TEST_LOCK.lock().await;
+    let permit = NORMALIZATION_WORKER.clone().try_acquire_owned().unwrap();
+    tokio::spawn(async move {
+        tokio::time::sleep(NORMALIZATION_ADMISSION_WAIT / 4).await;
+        drop(permit);
+    });
+
+    let output = normalize(
+        raster(image::ImageFormat::Png),
+        ImageSpec {
+            maximum_dimension: 64,
+            maximum_output_bytes: 64 * 1024,
+            square: false,
+        },
+    )
+    .await;
+
+    assert!(output.is_ok());
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn rejects_oversized_png_and_jpeg_before_decode() {
     let _lock = NORMALIZATION_TEST_LOCK.lock().await;
     for bytes in [oversized_png(), oversized_jpeg()] {

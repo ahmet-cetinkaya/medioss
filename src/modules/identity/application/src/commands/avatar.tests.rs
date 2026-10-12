@@ -79,7 +79,8 @@ impl AvatarStore for CountingAvatarStore {
         let sequence = self
             .next_key
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let avatar = AvatarRef::new(format!("avatar-{sequence}.{extension}"), extension).unwrap();
+        let avatar =
+            AvatarRef::new(format!("avatar-{sequence:016x}.{extension}"), extension).unwrap();
         self.written
             .lock()
             .unwrap()
@@ -192,7 +193,7 @@ fn replace_persists_and_unlinks_the_previous_file() {
 
     let avatar = updated.avatar().unwrap();
     assert_eq!(avatar.extension(), "webp");
-    assert_eq!(avatar.key(), "avatar-1.webp");
+    assert_eq!(avatar.key(), "avatar-0000000000000001.webp");
     assert_eq!(*store.written.lock().unwrap(), vec![(2, "webp")]);
     assert_eq!(*store.removed.lock().unwrap(), vec![(2, "png")]);
 }
@@ -215,7 +216,7 @@ fn replace_stages_a_new_key_and_only_deletes_the_old_one_after_the_update() {
     let updated = block_on(replace_avatar(&repository, &store, &actor, vec![7])).unwrap();
 
     let new_avatar = updated.avatar().unwrap();
-    assert_eq!(new_avatar.key(), "avatar-1.webp");
+    assert_eq!(new_avatar.key(), "avatar-0000000000000001.webp");
     assert_ne!(new_avatar.key(), previous_key);
     assert_eq!(
         repository
@@ -224,13 +225,14 @@ fn replace_stages_a_new_key_and_only_deletes_the_old_one_after_the_update() {
             .avatar()
             .unwrap()
             .key(),
-        "avatar-1.webp"
+        "avatar-0000000000000001.webp"
     );
     assert_eq!(*store.removed.lock().unwrap(), vec![(2, "png")]);
 }
 
 #[test]
-fn replace_on_db_update_failure_keeps_the_old_avatar_and_cleans_the_staged_one() {
+fn replace_on_db_update_failure_keeps_the_old_avatar_and_the_staged_blob_so_a_committed_update_never_dangles(
+) {
     let repository = FakeRepository::new();
     repository.seed_user(user(2, Role::Member));
     store_avatar(&repository, "png");
@@ -246,9 +248,9 @@ fn replace_on_db_update_failure_keeps_the_old_avatar_and_cleans_the_staged_one()
     let written = store.written.lock().unwrap().clone();
     assert_eq!(written, vec![(2, "webp")]);
     let removed = store.removed.lock().unwrap().clone();
-    // Only the staged new avatar is cleaned up; the old one is untouched.
-    assert_eq!(removed.len(), 1);
-    assert_eq!(removed[0].1, "webp");
+    // set_profile may have committed before failing, so nothing is removed:
+    // an orphaned blob is cheaper than a dangling reference.
+    assert!(removed.is_empty());
 }
 
 #[test]
@@ -283,7 +285,10 @@ fn first_upload_writes_the_avatar_without_deleting_anything() {
 
     let updated = block_on(replace_avatar(&repository, &store, &actor, vec![7])).unwrap();
 
-    assert_eq!(updated.avatar().unwrap().key(), "avatar-1.webp");
+    assert_eq!(
+        updated.avatar().unwrap().key(),
+        "avatar-0000000000000001.webp"
+    );
     assert_eq!(
         repository
             .user_by_id(UserId::new(2))
@@ -291,7 +296,7 @@ fn first_upload_writes_the_avatar_without_deleting_anything() {
             .avatar()
             .unwrap()
             .key(),
-        "avatar-1.webp"
+        "avatar-0000000000000001.webp"
     );
     assert_eq!(*store.written.lock().unwrap(), vec![(2, "webp")]);
     assert!(store.removed.lock().unwrap().is_empty());

@@ -15,5 +15,6 @@ pub struct Config {
     pub session_secret: SessionSecret,
     pub session_timeout: Duration,
     pub medioss_origin: String,
+    pub dev_origin: Option<String>,
     pub session_cookie_secure: bool,
 }

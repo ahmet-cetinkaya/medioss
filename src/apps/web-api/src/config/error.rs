@@ -21,6 +21,11 @@ pub enum ConfigError {
     #[error("MEDIOSS_ORIGIN must be a single absolute http:// or https:// origin, got `{value}`")]
     InvalidMediossOrigin { value: String },
 
+    #[error(
+        "MEDIOSS_DEV_ORIGIN must be blank or a single absolute http:// or https:// origin, got `{value}`"
+    )]
+    InvalidDevOrigin { value: String },
+
     #[error("SESSION_COOKIE_SECURE must be exactly `true` or `false`, got `{value}`")]
     InvalidSessionCookieSecure { value: String },
 

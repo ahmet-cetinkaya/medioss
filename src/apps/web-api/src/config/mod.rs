@@ -23,6 +23,7 @@ const STATIC_DIR_VAR: &str = "MEDIOSS_STATIC_DIR";
 const SESSION_SECRET_VAR: &str = "SESSION_SECRET";
 const SESSION_TIMEOUT_VAR: &str = "SESSION_TIMEOUT";
 const MEDIOSS_ORIGIN_VAR: &str = "MEDIOSS_ORIGIN";
+const DEV_ORIGIN_VAR: &str = "MEDIOSS_DEV_ORIGIN";
 const SESSION_COOKIE_SECURE_VAR: &str = "SESSION_COOKIE_SECURE";
 
 const DEFAULT_PORT: u16 = 3000;
@@ -38,6 +39,17 @@ pub fn from_env() -> Result<Config, ConfigError> {
         tracing::warn!(
             "SESSION_COOKIE_SECURE=false: session cookies may be sent over unencrypted HTTP"
         );
+    }
+    // Module routers read this variable per request and cannot depend on
+    // web-api, so publish only the validated, canonical value for them.
+    match &config.dev_origin {
+        Some(dev_origin) => {
+            tracing::warn!(
+                "{DEV_ORIGIN_VAR}={dev_origin}: this extra origin may make state-changing requests; use for development only"
+            );
+            std::env::set_var(DEV_ORIGIN_VAR, dev_origin);
+        }
+        None => std::env::remove_var(DEV_ORIGIN_VAR),
     }
     Ok(config)
 }
@@ -73,6 +85,11 @@ pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, Config
         .ok_or(ConfigError::MissingMediossOrigin)?;
     let medioss_origin = parse_origin(&medioss_origin_value)?;
 
+    let dev_origin = vars(DEV_ORIGIN_VAR)
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| parse_origin(&value).map_err(|_| ConfigError::InvalidDevOrigin { value }))
+        .transpose()?;
+
     let session_cookie_secure = match vars(SESSION_COOKIE_SECURE_VAR) {
         None => true,
         Some(value) if value == "true" => true,
@@ -87,6 +104,7 @@ pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, Config
         session_secret,
         session_timeout,
         medioss_origin,
+        dev_origin,
         session_cookie_secure,
     })
 }

@@ -38,6 +38,7 @@ async fn test_state() -> AppState {
         session_secret: crate::config::SessionSecret::new_for_tests("test-secret"),
         session_timeout: std::time::Duration::from_secs(3600),
         medioss_origin: "https://medioss.example".to_owned(),
+        dev_origin: None,
         session_cookie_secure: false,
     };
 
