@@ -8,9 +8,9 @@
 -->
 <script lang="ts">
   import { tick } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import { timeline, type MoodRange, type TimelineEvent } from "$lib/api/mood";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import FeedItem from "$lib/components/content/feed-item.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
@@ -22,7 +22,6 @@
   import { actionMessages } from "$lib/i18n/common.messages";
   import { formatDateTime } from "$lib/i18n/formatting/date-time-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { ROUTES } from "$lib/navigation/routes";
   import { historyMessages as m } from "./history.messages";
   import { appendPage, eventKey } from "./timeline-pages";
@@ -53,12 +52,7 @@
   );
 
   const reasonText = (reason: ServerReason, fallback: typeof m.loadFailed) =>
-    reason === "network" || reason === "server"
-      ? t(serverReasonMessages[reason])
-      : t(fallback);
-
-  const reasonOf = (error: unknown): ServerReason =>
-    error instanceof ApiError ? serverReason(error).reason : "generic";
+    t(failureMessage(reason, fallback).message);
 
   function describe(event: TimelineEvent): string {
     switch (event.kind) {

@@ -7,6 +7,10 @@
   import { playerTitle } from "./player-title.svelte";
 </script>
 
-<AppShell screen="player" title={playerTitle.name ? null : undefined}>
+<AppShell
+  screen="player"
+  title={playerTitle.name ? null : undefined}
+  documentTitle={playerTitle.name}
+>
   {#snippet children()}<PlayerContent />{/snippet}
 </AppShell>

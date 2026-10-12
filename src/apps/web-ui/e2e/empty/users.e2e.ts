@@ -1,5 +1,5 @@
 // `empty` project: admin plus member and no content (SC-007).
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/test-fixture";
 import { getJson, healthStatus, newApi } from "../support/api-client";
 import {
   ensureUsers,

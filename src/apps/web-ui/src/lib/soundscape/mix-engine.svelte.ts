@@ -104,13 +104,28 @@ export class MixEngine {
   }
 
   async #start(elements: HTMLAudioElement[]): Promise<boolean> {
-    try {
-      await Promise.all(elements.map((element) => element.play()));
-      return true;
-    } catch {
-      this.blocked = true;
-      return false;
+    const results = await Promise.allSettled(
+      elements.map((element) => element.play()),
+    );
+    const blocked = results.some(
+      (result) =>
+        result.status === "rejected" &&
+        (result.reason as { name?: unknown } | null)?.name ===
+          "NotAllowedError",
+    );
+    this.blocked = blocked;
+
+    for (const [index, result] of results.entries()) {
+      if (
+        result.status === "rejected" &&
+        (result.reason as { name?: unknown } | null)?.name !== "NotAllowedError"
+      ) {
+        const element = elements[index];
+        if (element) this.remove(Number(element.dataset.soundId));
+      }
     }
+
+    return !blocked && results.some((result) => result.status === "fulfilled");
   }
 
   #pauseAll(): void {

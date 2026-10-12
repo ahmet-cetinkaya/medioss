@@ -76,7 +76,7 @@
     <span class="sr-only">{t(stateMessages.loading)}</span>
   {:else if status === "error"}
     <div class="flex flex-col items-start gap-3">
-      <InlineMessage tone="error">
+      <InlineMessage tone="error" role="alert">
         {errorMessage ?? t(stateMessages.sectionLoadFailed)}
       </InlineMessage>
       {#if onRetry}

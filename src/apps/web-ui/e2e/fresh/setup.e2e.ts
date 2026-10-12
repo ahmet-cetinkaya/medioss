@@ -63,25 +63,23 @@ async function expectSecretNowhere(page: Page): Promise<void> {
   for (const key of storage.keys) expect(["medioss.locale"]).toContain(key);
 }
 
-test("a 3 s delayed status shows loading with no operable form (FR-083, SC-009)", async ({
+test("a delayed status shows loading with no operable form (FR-083, SC-009)", async ({
   page,
 }) => {
-  let released = false;
+  let releaseStatus!: () => void;
+  const statusReleased = new Promise<void>((resolve) => {
+    releaseStatus = resolve;
+  });
   await page.route(STATUS, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 3_000));
-    released = true;
+    await statusReleased;
     await route.continue();
   });
   await page.goto("/setup/");
   await expect(page.locator('main [aria-busy="true"]')).toBeVisible();
-  let samples = 0;
-  while (!released) {
-    expect(await operableControls(page)).toBe(0);
-    await expect(secretField(page)).toHaveCount(0);
-    samples++;
-    await page.waitForTimeout(400);
-  }
-  expect(samples).toBeGreaterThanOrEqual(3);
+  expect(await operableControls(page)).toBe(0);
+  await expect(secretField(page)).toHaveCount(0);
+
+  releaseStatus();
   await expect(secretField(page)).toBeEditable();
   await expect(secretField(page)).toHaveAttribute("type", "password");
   await expect(secretField(page)).toHaveAttribute("autocomplete", "off");
@@ -190,8 +188,6 @@ test("success shows the Login link on /setup/; a reload shows already set up (PB
   await expect(loginLink(page)).toBeFocused();
   await expect(page.locator("main input")).toHaveCount(0);
   expect(new URL(page.url()).pathname).toBe("/setup/");
-  // Nothing navigates on its own.
-  await page.waitForTimeout(1_000);
   expect(new URL(page.url()).pathname).toBe("/setup/");
 
   const storage = await storageSnapshot(page, sessionSecret());

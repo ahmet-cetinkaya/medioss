@@ -8,8 +8,12 @@
 -->
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import {
     createSoundscapeCategory,
     clearSoundIcon,
@@ -43,7 +47,6 @@
   import OverflowMenu from "$lib/components/ui/menu/overflow-menu.svelte";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { t } from "$lib/i18n/translate";
   import { adminMessages, soundAdminMessages as m } from "./admin.messages";
   import NativeSelect from "./native-select.svelte";
@@ -60,9 +63,11 @@
 
   const status = $derived(loadFailure ? "error" : data ? "ready" : "loading");
   const loadErrorText = $derived(
-    loadFailure === "network" || loadFailure === "server"
-      ? t(serverReasonMessages[loadFailure])
-      : t(adminMessages.loadFailed),
+    t(
+      failureMessage(loadFailure, adminMessages.loadFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
   const categoryName = (categoryId: number) =>
     data?.categories.find((category) => category.id === categoryId)?.name ?? "";
@@ -97,9 +102,7 @@
       data = { categories, sounds };
       loadFailure = null;
     } catch (error) {
-      if (current === request)
-        loadFailure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (current === request) loadFailure = reasonOf(error);
     }
   }
 

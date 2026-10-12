@@ -17,6 +17,7 @@
 -->
 <script lang="ts">
   import { avatarInitial } from "$lib/account/avatar-initial";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import {
     avatarUrl,
     fetchMeProfile,
@@ -35,7 +36,6 @@
   import type { SessionUser } from "$lib/session/gate-decision";
   import { session } from "$lib/session/session.svelte";
   import { AVATAR_TYPES, avatarFileProblem } from "./avatar-file";
-  import { settingsFailure, type SettingsFailure } from "./settings-failure";
   import { profileMessages as m } from "./settings.messages";
 
   type Props = { user: SessionUser };
@@ -48,9 +48,9 @@
   let displayName = $state(session.user?.display_name ?? "");
   let nameBusy = $state(false);
   let nameSaved = $state(false);
-  let nameFailure = $state<SettingsFailure | null>(null);
+  let nameFailure = $state<ReturnType<typeof reasonOf> | null>(null);
   let uploadBusy = $state(false);
-  let avatarFailure = $state<SettingsFailure | null>(null);
+  let avatarFailure = $state<ReturnType<typeof reasonOf> | null>(null);
   let removeOpen = $state(false);
   let fileInput = $state<HTMLInputElement | null>(null);
   let uploadButton = $state<HTMLElement | null>(null);
@@ -92,7 +92,7 @@
       await syncProfile({ has_avatar: true });
       announce(t(m.uploaded));
     } catch (error) {
-      avatarFailure = settingsFailure(error, m.uploadFailed);
+      avatarFailure = reasonOf(error);
     } finally {
       uploadBusy = false;
     }
@@ -118,7 +118,7 @@
       nameSaved = true;
       announce(t(m.nameSaved));
     } catch (error) {
-      nameFailure = settingsFailure(error, m.nameFailed);
+      nameFailure = reasonOf(error);
     } finally {
       nameBusy = false;
     }
@@ -190,7 +190,7 @@
         </p>
         {#if avatarFailure}
           <InlineMessage tone="error" role="alert">
-            {t(avatarFailure.message, avatarFailure.params)}
+            {t(failureMessage(avatarFailure, m.uploadFailed).message)}
           </InlineMessage>
         {/if}
       </div>
@@ -214,7 +214,7 @@
       </p>
       {#if nameFailure}
         <InlineMessage tone="error" role="alert">
-          {t(nameFailure.message, nameFailure.params)}
+          {t(failureMessage(nameFailure, m.nameFailed).message)}
         </InlineMessage>
       {:else if nameSaved}
         <InlineMessage tone="success">{t(m.nameSaved)}</InlineMessage>
@@ -234,5 +234,6 @@
   destructive
   onConfirm={runRemove}
   fallbackFocus={() => uploadButton}
-  errorMessage={(error) => settingsFailure(error, m.removeFailed).message}
+  errorMessage={(error) =>
+    failureMessage(reasonOf(error), m.removeFailed).message}
 />

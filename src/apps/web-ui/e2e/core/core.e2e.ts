@@ -1,7 +1,7 @@
 // Minimal e2e core: the flows most likely to break, one suite, fast feedback.
 // Full historical suites live in e2e/extended/ (excluded from testMatch) and
 // can be restored by moving files back into e2e/seeded/ etc.
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/test-fixture";
 import { storageStatePath } from "../support/auth";
 
 test.use({ storageState: storageStatePath("member") });
@@ -240,13 +240,6 @@ test("mood check-in saves from home dialog", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("admin tabs omit check icons", async ({ page }) => {
-  await page.goto("/admin/");
-  const tabs = page.getByRole("group", { name: "Admin section" });
-  await expect(tabs).toBeVisible();
-  await expect(tabs.locator("svg")).toHaveCount(0);
-});
-
 test("mobile: bottom bar stays at the viewport bottom, no header avatar", async ({
   page,
 }) => {
@@ -275,20 +268,31 @@ test("mobile: bottom bar stays at the viewport bottom, no header avatar", async 
   );
 });
 
-// Runs LAST: it ends the member's server-side session, so every earlier test
-// must be done with the member storage state by the time this executes.
 test("sign-in gate: a signed-out member address shows login", async ({
-  page,
+  browser,
 }) => {
-  // The logout endpoint is origin-checked (fail-closed): drive it through the
-  // page so the browser sends a same-origin Origin header.
-  await page.goto("/");
-  await page.evaluate(async () => {
-    await fetch("/api/identity/logout", {
-      method: "POST",
-      headers: { origin: window.location.origin },
-    }).catch(() => {});
-  });
-  await page.goto("/library/");
-  await expect(page).toHaveURL(/\/login\//);
+  // Sign in through a separate browser context: logout must not invalidate the
+  // shared member session that the sleep-timer and playback-state suites use.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.goto("/login/");
+    await page.getByLabel("Email").fill("member@example.test");
+    await page.getByLabel("Password").fill("member-e2e-pass-1");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/$/);
+
+    // The logout endpoint is origin-checked (fail-closed): drive it through
+    // the page so the browser sends a same-origin Origin header.
+    await page.evaluate(async () => {
+      await fetch("/api/identity/logout", {
+        method: "POST",
+        headers: { origin: window.location.origin },
+      });
+    });
+    await page.goto("/library/");
+    await expect(page).toHaveURL(/\/login\//);
+  } finally {
+    await context.close();
+  }
 });

@@ -13,9 +13,9 @@
     only in this component's state.
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
   import { fetchMeProfile, fetchSetupStatus, login } from "$lib/api/identity";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
@@ -26,7 +26,6 @@
     formatClockSpoken,
   } from "$lib/i18n/formatting/clock-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { loginDestination } from "./login-destination";
   import { loginMessages as m, RESET_PASSWORD_COMMAND } from "./login.messages";
 
@@ -42,13 +41,7 @@
   let remaining = $state(0);
   let passwordRef = $state<HTMLInputElement | null>(null);
 
-  const refusalText = $derived(
-    refusal === "invalidCredentials" ||
-      refusal === "network" ||
-      refusal === "server"
-      ? t(serverReasonMessages[refusal])
-      : t(m.failed),
-  );
+  const refusalText = $derived(t(failureMessage(refusal, m.failed).message));
   const help = $derived(t(m.resetHelp).split("{command}"));
 
   const goOn = () =>
@@ -96,8 +89,7 @@
         }),
       );
     } catch (error) {
-      refusal =
-        error instanceof ApiError ? serverReason(error).reason : "generic";
+      refusal = reasonOf(error);
       if (refusal === "invalidCredentials") {
         password = "";
         passwordRef?.focus();

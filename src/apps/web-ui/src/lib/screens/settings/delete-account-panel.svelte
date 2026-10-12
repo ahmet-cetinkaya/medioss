@@ -11,6 +11,7 @@
   Props: `user` (the signed-in user).
 -->
 <script lang="ts">
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import { deleteOwnAccount } from "$lib/api/identity";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
@@ -19,10 +20,8 @@
   import { Input } from "$lib/components/ui/input/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { goToLogin } from "$lib/navigation/login-redirect";
   import type { SessionUser } from "$lib/session/gate-decision";
-  import { settingsFailure, type SettingsFailure } from "./settings-failure";
   import { deleteAccountMessages as m } from "./settings.messages";
 
   type Props = { user: SessionUser };
@@ -33,7 +32,7 @@
 
   let typedEmail = $state("");
   let open = $state(false);
-  let failure = $state<SettingsFailure | null>(null);
+  let failure = $state<ReturnType<typeof reasonOf> | null>(null);
 
   const matches = $derived(typedEmail === user.email);
 
@@ -42,8 +41,8 @@
     try {
       await deleteOwnAccount();
     } catch (error) {
-      const refused = settingsFailure(error, m.failed);
-      if (refused.message !== serverReasonMessages.lastActiveAdmin) throw error;
+      const refused = reasonOf(error);
+      if (refused !== "lastActiveAdmin") throw error;
       failure = refused;
       return;
     }
@@ -72,7 +71,11 @@
     />
     {#if failure}
       <InlineMessage tone="error" role="alert">
-        {t(failure.message, failure.params)}
+        {t(
+          failureMessage(failure, m.failed, {
+            specificReasons: ["lastActiveAdmin"],
+          }).message,
+        )}
       </InlineMessage>
     {/if}
     <div class="mt-2">
@@ -96,5 +99,5 @@
   confirmLabel={t(m.action)}
   destructive
   onConfirm={runDelete}
-  errorMessage={(error) => settingsFailure(error, m.failed).message}
+  errorMessage={(error) => failureMessage(reasonOf(error), m.failed).message}
 />

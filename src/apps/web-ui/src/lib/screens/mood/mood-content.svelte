@@ -8,7 +8,6 @@
   insights and chart, whose action focuses the score selector.
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
   import {
     createMood,
     deleteMood,
@@ -19,7 +18,8 @@
     type MoodRange,
     type MoodStatistics,
   } from "$lib/api/mood";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
   import {
     describeFailure,
@@ -43,7 +43,6 @@
   import { formatDateTime } from "$lib/i18n/formatting/date-time-format";
   import { formatNumber } from "$lib/i18n/formatting/number-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import {
     appendUnique,
     distributionRows,
@@ -108,12 +107,7 @@
   );
 
   const loadError = (reason: ServerReason | null) =>
-    reason === "network" || reason === "server"
-      ? t(serverReasonMessages[reason])
-      : t(m.loadFailed);
-
-  const reasonOf = (error: unknown): ServerReason =>
-    error instanceof ApiError ? serverReason(error).reason : "generic";
+    t(failureMessage(reason, m.loadFailed).message);
 
   const entryTime = (entry: MoodEntry) =>
     formatDateTime(entry.recorded_at, locale.current);
@@ -407,7 +401,7 @@
                       <OverflowItem
                         label={t(actionMessages.edit)}
                         icon="pencil-simple"
-                        onclick={() => startEdit(entry, null)}
+                        onclick={(trigger) => startEdit(entry, trigger)}
                       />
                       <OverflowItem
                         label={t(actionMessages.delete)}

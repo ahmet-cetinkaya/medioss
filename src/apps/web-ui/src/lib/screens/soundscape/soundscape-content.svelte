@@ -5,8 +5,12 @@
   current mix lives in one MixState (plan D10) shared by the panels.
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import {
     fetchSoundscapeCategories,
     fetchSoundscapeMixes,
@@ -15,8 +19,6 @@
     type SoundscapeMix,
     type SoundscapeSound,
   } from "$lib/api/soundscape";
-  import type { StringMessage } from "$lib/i18n/message";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { t } from "$lib/i18n/translate";
   import MixPanel from "./mix-panel.svelte";
   import { MixState } from "./mix-state.svelte";
@@ -35,16 +37,6 @@
   let mixesFailure = $state<ServerReason | null>(null);
   let libraryRequest = 0;
   let mixesRequest = 0;
-
-  const reasonOf = (error: unknown): ServerReason =>
-    error instanceof ApiError ? serverReason(error).reason : "generic";
-
-  const failureText = (reason: ServerReason, fallback: StringMessage) =>
-    t(
-      reason === "network" || reason === "server"
-        ? serverReasonMessages[reason]
-        : fallback,
-    );
 
   async function loadLibrary() {
     const id = ++libraryRequest;
@@ -105,7 +97,11 @@
             : "empty"
           : "loading"}
       errorMessage={mixesFailure
-        ? failureText(mixesFailure, m.mixesLoadFailed)
+        ? t(
+            failureMessage(mixesFailure, m.mixesLoadFailed, {
+              specificReasons: NETWORK_OR_SERVER_REASONS,
+            }).message,
+          )
         : undefined}
       onReload={() => void loadMixes()}
     />
@@ -120,7 +116,11 @@
             : "empty"
           : "loading"}
       errorMessage={libraryFailure
-        ? failureText(libraryFailure, m.soundsLoadFailed)
+        ? t(
+            failureMessage(libraryFailure, m.soundsLoadFailed, {
+              specificReasons: NETWORK_OR_SERVER_REASONS,
+            }).message,
+          )
         : undefined}
       onRetry={() => void loadLibrary()}
     />

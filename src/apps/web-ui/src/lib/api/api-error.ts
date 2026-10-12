@@ -116,8 +116,3 @@ export async function readErrorBody(
     return { message: text, data: undefined };
   }
 }
-
-/** `{"error": msg}` → msg; empty → ""; text or invalid JSON → the raw text. */
-export async function parseErrorBody(response: Response): Promise<string> {
-  return (await readErrorBody(response)).message;
-}

@@ -92,6 +92,15 @@ describe("serverReason (refusal table)", () => {
     expect(reason("soundscape.category.rename", 409).reason).toBe(
       "duplicateName",
     );
+    expect(
+      reason(
+        "category.rename",
+        409,
+        "a category with that name already exists",
+      ),
+    ).toEqual({
+      reason: "duplicateName",
+    });
   });
 
   test("415 → unsupportedMedia", () => {
@@ -116,6 +125,10 @@ describe("serverReason (refusal table)", () => {
     expect(reason("sound.upload", 413)).toEqual({
       reason: "fileTooLarge",
       params: { limitMb: 100 },
+    });
+    expect(reason("sound.icon.upload", 413)).toEqual({
+      reason: "fileTooLarge",
+      params: { limitMb: 1 },
     });
   });
 

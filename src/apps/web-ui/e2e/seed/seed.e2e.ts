@@ -1,7 +1,7 @@
 // `seed` project: fills a fresh instance through the API and records ids in
 // .agents/qa/seed-<port>.json for the `seeded` suites. Refuses an instance
 // that already has content.
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/test-fixture";
 import {
   expectOk,
   getJson,

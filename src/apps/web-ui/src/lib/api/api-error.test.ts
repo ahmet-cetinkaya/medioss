@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { ApiError, parseErrorBody } from "./api-error";
+import { ApiError, readErrorBody } from "./api-error";
 import { completeSetup, login, logout } from "./identity";
 import { request, setRequestDependenciesForTests } from "./request";
 
@@ -23,14 +23,20 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 afterEach(() => setRequestDependenciesForTests({}));
 
-describe("parseErrorBody", () => {
-  test("JSON error body yields its message", async () => {
+describe("readErrorBody", () => {
+  test("JSON error body yields its message and parsed value", async () => {
     const response = Response.json({ error: "email already exists" });
-    expect(await parseErrorBody(response)).toBe("email already exists");
+    expect(await readErrorBody(response)).toEqual({
+      message: "email already exists",
+      data: { error: "email already exists" },
+    });
   });
 
-  test("empty body yields an empty string", async () => {
-    expect(await parseErrorBody(new Response(null, { status: 409 }))).toBe("");
+  test("empty body yields an empty message", async () => {
+    expect(await readErrorBody(new Response(null, { status: 409 }))).toEqual({
+      message: "",
+      data: undefined,
+    });
   });
 
   test("text/plain body yields the text", async () => {
@@ -38,14 +44,20 @@ describe("parseErrorBody", () => {
       status: 400,
       headers: { "content-type": "text/plain" },
     });
-    expect(await parseErrorBody(response)).toBe("missing import file");
+    expect(await readErrorBody(response)).toEqual({
+      message: "missing import file",
+      data: undefined,
+    });
   });
 
   test("invalid JSON yields the raw text", async () => {
     const response = new Response("{not json", {
       headers: { "content-type": "application/json" },
     });
-    expect(await parseErrorBody(response)).toBe("{not json");
+    expect(await readErrorBody(response)).toEqual({
+      message: "{not json",
+      data: undefined,
+    });
   });
 });
 
@@ -75,6 +87,26 @@ describe("request", () => {
       action: "generic",
       serverMessage: "",
       message: "request failed (409)",
+    });
+  });
+
+  test("invalid JSON in a successful response still throws ApiError", async () => {
+    stub(
+      () =>
+        new Response("<html>proxy login page</html>", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    const error = await request("/api/x", undefined, {
+      action: "mood.list",
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 200,
+      action: "mood.list",
+      serverMessage: "",
+      message: "request failed (200)",
     });
   });
 

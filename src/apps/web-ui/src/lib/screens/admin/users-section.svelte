@@ -10,7 +10,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { avatarInitial } from "$lib/account/avatar-initial";
-  import { ApiError } from "$lib/api/api-error";
   import {
     avatarUrl,
     createUser,
@@ -19,7 +18,12 @@
     setUserStatus,
     type IdentityUser,
   } from "$lib/api/identity";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
   import {
     describeFailure,
@@ -34,7 +38,6 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { t } from "$lib/i18n/translate";
   import { session } from "$lib/session/session.svelte";
   import { adminMessages, userMessages as m } from "./admin.messages";
@@ -55,9 +58,11 @@
         : "loading",
   );
   const loadErrorText = $derived(
-    loadFailure === "network" || loadFailure === "server"
-      ? t(serverReasonMessages[loadFailure])
-      : t(adminMessages.loadFailed),
+    t(
+      failureMessage(loadFailure, adminMessages.loadFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
 
   async function load(reset = true) {
@@ -72,9 +77,7 @@
       users = result;
       loadFailure = null;
     } catch (error) {
-      if (current === request)
-        loadFailure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (current === request) loadFailure = reasonOf(error);
     }
   }
 

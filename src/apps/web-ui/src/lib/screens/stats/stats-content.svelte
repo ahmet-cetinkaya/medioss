@@ -6,13 +6,17 @@
   server reports it (formatCalendarDay, never shifted) with its minutes.
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
   import {
     fetchStatistics,
     type StatisticsRange,
     type UserStatistics,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import RangeChips from "$lib/components/filters/range-chips.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -20,7 +24,6 @@
   import { formatCalendarDay } from "$lib/i18n/formatting/date-time-format";
   import { formatNumber } from "$lib/i18n/formatting/number-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { ROUTES } from "$lib/navigation/routes";
   import { statsMessages as m } from "./stats.messages";
 
@@ -61,9 +64,11 @@
   );
 
   const errorMessage = $derived(
-    failure === "network" || failure === "server"
-      ? t(serverReasonMessages[failure])
-      : t(m.loadFailed),
+    t(
+      failureMessage(failure, m.loadFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
 
   const withUnit = (value: number, unit: string) =>
@@ -81,9 +86,7 @@
       const result = await fetchStatistics(selected);
       if (id === request) statistics = result;
     } catch (error) {
-      if (id === request)
-        failure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (id === request) failure = reasonOf(error);
     }
   }
 

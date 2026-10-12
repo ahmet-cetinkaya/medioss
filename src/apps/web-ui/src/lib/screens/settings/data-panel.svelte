@@ -9,6 +9,7 @@
     reason (never server text) and no report.
 -->
 <script lang="ts">
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import {
     exportCsvUrl,
     exportJsonUrl,
@@ -23,7 +24,6 @@
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { formatNumber } from "$lib/i18n/formatting/number-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { settingsFailure, type SettingsFailure } from "./settings-failure";
   import { dataMessages as m } from "./settings.messages";
 
   const id = $props.id();
@@ -31,7 +31,7 @@
   let file = $state<File | null>(null);
   let busy = $state(false);
   let report = $state<ImportReport | null>(null);
-  let failure = $state<SettingsFailure | null>(null);
+  let failure = $state<ReturnType<typeof reasonOf> | null>(null);
 
   const counts = $derived(
     report
@@ -58,7 +58,7 @@
       report = await importData(file);
       announce(t(m.imported));
     } catch (error) {
-      failure = settingsFailure(error, m.importFailed);
+      failure = reasonOf(error);
     } finally {
       busy = false;
     }
@@ -110,7 +110,7 @@
       />
       {#if failure}
         <InlineMessage tone="error" role="alert">
-          {t(failure.message, failure.params)}
+          {t(failureMessage(failure, m.importFailed).message)}
         </InlineMessage>
       {/if}
       <div class="mt-2">

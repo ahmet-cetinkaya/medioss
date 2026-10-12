@@ -11,14 +11,13 @@
   so saving stores the sliders.
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
-  import { serverReason } from "$lib/api/server-reason";
   import {
     createSoundscapeMix,
     type SoundscapeCategory,
     type SoundscapeMix,
     type SoundscapeSound,
   } from "$lib/api/soundscape";
+  import { reasonOf } from "$lib/api/failure";
   import RenameDialog from "$lib/components/dialogs/rename-dialog.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
@@ -31,7 +30,6 @@
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { formatClock } from "$lib/i18n/formatting/clock-format";
   import { t } from "$lib/i18n/translate";
-  import { randomMix } from "$lib/soundscape/random-mix";
   import MasterVolumeControl from "./master-volume-control.svelte";
   import type { MixState } from "./mix-state.svelte";
   import { soundscapeMessages as m } from "./soundscape.messages";
@@ -65,15 +63,7 @@
       playing when it was playing; a stop-then-fill would need a second click. */
   async function fillRandom() {
     const wasPlaying = mix.playing;
-    const picked = randomMix(sounds);
-    mix.stop();
-    mix.engine.clear();
-    mix.sounds = [];
-    mix.missingSounds = false;
-    for (const { sound, volume } of picked) {
-      mix.toggle(sound);
-      mix.setVolume(sound.id, volume);
-    }
+    const picked = mix.replaceWithRandom(sounds);
     announce(t(m.randomMixFilled, { count: picked.length }));
     if (wasPlaying) await mix.play();
   }
@@ -87,9 +77,7 @@
 
   /** Generic refusals show the save message; specific ones their own reason. */
   const saveFailure = (error: unknown) =>
-    error instanceof ApiError && serverReason(error).reason !== "generic"
-      ? null
-      : m.saveFailed;
+    reasonOf(error) === "generic" ? m.saveFailed : null;
 </script>
 
 <Panel aria-labelledby="soundscape-mix-heading" tint>

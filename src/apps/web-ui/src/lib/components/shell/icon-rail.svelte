@@ -38,7 +38,6 @@
   <BrandLockup compact href="/" />
   {#each NAV_GROUPS as group, index (group.key)}
     <ul
-      aria-label={t(group.label)}
       class="flex flex-col items-center gap-2 {index > 0
         ? 'border-t border-divider pt-4'
         : ''}"

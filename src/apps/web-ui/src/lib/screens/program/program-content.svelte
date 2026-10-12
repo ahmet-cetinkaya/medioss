@@ -9,7 +9,6 @@
 -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import {
     fetchProgram,
     fetchProgramMembers,
@@ -17,7 +16,12 @@
     type Meditation,
     type Program,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import GeneratedArtwork from "$lib/components/content/generated-artwork.svelte";
   import { contentMessages } from "$lib/components/content/content.messages";
   import RegionState from "$lib/components/feedback/region-state.svelte";
@@ -27,7 +31,6 @@
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import {
     meditationProgressLabel,
     programProgressLabel,
@@ -56,9 +59,11 @@
   );
 
   const errorMessage = $derived(
-    failure === "network" || failure === "server"
-      ? t(serverReasonMessages[failure])
-      : t(m.loadFailed),
+    t(
+      failureMessage(failure, m.loadFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
 
   const action = $derived(data ? programPrimaryAction(data.members) : null);
@@ -82,9 +87,7 @@
       ]);
       if (current === request) data = { program, members };
     } catch (error) {
-      if (current === request)
-        failure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (current === request) failure = reasonOf(error);
     }
   }
 

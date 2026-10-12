@@ -13,14 +13,14 @@
 -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import {
     fetchContinueProgram,
     fetchProgramMembers,
     programCoverUrl,
     type ContinueProgram,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import NowPlayingPill from "$lib/components/content/now-playing-pill.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Panel } from "$lib/components/ui/panel/index.js";
@@ -31,7 +31,6 @@
   import { homeLibrary } from "./home-library.svelte";
   import HomeStartAction, { hasStartAction } from "./home-start-action.svelte";
   import { homeMessages as m } from "./home.messages";
-  import { reasonMessage } from "./reason-message";
 
   type RegionStatus = "loading" | "error" | "empty" | "ready";
 
@@ -82,9 +81,7 @@
       current = result;
       if (result) void loadNextName(result, id);
     } catch (error) {
-      if (id === request)
-        failure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (id === request) failure = reasonOf(error);
     }
   }
 
@@ -112,7 +109,7 @@
     {status}
     minHeight="8rem"
     errorMessage={failure
-      ? t(reasonMessage(failure, m.continueFailed))
+      ? t(failureMessage(failure, m.continueFailed).message)
       : undefined}
     onRetry={() => void load()}
     emptyTitle={t(noContent ? m.noContentTitle : m.continueEmptyTitle)}

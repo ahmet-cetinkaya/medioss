@@ -6,14 +6,14 @@
   Loads on its own, so a playback failure never blocks it (FR-048).
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
   import {
     createNote,
     deleteNote,
     fetchNotes,
     type Note,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage } from "$lib/api/failure";
   import FeedItem from "$lib/components/content/feed-item.svelte";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
@@ -25,7 +25,6 @@
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { formatDateTime } from "$lib/i18n/formatting/date-time-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { playerMessages as m } from "./player.messages";
 
   type Props = { meditationId: number; refresh?: number };
@@ -52,13 +51,8 @@
     failure ? "error" : notes ? (notes.length ? "ready" : "empty") : "loading",
   );
 
-  const reasonText = (
-    reason: ServerReason,
-    fallback: typeof m.noteAddFailed,
-  ) =>
-    reason === "network" || reason === "server"
-      ? t(serverReasonMessages[reason])
-      : t(fallback);
+  const reasonText = (reason: ServerReason, fallback: typeof m.noteAddFailed) =>
+    t(failureMessage(reason, fallback).message);
 
   async function load(id: number) {
     const current = ++request;
@@ -68,9 +62,7 @@
       const result = await fetchNotes(id);
       if (current === request) notes = newestFirst(result);
     } catch (error) {
-      if (current === request)
-        failure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (current === request) failure = reasonOf(error);
     }
   }
 
@@ -91,8 +83,7 @@
       draft = "";
       announce(t(m.noteAdded));
     } catch (error) {
-      addFailure =
-        error instanceof ApiError ? serverReason(error).reason : "generic";
+      addFailure = reasonOf(error);
     } finally {
       adding = false;
     }

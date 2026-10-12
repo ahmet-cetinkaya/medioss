@@ -205,6 +205,16 @@ describe("global.css parser guard", () => {
     expect(resolveToken("--background")).not.toContain("oklch");
   });
 
+  test("defines the bg-panel-tint utility token", () => {
+    expect(css).toContain("--color-panel-tint: rgb(246 240 255 / 0.5)");
+  });
+
+  test("keeps the live announcer visible during player focus mode", () => {
+    // jsdom cannot prove this CSS cascade; guard the explicit descendant reset.
+    expect(css).toContain(".player-focus-on [data-live-announcer] {");
+    expect(css).toContain("visibility: visible;");
+  });
+
   test("would reject the §3.1 reference --text-muted #7c7c7c", () => {
     const ratios = allSurfaces.map((s) =>
       contrast(parseColor("#7c7c7c").rgb, s.rgb),

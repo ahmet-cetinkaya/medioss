@@ -7,6 +7,7 @@
 import type { SoundscapeMix, SoundscapeSound } from "$lib/api/soundscape";
 import { writeLastMixId } from "$lib/soundscape/last-mix";
 import { MixEngine } from "$lib/soundscape/mix-engine.svelte";
+import { randomMix } from "$lib/soundscape/random-mix";
 import {
   DEFAULT_VOLUME,
   mixEntries,
@@ -67,6 +68,19 @@ export class MixState {
   // Overall volume; not part of saved payloads.
   setMaster = (volume: number): void => {
     this.engine.master = volume;
+  };
+
+  replaceWithRandom = (library: readonly SoundscapeSound[]): MixEntry[] => {
+    const entries = randomMix(library);
+    this.stop();
+    this.engine.clear();
+    this.sounds = [];
+    this.missingSounds = false;
+    for (const { sound, volume } of entries) {
+      this.toggle(sound);
+      this.setVolume(sound.id, volume);
+    }
+    return entries;
   };
 
   play = async (): Promise<void> => {

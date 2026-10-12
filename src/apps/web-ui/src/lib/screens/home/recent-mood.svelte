@@ -7,9 +7,9 @@
 -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import { listMood, type MoodEntry } from "$lib/api/mood";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import FeedItem from "$lib/components/content/feed-item.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { moodScoreMessages } from "$lib/components/mood/mood-score.messages";
@@ -20,7 +20,6 @@
   import { locale, t } from "$lib/i18n/locale.svelte";
   import { ROUTES } from "$lib/navigation/routes";
   import { homeMessages as m } from "./home.messages";
-  import { reasonMessage } from "./reason-message";
 
   type Props = { onCheckIn: () => void };
 
@@ -50,9 +49,7 @@
       const page = await listMood("all");
       if (id === request) entries = page.items.slice(0, RECENT_COUNT);
     } catch (error) {
-      if (id === request)
-        loadFailure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (id === request) loadFailure = reasonOf(error);
     }
   }
 
@@ -83,7 +80,7 @@
     {status}
     minHeight="8rem"
     errorMessage={loadFailure
-      ? t(reasonMessage(loadFailure, m.moodFailed))
+      ? t(failureMessage(loadFailure, m.moodFailed).message)
       : undefined}
     onRetry={() => void reload()}
     emptyTitle={t(m.moodEmptyTitle)}

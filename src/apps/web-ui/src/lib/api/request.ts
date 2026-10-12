@@ -96,5 +96,11 @@ export async function request<T>(
   }
   const text = await response.text();
   if (!text) return undefined as T;
-  return JSON.parse(text) as T;
+  // A 2xx body that is not valid JSON (reverse-proxy interstitial, truncated
+  // response) must not break the ApiError contract with a raw SyntaxError.
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, action, "");
+  }
 }

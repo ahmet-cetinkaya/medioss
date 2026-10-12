@@ -17,7 +17,6 @@
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { t } from "$lib/i18n/translate";
-  import { randomMix } from "$lib/soundscape/random-mix";
   import MasterVolumeControl from "../soundscape/master-volume-control.svelte";
   import { groupAddableSounds } from "./mix-add-groups";
   import type { PlayerMix } from "./player-mix.svelte";
@@ -44,13 +43,7 @@
   // is in the mix now, and started too when the meditation is playing.
   async function randomize() {
     await mix.load();
-    for (const sound of [...state.entries.map((e) => e.sound)])
-      state.remove(sound.id);
-    const picked = randomMix(mix.sounds);
-    for (const { sound, volume } of picked) {
-      state.toggle(sound);
-      state.setVolume(sound.id, volume);
-    }
+    const picked = state.replaceWithRandom(mix.sounds);
     announce(t(m.mixRandomLoaded, { count: picked.length }));
     if (playing && picked.length > 0) await state.play();
   }

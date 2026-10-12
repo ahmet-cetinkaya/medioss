@@ -9,11 +9,10 @@
 
   Props:
   - `screen` (ScreenKey): nav current item, h1, and document title.
-  - `title?`: runtime title override (already translated or user content,
-    e.g. the Player's meditation name, FR-043); replaces the screen name in
-    the h1 and the document title. An explicit `null` suppresses the h1 (Home:
-    its greeting is the in-content h1); the document title stays the screen
-    name.
+  - `title?`: runtime h1 override (already translated or user content). An
+    explicit `null` suppresses the h1 (Home: its greeting is the in-content h1).
+  - `documentTitle?`: runtime document-title override; separate from `title`
+    when a screen suppresses its shell h1.
   - `requires?` ("user" | "admin"): screens whose route requires an admin are
     always gated as "admin", whatever is passed.
   - `search?`: shows the Library header search (Library only).
@@ -64,6 +63,7 @@
   type Props = {
     screen: ScreenKey;
     title?: string | null;
+    documentTitle?: string;
     requires?: GateRequirement;
     search?: boolean;
     aside?: Snippet;
@@ -73,6 +73,7 @@
   let {
     screen,
     title,
+    documentTitle,
     requires = "user",
     search = false,
     aside,
@@ -83,8 +84,8 @@
     ROUTES[screen].requiresAdmin ? "admin" : requires,
   );
   const decision = $derived(decideGate(session.state, requirement));
-  const pageTitle = $derived(title ?? t(ROUTES[screen].title));
-  const headerTitle = $derived(title === null ? null : pageTitle);
+  const pageTitle = $derived(documentTitle ?? title ?? t(ROUTES[screen].title));
+  const headerTitle = $derived(title === null ? null : (title ?? pageTitle));
   const errorText = $derived.by(() => {
     const state = session.state;
     if (state.status !== "error") return undefined;

@@ -45,7 +45,7 @@
     programCoverUrl,
     type Meditation,
     type PlaybackState,
-    type Program,
+    type ProgramSummary,
   } from "$lib/api/meditation";
   import GeneratedArtwork from "$lib/components/content/generated-artwork.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
@@ -74,7 +74,7 @@
     meditation: Meditation;
     playback: PlaybackState;
     /** undefined while the program is looked up; null for none. */
-    program: Program | null | undefined;
+    program: ProgramSummary | null | undefined;
     mix: PlayerMix;
     /** The completion was recorded (end of the meditation). */
     onCompleted: () => void;

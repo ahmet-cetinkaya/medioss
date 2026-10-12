@@ -18,13 +18,13 @@
   import { greeting } from "./greeting";
   import RecentMood from "./recent-mood.svelte";
   import SuggestionRegion from "./suggestion-region.svelte";
-  import { ApiError } from "$lib/api/api-error";
   import {
     fetchRecentPrograms,
     programCoverUrl,
     type RecentProgram,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import ContentCard from "$lib/components/content/content-card.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Panel } from "$lib/components/ui/panel/index.js";
@@ -35,7 +35,6 @@
   import { homeLibrary } from "./home-library.svelte";
   import HomeStartAction, { hasStartAction } from "./home-start-action.svelte";
   import { homeMessages as m } from "./home.messages";
-  import { reasonMessage } from "./reason-message";
 
   const LEADS = {
     morning: m.greetingMorning,
@@ -81,9 +80,7 @@
       const result = await fetchRecentPrograms(5);
       if (id === request) recent = result.slice(0, 5);
     } catch (error) {
-      if (id === request)
-        failure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (id === request) failure = reasonOf(error);
     }
   }
 
@@ -130,7 +127,7 @@
       {status}
       minHeight="14rem"
       errorMessage={failure
-        ? t(reasonMessage(failure, m.recentFailed))
+        ? t(failureMessage(failure, m.recentFailed).message)
         : undefined}
       onRetry={() => void load()}
       emptyTitle={t(noContent ? m.noContentTitle : m.recentEmptyTitle)}

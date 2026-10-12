@@ -13,9 +13,13 @@
 -->
 <script lang="ts">
   import { tick } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import { completeSetup, fetchSetupStatus } from "$lib/api/identity";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import { PASSWORD_MIN_LENGTH } from "$lib/components/account/password-rules";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
@@ -23,7 +27,6 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { setupMessages as m } from "./setup.messages";
 
   const LOGIN_PATH = "/login/";
@@ -47,15 +50,13 @@
     statusFailure ? "error" : setupRequired === null ? "loading" : "ready",
   );
   const statusError = $derived(
-    statusFailure === "network" || statusFailure === "server"
-      ? t(serverReasonMessages[statusFailure])
-      : t(m.statusFailed),
+    t(
+      failureMessage(statusFailure, m.statusFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
-  const refusalText = $derived(
-    refusal && refusal !== "generic"
-      ? t(serverReasonMessages[refusal])
-      : t(m.failed),
-  );
+  const refusalText = $derived(t(failureMessage(refusal, m.failed).message));
 
   async function load() {
     const current = ++request;
@@ -66,8 +67,7 @@
       if (current === request) setupRequired = result.setup_required;
     } catch (error) {
       if (current !== request) return;
-      statusFailure =
-        error instanceof ApiError ? serverReason(error).reason : "generic";
+      statusFailure = reasonOf(error);
     }
   }
 
@@ -94,8 +94,7 @@
       await tick();
       loginRef?.focus();
     } catch (error) {
-      refusal =
-        error instanceof ApiError ? serverReason(error).reason : "generic";
+      refusal = reasonOf(error);
       if (refusal === "setupAlreadyCompleted") setupRequired = false;
     } finally {
       // PB-15: the secret never outlives an attempt.

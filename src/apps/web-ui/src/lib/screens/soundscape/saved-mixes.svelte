@@ -8,8 +8,6 @@
   heading.
 -->
 <script lang="ts">
-  import { ApiError } from "$lib/api/api-error";
-  import { serverReason } from "$lib/api/server-reason";
   import {
     deleteSoundscapeMix,
     updateSoundscapeMix,
@@ -18,6 +16,7 @@
   } from "$lib/api/soundscape";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
   import RenameDialog from "$lib/components/dialogs/rename-dialog.svelte";
+  import { reasonOf } from "$lib/api/failure";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -54,9 +53,7 @@
 
   /** Generic refusals show this action's own message; specific ones their reason. */
   const ownFailure = (fallback: StringMessage) => (error: unknown) =>
-    error instanceof ApiError && serverReason(error).reason !== "generic"
-      ? null
-      : fallback;
+    reasonOf(error) === "generic" ? fallback : null;
 
   /** A mix deleted in another tab: refresh the list, keep the error showing. */
   function refreshIfGone(error: unknown): never {

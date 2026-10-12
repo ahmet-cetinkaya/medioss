@@ -69,6 +69,7 @@ const DUPLICATE_NAME_ACTIONS: readonly ApiAction[] = [
   "soundscape.category.create",
   "soundscape.category.rename",
   "category.create",
+  "category.rename",
 ];
 
 // Import validation errors in the JSON path arrive as "invalid record: <msg>";

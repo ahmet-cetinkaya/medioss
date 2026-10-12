@@ -10,7 +10,6 @@
 -->
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import {
     addMember,
     assignCategory,
@@ -35,8 +34,14 @@
     type Meditation,
     type Program,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage as formatFailureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
+  import RenameDialog from "$lib/components/dialogs/rename-dialog.svelte";
   import FormDialog, {
     describeFailure,
     type Failure,
@@ -55,7 +60,6 @@
   import { actionMessages } from "$lib/i18n/common.messages";
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { groupPrograms } from "$lib/screens/library/library-groups";
   import { playerHref } from "$lib/navigation/routes";
   import {
@@ -90,9 +94,11 @@
 
   const status = $derived(loadFailure ? "error" : data ? "ready" : "loading");
   const loadErrorText = $derived(
-    loadFailure === "network" || loadFailure === "server"
-      ? t(serverReasonMessages[loadFailure])
-      : t(adminMessages.loadFailed),
+    t(
+      formatFailureMessage(loadFailure, adminMessages.loadFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
 
   async function load(reset = true) {
@@ -111,9 +117,7 @@
       data = { programs, categories, library };
       loadFailure = null;
     } catch (error) {
-      if (current === request)
-        loadFailure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (current === request) loadFailure = reasonOf(error);
     }
   }
 
@@ -265,19 +269,17 @@
   // Rename category (dialog).
   let renameOpen = $state(false);
   let renameTarget = $state<Category | null>(null);
-  let renameName = $state("");
 
   function askRenameCategory(category: Category) {
     renameTarget = category;
-    renameName = category.name;
     renameOpen = true;
   }
 
-  async function runRenameCategory() {
+  async function runRenameCategory(name: string) {
     const category = renameTarget;
-    if (!category || renameName.trim() === "") return;
-    await renameCategory(category.id, renameName.trim());
-    say(m.categoryRenamed, { name: renameName.trim() });
+    if (!category) return;
+    await renameCategory(category.id, name);
+    say(m.categoryRenamed, { name });
     await load(false);
   }
 
@@ -390,6 +392,7 @@
     if (!program || !meditation) return;
     await addMember(program.id, meditation.id);
     say(m.addedToProgram, { name: meditation.name, title: program.title });
+    await load(false);
     if (program.id === selectedId) await loadMembers(false);
   }
 
@@ -967,19 +970,13 @@
   </div>
 </FormDialog>
 
-<FormDialog
+<RenameDialog
   bind:open={renameOpen}
   title={t(m.renameCategoryTitle)}
-  description={renameTarget?.name}
-  submitLabel={t(actionMessages.save)}
-  canSubmit={renameName.trim() !== ""}
-  onSubmit={runRenameCategory}
->
-  <div class="grid grid-cols-1 gap-2">
-    <Label for="{id}-rename-category">{t(m.categoryName)}</Label>
-    <Input id="{id}-rename-category" bind:value={renameName} required />
-  </div>
-</FormDialog>
+  currentName={renameTarget?.name ?? ""}
+  label={t(m.categoryName)}
+  onSave={runRenameCategory}
+/>
 
 <ConfirmDialog
   bind:open={deleteCategoryOpen}

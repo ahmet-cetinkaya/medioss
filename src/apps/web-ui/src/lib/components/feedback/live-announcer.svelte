@@ -7,6 +7,12 @@
   import { announcement } from "./announcer.svelte";
 </script>
 
-<div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+<div
+  data-live-announcer
+  class="sr-only"
+  role="status"
+  aria-live="polite"
+  aria-atomic="true"
+>
   {announcement.message}
 </div>

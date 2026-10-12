@@ -8,22 +8,23 @@
 -->
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import {
     fetchMeditation,
     fetchPlaybackState,
-    fetchProgramMembers,
-    fetchPrograms,
     type Meditation,
     type PlaybackState,
-    type Program,
+    type ProgramSummary,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import {
+    failureMessage,
+    NETWORK_OR_SERVER_REASONS,
+    reasonOf,
+  } from "$lib/api/failure";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { ROUTES } from "$lib/navigation/routes";
   import { PlayerMix } from "./player-mix.svelte";
   import PlayerCompletionDialog from "./player-completion-dialog.svelte";
@@ -39,7 +40,7 @@
     playback: PlaybackState;
   } | null>(null);
   // undefined while looking up, null when the meditation is in no program.
-  let program = $state<Program | null | undefined>(undefined);
+  let program = $state<ProgramSummary | null | undefined>(undefined);
   let failure = $state<ServerReason | null>(null);
   let request = 0;
   // One background mix (one MixEngine) per screen mount.
@@ -58,9 +59,11 @@
   );
 
   const errorMessage = $derived(
-    failure === "network" || failure === "server"
-      ? t(serverReasonMessages[failure])
-      : t(m.loadFailed),
+    t(
+      failureMessage(failure, m.loadFailed, {
+        specificReasons: NETWORK_OR_SERVER_REASONS,
+      }).message,
+    ),
   );
 
   onMount(() => {
@@ -68,7 +71,7 @@
     // Guard against Back during hydration: if the user already left the
     // player before this island mounted, do not yank them back to Library.
     if (parsed === null) {
-      if (window.location.pathname === ROUTES.player.path)
+      if (window.location.pathname.startsWith(ROUTES.player.path))
         location.replace(ROUTES.library.path);
     } else id = parsed;
     return () => {
@@ -77,19 +80,8 @@
     };
   });
 
-  // `GET /meditation/{id}` names no program, so look the meditation up in
-  // the program member lists; the first program that contains it wins.
-  async function findProgram(meditationId: number): Promise<Program | null> {
-    const programs = await fetchPrograms();
-    const members = await Promise.all(
-      programs.map((item) => fetchProgramMembers(item.id)),
-    );
-    const index = members.findIndex((list) =>
-      list.some((member) => member.id === meditationId),
-    );
-    return index === -1 ? null : programs[index];
-  }
-
+  // The detail response includes the home-program summary, avoiding a fan-out
+  // across every program and membership list on each Player load.
   async function load(meditationId: number) {
     const current = ++request;
     data = null;
@@ -103,12 +95,9 @@
       if (current !== request) return;
       data = { meditation, playback };
       playerTitle.name = meditation.name;
-      const found = await findProgram(meditationId).catch(() => null);
-      if (current === request) program = found;
+      program = meditation.program ?? null;
     } catch (error) {
-      if (current === request)
-        failure =
-          error instanceof ApiError ? serverReason(error).reason : "generic";
+      if (current === request) failure = reasonOf(error);
     }
   }
 

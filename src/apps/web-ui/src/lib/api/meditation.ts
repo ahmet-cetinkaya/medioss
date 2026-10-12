@@ -5,6 +5,14 @@
 
 import { request } from "./request";
 
+/** The home-program summary the meditation detail response carries: the
+ * Player borrows the cover and links to the program by title. */
+export interface ProgramSummary {
+  id: number;
+  title: string;
+  has_cover: boolean;
+}
+
 export interface Meditation {
   id: number;
   name: string;
@@ -16,6 +24,7 @@ export interface Meditation {
   progress_percent: number;
   program_id?: number;
   program_has_cover?: boolean;
+  program?: ProgramSummary | null;
   description: string | null;
 }
 

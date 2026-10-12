@@ -11,7 +11,6 @@
   import OverflowItem from "$lib/components/ui/menu/overflow-item.svelte";
   import { downloadFile } from "$lib/download-file";
   import { onMount } from "svelte";
-  import { ApiError } from "$lib/api/api-error";
   import {
     fetchCategories,
     fetchLibrary,
@@ -22,7 +21,8 @@
     type Meditation,
     type Program,
   } from "$lib/api/meditation";
-  import { serverReason, type ServerReason } from "$lib/api/server-reason";
+  import { type ServerReason } from "$lib/api/server-reason";
+  import { failureMessage, reasonOf } from "$lib/api/failure";
   import ContentCard from "$lib/components/content/content-card.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
@@ -32,7 +32,6 @@
   import { actionMessages } from "$lib/i18n/common.messages";
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
-  import { serverReasonMessages } from "$lib/i18n/server-reason.messages";
   import { libraryQuery } from "$lib/library/library-query.svelte";
   import {
     meditationProgressLabel,
@@ -90,13 +89,7 @@
   const failureText = (
     failure: ServerReason | null,
     fallback: typeof m.loadFailed,
-  ) =>
-    failure === "network" || failure === "server"
-      ? t(serverReasonMessages[failure])
-      : t(fallback);
-
-  const reasonOf = (error: unknown): ServerReason =>
-    error instanceof ApiError ? serverReason(error).reason : "generic";
+  ) => t(failureMessage(failure, fallback).message);
 
   async function loadGroups() {
     programs = null;
@@ -197,8 +190,8 @@
               title={meditation.name}
               meta={[
                 formatDuration(meditation.duration_ms, locale.current, "short"),
-                meditationProgressLabel(meditation, locale.current) ?? "",
-              ]}
+                meditationProgressLabel(meditation, locale.current),
+              ].filter((item): item is string => item !== null)}
               coverUrl={meditation.program_has_cover && meditation.program_id
                 ? programCoverUrl(meditation.program_id)
                 : null}
@@ -263,9 +256,8 @@
                   href={programHref(program.id)}
                   title={program.title}
                   meta={[
-                    programProgressLabel(program.progress, locale.current) ??
-                      "",
-                  ]}
+                    programProgressLabel(program.progress, locale.current),
+                  ].filter((item): item is string => item !== null)}
                   coverUrl={program.has_cover
                     ? programCoverUrl(program.id)
                     : null}
