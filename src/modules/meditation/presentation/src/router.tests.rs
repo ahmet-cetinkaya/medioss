@@ -235,6 +235,7 @@ async fn seed_search_library(app: &TestApp) {
         .unwrap()
         .id;
     programs.set_category(home, Some(sleep.id)).await.unwrap();
+    programs.set_cover_key(home, "covers/home").await.unwrap();
     memberships.add(focus, 3, now).await.unwrap();
     memberships.add(home, 5, now).await.unwrap();
 }
@@ -251,6 +252,60 @@ async fn library_q(app: &TestApp, query: &str) -> Vec<serde_json::Value> {
     .await;
     assert_eq!(status, StatusCode::OK);
     serde_json::from_slice(&body).unwrap()
+}
+
+#[tokio::test]
+async fn meditation_detail_carries_its_home_program_and_cover_flag() {
+    let app = app();
+    seed_search_library(&app).await;
+
+    let (status, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/meditation/5",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let response: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(response["program_id"], serde_json::json!(2));
+    assert_eq!(response["program_has_cover"], serde_json::json!(true));
+    assert_eq!(
+        response["program"],
+        serde_json::json!({"id": 2, "title": "Home Collection", "has_cover": true})
+    );
+
+    // The home program's title travels too, cover or not.
+    let (_, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/meditation/3",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    let response: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(
+        response["program"],
+        serde_json::json!({"id": 1, "title": "Focus Program", "has_cover": false})
+    );
+
+    // No membership: no program summary (absent, like program_id).
+    let (_, _, body) = call(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/meditation/1",
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    let response: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(response.get("program").is_none());
 }
 
 #[tokio::test]
@@ -310,6 +365,30 @@ async fn library_rows_carry_their_program_id_or_none() {
         .collect();
     with_program.sort();
     assert_eq!(with_program, vec![3, 5]);
+}
+
+#[tokio::test]
+async fn library_rows_carry_their_home_program_cover_flag() {
+    let app = app();
+    seed_search_library(&app).await;
+    let listed = library_q(&app, "").await;
+    let by_id = |id: i64| {
+        listed
+            .iter()
+            .find(|row| row["id"].as_i64() == Some(id))
+            .unwrap_or_else(|| panic!("meditation {id} missing from library"))
+    };
+    // Home Collection has a cover; Focus Program does not; the rest have no
+    // program at all (flag absent via serde skip).
+    assert_eq!(by_id(5)["program_id"], serde_json::json!(2));
+    assert_eq!(by_id(5)["program_has_cover"], serde_json::json!(true));
+    assert_eq!(by_id(3)["program_id"], serde_json::json!(1));
+    // Focus Program has no cover: the flag is skipped at `false` (serde
+    // convention shared with every other surface).
+    assert_eq!(by_id(3)["program_has_cover"], serde_json::json!(null));
+    let untouched = by_id(1);
+    assert!(untouched.get("program_id").is_none());
+    assert_eq!(untouched["program_has_cover"], serde_json::json!(null));
 }
 
 #[tokio::test]
@@ -397,6 +476,7 @@ async fn every_route_requires_an_actor() {
         ("GET", "/meditation/1/notes"),
         ("GET", "/meditation/programs"),
         ("GET", "/meditation/categories"),
+        ("PUT", "/meditation/categories/1"),
     ] {
         let (status, _, _) = call(&app, None, method, path, vec![], Body::empty()).await;
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{method} {path}");
@@ -417,6 +497,7 @@ async fn content_management_is_admin_only() {
         ("PUT", "/meditation/programs/1/category"),
         ("PUT", "/meditation/programs/1/meditations/order"),
         ("POST", "/meditation/categories"),
+        ("PUT", "/meditation/categories/1"),
         ("DELETE", "/meditation/categories/1"),
     ] {
         let (status, _, _) = call(
@@ -778,6 +859,70 @@ async fn replacing_a_cover_removes_the_previous_blob() {
         1,
         "the old cover blob is removed, not left behind alongside the new one"
     );
+}
+
+#[tokio::test]
+async fn cover_normalization_failures_keep_their_operational_statuses() {
+    use meditation_application::ports::CoverNormalizationError;
+    use meditation_application::test_support::FailingCoverValidator;
+
+    // Worker failure and busy are server-side conditions: they must surface
+    // as 503, never as the 415 reserved for genuinely bad media.
+    let cases = [
+        (
+            CoverNormalizationError::InvalidPayload,
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        ),
+        (
+            CoverNormalizationError::OutputTooLarge,
+            StatusCode::PAYLOAD_TOO_LARGE,
+        ),
+        (
+            CoverNormalizationError::WorkerFailed,
+            StatusCode::SERVICE_UNAVAILABLE,
+        ),
+        (
+            CoverNormalizationError::Busy,
+            StatusCode::SERVICE_UNAVAILABLE,
+        ),
+    ];
+    for (error, expected) in cases {
+        let state = RepoState::new();
+        let store = FakeBlobStore::new();
+        let deps = MeditationDependencies {
+            meditations: Arc::new(FakeMeditationRepository(state.clone())),
+            programs: Arc::new(FakeProgramRepository(state.clone())),
+            categories: Arc::new(FakeCategoryRepository(state.clone())),
+            memberships: Arc::new(FakeMembershipRepository(state.clone())),
+            notes: Arc::new(FakeNoteRepository(state.clone())),
+            playback: Arc::new(FakePlaybackRepository(state.clone())),
+            sessions: Arc::new(FakeSessionRepository(state.clone())),
+            validator: Arc::new(FakeValidator),
+            cover_validator: Arc::new(FailingCoverValidator(error)),
+            converter: Arc::new(FakeConverter { fail: false }),
+            store: Arc::new(store.clone()),
+            clock: Arc::new(FixedClock(chrono::Utc::now())),
+            medioss_origin: Arc::new("http://localhost".to_owned()),
+        };
+        let router = meditation_router().with_state(Arc::new(deps));
+
+        let program_id = FakeProgramRepository(state.clone())
+            .insert("Holder".to_owned(), None, chrono::Utc::now())
+            .await
+            .unwrap()
+            .id;
+        let (content_type, body) = multipart_body(&[("cover", "cover.png", b"not-an-image")]);
+        let mut request = Request::put(format!("/meditation/programs/{program_id}/cover"))
+            .header("content-type", content_type)
+            .header("origin", "http://localhost")
+            .body(Body::from(body))
+            .unwrap();
+        request.extensions_mut().insert(admin_actor());
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), expected, "{error:?}");
+        assert!(store.is_empty());
+    }
 }
 
 #[tokio::test]

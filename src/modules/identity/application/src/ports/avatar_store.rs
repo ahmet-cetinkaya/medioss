@@ -6,6 +6,12 @@ use kernel::UserId;
 pub enum AvatarStoreError {
     #[error("avatar payload is invalid")]
     InvalidPayload,
+    #[error("avatar output exceeds the allowed size")]
+    OutputTooLarge,
+    #[error("avatar processing worker failed")]
+    WorkerFailed,
+    #[error("avatar processing is busy")]
+    Busy,
     #[error("avatar storage operation failed")]
     Storage,
 }
@@ -16,9 +22,9 @@ pub trait AvatarStore: Send + Sync {
     async fn write(
         &self,
         id: UserId,
-        avatar: AvatarRef,
+        extension: &'static str,
         bytes: &[u8],
-    ) -> Result<(), AvatarStoreError>;
-    async fn read(&self, id: UserId, avatar: AvatarRef) -> Result<Vec<u8>, AvatarStoreError>;
-    async fn remove(&self, id: UserId, avatar: AvatarRef) -> Result<(), AvatarStoreError>;
+    ) -> Result<AvatarRef, AvatarStoreError>;
+    async fn read(&self, id: UserId, avatar: &AvatarRef) -> Result<Vec<u8>, AvatarStoreError>;
+    async fn remove(&self, id: UserId, avatar: &AvatarRef) -> Result<(), AvatarStoreError>;
 }

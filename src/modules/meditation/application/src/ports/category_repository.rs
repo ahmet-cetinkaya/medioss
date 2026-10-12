@@ -9,6 +9,13 @@ pub struct Category {
     pub created_at: DateTime<Utc>,
 }
 
+/// A failure while renaming a category.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RenameCategoryError {
+    Duplicate,
+    Repository(String),
+}
+
 /// Persists program categories.
 #[async_trait]
 pub trait CategoryRepository: Send + Sync {
@@ -31,7 +38,7 @@ pub trait CategoryRepository: Send + Sync {
         id: i64,
         name: String,
         updated_at: DateTime<Utc>,
-    ) -> Result<bool, String>;
+    ) -> Result<bool, RenameCategoryError>;
 
     /// Deletes a category; `false` when the identifier is unknown.
     async fn delete(&self, id: i64) -> Result<bool, String>;

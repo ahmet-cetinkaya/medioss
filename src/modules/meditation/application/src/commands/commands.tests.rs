@@ -3,12 +3,14 @@ use kernel::UserId;
 
 use super::*;
 use crate::ports::{
-    MeditationRepository, PlaybackStateRepository, ProgramRepository, SessionRepository,
+    CoverNormalizationError, MeditationRepository, PlaybackStateRepository, ProgramRepository,
+    SessionRepository,
 };
 use crate::test_support::{
-    FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
-    FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
-    FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
+    FailingCoverValidator, FakeBlobStore, FakeCategoryRepository, FakeConverter,
+    FakeCoverValidator, FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository,
+    FakePlaybackRepository, FakeProgramRepository, FakeSessionRepository, FakeValidator,
+    FixedClock, RepoState,
 };
 
 struct Deps {
@@ -413,6 +415,23 @@ async fn category_names_must_be_unique_and_nonempty() {
 }
 
 #[tokio::test]
+async fn renaming_to_a_name_inserted_after_the_duplicate_check_is_a_duplicate() {
+    let deps = Deps::new();
+    let renamed = create_category(&deps.categories, &deps.clock, "Morning")
+        .await
+        .expect("renamed category");
+    create_category(&deps.categories, &deps.clock, "Evening")
+        .await
+        .expect("existing category");
+
+    let error = rename_category(&deps.categories, &deps.clock, renamed.id, "Evening")
+        .await
+        .expect_err("repository duplicate maps to application error");
+
+    assert_eq!(error, ApplicationError::DuplicateCategory);
+}
+
+#[tokio::test]
 async fn deleting_a_category_leaves_its_programs_uncategorized() {
     let deps = Deps::new();
     let category = create_category(&deps.categories, &deps.clock, "Evening")
@@ -556,6 +575,43 @@ async fn covers_are_validated_and_capped() {
     )
     .await;
     assert_eq!(result.unwrap_err(), ApplicationError::PayloadTooLarge);
+}
+
+#[tokio::test]
+async fn cover_normalization_failures_keep_their_operational_meaning() {
+    // Invalid covers stay a client error; worker failure and busy are
+    // server-side conditions, and oversize output keeps 413 semantics.
+    let cases = [
+        (
+            CoverNormalizationError::InvalidPayload,
+            ApplicationError::UnsupportedMedia,
+        ),
+        (
+            CoverNormalizationError::OutputTooLarge,
+            ApplicationError::PayloadTooLarge,
+        ),
+        (
+            CoverNormalizationError::WorkerFailed,
+            ApplicationError::Storage("cover processing failed".to_owned()),
+        ),
+        (CoverNormalizationError::Busy, ApplicationError::Busy),
+    ];
+    for (error, expected) in cases {
+        let deps = Deps::new();
+        let result = create_program(
+            &deps.programs,
+            &FailingCoverValidator(error),
+            &deps.store,
+            &deps.clock,
+            "Cover mapping",
+            None,
+            Some(b"RIFF....WEBP....".to_vec()),
+        )
+        .await;
+        assert_eq!(result.unwrap_err(), expected, "{error:?}");
+        assert!(deps.store.is_empty());
+        assert!(deps.programs.0.programs.lock().unwrap().is_empty());
+    }
 }
 
 #[tokio::test]

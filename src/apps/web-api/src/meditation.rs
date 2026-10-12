@@ -131,7 +131,7 @@ pub fn meditation_dependencies(
         playback: Arc::new(SeaOrmPlaybackRepository::new(connection.clone())),
         sessions: Arc::new(SeaOrmSessionRepository::new(connection)),
         validator: Arc::new(FfmpegAudioValidator),
-        cover_validator: Arc::new(CoverSniffer),
+        cover_validator: Arc::new(CoverNormalizer),
         converter: Arc::new(FfmpegOpusConverter),
         store: Arc::new(MediaStoreBlobs::new(media_store::MediaStore::new(
             media_root,
@@ -141,28 +141,39 @@ pub fn meditation_dependencies(
     })
 }
 
-/// Cover sniffing without a subprocess: pure magic-byte rules.
-struct CoverSniffer;
+const MAX_COVER_DIMENSION: u32 = 1_024;
+const MAX_COVER_OUTPUT_BYTES: usize = meditation_application::commands::MAX_COVER_BYTES;
+
+struct CoverNormalizer;
 
 #[async_trait::async_trait]
-impl meditation_application::ports::CoverValidator for CoverSniffer {
-    async fn sniff(
+impl meditation_application::ports::CoverValidator for CoverNormalizer {
+    async fn normalize(
         &self,
-        leading: &[u8],
-    ) -> Result<meditation_application::ports::ImageFormat, meditation_application::ports::SniffError>
-    {
-        if leading.len() < 12 {
-            return Err(meditation_application::ports::SniffError::TooShort);
-        }
-        if leading.starts_with(&[0x89, b'P', b'N', b'G']) {
-            return Ok(meditation_application::ports::ImageFormat::Png);
-        }
-        if leading.starts_with(&[0xFF, 0xD8, 0xFF]) {
-            return Ok(meditation_application::ports::ImageFormat::Jpeg);
-        }
-        if leading.starts_with(b"RIFF") && &leading[8..12] == b"WEBP" {
-            return Ok(meditation_application::ports::ImageFormat::Webp);
-        }
-        Err(meditation_application::ports::SniffError::Unsupported)
+        bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, meditation_application::ports::CoverNormalizationError> {
+        crate::image_normalization::normalize(
+            bytes,
+            crate::image_normalization::ImageSpec {
+                maximum_dimension: MAX_COVER_DIMENSION,
+                maximum_output_bytes: MAX_COVER_OUTPUT_BYTES,
+                square: false,
+            },
+        )
+        .await
+        .map_err(|error| match error {
+            crate::image_normalization::ImageNormalizationError::InvalidPayload => {
+                meditation_application::ports::CoverNormalizationError::InvalidPayload
+            }
+            crate::image_normalization::ImageNormalizationError::OutputTooLarge => {
+                meditation_application::ports::CoverNormalizationError::OutputTooLarge
+            }
+            crate::image_normalization::ImageNormalizationError::WorkerFailed => {
+                meditation_application::ports::CoverNormalizationError::WorkerFailed
+            }
+            crate::image_normalization::ImageNormalizationError::Busy => {
+                meditation_application::ports::CoverNormalizationError::Busy
+            }
+        })
     }
 }

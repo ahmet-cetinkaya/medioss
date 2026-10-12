@@ -30,6 +30,25 @@ pub trait OpusConverter: Send + Sync {
 }
 pub struct BlobReader(pub Box<dyn AsyncRead + Send + Unpin>);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum ImageNormalizationError {
+    #[error("image payload is invalid")]
+    InvalidPayload,
+    #[error("image output exceeds the allowed size")]
+    OutputTooLarge,
+    #[error("image processing worker failed")]
+    WorkerFailed,
+    #[error("image processing is busy")]
+    Busy,
+}
+
+#[async_trait]
+pub trait ImageNormalizer: Send + Sync {
+    /// Convert validated raster input into bounded WebP bytes before any
+    /// dependent audio or database writes occur.
+    async fn normalize(&self, bytes: Vec<u8>) -> Result<Vec<u8>, ImageNormalizationError>;
+}
+
 #[async_trait]
 pub trait BlobStore: Send + Sync {
     async fn put(

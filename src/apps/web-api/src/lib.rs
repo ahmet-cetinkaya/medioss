@@ -1,6 +1,7 @@
 pub mod avatar_store;
 pub mod bootstrap;
 pub mod config;
+pub mod image_normalization;
 pub mod meditation;
 pub mod mood_tracker;
 pub mod portability;

@@ -1,5 +1,5 @@
 //! Renames a category; names are unique instance-wide.
-use crate::ports::{CategoryRepository, Clock};
+use crate::ports::{CategoryRepository, Clock, RenameCategoryError};
 use crate::ApplicationError;
 
 /// Renames a category (admin content management; the Library groups and the
@@ -30,7 +30,10 @@ where
     let renamed = categories
         .rename(category_id, name.to_owned(), clock.now().await)
         .await
-        .map_err(ApplicationError::Repository)?;
+        .map_err(|error| match error {
+            RenameCategoryError::Duplicate => ApplicationError::DuplicateCategory,
+            RenameCategoryError::Repository(error) => ApplicationError::Repository(error),
+        })?;
     if !renamed {
         return Err(ApplicationError::NotFound);
     }

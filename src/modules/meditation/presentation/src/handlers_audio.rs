@@ -30,6 +30,19 @@ pub struct MeditationResponse {
     pub program_id: Option<i64>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub program_has_cover: bool,
+    /// The home program as the Player needs it (cover borrowing, link label);
+    /// set on the detail response, absent elsewhere.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program: Option<ProgramSummary>,
+}
+
+/// The part of a program the Player screen renders: its identity, the title
+/// for the program link's label, and whether a cover can be borrowed.
+#[derive(Serialize)]
+pub struct ProgramSummary {
+    pub id: i64,
+    pub title: String,
+    pub has_cover: bool,
 }
 
 pub(crate) fn meditation_response(
@@ -47,6 +60,7 @@ pub(crate) fn meditation_response(
         progress_percent: 0,
         program_id: None,
         program_has_cover: false,
+        program: None,
     }
 }
 
@@ -208,32 +222,48 @@ pub async fn library(
     .await
     .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
+    let homes = deps.memberships.home_programs().await.map_err(|e| {
+        ApiError::Application(meditation_application::ApplicationError::Repository(e))
+    })?;
     for meditation in &listed {
         let mut response = with_playback(deps.playback.as_ref(), actor.user_id(), meditation).await;
-        response.program_id = deps
-            .memberships
-            .first_program_for_meditation(meditation.id())
-            .await
-            .map_err(|e| {
-                ApiError::Application(meditation_application::ApplicationError::Repository(e))
-            })?;
+        if let Some((program_id, has_cover)) = homes.get(&meditation.id()) {
+            response.program_id = Some(*program_id);
+            response.program_has_cover = *has_cover;
+        }
         responses.push(response);
     }
     Ok(Json(responses))
 }
 
-/// `GET /meditation/{id}` — one meditation's metadata.
+/// `GET /meditation/{id}` — one meditation's metadata, with its home program
+/// as a summary the Player can render without further requests.
 pub async fn meditation(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<MeditationResponse>, ApiError> {
-    let found = queries::get_meditation(deps.meditations.as_ref(), id)
-        .await
-        .map_err(ApiError::Application)?;
-    Ok(Json(
-        with_playback(deps.playback.as_ref(), actor.user_id(), &found).await,
-    ))
+    let found = queries::get_meditation_detail(
+        deps.meditations.as_ref(),
+        deps.memberships.as_ref(),
+        deps.programs.as_ref(),
+        id,
+    )
+    .await
+    .map_err(ApiError::Application)?;
+    let mut response =
+        with_playback(deps.playback.as_ref(), actor.user_id(), &found.meditation).await;
+    if let Some(program) = found.program {
+        let has_cover = program.cover_storage_key.is_some();
+        response.program_id = Some(program.id);
+        response.program_has_cover = has_cover;
+        response.program = Some(ProgramSummary {
+            id: program.id,
+            title: program.title,
+            has_cover,
+        });
+    }
+    Ok(Json(response))
 }
 
 /// Fills a meditation response's `completed`/`progress_percent` from the

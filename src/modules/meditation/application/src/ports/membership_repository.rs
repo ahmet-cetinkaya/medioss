@@ -41,4 +41,9 @@ pub trait MembershipRepository: Send + Sync {
     /// its home program, used to resume "continue this program" links.
     async fn first_program_for_meditation(&self, meditation_id: i64)
         -> Result<Option<i64>, String>;
+
+    /// Every meditation's home program in one pass: meditation id →
+    /// (program id, program has a cover). Library-scale callers must use
+    /// this instead of per-meditation `first_program_for_meditation`.
+    async fn home_programs(&self) -> Result<std::collections::HashMap<i64, (i64, bool)>, String>;
 }

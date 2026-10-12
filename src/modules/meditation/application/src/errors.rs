@@ -1,3 +1,4 @@
+use crate::ports::CoverNormalizationError;
 use thiserror::Error;
 
 /// Why a meditation use-case failed.
@@ -13,6 +14,8 @@ pub enum ApplicationError {
     UnsupportedMedia,
     #[error("the payload exceeds the allowed size")]
     PayloadTooLarge,
+    #[error("media processing is temporarily unavailable")]
+    Busy,
     #[error("the requested resource was not found")]
     NotFound,
     #[error("a category with that name already exists")]
@@ -21,4 +24,17 @@ pub enum ApplicationError {
     Storage(String),
     #[error("repository operation failed: {0}")]
     Repository(String),
+}
+
+impl From<CoverNormalizationError> for ApplicationError {
+    fn from(error: CoverNormalizationError) -> Self {
+        match error {
+            CoverNormalizationError::InvalidPayload => Self::UnsupportedMedia,
+            CoverNormalizationError::OutputTooLarge => Self::PayloadTooLarge,
+            CoverNormalizationError::WorkerFailed => {
+                Self::Storage("cover processing failed".to_owned())
+            }
+            CoverNormalizationError::Busy => Self::Busy,
+        }
+    }
 }

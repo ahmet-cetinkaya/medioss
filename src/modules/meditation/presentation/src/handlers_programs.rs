@@ -461,10 +461,13 @@ pub async fn replace_cover(
     {
         if field.name() == Some("cover") {
             let buffer = crate::response::read_field_capped(&mut field, max_cover).await?;
-            let format = deps.cover_validator.sniff(&buffer).await.map_err(|_| {
-                ApiError::Application(meditation_application::ApplicationError::UnsupportedMedia)
-            })?;
-            cover = Some((buffer, format.extension()));
+            let normalized = deps
+                .cover_validator
+                .normalize(buffer)
+                .await
+                .map_err(meditation_application::ApplicationError::from)
+                .map_err(ApiError::Application)?;
+            cover = Some((normalized, "webp"));
         } else {
             let _ = field.bytes().await;
         }

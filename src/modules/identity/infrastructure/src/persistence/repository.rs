@@ -76,11 +76,15 @@ fn restore_user(model: users::Model) -> Result<User, RepositoryError> {
             .display_name
             .map(|value| DisplayName::parse(value).map_err(|_| RepositoryError::OperationFailed))
             .transpose()?,
-        match model.avatar_ext.as_deref() {
-            Some(raw) => {
-                Some(AvatarRef::from_extension(raw).map_err(|_| RepositoryError::OperationFailed)?)
+        match (model.avatar_key, model.avatar_ext.as_deref()) {
+            (Some(key), Some(extension)) => {
+                Some(AvatarRef::new(key, extension).map_err(|_| RepositoryError::OperationFailed)?)
             }
-            None => None,
+            (None, Some(extension)) => Some(
+                AvatarRef::from_extension(extension)
+                    .map_err(|_| RepositoryError::OperationFailed)?,
+            ),
+            _ => None,
         },
     )
     .map_err(|_| RepositoryError::OperationFailed)
@@ -98,6 +102,7 @@ fn insert_model(user: &User, email_raw: &str) -> users::ActiveModel {
         disabled: Set(user.is_disabled()),
         display_name: Set(user.display_name().map(|name| name.as_str().to_owned())),
         avatar_ext: Set(user.avatar().map(|avatar| avatar.extension().to_owned())),
+        avatar_key: Set(user.avatar().map(|avatar| avatar.key().to_owned())),
         created_at: Set(to_rfc3339(&user.created_at())),
         ..Default::default()
     }
@@ -228,7 +233,7 @@ impl UserRepository for SeaOrmUserRepository {
         &self,
         id: UserId,
         display_name: Option<DisplayName>,
-        avatar_ext: Option<AvatarRef>,
+        avatar: Option<AvatarRef>,
     ) -> Result<User, RepositoryError> {
         let existing = users::Entity::find_by_id(id.value())
             .one(&self.db)
@@ -238,7 +243,8 @@ impl UserRepository for SeaOrmUserRepository {
 
         let mut model: users::ActiveModel = existing.into();
         model.display_name = Set(display_name.map(|name| name.as_str().to_owned()));
-        model.avatar_ext = Set(avatar_ext.map(|avatar| avatar.extension().to_owned()));
+        model.avatar_ext = Set(avatar.as_ref().map(|avatar| avatar.extension().to_owned()));
+        model.avatar_key = Set(avatar.as_ref().map(|avatar| avatar.key().to_owned()));
         model
             .update(&self.db)
             .await

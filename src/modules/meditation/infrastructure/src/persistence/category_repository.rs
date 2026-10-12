@@ -1,7 +1,7 @@
 //! `CategoryRepository` over SeaORM/SQLite.
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use meditation_application::ports::{Category, CategoryRepository};
+use meditation_application::ports::{Category, CategoryRepository, RenameCategoryError};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 use crate::persistence::entities::categories as table;
@@ -15,6 +15,12 @@ impl SeaOrmCategoryRepository {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
     }
+}
+
+fn is_duplicate_name(error: &sea_orm::DbErr) -> bool {
+    error
+        .to_string()
+        .contains("UNIQUE constraint failed: meditation_categories.name")
 }
 
 fn to_domain(model: table::Model) -> Result<Category, String> {
@@ -74,19 +80,25 @@ impl CategoryRepository for SeaOrmCategoryRepository {
         id: i64,
         name: String,
         _updated_at: DateTime<Utc>,
-    ) -> Result<bool, String> {
+    ) -> Result<bool, RenameCategoryError> {
         // The table stores only created_at; the timestamp parameter keeps
         // the port honest for stores that track updates.
         let row = table::Entity::find_by_id(id)
             .one(&self.db)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| RenameCategoryError::Repository(error.to_string()))?;
         let Some(model) = row else {
             return Ok(false);
         };
         let mut active: table::ActiveModel = model.into();
         active.name = Set(name);
-        active.update(&self.db).await.map_err(|e| e.to_string())?;
+        active.update(&self.db).await.map_err(|error| {
+            if is_duplicate_name(&error) {
+                RenameCategoryError::Duplicate
+            } else {
+                RenameCategoryError::Repository(error.to_string())
+            }
+        })?;
         Ok(true)
     }
 

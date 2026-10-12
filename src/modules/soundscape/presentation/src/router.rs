@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use soundscape_application::{
     commands,
     ports::{
-        media::{AudioValidator, BlobReader, BlobStore, OpusConverter},
+        media::{AudioValidator, BlobReader, BlobStore, ImageNormalizer, OpusConverter},
         CategoryRepository, Clock, MixRepository, SoundRepository,
     },
     ApplicationError,
@@ -28,6 +28,7 @@ pub struct SoundscapeDependencies {
     pub validator: Arc<dyn AudioValidator>,
     pub converter: Arc<dyn OpusConverter>,
     pub store: Arc<dyn BlobStore>,
+    pub image_normalizer: Arc<dyn ImageNormalizer>,
     pub medioss_origin: Arc<String>,
 }
 pub type SharedDependencies = Arc<SoundscapeDependencies>;
@@ -384,7 +385,14 @@ async fn upload_sound(
                 bytes = Some(data);
             }
             Some("icon_key") => {
-                icon_key = Some(field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?)
+                icon_key = Some(
+                    String::from_utf8(
+                        read_field(&mut field, 256)
+                            .await
+                            .map_err(|_| StatusCode::BAD_REQUEST)?,
+                    )
+                    .map_err(|_| StatusCode::BAD_REQUEST)?,
+                )
             }
             Some("icon") => {
                 icon = Some(read_field(&mut field, soundscape_domain::MAX_ICON_BYTES).await?)
@@ -398,6 +406,7 @@ async fn upload_sound(
         deps.validator.as_ref(),
         deps.converter.as_ref(),
         deps.store.as_ref(),
+        deps.image_normalizer.as_ref(),
         &name.ok_or(StatusCode::BAD_REQUEST)?,
         category_id.ok_or(StatusCode::BAD_REQUEST)?,
         bytes.ok_or(StatusCode::BAD_REQUEST)?,
@@ -451,6 +460,7 @@ async fn upload_icon(
     commands::sounds::set_sound_icon(
         deps.sounds.as_ref(),
         deps.store.as_ref(),
+        deps.image_normalizer.as_ref(),
         id,
         icon.ok_or(StatusCode::BAD_REQUEST)?,
     )
@@ -489,7 +499,13 @@ async fn get_icon(
             soundscape_domain::MAX_ICON_BYTES as u64 + 1,
         )
         .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+        .map_err(|error| {
+            if error.starts_with("no blob at ") {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        })?;
     use tokio::io::AsyncReadExt;
     use tokio_util::compat::FuturesAsyncReadCompatExt;
     let mut bytes =
@@ -566,7 +582,7 @@ async fn stream_sound(
                 StatusCode::RANGE_NOT_SATISFIABLE,
                 [(header::CONTENT_RANGE, format!("bytes */{total}"))],
             )
-                .into_response())
+                .into_response());
         }
         None => (StatusCode::OK, 0, total, None),
     };
@@ -722,6 +738,9 @@ fn map_error(error: ApplicationError) -> StatusCode {
         ApplicationError::InvalidInput(_) => StatusCode::BAD_REQUEST,
         ApplicationError::UnsupportedMedia => StatusCode::UNSUPPORTED_MEDIA_TYPE,
         ApplicationError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
-        _ => StatusCode::INTERNAL_SERVER_ERROR,
+        ApplicationError::Busy => StatusCode::SERVICE_UNAVAILABLE,
+        ApplicationError::Storage(_) | ApplicationError::Repository(_) => {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     }
 }

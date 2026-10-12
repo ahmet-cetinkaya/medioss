@@ -6,10 +6,10 @@ use chrono::{DateTime, Utc};
 use kernel::UserId;
 
 use crate::ports::{
-    AudioFormat, AudioValidator, BlobStore, Category, CategoryRepository, Clock, CoverValidator,
-    ImageFormat, MeditationSession, Membership, MembershipRepository, Note, NoteRepository,
-    PlaybackState, PlaybackStateRepository, Program, ProgramRepository, SessionRepository,
-    SniffError, StoredBlob,
+    AudioFormat, AudioValidator, BlobStore, Category, CategoryRepository, Clock,
+    CoverNormalizationError, CoverValidator, MeditationSession, Membership, MembershipRepository,
+    Note, NoteRepository, PlaybackState, PlaybackStateRepository, Program, ProgramRepository,
+    RenameCategoryError, SessionRepository, SniffError, StoredBlob,
 };
 
 /// A clock returning a fixed instant.
@@ -65,20 +65,27 @@ pub struct FakeCoverValidator;
 
 #[async_trait::async_trait]
 impl CoverValidator for FakeCoverValidator {
-    async fn sniff(&self, leading: &[u8]) -> Result<ImageFormat, SniffError> {
-        if leading.len() < 12 {
-            return Err(SniffError::TooShort);
+    async fn normalize(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoverNormalizationError> {
+        if bytes.len() < 12 {
+            return Err(CoverNormalizationError::InvalidPayload);
         }
-        if leading.starts_with(&[0x89, b'P', b'N', b'G']) {
-            return Ok(ImageFormat::Png);
+        if bytes.starts_with(&[0x89, b'P', b'N', b'G'])
+            || bytes.starts_with(&[0xFF, 0xD8, 0xFF])
+            || (bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP")
+        {
+            return Ok(bytes);
         }
-        if leading.starts_with(&[0xFF, 0xD8, 0xFF]) {
-            return Ok(ImageFormat::Jpeg);
-        }
-        if leading.starts_with(b"RIFF") && &leading[8..12] == b"WEBP" {
-            return Ok(ImageFormat::Webp);
-        }
-        Err(SniffError::Unsupported)
+        Err(CoverNormalizationError::InvalidPayload)
+    }
+}
+
+/// Always fails with the configured error, for mapping tests.
+pub struct FailingCoverValidator(pub CoverNormalizationError);
+
+#[async_trait::async_trait]
+impl CoverValidator for FailingCoverValidator {
+    async fn normalize(&self, _bytes: Vec<u8>) -> Result<Vec<u8>, CoverNormalizationError> {
+        Err(self.0)
     }
 }
 
@@ -558,8 +565,14 @@ impl CategoryRepository for FakeCategoryRepository {
         id: i64,
         name: String,
         _updated_at: DateTime<Utc>,
-    ) -> Result<bool, String> {
+    ) -> Result<bool, RenameCategoryError> {
         let mut rows = self.0.categories.lock().unwrap();
+        if rows
+            .iter()
+            .any(|category| category.id != id && category.name == name)
+        {
+            return Err(RenameCategoryError::Duplicate);
+        }
         let Some(category) = rows.iter_mut().find(|category| category.id == id) else {
             return Ok(false);
         };
@@ -673,6 +686,27 @@ impl MembershipRepository for FakeMembershipRepository {
             .collect();
         rows.sort_by_key(|membership| membership.added_at);
         Ok(rows.first().map(|membership| membership.program_id))
+    }
+
+    async fn home_programs(&self) -> Result<std::collections::HashMap<i64, (i64, bool)>, String> {
+        let mut rows: Vec<Membership> = self.0.memberships.lock().unwrap().clone();
+        rows.sort_by_key(|membership| membership.added_at);
+        let covers: std::collections::HashMap<i64, bool> = self
+            .0
+            .programs
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|program| (program.id, program.cover_storage_key.is_some()))
+            .collect();
+        let mut homes = std::collections::HashMap::new();
+        for membership in rows {
+            homes.entry(membership.meditation_id).or_insert_with(|| {
+                let has_cover = covers.get(&membership.program_id).copied().unwrap_or(false);
+                (membership.program_id, has_cover)
+            });
+        }
+        Ok(homes)
     }
 }
 

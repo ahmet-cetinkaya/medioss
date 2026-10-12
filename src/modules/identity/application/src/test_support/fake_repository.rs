@@ -284,7 +284,7 @@ impl UserRepository for FakeRepository {
         &self,
         id: UserId,
         display_name: Option<DisplayName>,
-        avatar_ext: Option<AvatarRef>,
+        avatar: Option<AvatarRef>,
     ) -> Result<User, RepositoryError> {
         let mut state = self.state.lock().unwrap();
         let current = state
@@ -296,7 +296,7 @@ impl UserRepository for FakeRepository {
         let changed = current
             .clone()
             .with_display_name(display_name)
-            .with_avatar(avatar_ext);
+            .with_avatar(avatar);
         let mut users = state.users.clone();
         users.insert(current.email().as_str().to_owned(), changed.clone());
         *state = FakeRepositoryState {

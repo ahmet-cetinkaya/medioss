@@ -113,20 +113,18 @@ impl SoundRepository for SeaOrmSoundRepository {
             Some(icon) => (Some(icon.storage_key), Some(icon.content_type)),
             None => (None, None),
         };
-        let r = self
+        // RETURNING hydrates from the committed UPDATE itself, so a separate
+        // read cannot fail after the icon key was already persisted.
+        let row = self
             .db
-            .execute(Statement::from_sql_and_values(
+            .query_one(Statement::from_sql_and_values(
                 DatabaseBackend::Sqlite,
-                "UPDATE soundscape_sounds SET icon_storage_key=?,icon_content_type=? WHERE id=?",
+                "UPDATE soundscape_sounds SET icon_storage_key=?,icon_content_type=? WHERE id=? RETURNING id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type",
                 [key.into(), content_type.into(), id.into()],
             ))
             .await
             .map_err(|e| e.to_string())?;
-        if r.rows_affected() == 0 {
-            Ok(None)
-        } else {
-            self.find(id).await
-        }
+        row.as_ref().map(to_sound).transpose()
     }
     async fn delete_with_mix_items(&self, id: i64) -> Result<Option<Sound>, String> {
         let sound = self.find(id).await?;

@@ -410,6 +410,11 @@ impl IntoResponse for ApiError {
                 "invalid credentials".to_owned(),
                 None,
             ),
+            ApplicationError::ProcessingUnavailable => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "avatar processing is temporarily unavailable".to_owned(),
+                None,
+            ),
             ApplicationError::PasswordHasher | ApplicationError::Repository => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal error".to_owned(),

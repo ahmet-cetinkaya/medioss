@@ -4,7 +4,7 @@ use crate::commands::{validate_name, MAX_COVER_BYTES};
 use crate::ports::{BlobStore, Clock, CoverValidator, Program, ProgramRepository};
 use crate::ApplicationError;
 
-/// Creates a program; cover bytes are sniffed, capped, and stored at
+/// Creates a program; cover bytes are normalized, capped, and stored at
 /// `{folder}/cover-{suffix}.{ext}` (spec FR-025/026).
 pub async fn create_program<P, V, S, K>(
     programs: &P,
@@ -27,11 +27,11 @@ where
             if bytes.len() > MAX_COVER_BYTES {
                 return Err(ApplicationError::PayloadTooLarge);
             }
-            let format = cover_validator
-                .sniff(&bytes)
+            let normalized = cover_validator
+                .normalize(bytes)
                 .await
-                .map_err(|_| ApplicationError::UnsupportedMedia)?;
-            Some((bytes, format.extension()))
+                .map_err(ApplicationError::from)?;
+            Some((normalized, "webp"))
         }
         None => None,
     };

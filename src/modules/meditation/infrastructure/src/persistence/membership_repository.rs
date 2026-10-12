@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use meditation_application::ports::{Membership, MembershipRepository};
 use sea_orm::{
-    sea_query::Expr, ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
-    QueryOrder, Set, TransactionTrait,
+    sea_query::Expr, ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection,
+    EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait,
 };
 
 use crate::persistence::entities::memberships as table;
@@ -138,5 +138,39 @@ impl MembershipRepository for SeaOrmMembershipRepository {
             .await
             .map_err(|e| e.to_string())?;
         Ok(model.map(|row| row.program_id))
+    }
+
+    async fn home_programs(&self) -> Result<std::collections::HashMap<i64, (i64, bool)>, String> {
+        // One pass over all memberships (earliest added_at, then row id, wins
+        // per meditation), joined with the program's cover presence.
+        let rows = self
+            .db
+            .query_all(sea_orm::Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                "SELECT m.meditation_id AS meditation_id, m.program_id AS program_id, \
+                 (p.cover_storage_key IS NOT NULL) AS has_cover \
+                 FROM meditation_program_memberships m \
+                 JOIN meditation_programs p ON p.id = m.program_id \
+                 ORDER BY m.added_at ASC, m.id ASC"
+                    .to_owned(),
+            ))
+            .await
+            .map_err(|e| e.to_string())?;
+        let mut homes = std::collections::HashMap::new();
+        for row in rows {
+            let meditation_id: i64 = row
+                .try_get("", "meditation_id")
+                .map_err(|e| e.to_string())?;
+            // insert keeps the first row seen for a meditation; the ORDER BY
+            // makes that the earliest membership.
+            homes.entry(meditation_id).or_insert((
+                row.try_get::<i64>("", "program_id")
+                    .map_err(|e| e.to_string())?,
+                row.try_get::<i64>("", "has_cover")
+                    .map_err(|e| e.to_string())?
+                    != 0,
+            ));
+        }
+        Ok(homes)
     }
 }

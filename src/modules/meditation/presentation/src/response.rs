@@ -49,6 +49,7 @@ pub fn application_error_response(error: ApplicationError) -> Response {
     let status = match &error {
         ApplicationError::UnsupportedMedia => StatusCode::UNSUPPORTED_MEDIA_TYPE,
         ApplicationError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
+        ApplicationError::Busy => StatusCode::SERVICE_UNAVAILABLE,
         ApplicationError::NotFound => StatusCode::NOT_FOUND,
         ApplicationError::DuplicateCategory => StatusCode::CONFLICT,
         ApplicationError::InvalidInput(_)

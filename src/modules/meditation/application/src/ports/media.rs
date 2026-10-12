@@ -29,30 +29,24 @@ pub trait AudioValidator: Send + Sync {
     async fn sniff(&self, leading: &[u8]) -> Result<AudioFormat, SniffError>;
 }
 
-/// Image formats accepted for program covers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ImageFormat {
-    Png,
-    Jpeg,
-    Webp,
+/// Why cover normalization failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum CoverNormalizationError {
+    #[error("cover payload is invalid")]
+    InvalidPayload,
+    #[error("cover output exceeds the allowed size")]
+    OutputTooLarge,
+    #[error("cover processing worker failed")]
+    WorkerFailed,
+    #[error("cover processing is busy")]
+    Busy,
 }
 
-impl ImageFormat {
-    /// The file extension the store persists this format under.
-    pub fn extension(self) -> &'static str {
-        match self {
-            ImageFormat::Png => "png",
-            ImageFormat::Jpeg => "jpg",
-            ImageFormat::Webp => "webp",
-        }
-    }
-}
-
-/// Detects cover image formats from leading bytes.
+/// Validates and normalizes cover uploads before persistence.
 #[async_trait]
 pub trait CoverValidator: Send + Sync {
-    /// Sniffs the image format from the leading bytes of a cover upload.
-    async fn sniff(&self, leading: &[u8]) -> Result<ImageFormat, SniffError>;
+    /// Converts a JPEG, PNG, or WebP cover to a bounded WebP image.
+    async fn normalize(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoverNormalizationError>;
 }
 
 /// Why a conversion failed.

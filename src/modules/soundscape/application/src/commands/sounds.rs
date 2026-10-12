@@ -1,6 +1,6 @@
 use crate::{
     ports::{
-        media::{AudioValidator, BlobStore, OpusConverter},
+        media::{AudioValidator, BlobStore, ImageNormalizer, OpusConverter},
         CategoryRepository, NewSound, SoundRepository,
     },
     ApplicationError,
@@ -15,6 +15,7 @@ pub async fn create_sound(
     validator: &dyn AudioValidator,
     converter: &dyn OpusConverter,
     store: &dyn BlobStore,
+    image_normalizer: &dyn ImageNormalizer,
     name: &str,
     category_id: i64,
     bytes: Vec<u8>,
@@ -27,9 +28,6 @@ pub async fn create_sound(
         .transpose()
         .map_err(|_| ApplicationError::InvalidInput("icon key"))?
         .flatten();
-    if let Some(icon) = &icon {
-        check_icon(icon)?;
-    }
     if bytes.len() > MAX_UPLOAD_BYTES {
         return Err(ApplicationError::PayloadTooLarge);
     }
@@ -41,6 +39,10 @@ pub async fn create_sound(
     {
         return Err(ApplicationError::NotFound);
     }
+    let icon = match icon {
+        Some(bytes) => Some(normalize_icon(image_normalizer, bytes).await?),
+        None => None,
+    };
     let format = validator
         .sniff(&bytes)
         .await
@@ -77,7 +79,7 @@ pub async fn create_sound(
         }
     };
     match icon {
-        Some(icon) => match set_sound_icon(sounds, store, sound.id, icon).await {
+        Some(icon) => match store_sound_icon(sounds, store, sound.id, icon).await {
             Ok(sound) => Ok(sound),
             Err(error) => {
                 // Upload is all-or-nothing: do not leave a half-created sound.
@@ -88,11 +90,18 @@ pub async fn create_sound(
         None => Ok(sound),
     }
 }
-fn check_icon(bytes: &[u8]) -> Result<(&'static str, &'static str), ApplicationError> {
+async fn normalize_icon(
+    normalizer: &dyn ImageNormalizer,
+    bytes: Vec<u8>,
+) -> Result<Vec<u8>, ApplicationError> {
     if bytes.len() > MAX_ICON_BYTES {
         return Err(ApplicationError::PayloadTooLarge);
     }
-    sniff_icon(bytes).ok_or(ApplicationError::UnsupportedMedia)
+    sniff_icon(&bytes).ok_or(ApplicationError::UnsupportedMedia)?;
+    normalizer
+        .normalize(bytes)
+        .await
+        .map_err(ApplicationError::from)
 }
 /// Edits name, category and bundled-glyph key. `icon_key` replaces the stored
 /// value; `None` or blank clears it.
@@ -129,10 +138,20 @@ pub async fn update_sound(
 pub async fn set_sound_icon(
     sounds: &dyn SoundRepository,
     store: &dyn BlobStore,
+    image_normalizer: &dyn ImageNormalizer,
     id: i64,
     bytes: Vec<u8>,
 ) -> Result<Sound, ApplicationError> {
-    let (content_type, ext) = check_icon(&bytes)?;
+    let bytes = normalize_icon(image_normalizer, bytes).await?;
+    store_sound_icon(sounds, store, id, bytes).await
+}
+
+async fn store_sound_icon(
+    sounds: &dyn SoundRepository,
+    store: &dyn BlobStore,
+    id: i64,
+    bytes: Vec<u8>,
+) -> Result<Sound, ApplicationError> {
     let previous = sounds
         .find(id)
         .await
@@ -140,12 +159,12 @@ pub async fn set_sound_icon(
         .ok_or(ApplicationError::NotFound)?
         .icon;
     let key = store
-        .put("soundscape", &format!("icon-{id}"), ext, &bytes)
+        .put("soundscape", &format!("icon-{id}"), "webp", &bytes)
         .await
         .map_err(ApplicationError::Storage)?;
     let icon = SoundIcon {
         storage_key: key.clone(),
-        content_type: content_type.into(),
+        content_type: "image/webp".into(),
     };
     match sounds.set_icon(id, Some(icon)).await {
         Ok(Some(sound)) => {
@@ -154,15 +173,19 @@ pub async fn set_sound_icon(
             }
             Ok(sound)
         }
-        other => {
+        Ok(None) => {
             let _ = store.delete(&key).await;
-            match other {
-                Ok(_) => Err(ApplicationError::NotFound),
-                Err(error) => Err(ApplicationError::Repository(error)),
-            }
+            Err(ApplicationError::NotFound)
+        }
+        Err(error) => {
+            // `set_icon` can fail after committing its update while hydrating
+            // the returned sound. Keep the new blob so that update cannot
+            // leave the database pointing at a deleted key.
+            Err(ApplicationError::Repository(error))
         }
     }
 }
+
 /// Removes the uploaded icon image (the bundled `icon_key` is untouched).
 pub async fn clear_sound_icon(
     sounds: &dyn SoundRepository,

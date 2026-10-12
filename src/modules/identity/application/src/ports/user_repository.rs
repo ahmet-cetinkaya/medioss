@@ -35,7 +35,7 @@ pub trait UserRepository: Send + Sync {
         &self,
         id: UserId,
         display_name: Option<DisplayName>,
-        avatar_ext: Option<AvatarRef>,
+        avatar: Option<AvatarRef>,
     ) -> Result<User, RepositoryError>;
 
     async fn delete_user(&self, id: UserId) -> Result<bool, RepositoryError>;

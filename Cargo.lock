@@ -3519,6 +3519,7 @@ dependencies = [
  "serde",
  "serde_json",
  "soundscape-application",
+ "soundscape-domain",
  "soundscape-infrastructure",
  "soundscape-presentation",
  "sqlx",

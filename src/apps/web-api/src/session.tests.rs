@@ -105,6 +105,40 @@ async fn login_and_capture_cookie(app: &axum::Router) -> Option<String> {
 }
 
 #[tokio::test]
+async fn admin_fallback_matches_only_the_first_path_segment() {
+    let state = test_state().await;
+    tokio::fs::create_dir_all(state.config.static_dir.join("admin/meditations"))
+        .await
+        .unwrap();
+    tokio::fs::write(
+        state.config.static_dir.join("admin/index.html"),
+        "admin shell",
+    )
+    .await
+    .unwrap();
+    tokio::fs::write(
+        state.config.static_dir.join("admin/meditations/index.html"),
+        "meditations shell",
+    )
+    .await
+    .unwrap();
+    let app = router(state);
+
+    let response = app
+        .oneshot(
+            Request::get("/admin/meditations-archive")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), 4096).await.unwrap();
+    assert_eq!(body.as_ref(), b"admin shell");
+}
+
+#[tokio::test]
 async fn health_responds_without_a_session() {
     let state = test_state().await;
     let app = router(state);

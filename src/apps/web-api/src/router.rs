@@ -50,9 +50,9 @@ pub fn router(state: AppState) -> Router {
             get({
                 let static_dir = state.config.static_dir.clone();
                 move |path: axum::extract::Path<String>| async move {
-                    let page = if path.starts_with("meditations") {
+                    let page = if path.split('/').next() == Some("meditations") {
                         "admin/meditations/index.html"
-                    } else if path.starts_with("soundscape") {
+                    } else if path.split('/').next() == Some("soundscape") {
                         "admin/soundscape/index.html"
                     } else {
                         "admin/index.html"

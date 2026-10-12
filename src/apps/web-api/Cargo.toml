@@ -34,6 +34,7 @@ mood-tracker-infrastructure = { path = "../../modules/mood-tracker/infrastructur
 portability-presentation = { path = "../../modules/portability/presentation" }
 mood-tracker-presentation = { path = "../../modules/mood-tracker/presentation" }
 soundscape-application = { path = "../../modules/soundscape/application" }
+soundscape-domain = { path = "../../modules/soundscape/domain" }
 soundscape-infrastructure = { path = "../../modules/soundscape/infrastructure" }
 soundscape-presentation = { path = "../../modules/soundscape/presentation" }
 # M0: wired so the release binary proves the whole workspace compiles

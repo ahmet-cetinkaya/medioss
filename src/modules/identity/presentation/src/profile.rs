@@ -34,6 +34,15 @@ fn profile_response(user: &identity_domain::User) -> ProfileResponse {
     }
 }
 
+fn map_multipart_error(error: axum::extract::multipart::MultipartError) -> ApiError {
+    let application_error = if error.status() == StatusCode::PAYLOAD_TOO_LARGE {
+        ApplicationError::PayloadTooLarge
+    } else {
+        ApplicationError::InvalidInput(identity_domain::IdentityError::InvalidProfile)
+    };
+    ApiError::from(application_error)
+}
+
 pub async fn me_profile<R, H, C, A>(
     State(dependencies): State<SharedDependencies<R, H, C, A>>,
     CurrentActor(actor): CurrentActor,
@@ -71,22 +80,14 @@ where
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
 
     let mut bytes: Option<Vec<u8>> = None;
-    while let Some(mut field) = multipart
-        .next_field()
-        .await
-        .map_err(|_| ApiError::from(ApplicationError::PayloadTooLarge))?
-    {
+    while let Some(mut field) = multipart.next_field().await.map_err(map_multipart_error)? {
         if field.name() != Some("file") {
             return Err(ApiError::from(ApplicationError::InvalidInput(
                 identity_domain::IdentityError::InvalidProfile,
             )));
         }
         let mut buffer = Vec::new();
-        while let Some(chunk) = field
-            .chunk()
-            .await
-            .map_err(|_| ApiError::from(ApplicationError::PayloadTooLarge))?
-        {
+        while let Some(chunk) = field.chunk().await.map_err(map_multipart_error)? {
             buffer.extend_from_slice(&chunk);
             if buffer.len() > MAX_AVATAR_BYTES {
                 return Err(ApiError::from(ApplicationError::PayloadTooLarge));

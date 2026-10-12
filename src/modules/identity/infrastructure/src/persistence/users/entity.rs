@@ -17,6 +17,7 @@ pub struct Model {
     pub disabled: bool,
     pub display_name: Option<String>,
     pub avatar_ext: Option<String>,
+    pub avatar_key: Option<String>,
     pub created_at: String,
 }
 

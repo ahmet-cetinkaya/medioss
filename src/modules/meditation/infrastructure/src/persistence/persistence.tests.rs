@@ -119,6 +119,30 @@ async fn category_names_are_unique_at_the_database_level() {
 }
 
 #[tokio::test]
+async fn category_rename_maps_unique_constraint_to_duplicate() {
+    let database = TestDatabase::open().await;
+    let repository = SeaOrmCategoryRepository::new(database.connection);
+    let first = repository
+        .insert("Morning".to_owned(), Utc::now())
+        .await
+        .unwrap();
+    repository
+        .insert("Evening".to_owned(), Utc::now())
+        .await
+        .unwrap();
+
+    let error = repository
+        .rename(first.id, "Evening".to_owned(), Utc::now())
+        .await
+        .expect_err("duplicate category name");
+
+    assert_eq!(
+        error,
+        meditation_application::ports::RenameCategoryError::Duplicate
+    );
+}
+
+#[tokio::test]
 async fn memberships_are_idempotent_on_the_pair() {
     let database = TestDatabase::open().await;
     let meditations = SeaOrmMeditationRepository::new(database.connection.clone());
@@ -422,7 +446,7 @@ async fn membership_positions_append_reorder_and_survive_gaps() {
         .await
         .unwrap();
     let mut ids = Vec::new();
-    for i in 0..3 {
+    for i in 0..4 {
         let m = meditations
             .insert(
                 format!("M{i}"),
@@ -435,29 +459,39 @@ async fn membership_positions_append_reorder_and_survive_gaps() {
             )
             .await
             .unwrap();
+        ids.push(m.id());
+    }
+    for meditation_id in &ids[..3] {
         memberships
-            .add(program.id, m.id(), Utc::now())
+            .add(program.id, *meditation_id, Utc::now())
             .await
             .unwrap();
-        ids.push(m.id());
     }
     let order = |l: Vec<meditation_application::ports::Membership>| {
         l.into_iter().map(|m| m.meditation_id).collect::<Vec<_>>()
     };
     assert_eq!(
         order(memberships.list_by_program(program.id).await.unwrap()),
-        ids
+        ids[..3]
     );
-    let reversed: Vec<i64> = ids.iter().rev().copied().collect();
+    let reversed: Vec<i64> = ids[..3].iter().rev().copied().collect();
     memberships.set_order(program.id, &reversed).await.unwrap();
     assert_eq!(
         order(memberships.list_by_program(program.id).await.unwrap()),
         reversed
     );
     memberships.remove(program.id, reversed[1]).await.unwrap();
+    memberships
+        .add(program.id, ids[3], Utc::now())
+        .await
+        .unwrap();
     let listed = memberships.list_by_program(program.id).await.unwrap();
     assert_eq!(
+        listed.iter().map(|m| m.meditation_id).collect::<Vec<_>>(),
+        vec![reversed[0], reversed[2], ids[3]]
+    );
+    assert_eq!(
         listed.iter().map(|m| m.position).collect::<Vec<_>>(),
-        vec![0, 2]
+        vec![0, 2, 3]
     );
 }
