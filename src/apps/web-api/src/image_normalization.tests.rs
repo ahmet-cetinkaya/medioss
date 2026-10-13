@@ -353,3 +353,72 @@ fn accepts_lossy_webp_with_lossless_and_raw_alpha() {
     );
     assert_eq!(preflight_webp(&lossy_with_alpha(0, &[(0, 1)])), Ok(()));
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn encodes_photos_as_lossy_vp8_smaller_than_lossless() {
+    let _lock = NORMALIZATION_TEST_LOCK.lock().await;
+    let photo = image::RgbImage::from_fn(256, 256, |x, y| {
+        let grain = (x.wrapping_mul(31) ^ y.wrapping_mul(17)) % 24;
+        image::Rgb([
+            (x + grain) as u8,
+            (y + grain) as u8,
+            ((x + y) / 2 + grain) as u8,
+        ])
+    });
+    let mut png = Vec::new();
+    image::DynamicImage::ImageRgb8(photo.clone())
+        .write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png)
+        .unwrap();
+    let mut lossless = Vec::new();
+    image::DynamicImage::ImageRgb8(photo)
+        .write_to(&mut Cursor::new(&mut lossless), image::ImageFormat::WebP)
+        .unwrap();
+
+    let normalized = normalize(
+        png,
+        ImageSpec {
+            maximum_dimension: 256,
+            maximum_output_bytes: 256 * 1024,
+            square: false,
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(&normalized[12..16], b"VP8 ", "output must be lossy VP8");
+    assert!(
+        normalized.len() < lossless.len(),
+        "lossy {} bytes vs lossless {} bytes",
+        normalized.len(),
+        lossless.len()
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn refuses_to_queue_more_than_the_waiter_cap_and_frees_slots_afterwards() {
+    let _lock = NORMALIZATION_TEST_LOCK.lock().await;
+    let permit = NORMALIZATION_WORKER.clone().try_acquire_owned().unwrap();
+    let specification = ImageSpec {
+        maximum_dimension: 64,
+        maximum_output_bytes: 64 * 1024,
+        square: false,
+    };
+    let waiters: Vec<_> = (0..MAX_ADMISSION_WAITERS)
+        .map(|_| tokio::spawn(normalize(raster(image::ImageFormat::Png), specification)))
+        .collect();
+    tokio::task::yield_now().await;
+
+    let started = std::time::Instant::now();
+    let overflow = normalize(raster(image::ImageFormat::Png), specification).await;
+    assert_eq!(overflow, Err(ImageNormalizationError::Busy));
+    assert!(
+        started.elapsed() < NORMALIZATION_ADMISSION_WAIT / 2,
+        "overflow must fail fast instead of waiting"
+    );
+
+    for waiter in waiters {
+        assert_eq!(waiter.await.unwrap(), Err(ImageNormalizationError::Busy));
+    }
+    assert_eq!(ADMISSION_WAITERS.load(Ordering::Acquire), 0);
+    drop(permit);
+}

@@ -1,10 +1,15 @@
 use std::{
     io::Cursor,
-    sync::{Arc, LazyLock},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, LazyLock,
+    },
 };
 
 const MAX_DECODE_DIMENSION: u32 = 8_192;
 const MAX_INPUT_PIXELS: u64 = 4_000_000;
+// High enough that photos and flat artwork stay visually clean.
+const WEBP_OUTPUT_QUALITY: f32 = 88.0;
 const MAX_DECODE_ALLOC: u64 = 64 * 1024 * 1024;
 // VP8L prefix-code alphabets (WebP lossless spec): green = 256 literals + 24 length codes
 // (+ color-cache entries), the other channels are 256 wide, distance has 40 codes.
@@ -18,6 +23,9 @@ const MAX_COLOR_CACHE_BITS: u8 = 11;
 const NORMALIZATION_ADMISSION_WAIT: std::time::Duration = std::time::Duration::from_secs(2);
 #[cfg(test)]
 const NORMALIZATION_ADMISSION_WAIT: std::time::Duration = std::time::Duration::from_millis(200);
+// Waiters hold the request body in memory, so only a few may queue.
+const MAX_ADMISSION_WAITERS: usize = 4;
+static ADMISSION_WAITERS: AtomicUsize = AtomicUsize::new(0);
 static NORMALIZATION_WORKER: LazyLock<Arc<tokio::sync::Semaphore>> =
     LazyLock::new(|| Arc::new(tokio::sync::Semaphore::new(1)));
 
@@ -40,17 +48,35 @@ pub enum ImageNormalizationError {
     Busy,
 }
 
-pub async fn normalize(
-    bytes: Vec<u8>,
-    specification: ImageSpec,
-) -> Result<Vec<u8>, ImageNormalizationError> {
-    let permit = tokio::time::timeout(
+/// Decrements the waiter count on every exit, including cancellation.
+struct WaiterSlot;
+
+impl Drop for WaiterSlot {
+    fn drop(&mut self) {
+        ADMISSION_WAITERS.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+async fn admit() -> Result<tokio::sync::OwnedSemaphorePermit, ImageNormalizationError> {
+    if ADMISSION_WAITERS.fetch_add(1, Ordering::AcqRel) >= MAX_ADMISSION_WAITERS {
+        ADMISSION_WAITERS.fetch_sub(1, Ordering::AcqRel);
+        return Err(ImageNormalizationError::Busy);
+    }
+    let _slot = WaiterSlot;
+    tokio::time::timeout(
         NORMALIZATION_ADMISSION_WAIT,
         NORMALIZATION_WORKER.clone().acquire_owned(),
     )
     .await
     .map_err(|_| ImageNormalizationError::Busy)?
-    .map_err(|_| ImageNormalizationError::WorkerFailed)?;
+    .map_err(|_| ImageNormalizationError::WorkerFailed)
+}
+
+pub async fn normalize(
+    bytes: Vec<u8>,
+    specification: ImageSpec,
+) -> Result<Vec<u8>, ImageNormalizationError> {
+    let permit = admit().await?;
 
     tokio::task::spawn_blocking(move || {
         let _permit = permit;
@@ -108,14 +134,29 @@ fn normalize_blocking(
         )
     };
 
-    let mut output = Vec::new();
-    image
-        .write_to(&mut Cursor::new(&mut output), image::ImageFormat::WebP)
-        .map_err(|_| ImageNormalizationError::WorkerFailed)?;
+    let output = encode_lossy_webp(&image)?;
     if output.is_empty() || output.len() > specification.maximum_output_bytes {
         return Err(ImageNormalizationError::OutputTooLarge);
     }
     Ok(output)
+}
+
+/// The `image` crate's WebP encoder is lossless-only, which bloats photos, so
+/// encoding goes through libwebp (vendored and built by the `webp` crate).
+fn encode_lossy_webp(image: &image::DynamicImage) -> Result<Vec<u8>, ImageNormalizationError> {
+    let (width, height) = (image.width(), image.height());
+    let (rgba, rgb);
+    let encoder = if image.color().has_alpha() {
+        rgba = image.to_rgba8();
+        webp::Encoder::from_rgba(&rgba, width, height)
+    } else {
+        rgb = image.to_rgb8();
+        webp::Encoder::from_rgb(&rgb, width, height)
+    };
+    encoder
+        .encode_simple(false, WEBP_OUTPUT_QUALITY)
+        .map(|encoded| encoded.to_vec())
+        .map_err(|_| ImageNormalizationError::WorkerFailed)
 }
 
 fn image_reader(
