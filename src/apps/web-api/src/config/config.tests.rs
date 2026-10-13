@@ -212,6 +212,44 @@ fn origin_rejects_non_origins() {
 }
 
 #[test]
+fn dev_origin_is_disabled_when_unset_or_blank() {
+    assert_eq!(from_vars(&required_vars(&[])).unwrap().dev_origin, None);
+    let config = from_vars(&required_vars(&[("MEDIOSS_DEV_ORIGIN", "  ")])).unwrap();
+    assert_eq!(config.dev_origin, None);
+}
+
+#[test]
+fn dev_origin_is_canonicalized() {
+    let config = from_vars(&required_vars(&[(
+        "MEDIOSS_DEV_ORIGIN",
+        "HTTP://LOCALHOST:4321/",
+    )]))
+    .unwrap();
+
+    assert_eq!(config.dev_origin.as_deref(), Some("http://localhost:4321"));
+}
+
+#[test]
+fn dev_origin_rejects_non_origins() {
+    for value in [
+        "null",
+        "*",
+        "http://localhost:4321/path",
+        " http://localhost:4321",
+    ] {
+        let error = from_vars(&required_vars(&[("MEDIOSS_DEV_ORIGIN", value)])).unwrap_err();
+        assert_eq!(
+            error,
+            ConfigError::InvalidDevOrigin {
+                value: value.to_owned()
+            },
+            "value: {value}"
+        );
+        assert!(error.to_string().contains("MEDIOSS_DEV_ORIGIN"));
+    }
+}
+
+#[test]
 fn session_cookie_secure_defaults_to_true() {
     let config = from_vars(&required_vars(&[])).unwrap();
 

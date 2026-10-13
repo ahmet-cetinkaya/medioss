@@ -27,14 +27,12 @@ impl AvatarRef {
     }
 
     pub fn new(key: String, extension: &str) -> Result<Self, IdentityError> {
-        if key.is_empty() || key.contains('/') || key.contains('\\') {
+        let extension = AvatarExtension::parse(extension)?;
+        if !is_minted_key(&key, extension) {
             return Err(IdentityError::InvalidProfile);
         }
 
-        Ok(Self::Stored {
-            key,
-            extension: AvatarExtension::parse(extension)?,
-        })
+        Ok(Self::Stored { key, extension })
     }
 
     pub fn key(&self) -> &str {
@@ -52,6 +50,25 @@ impl AvatarRef {
             Self::Stored { extension, .. } => extension.as_str(),
         }
     }
+}
+
+const KEY_PREFIX: &str = "avatar-";
+const KEY_RANDOM_HEX_LENGTH: usize = 16;
+
+/// Accepts only the shape the avatar store mints:
+/// `avatar-<16 lowercase hex>.<extension>`.
+fn is_minted_key(key: &str, extension: AvatarExtension) -> bool {
+    let Some(rest) = key.strip_prefix(KEY_PREFIX) else {
+        return false;
+    };
+    let Some((random, suffix)) = rest.split_once('.') else {
+        return false;
+    };
+    random.len() == KEY_RANDOM_HEX_LENGTH
+        && random
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        && suffix == extension.as_str()
 }
 
 impl AvatarExtension {

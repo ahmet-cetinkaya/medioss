@@ -99,10 +99,11 @@ impl identity_application::ports::AvatarStore for RecordingAvatarStore {
             .next_key
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         self.written.lock().unwrap().push(extension);
-        Ok(
-            identity_domain::AvatarRef::new(format!("avatar-{sequence}.{extension}"), extension)
-                .unwrap(),
+        Ok(identity_domain::AvatarRef::new(
+            format!("avatar-{sequence:016x}.{extension}"),
+            extension,
         )
+        .unwrap())
     }
 
     async fn read(
@@ -1198,6 +1199,32 @@ async fn avatar_serving_is_owner_or_admin_only() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn avatar_responses_forbid_content_type_sniffing() {
+    for (avatar, content_type) in [
+        (identity_domain::AvatarRef::Webp, "image/webp"),
+        (identity_domain::AvatarRef::Png, "image/png"),
+    ] {
+        let store = Arc::new(RecordingAvatarStore::accepting());
+        let router = seeded_app_with(
+            vec![user(2, "member@example.com", Role::Member).with_avatar(Some(avatar))],
+            store,
+        );
+        let mut request = Request::get("/identity/avatar/2")
+            .body(Body::empty())
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(kernel::Actor::new(kernel::UserId::new(2), Role::Member));
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()["content-type"], content_type);
+        assert_eq!(response.headers()["x-content-type-options"], "nosniff");
+    }
 }
 
 #[tokio::test]
