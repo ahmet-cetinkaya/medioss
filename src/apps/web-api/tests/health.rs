@@ -137,11 +137,23 @@ fn multipart_avatar(png: Vec<u8>) -> Vec<u8> {
     body
 }
 
-#[tokio::test]
-async fn deleting_a_user_wipes_their_avatar_file() {
+const TEST_ORIGIN: &str = "http://localhost";
+
+struct MemberWithAvatar {
+    app: axum::Router,
+    _guard: TempDir,
+    admin_cookie: String,
+    member_cookie: String,
+    member_id: i64,
+    member_media: std::path::PathBuf,
+}
+
+/// Sets up an admin and a member, uploads the member's avatar and asserts the
+/// staged avatar file landed in the member's media directory.
+async fn member_with_uploaded_avatar() -> MemberWithAvatar {
     let (state, guard) = test_state().await;
     let app = router(state);
-    let origin = "http://localhost";
+    let origin = TEST_ORIGIN;
 
     let png = {
         let image = image::DynamicImage::new_rgb8(8, 8);
@@ -265,12 +277,53 @@ async fn deleting_a_user_wipes_their_avatar_file() {
         "expected one staged avatar file, got {uploaded:?}"
     );
 
-    let delete = app
+    MemberWithAvatar {
+        app,
+        _guard: guard,
+        admin_cookie: cookie,
+        member_cookie,
+        member_id,
+        member_media,
+    }
+}
+
+#[tokio::test]
+async fn deleting_your_own_account_wipes_your_avatar_file() {
+    let fixture = member_with_uploaded_avatar().await;
+
+    let delete = fixture
+        .app
+        .clone()
+        .oneshot(
+            Request::delete("/api/identity/me")
+                .header("origin", TEST_ORIGIN)
+                .header("cookie", &fixture.member_cookie)
+                .body(Body::empty())
+                .expect("build"),
+        )
+        .await
+        .expect("delete response");
+    assert_eq!(delete.status(), StatusCode::NO_CONTENT);
+
+    assert!(
+        !fixture.member_media.exists(),
+        "user media dir must be wiped on self delete"
+    );
+}
+
+#[tokio::test]
+async fn deleting_a_user_wipes_their_avatar_file() {
+    let fixture = member_with_uploaded_avatar().await;
+    let member_id = fixture.member_id;
+    let member_media = &fixture.member_media;
+
+    let delete = fixture
+        .app
         .clone()
         .oneshot(
             Request::delete(format!("/api/identity/users/{member_id}"))
-                .header("origin", origin)
-                .header("cookie", &cookie)
+                .header("origin", TEST_ORIGIN)
+                .header("cookie", &fixture.admin_cookie)
                 .body(Body::empty())
                 .expect("build"),
         )
