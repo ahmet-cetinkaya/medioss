@@ -585,19 +585,25 @@ async fn listing_sounds_requires_any_signed_in_actor() {
 #[test]
 fn parses_single_byte_and_suffix_ranges() {
     assert_eq!(
-        crate::router::parse_range("bytes=0-0", 10),
+        crate::byte_range::parse_range("bytes=0-0", 10),
         Some(Ok((0, 0)))
     );
-    assert_eq!(crate::router::parse_range("bytes=-3", 10), Some(Ok((7, 9))));
-    assert_eq!(crate::router::parse_range("bytes=4-", 10), Some(Ok((4, 9))));
+    assert_eq!(
+        crate::byte_range::parse_range("bytes=-3", 10),
+        Some(Ok((7, 9)))
+    );
+    assert_eq!(
+        crate::byte_range::parse_range("bytes=4-", 10),
+        Some(Ok((4, 9)))
+    );
 }
 
 #[test]
 fn ignores_malformed_and_rejects_unsatisfiable_ranges() {
-    assert_eq!(crate::router::parse_range("items=0-1", 10), None);
-    assert_eq!(crate::router::parse_range("bytes=bogus", 10), None);
+    assert_eq!(crate::byte_range::parse_range("items=0-1", 10), None);
+    assert_eq!(crate::byte_range::parse_range("bytes=bogus", 10), None);
     assert_eq!(
-        crate::router::parse_range("bytes=99-100", 10),
+        crate::byte_range::parse_range("bytes=99-100", 10),
         Some(Err(()))
     );
 }
