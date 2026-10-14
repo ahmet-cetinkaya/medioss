@@ -351,6 +351,18 @@ async fn health_endpoint_returns_ok() {
 }
 
 #[tokio::test]
+async fn every_response_carries_nosniff() {
+    for path in ["/api/health", "/api/does-not-exist", "/nonexistent"] {
+        let response = get(path).await;
+        assert_eq!(
+            response.headers()["x-content-type-options"],
+            "nosniff",
+            "{path}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn unknown_api_path_returns_json_not_found() {
     let response = get("/api/does-not-exist").await;
 

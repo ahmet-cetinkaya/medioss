@@ -187,6 +187,9 @@ describe("serverReason (refusal table)", () => {
     expect(reason("library.load", 0).reason).toBe("network");
     expect(reason("library.load", 500, "internal error").reason).toBe("server");
     expect(reason("sound.upload", 503).reason).toBe("server");
+    expect(reason("program.cover", 500, "internal error").reason).toBe(
+      "server",
+    );
   });
 
   test("anything else → generic", () => {

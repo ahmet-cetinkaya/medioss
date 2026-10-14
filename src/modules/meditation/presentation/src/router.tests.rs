@@ -866,8 +866,8 @@ async fn cover_normalization_failures_keep_their_operational_statuses() {
     use meditation_application::ports::CoverNormalizationError;
     use meditation_application::test_support::FailingCoverValidator;
 
-    // Worker failure and busy are server-side conditions: they must surface
-    // as 503, never as the 415 reserved for genuinely bad media.
+    // Server-side conditions never surface as the 415 reserved for bad media:
+    // busy is a retryable 503, a failed worker or store is a 500.
     let cases = [
         (
             CoverNormalizationError::InvalidPayload,
@@ -879,7 +879,7 @@ async fn cover_normalization_failures_keep_their_operational_statuses() {
         ),
         (
             CoverNormalizationError::WorkerFailed,
-            StatusCode::SERVICE_UNAVAILABLE,
+            StatusCode::INTERNAL_SERVER_ERROR,
         ),
         (
             CoverNormalizationError::Busy,

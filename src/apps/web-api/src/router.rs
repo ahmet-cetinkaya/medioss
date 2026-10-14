@@ -1,8 +1,14 @@
 //! HTTP routing: JSON API under `/api`, everything else served from the
 //! static directory (absent in dev until the frontend build lands).
 
-use axum::{http::StatusCode, response::IntoResponse, routing::get, Json, Router};
+use axum::{
+    http::{header, HeaderValue, StatusCode},
+    response::IntoResponse,
+    routing::get,
+    Json, Router,
+};
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_sessions::{Expiry, SessionManagerLayer};
 
 use crate::{
@@ -70,6 +76,10 @@ pub fn router(state: AppState) -> Router {
         )
         .fallback_service(static_files)
         .layer(axum::middleware::from_fn(cache_headers))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
         .with_state(state)
 }
 

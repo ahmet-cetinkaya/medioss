@@ -34,13 +34,33 @@ enum Commands {
     ClearThrottle { identifier: String },
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     // Local convenience: load ./.env if present. Real environment variables
     // always win (dotenv_override is off), so production env files cannot
     // shadow an operator's explicit settings. A missing file is fine.
     let _ = dotenvy::dotenv();
     let cli = <Cli as clap::Parser>::parse();
+    // Environment mutation is only sound while the process is single-threaded,
+    // so the server config is read and published before the runtime exists.
+    let server_config = cli.command.is_none().then(|| {
+        let config = config::from_env().unwrap_or_else(|err| {
+            eprintln!("{}", with_causes(&err));
+            std::process::exit(1)
+        });
+        config::publish_dev_origin(&config);
+        config
+    });
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|err| {
+            eprintln!("could not start the async runtime: {err}");
+            std::process::exit(1)
+        })
+        .block_on(run(cli, server_config));
+}
+
+async fn run(cli: Cli, server_config: Option<config::Config>) {
     match cli.command {
         Some(Commands::ResetPassword { email }) => {
             return run_reset_password(&email).await;
@@ -50,6 +70,7 @@ async fn main() {
         }
         None => {}
     }
+    let Some(config) = server_config else { return };
 
     let filter = match std::env::var(EnvFilter::DEFAULT_ENV) {
         // The subscriber does not exist yet, so this one report cannot use tracing.
@@ -61,7 +82,7 @@ async fn main() {
     };
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    let config = config::from_env().unwrap_or_else(|err| fail(with_causes(&err)));
+    config::warn_about_weakened_defaults(&config);
     if let Err(err) = ensure_data_dir(&config.data_dir) {
         fail(with_causes(&err));
     }

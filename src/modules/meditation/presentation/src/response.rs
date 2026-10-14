@@ -55,8 +55,9 @@ pub fn application_error_response(error: ApplicationError) -> Response {
         ApplicationError::InvalidInput(_)
         | ApplicationError::InvalidDescription
         | ApplicationError::InvalidProgramOrder => StatusCode::BAD_REQUEST,
-        ApplicationError::Storage(_) => StatusCode::SERVICE_UNAVAILABLE,
-        ApplicationError::Repository(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        ApplicationError::Storage(_) | ApplicationError::Repository(_) => {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
     };
     let message = match &error {
         ApplicationError::Repository(_) | ApplicationError::Storage(_) => {

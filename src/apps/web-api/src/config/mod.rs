@@ -34,24 +34,31 @@ const DEFAULT_SESSION_TIMEOUT: &str = "7d";
 
 /// Reads configuration from the process environment.
 pub fn from_env() -> Result<Config, ConfigError> {
-    let config = from_vars(&|key| std::env::var(key).ok())?;
+    from_vars(&|key| std::env::var(key).ok())
+}
+
+/// Publishes the validated dev origin for the module routers, which read the
+/// variable per request and cannot depend on web-api. Mutates the process
+/// environment, so call it before the async runtime starts any thread.
+pub fn publish_dev_origin(config: &Config) {
+    match &config.dev_origin {
+        Some(dev_origin) => std::env::set_var(DEV_ORIGIN_VAR, dev_origin),
+        None => std::env::remove_var(DEV_ORIGIN_VAR),
+    }
+}
+
+/// Logs settings that weaken the defaults; needs the tracing subscriber.
+pub fn warn_about_weakened_defaults(config: &Config) {
     if !config.session_cookie_secure {
         tracing::warn!(
             "SESSION_COOKIE_SECURE=false: session cookies may be sent over unencrypted HTTP"
         );
     }
-    // Module routers read this variable per request and cannot depend on
-    // web-api, so publish only the validated, canonical value for them.
-    match &config.dev_origin {
-        Some(dev_origin) => {
-            tracing::warn!(
-                "{DEV_ORIGIN_VAR}={dev_origin}: this extra origin may make state-changing requests; use for development only"
-            );
-            std::env::set_var(DEV_ORIGIN_VAR, dev_origin);
-        }
-        None => std::env::remove_var(DEV_ORIGIN_VAR),
+    if let Some(dev_origin) = &config.dev_origin {
+        tracing::warn!(
+            "{DEV_ORIGIN_VAR}={dev_origin}: this extra origin may make state-changing requests; use for development only"
+        );
     }
-    Ok(config)
 }
 
 /// Pure configuration parsing: no filesystem access, no directory creation.
