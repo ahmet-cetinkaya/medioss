@@ -8,7 +8,10 @@ use identity_application::ApplicationError;
 use identity_domain::DisplayName;
 use kernel::UserId;
 
-use crate::router::{ensure_browser_origin, ApiError, CurrentActor, SharedDependencies};
+use crate::actors::CurrentActor;
+use crate::api_error::ApiError;
+use crate::dependencies::SharedDependencies;
+use crate::origin_guard::ensure_browser_origin;
 
 pub const MAX_AVATAR_BYTES: usize = 2 * 1024 * 1024;
 

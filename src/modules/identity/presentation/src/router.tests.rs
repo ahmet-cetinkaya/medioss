@@ -15,7 +15,7 @@ use identity_domain::{Email, FailedAttempts, IdentityError, PasswordHash, RawPas
 use kernel::Role;
 use tower::ServiceExt;
 
-use super::{identity_router, IdentityDependencies, Principal, SharedDependencies};
+use crate::{identity_router, IdentityDependencies, Principal, SharedDependencies};
 
 struct NullHasher;
 
@@ -439,8 +439,8 @@ async fn weak_password_maps_to_bad_request() {
 
 #[test]
 fn constant_time_eq_rejects_length_mismatch_without_leaking() {
-    assert!(!super::constant_time_eq(b"abc", b"abcd"));
-    assert!(super::constant_time_eq(b"same", b"same"));
+    assert!(!crate::origin_guard::constant_time_eq(b"abc", b"abcd"));
+    assert!(crate::origin_guard::constant_time_eq(b"same", b"same"));
 }
 
 #[test]
@@ -495,7 +495,7 @@ fn api_error_mapping_table() {
         ),
     ];
     for (error, expected) in cases {
-        let response = super::ApiError::from(error).into_response_status();
+        let response = crate::api_error::ApiError::from(error).into_response_status();
         assert_eq!(response, expected);
     }
 }

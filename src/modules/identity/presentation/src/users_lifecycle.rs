@@ -20,9 +20,10 @@ use kernel::UserId;
 use serde::Deserialize;
 use tower_sessions::Session;
 
-use crate::router::{
-    ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies,
-};
+use crate::actors::{AdminActor, CurrentActor};
+use crate::api_error::ApiError;
+use crate::dependencies::SharedDependencies;
+use crate::origin_guard::ensure_browser_origin;
 
 /// Purges other modules' data and media for a user. The composition root
 /// implements this; it runs only after all identity guards pass, so a
