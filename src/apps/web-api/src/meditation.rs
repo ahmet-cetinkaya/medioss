@@ -161,19 +161,6 @@ impl meditation_application::ports::CoverValidator for CoverNormalizer {
             },
         )
         .await
-        .map_err(|error| match error {
-            crate::image_normalization::ImageNormalizationError::InvalidPayload => {
-                meditation_application::ports::CoverNormalizationError::InvalidPayload
-            }
-            crate::image_normalization::ImageNormalizationError::OutputTooLarge => {
-                meditation_application::ports::CoverNormalizationError::OutputTooLarge
-            }
-            crate::image_normalization::ImageNormalizationError::WorkerFailed => {
-                meditation_application::ports::CoverNormalizationError::WorkerFailed
-            }
-            crate::image_normalization::ImageNormalizationError::Busy => {
-                meditation_application::ports::CoverNormalizationError::Busy
-            }
-        })
+        .map_err(meditation_application::ports::CoverNormalizationError::from)
     }
 }
