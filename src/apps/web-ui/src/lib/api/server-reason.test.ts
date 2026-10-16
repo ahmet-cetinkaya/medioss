@@ -55,7 +55,10 @@ describe("serverReason (refusal table)", () => {
     );
   });
 
-  test("avatar 413 → avatarTooLarge; 400 bad image → avatarInvalid", () => {
+  test("avatar 413 → avatarTooLarge; 400/415 bad image → avatarInvalid", () => {
+    expect(reason("profile.avatar", 415, "unsupported media type").reason).toBe(
+      "avatarInvalid",
+    );
     expect(reason("profile.avatar", 413, "payload too large").reason).toBe(
       "avatarTooLarge",
     );

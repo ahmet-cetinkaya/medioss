@@ -8,7 +8,7 @@ use soundscape_application::commands;
 
 use crate::actors::{admin, AdminActor, CurrentActor};
 use crate::dependencies::SharedDependencies;
-use crate::error_mapping::map_error;
+use crate::error_mapping::status_for;
 use crate::origin_guard::origin;
 
 #[derive(Serialize)]
@@ -51,7 +51,7 @@ pub(crate) async fn create_category(
     commands::create_category(deps.categories.as_ref(), &input.name)
         .await
         .map(|value| (StatusCode::CREATED, Json(value.into())))
-        .map_err(map_error)
+        .map_err(status_for)
 }
 pub(crate) async fn rename_category(
     Path(id): Path<i64>,
@@ -65,7 +65,7 @@ pub(crate) async fn rename_category(
     commands::rename_category(deps.categories.as_ref(), id, &input.name)
         .await
         .map(|value| Json(value.into()))
-        .map_err(map_error)
+        .map_err(status_for)
 }
 pub(crate) async fn delete_category(
     Path(id): Path<i64>,
@@ -78,5 +78,5 @@ pub(crate) async fn delete_category(
     commands::delete_category(deps.categories.as_ref(), id)
         .await
         .map(|_| StatusCode::NO_CONTENT)
-        .map_err(map_error)
+        .map_err(status_for)
 }

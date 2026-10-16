@@ -9,7 +9,7 @@ use soundscape_application::{commands, ports::media::BlobReader};
 
 use crate::actors::{admin, AdminActor, CurrentActor};
 use crate::dependencies::SharedDependencies;
-use crate::error_mapping::map_error;
+use crate::error_mapping::status_for;
 use crate::multipart_field::read_field;
 use crate::origin_guard::origin;
 use crate::sounds::SoundDto;
@@ -42,7 +42,7 @@ pub(crate) async fn upload_icon(
     )
     .await
     .map(|sound| Json(sound.into()))
-    .map_err(map_error)
+    .map_err(status_for)
 }
 pub(crate) async fn clear_icon(
     Path(id): Path<i64>,
@@ -55,7 +55,7 @@ pub(crate) async fn clear_icon(
     commands::sounds::clear_sound_icon(deps.sounds.as_ref(), deps.store.as_ref(), id)
         .await
         .map(|sound| Json(sound.into()))
-        .map_err(map_error)
+        .map_err(status_for)
 }
 /// GET /soundscape/sounds/{id}/icon — the uploaded icon image; 404 when the
 /// sound has none. Sounds are host content, so any signed-in user may read.
@@ -66,7 +66,7 @@ pub(crate) async fn get_icon(
 ) -> Result<Response, StatusCode> {
     let icon = soundscape_application::queries::find_sound_icon(deps.sounds.as_ref(), id)
         .await
-        .map_err(map_error)?;
+        .map_err(status_for)?;
     let (BlobReader(reader), _, total) = deps
         .store
         .open_range(

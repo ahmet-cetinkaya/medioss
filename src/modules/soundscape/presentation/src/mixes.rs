@@ -8,7 +8,7 @@ use soundscape_application::commands;
 
 use crate::actors::CurrentActor;
 use crate::dependencies::SharedDependencies;
-use crate::error_mapping::map_error;
+use crate::error_mapping::status_for;
 use crate::origin_guard::origin;
 
 #[derive(Deserialize)]
@@ -75,7 +75,7 @@ pub(crate) async fn create_mix(
     )
     .await
     .map(|value| (StatusCode::CREATED, Json(value.into())))
-    .map_err(map_error)
+    .map_err(status_for)
 }
 pub(crate) async fn update_mix(
     Path(id): Path<i64>,
@@ -96,7 +96,7 @@ pub(crate) async fn update_mix(
     )
     .await
     .map(|value| Json(value.into()))
-    .map_err(map_error)
+    .map_err(status_for)
 }
 pub(crate) async fn delete_mix(
     Path(id): Path<i64>,
@@ -108,5 +108,5 @@ pub(crate) async fn delete_mix(
     commands::mixes::delete_mix(deps.mixes.as_ref(), id, actor.user_id())
         .await
         .map(|_| StatusCode::NO_CONTENT)
-        .map_err(map_error)
+        .map_err(status_for)
 }

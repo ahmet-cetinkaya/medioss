@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use soundscape_application::ApplicationError;
 
-pub(crate) fn map_error(error: ApplicationError) -> StatusCode {
+pub(crate) fn status_for(error: ApplicationError) -> StatusCode {
     match error {
         ApplicationError::NotFound => StatusCode::NOT_FOUND,
         ApplicationError::Duplicate | ApplicationError::CategoryInUse => StatusCode::CONFLICT,
@@ -14,3 +14,7 @@ pub(crate) fn map_error(error: ApplicationError) -> StatusCode {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "error_mapping.tests.rs"]
+mod tests;

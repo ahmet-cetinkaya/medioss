@@ -1097,7 +1097,7 @@ async fn avatar_upload_rejects_invalid_payloads_without_writing() {
         .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));
 
     let response = router.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
     assert!(store.written.lock().unwrap().is_empty());
 }
 

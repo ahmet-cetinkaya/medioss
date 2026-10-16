@@ -331,10 +331,7 @@ fn replace_rejects_invalid_payloads_and_writes_nothing() {
 
     let error = block_on(replace_avatar(&repository, &store, &actor, vec![0])).unwrap_err();
 
-    assert_eq!(
-        error,
-        ApplicationError::InvalidInput(identity_domain::IdentityError::InvalidProfile)
-    );
+    assert_eq!(error, ApplicationError::UnsupportedMedia);
     assert!(store.written.lock().unwrap().is_empty());
     assert!(store.removed.lock().unwrap().is_empty());
 }
@@ -346,7 +343,7 @@ fn replace_maps_normalization_failures_by_who_is_at_fault() {
     let cases = [
         (
             AvatarStoreError::InvalidPayload,
-            ApplicationError::InvalidInput(identity_domain::IdentityError::InvalidProfile),
+            ApplicationError::UnsupportedMedia,
         ),
         (
             AvatarStoreError::OutputTooLarge,

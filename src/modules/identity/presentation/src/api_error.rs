@@ -8,59 +8,68 @@ use identity_domain::IdentityError;
 
 pub struct ApiError(pub(crate) ApplicationError);
 
+/// The one place that decides which HTTP status each application outcome
+/// (including every avatar normalizer outcome) answers with.
+pub(crate) fn status_for(error: &ApplicationError) -> StatusCode {
+    match error {
+        ApplicationError::InvalidInput(IdentityError::LoginThrottled { .. }) => {
+            StatusCode::TOO_MANY_REQUESTS
+        }
+        ApplicationError::InvalidInput(_) | ApplicationError::LastActiveAdmin => {
+            StatusCode::BAD_REQUEST
+        }
+        ApplicationError::InvalidCredentials | ApplicationError::UserNotFound => {
+            StatusCode::UNAUTHORIZED
+        }
+        ApplicationError::Forbidden => StatusCode::FORBIDDEN,
+        ApplicationError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
+        ApplicationError::UnsupportedMedia => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        ApplicationError::SetupAlreadyCompleted | ApplicationError::EmailAlreadyExists => {
+            StatusCode::CONFLICT
+        }
+        ApplicationError::ProcessingUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+        ApplicationError::PasswordHasher | ApplicationError::Repository => {
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
+}
+
+fn message_for(error: &ApplicationError) -> String {
+    match error {
+        ApplicationError::InvalidInput(IdentityError::LoginThrottled { .. }) => {
+            "too many attempts".to_owned()
+        }
+        // Domain messages are user-facing by design and contain no secrets.
+        ApplicationError::InvalidInput(error) => error.to_string(),
+        ApplicationError::InvalidCredentials | ApplicationError::UserNotFound => {
+            "invalid credentials".to_owned()
+        }
+        ApplicationError::Forbidden => "forbidden".to_owned(),
+        ApplicationError::PayloadTooLarge => "payload too large".to_owned(),
+        ApplicationError::UnsupportedMedia => "unsupported media type".to_owned(),
+        ApplicationError::LastActiveAdmin => {
+            "operation would leave the instance without an active admin".to_owned()
+        }
+        ApplicationError::SetupAlreadyCompleted => "setup already completed".to_owned(),
+        ApplicationError::EmailAlreadyExists => "email already exists".to_owned(),
+        ApplicationError::ProcessingUnavailable => {
+            "avatar processing is temporarily unavailable".to_owned()
+        }
+        ApplicationError::PasswordHasher | ApplicationError::Repository => {
+            "internal error".to_owned()
+        }
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let (status, message, retry_after): (StatusCode, String, _) = match &self.0 {
-            ApplicationError::InvalidInput(IdentityError::LoginThrottled { retry_after }) => (
-                StatusCode::TOO_MANY_REQUESTS,
-                "too many attempts".to_owned(),
-                Some(retry_after.as_secs()),
-            ),
-            // Domain messages are user-facing by design and contain no secrets.
-            ApplicationError::InvalidInput(error) => {
-                (StatusCode::BAD_REQUEST, error.to_string(), None)
+        let status = status_for(&self.0);
+        let message = message_for(&self.0);
+        let retry_after = match &self.0 {
+            ApplicationError::InvalidInput(IdentityError::LoginThrottled { retry_after }) => {
+                Some(retry_after.as_secs())
             }
-            ApplicationError::InvalidCredentials => (
-                StatusCode::UNAUTHORIZED,
-                "invalid credentials".to_owned(),
-                None,
-            ),
-            ApplicationError::Forbidden => (StatusCode::FORBIDDEN, "forbidden".to_owned(), None),
-            ApplicationError::PayloadTooLarge => (
-                StatusCode::PAYLOAD_TOO_LARGE,
-                "payload too large".to_owned(),
-                None,
-            ),
-            ApplicationError::LastActiveAdmin => (
-                StatusCode::BAD_REQUEST,
-                "operation would leave the instance without an active admin".to_owned(),
-                None,
-            ),
-            ApplicationError::SetupAlreadyCompleted => (
-                StatusCode::CONFLICT,
-                "setup already completed".to_owned(),
-                None,
-            ),
-            ApplicationError::EmailAlreadyExists => (
-                StatusCode::CONFLICT,
-                "email already exists".to_owned(),
-                None,
-            ),
-            ApplicationError::UserNotFound => (
-                StatusCode::UNAUTHORIZED,
-                "invalid credentials".to_owned(),
-                None,
-            ),
-            ApplicationError::ProcessingUnavailable => (
-                StatusCode::SERVICE_UNAVAILABLE,
-                "avatar processing is temporarily unavailable".to_owned(),
-                None,
-            ),
-            ApplicationError::PasswordHasher | ApplicationError::Repository => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "internal error".to_owned(),
-                None,
-            ),
+            _ => None,
         };
         let mut response = (
             status,
@@ -112,3 +121,7 @@ impl ApiError {
         parts.status
     }
 }
+
+#[cfg(test)]
+#[path = "api_error.tests.rs"]
+mod tests;

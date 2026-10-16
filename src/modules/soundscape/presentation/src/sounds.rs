@@ -11,7 +11,7 @@ use soundscape_application::{commands, ports::media::BlobReader};
 use crate::actors::{admin, AdminActor, CurrentActor};
 use crate::byte_range::parse_range;
 use crate::dependencies::SharedDependencies;
-use crate::error_mapping::map_error;
+use crate::error_mapping::status_for;
 use crate::multipart_field::read_field;
 use crate::origin_guard::origin;
 
@@ -185,7 +185,7 @@ pub(crate) async fn upload_sound(
         icon,
     )
     .await
-    .map_err(map_error)?;
+    .map_err(status_for)?;
     Ok((StatusCode::CREATED, Json(sound.into())))
 }
 pub(crate) async fn update_sound(
@@ -207,7 +207,7 @@ pub(crate) async fn update_sound(
     )
     .await
     .map(|sound| Json(sound.into()))
-    .map_err(map_error)
+    .map_err(status_for)
 }
 pub(crate) async fn delete_sound(
     Path(id): Path<i64>,
@@ -220,7 +220,7 @@ pub(crate) async fn delete_sound(
     commands::sounds::delete_sound(deps.sounds.as_ref(), deps.store.as_ref(), id)
         .await
         .map(|_| StatusCode::NO_CONTENT)
-        .map_err(map_error)
+        .map_err(status_for)
 }
 pub(crate) async fn stream_sound(
     Path(id): Path<i64>,

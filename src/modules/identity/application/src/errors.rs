@@ -27,6 +27,8 @@ pub enum ApplicationError {
     LastActiveAdmin,
     #[error("request payload is too large")]
     PayloadTooLarge,
+    #[error("uploaded image is not a supported media type")]
+    UnsupportedMedia,
 }
 
 impl From<IdentityError> for ApplicationError {
@@ -44,7 +46,7 @@ impl From<PasswordHasherError> for ApplicationError {
 impl From<AvatarStoreError> for ApplicationError {
     fn from(error: AvatarStoreError) -> Self {
         match error {
-            AvatarStoreError::InvalidPayload => Self::InvalidInput(IdentityError::InvalidProfile),
+            AvatarStoreError::InvalidPayload => Self::UnsupportedMedia,
             AvatarStoreError::OutputTooLarge => Self::PayloadTooLarge,
             AvatarStoreError::WorkerFailed => Self::Repository,
             AvatarStoreError::Busy => Self::ProcessingUnavailable,
