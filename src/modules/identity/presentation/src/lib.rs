@@ -16,5 +16,5 @@ pub use router::identity_router;
 pub use users_lifecycle::{NoUserDeletion, UserDeletionListener};
 
 #[cfg(test)]
-#[path = "router.tests.rs"]
+#[path = "router_tests/mod.rs"]
 mod router_tests;

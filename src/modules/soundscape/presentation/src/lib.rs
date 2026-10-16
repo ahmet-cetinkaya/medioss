@@ -13,5 +13,5 @@ mod sounds;
 pub use router::{soundscape_router, SharedDependencies, SoundscapeDependencies};
 
 #[cfg(test)]
-#[path = "router.tests.rs"]
+#[path = "router_tests/mod.rs"]
 mod router_tests;

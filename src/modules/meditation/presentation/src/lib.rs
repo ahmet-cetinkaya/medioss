@@ -23,5 +23,5 @@ pub use response::{application_error_response, ensure_browser_origin, ApiError};
 pub use router::{meditation_router, MeditationDependencies, SharedDependencies};
 
 #[cfg(test)]
-#[path = "router.tests.rs"]
+#[path = "router_tests/mod.rs"]
 mod router_tests;
