@@ -23,22 +23,11 @@ pub async fn create_sound(
     icon: Option<Vec<u8>>,
 ) -> Result<Sound, ApplicationError> {
     valid_name(name).map_err(|_| ApplicationError::InvalidInput("sound name"))?;
-    let icon_key = icon_key
-        .map(valid_icon_key)
-        .transpose()
-        .map_err(|_| ApplicationError::InvalidInput("icon key"))?
-        .flatten();
+    let icon_key = parse_icon_key(icon_key)?;
     if bytes.len() > MAX_UPLOAD_BYTES {
         return Err(ApplicationError::PayloadTooLarge);
     }
-    if categories
-        .find(category_id)
-        .await
-        .map_err(ApplicationError::Repository)?
-        .is_none()
-    {
-        return Err(ApplicationError::NotFound);
-    }
+    ensure_category_exists(categories, category_id).await?;
     let icon = match icon {
         Some(bytes) => Some(normalize_icon(image_normalizer, bytes).await?),
         None => None,
@@ -47,47 +36,73 @@ pub async fn create_sound(
         .sniff(&bytes)
         .await
         .map_err(|_| ApplicationError::UnsupportedMedia)?;
-    let (stored_bytes, duration, stored) = converter
+    let (stored_bytes, duration_ms, stored) = converter
         .convert(bytes, format)
         .await
         .map_err(ApplicationError::Storage)?;
-    if duration <= 0 {
+    if duration_ms <= 0 {
         return Err(ApplicationError::UnsupportedMedia);
     }
     let key = store
         .put("soundscape", name, stored.extension, &stored_bytes)
         .await
         .map_err(ApplicationError::Storage)?;
-    let result = sounds
-        .create(NewSound {
-            name: name.trim().into(),
-            category_id,
-            content_type: stored.content_type.into(),
-            size_bytes: stored_bytes.len() as i64,
-            storage_key: key.clone(),
-            duration_ms: duration,
-            created_at: Utc::now(),
-            icon_key,
-        })
-        .await
-        .map_err(ApplicationError::Repository);
-    let sound = match result {
+    let new_sound = NewSound {
+        name: name.trim().into(),
+        category_id,
+        content_type: stored.content_type.into(),
+        size_bytes: stored_bytes.len() as i64,
+        storage_key: key.clone(),
+        duration_ms,
+        created_at: Utc::now(),
+        icon_key,
+    };
+    let sound = match sounds.create(new_sound).await {
         Ok(sound) => sound,
         Err(error) => {
             let _ = store.delete(&key).await;
-            return Err(error);
+            return Err(ApplicationError::Repository(error));
         }
     };
     match icon {
-        Some(icon) => match store_sound_icon(sounds, store, sound.id, icon).await {
-            Ok(sound) => Ok(sound),
-            Err(error) => {
-                // Upload is all-or-nothing: do not leave a half-created sound.
-                let _ = delete_sound(sounds, store, sound.id).await;
-                Err(error)
-            }
-        },
+        Some(icon) => attach_icon_or_roll_back(sounds, store, sound, icon).await,
         None => Ok(sound),
+    }
+}
+
+fn parse_icon_key(icon_key: Option<&str>) -> Result<Option<String>, ApplicationError> {
+    Ok(icon_key
+        .map(valid_icon_key)
+        .transpose()
+        .map_err(|_| ApplicationError::InvalidInput("icon key"))?
+        .flatten())
+}
+
+async fn ensure_category_exists(
+    categories: &dyn CategoryRepository,
+    category_id: i64,
+) -> Result<(), ApplicationError> {
+    categories
+        .find(category_id)
+        .await
+        .map_err(ApplicationError::Repository)?
+        .map(|_| ())
+        .ok_or(ApplicationError::NotFound)
+}
+
+async fn attach_icon_or_roll_back(
+    sounds: &dyn SoundRepository,
+    store: &dyn BlobStore,
+    sound: Sound,
+    icon: Vec<u8>,
+) -> Result<Sound, ApplicationError> {
+    match store_sound_icon(sounds, store, sound.id, icon).await {
+        Ok(sound) => Ok(sound),
+        Err(error) => {
+            // Upload is all-or-nothing: do not leave a half-created sound.
+            let _ = delete_sound(sounds, store, sound.id).await;
+            Err(error)
+        }
     }
 }
 async fn normalize_icon(
@@ -114,19 +129,8 @@ pub async fn update_sound(
     icon_key: Option<&str>,
 ) -> Result<Sound, ApplicationError> {
     valid_name(name).map_err(|_| ApplicationError::InvalidInput("sound name"))?;
-    let icon_key = icon_key
-        .map(valid_icon_key)
-        .transpose()
-        .map_err(|_| ApplicationError::InvalidInput("icon key"))?
-        .flatten();
-    if categories
-        .find(category_id)
-        .await
-        .map_err(ApplicationError::Repository)?
-        .is_none()
-    {
-        return Err(ApplicationError::NotFound);
-    }
+    let icon_key = parse_icon_key(icon_key)?;
+    ensure_category_exists(categories, category_id).await?;
     sounds
         .update(id, name, category_id, icon_key.as_deref())
         .await

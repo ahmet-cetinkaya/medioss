@@ -69,66 +69,95 @@ async fn seed(
             Some(id) => id,
             None => insert_category(db, &slug, &entry.category_name).await?,
         };
-        let exists: Option<i64> = db
-            .query_one(Statement::from_sql_and_values(
-                sea_orm::DatabaseBackend::Sqlite,
-                "SELECT id FROM soundscape_sounds WHERE builtin_id = ?",
-                vec![builtin_id.clone().into()],
-            ))
-            .await
-            .map_err(|e| SeedError::Db(e.to_string()))?
-            .and_then(|row| row.try_get::<i64>("", "id").ok());
-        if exists.is_some() {
-            continue;
-        }
-        // An admin removed this built-in on an earlier run; removal must stick
-        // (FR-029), so the seeder does not resurrect tombstoned sounds.
-        let tombstoned = db
-            .query_one(Statement::from_sql_and_values(
-                sea_orm::DatabaseBackend::Sqlite,
-                "SELECT builtin_id FROM soundscape_builtin_tombstones WHERE builtin_id = ?",
-                vec![builtin_id.clone().into()],
-            ))
-            .await
-            .map_err(|e| SeedError::Db(e.to_string()))?
-            .is_some();
-        if tombstoned {
+        if !needs_seeding(db, &builtin_id).await? {
             continue;
         }
         let bytes = tokio::fs::read(dir.join(&entry.file)).await?;
-        let extension = Path::new(&entry.file)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .unwrap_or("bin");
-        let key = store
-            .put(
-                "soundscape",
-                &format!("builtin-{slug}-{}", entry.name),
-                extension,
-                &bytes,
-            )
-            .await
-            .map_err(|e| SeedError::Media(e.to_string()))?;
-        db.execute(Statement::from_sql_and_values(
+        let key = store_builtin_blob(&store, &slug, &entry, &bytes).await?;
+        insert_builtin_sound(db, &slug, category_id, entry, builtin_id, &key, &now).await?;
+    }
+    Ok(())
+}
+
+/// False when the sound is already seeded or an admin removed it on an
+/// earlier run; removal must stick (FR-029), so tombstoned sounds are not
+/// resurrected.
+async fn needs_seeding(db: &DatabaseConnection, builtin_id: &str) -> Result<bool, SeedError> {
+    let exists = db
+        .query_one(Statement::from_sql_and_values(
             sea_orm::DatabaseBackend::Sqlite,
-            "INSERT INTO soundscape_sounds (name, category_id, content_type, size_bytes, storage_key, duration_ms, created_at, builtin_id, icon_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            vec![
-                display_name(&entry.name).into(),
-                category_id.into(),
-                entry.content_type.into(),
-                entry.size.into(),
-                key.as_str().into(),
-                entry.duration_ms.into(),
-                now.clone().into(),
-                builtin_id.into(),
-                crate::icon_defaults::default_icon_key(&slug, &display_name(&entry.name))
-                    .map(str::to_owned)
-                    .into(),
-            ],
+            "SELECT id FROM soundscape_sounds WHERE builtin_id = ?",
+            vec![builtin_id.into()],
         ))
         .await
-        .map_err(|e| SeedError::Db(e.to_string()))?;
+        .map_err(|e| SeedError::Db(e.to_string()))?
+        .and_then(|row| row.try_get::<i64>("", "id").ok())
+        .is_some();
+    if exists {
+        return Ok(false);
     }
+    let tombstoned = db
+        .query_one(Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT builtin_id FROM soundscape_builtin_tombstones WHERE builtin_id = ?",
+            vec![builtin_id.into()],
+        ))
+        .await
+        .map_err(|e| SeedError::Db(e.to_string()))?
+        .is_some();
+    Ok(!tombstoned)
+}
+
+async fn store_builtin_blob(
+    store: &media_store::MediaStore,
+    slug: &str,
+    entry: &ManifestEntry,
+    bytes: &[u8],
+) -> Result<String, SeedError> {
+    let extension = Path::new(&entry.file)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("bin");
+    store
+        .put(
+            "soundscape",
+            &format!("builtin-{slug}-{}", entry.name),
+            extension,
+            bytes,
+        )
+        .await
+        .map(|key| key.as_str().to_owned())
+        .map_err(|e| SeedError::Media(e.to_string()))
+}
+
+async fn insert_builtin_sound(
+    db: &DatabaseConnection,
+    slug: &str,
+    category_id: i64,
+    entry: ManifestEntry,
+    builtin_id: String,
+    key: &str,
+    now: &str,
+) -> Result<(), SeedError> {
+    let name = display_name(&entry.name);
+    let icon_key = crate::icon_defaults::default_icon_key(slug, &name).map(str::to_owned);
+    db.execute(Statement::from_sql_and_values(
+        sea_orm::DatabaseBackend::Sqlite,
+        "INSERT INTO soundscape_sounds (name, category_id, content_type, size_bytes, storage_key, duration_ms, created_at, builtin_id, icon_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        vec![
+            name.into(),
+            category_id.into(),
+            entry.content_type.into(),
+            entry.size.into(),
+            key.into(),
+            entry.duration_ms.into(),
+            now.into(),
+            builtin_id.into(),
+            icon_key.into(),
+        ],
+    ))
+    .await
+    .map_err(|e| SeedError::Db(e.to_string()))?;
     Ok(())
 }
 
