@@ -26,13 +26,15 @@ pub enum ApplicationError {
     Repository(String),
 }
 
+const COVER_PROCESSING_FAILED: &str = "cover processing failed";
+
 impl From<CoverNormalizationError> for ApplicationError {
     fn from(error: CoverNormalizationError) -> Self {
         match error {
             CoverNormalizationError::InvalidPayload => Self::UnsupportedMedia,
             CoverNormalizationError::OutputTooLarge => Self::PayloadTooLarge,
             CoverNormalizationError::WorkerFailed => {
-                Self::Storage("cover processing failed".to_owned())
+                Self::Storage(COVER_PROCESSING_FAILED.to_owned())
             }
             CoverNormalizationError::Busy => Self::Busy,
         }

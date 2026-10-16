@@ -24,8 +24,10 @@ const NORMALIZATION_ADMISSION_WAIT: std::time::Duration = std::time::Duration::f
 // Waiters hold the request body in memory, so only a few may queue.
 const MAX_ADMISSION_WAITERS: usize = 4;
 static ADMISSION_WAITERS: AtomicUsize = AtomicUsize::new(0);
+// Decoding and encoding are CPU- and memory-heavy: one image at a time.
+const CONCURRENT_NORMALIZATIONS: usize = 1;
 static NORMALIZATION_WORKER: LazyLock<Arc<tokio::sync::Semaphore>> =
-    LazyLock::new(|| Arc::new(tokio::sync::Semaphore::new(1)));
+    LazyLock::new(|| Arc::new(tokio::sync::Semaphore::new(CONCURRENT_NORMALIZATIONS)));
 
 #[cfg(test)]
 pub(crate) static NORMALIZATION_TEST_LOCK: LazyLock<tokio::sync::Mutex<()>> =
