@@ -432,7 +432,7 @@ async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditation {
     // A ready Ogg-Opus-shaped blob the fakes accept.
     let mut bytes = b"OggS".to_vec();
     bytes.extend_from_slice(b"....OpusHead-payload-for-tests");
-    crate::handlers_audio::upload_for_tests(&app.state, &app.store, bytes).await
+    crate::audio_upload::upload_for_tests(&app.state, &app.store, bytes).await
 }
 
 /// Builds a multipart body from `(field name, filename, bytes)` triples; an

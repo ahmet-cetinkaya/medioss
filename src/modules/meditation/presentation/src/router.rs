@@ -8,14 +8,32 @@
 use std::sync::Arc;
 
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{delete, get, post, put},
     Router,
 };
+use meditation_application::commands::{MAX_COVER_BYTES, MAX_UPLOAD_BYTES};
 use meditation_application::ports::{
     AudioValidator, BlobStore, CategoryRepository, Clock, CoverValidator, MeditationRepository,
     MembershipRepository, NoteRepository, OpusConverter, PlaybackStateRepository,
     ProgramRepository, SessionRepository,
 };
+
+use crate::audio_stream::{audio, download};
+use crate::audio_upload::upload;
+use crate::categories::{
+    assign_category, categories, create_category, delete_category, rename_category,
+};
+use crate::handlers_notes::{create_note, delete_note, notes, update_note};
+use crate::handlers_playback::{completion, playback_state, position, set_completed};
+use crate::handlers_statistics::statistics;
+use crate::meditations::{
+    daily_suggestion, delete_meditation, library, meditation, update_description,
+};
+use crate::program_activity::{continue_program, recent_programs};
+use crate::program_cover::{cover, replace_cover};
+use crate::program_members::{add_member, program_members, remove_member, update_order};
+use crate::programs::{create_program, delete_program, program, programs, update_program};
 
 /// Everything a handler needs, injected by web-api's composition root as
 /// trait objects (all ports are object-safe through async_trait).
@@ -37,117 +55,122 @@ pub struct MeditationDependencies {
 
 pub type SharedDependencies = Arc<MeditationDependencies>;
 
+/// Headroom above a payload cap for the multipart envelope around the file.
+const MULTIPART_OVERHEAD_BYTES: usize = 1024 * 1024;
+
 /// The meditation HTTP surface (plan D5). Every route is authenticated;
 /// content-management routes are admin-gated through the
 /// [`AdminActor`] extractor.
 pub fn meditation_router() -> Router<SharedDependencies> {
+    Router::new()
+        .merge(audio_routes())
+        .merge(category_routes())
+        .merge(program_routes())
+        .merge(program_member_routes())
+        .merge(program_cover_routes())
+        .merge(meditation_routes())
+        .merge(playback_routes())
+        .merge(note_routes())
+}
+
+fn audio_routes() -> Router<SharedDependencies> {
     Router::new()
         // The extractor-level default body limit (2MB) would reject large
         // uploads before the handler's own streamed cap ever runs; the
         // upload route owns its limit (spec FR-002/003).
         .route(
             "/meditation/audio",
-            post(crate::handlers_audio::upload).layer(axum::extract::DefaultBodyLimit::max(
-                meditation_application::commands::MAX_UPLOAD_BYTES + 1024 * 1024,
+            post(upload).layer(DefaultBodyLimit::max(
+                MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES,
             )),
         )
-        .route("/meditation/library", get(crate::handlers_audio::library))
+        .route("/meditation/{id}/audio", get(audio))
+        .route("/meditation/{id}/download", get(download))
+}
+
+fn category_routes() -> Router<SharedDependencies> {
+    Router::new()
         .route(
             "/meditation/categories",
-            get(crate::handlers_programs::categories)
-                .post(crate::handlers_programs::create_category),
+            get(categories).post(create_category),
         )
         .route(
             "/meditation/categories/{id}",
-            put(crate::handlers_programs::rename_category)
-                .delete(crate::handlers_programs::delete_category),
+            put(rename_category).delete(delete_category),
         )
+        .route("/meditation/programs/{id}/category", put(assign_category))
+}
+
+fn program_routes() -> Router<SharedDependencies> {
+    Router::new()
         .route(
             "/meditation/programs",
-            get(crate::handlers_programs::programs)
-                .post(crate::handlers_programs::create_program)
-                .layer(axum::extract::DefaultBodyLimit::max(
-                    meditation_application::commands::MAX_COVER_BYTES + 1024 * 1024,
+            get(programs)
+                .post(create_program)
+                .layer(DefaultBodyLimit::max(
+                    MAX_COVER_BYTES + MULTIPART_OVERHEAD_BYTES,
                 )),
-        )
-        .route(
-            "/meditation/continue",
-            get(crate::handlers_programs::continue_program),
-        )
-        .route(
-            "/meditation/recent-programs",
-            get(crate::handlers_programs::recent_programs),
-        )
-        .route(
-            "/meditation/statistics",
-            get(crate::handlers_statistics::statistics),
-        )
-        .route(
-            "/meditation/daily-suggestion",
-            get(crate::handlers_audio::daily_suggestion),
         )
         .route(
             "/meditation/programs/{id}",
-            get(crate::handlers_programs::program)
-                .put(crate::handlers_programs::update_program)
-                .delete(crate::handlers_programs::delete_program),
+            get(program).put(update_program).delete(delete_program),
         )
-        .route(
-            "/meditation/programs/{id}/cover",
-            get(crate::handlers_programs::cover)
-                .put(crate::handlers_programs::replace_cover)
-                .layer(axum::extract::DefaultBodyLimit::max(
-                    meditation_application::commands::MAX_COVER_BYTES + 1024 * 1024,
-                )),
-        )
+        .route("/meditation/continue", get(continue_program))
+        .route("/meditation/recent-programs", get(recent_programs))
+}
+
+fn program_member_routes() -> Router<SharedDependencies> {
+    Router::new()
         .route(
             "/meditation/programs/{id}/members",
-            get(crate::handlers_programs::program_members)
-                .post(crate::handlers_programs::add_member),
+            get(program_members).post(add_member),
         )
         .route(
             "/meditation/programs/{id}/meditations/order",
-            put(crate::handlers_programs::update_order),
+            put(update_order),
         )
         .route(
             "/meditation/programs/{id}/members/{meditation_id}",
-            delete(crate::handlers_programs::remove_member),
+            delete(remove_member),
         )
-        .route(
-            "/meditation/programs/{id}/category",
-            put(crate::handlers_programs::assign_category),
-        )
-        .route(
-            "/meditation/meditations/{id}",
-            put(crate::handlers_audio::update_description),
-        )
+}
+
+fn program_cover_routes() -> Router<SharedDependencies> {
+    Router::new().route(
+        "/meditation/programs/{id}/cover",
+        get(cover).put(replace_cover).layer(DefaultBodyLimit::max(
+            MAX_COVER_BYTES + MULTIPART_OVERHEAD_BYTES,
+        )),
+    )
+}
+
+fn meditation_routes() -> Router<SharedDependencies> {
+    Router::new()
+        .route("/meditation/library", get(library))
+        .route("/meditation/statistics", get(statistics))
+        .route("/meditation/daily-suggestion", get(daily_suggestion))
+        .route("/meditation/meditations/{id}", put(update_description))
         .route(
             "/meditation/{id}",
-            get(crate::handlers_audio::meditation).delete(crate::handlers_audio::delete_meditation),
+            get(meditation).delete(delete_meditation),
         )
-        .route("/meditation/{id}/audio", get(crate::handlers_audio::audio))
-        .route(
-            "/meditation/{id}/download",
-            get(crate::handlers_audio::download),
-        )
+}
+
+fn playback_routes() -> Router<SharedDependencies> {
+    Router::new()
         .route(
             "/meditation/{id}/playback-state",
-            get(crate::handlers_playback::playback_state).post(crate::handlers_playback::position),
+            get(playback_state).post(position),
         )
-        .route(
-            "/meditation/{id}/completion",
-            post(crate::handlers_playback::completion),
-        )
-        .route(
-            "/meditation/{id}/completed",
-            put(crate::handlers_playback::set_completed),
-        )
-        .route(
-            "/meditation/{id}/notes",
-            get(crate::handlers_notes::notes).post(crate::handlers_notes::create_note),
-        )
+        .route("/meditation/{id}/completion", post(completion))
+        .route("/meditation/{id}/completed", put(set_completed))
+}
+
+fn note_routes() -> Router<SharedDependencies> {
+    Router::new()
+        .route("/meditation/{id}/notes", get(notes).post(create_note))
         .route(
             "/meditation/{id}/notes/{note_id}",
-            put(crate::handlers_notes::update_note).delete(crate::handlers_notes::delete_note),
+            put(update_note).delete(delete_note),
         )
 }
