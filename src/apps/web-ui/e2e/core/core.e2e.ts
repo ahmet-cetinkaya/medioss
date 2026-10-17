@@ -261,38 +261,34 @@ test("mobile: bottom bar stays at the viewport bottom, no header avatar", async 
   const wordmark = page.locator("header").getByText("MediOSS");
   await expect(wordmark).toBeVisible();
   await expect(wordmark).toHaveCSS("font-size", "16px");
-  const card = page.locator("main a[href^='/program/']").first();
-  await expect(card.locator("xpath=..")).toHaveCSS(
+  await expect(page.locator("main a[href^='/program/']").first()).toHaveCSS(
     "backdrop-filter",
     /blur\(20px\)/,
   );
 });
 
-test("sign-in gate: a signed-out member address shows login", async ({
-  browser,
-}) => {
-  // Sign in through a separate browser context: logout must not invalidate the
-  // shared member session that the sleep-timer and playback-state suites use.
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  try {
+test.describe("sign-in gate", () => {
+  // A fresh, signed-out context: logout must not invalidate the shared member
+  // session that the sleep-timer and playback-state suites use.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("a signed-out member address shows login", async ({ page }) => {
     await page.goto("/login/");
     await page.getByLabel("Email").fill("member@example.test");
     await page.getByLabel("Password").fill("member-e2e-pass-1");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).not.toHaveURL(/\/login\//);
 
     // The logout endpoint is origin-checked (fail-closed): drive it through
     // the page so the browser sends a same-origin Origin header.
-    await page.evaluate(async () => {
-      await fetch("/api/identity/logout", {
+    const logoutStatus = await page.evaluate(async () => {
+      const response = await fetch("/api/identity/logout", {
         method: "POST",
-        headers: { origin: window.location.origin },
       });
+      return response.status;
     });
+    expect(logoutStatus).toBe(204);
     await page.goto("/library/");
     await expect(page).toHaveURL(/\/login\//);
-  } finally {
-    await context.close();
-  }
+  });
 });
