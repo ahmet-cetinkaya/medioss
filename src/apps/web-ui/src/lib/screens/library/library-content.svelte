@@ -134,7 +134,7 @@
   // width and pack from the left, so a short row never stretches. Negative
   // margin + padding keep focus rings and elevation unclipped.
   const rowClass =
-    "-mx-2 flex snap-x snap-proximity gap-4 overflow-x-auto px-2 py-2";
+    "-mx-2 flex scroll-px-2 snap-x snap-proximity gap-4 overflow-x-auto px-2 py-2";
   const itemClass = "w-48 shrink-0 snap-start";
 
   // Browsers skip scrolling a partly visible focus target, so a Tab into a

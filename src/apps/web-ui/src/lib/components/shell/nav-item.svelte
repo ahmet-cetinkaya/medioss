@@ -69,7 +69,13 @@
       {label}
     </span>
   {:else}
-    <span class="min-w-0 wrap-anywhere">{label}</span>
+    <!-- The bar's labels are single short words: keep them whole (shrink, never
+         split mid-word); the other variants may wrap at spaces only. -->
+    <span
+      class={variant === "bar"
+        ? "min-w-0 text-[0.625rem]"
+        : "min-w-0 wrap-anywhere"}>{label}</span
+    >
   {/if}
 {/snippet}
 

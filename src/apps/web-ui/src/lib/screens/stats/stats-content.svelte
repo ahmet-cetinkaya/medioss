@@ -173,7 +173,7 @@
               role="region"
               aria-label={t(m.heatmapLabel)}
               tabindex="0"
-              class="overflow-x-auto rounded-tile p-1 focus-visible:outline-2 focus-visible:outline-accent-strong"
+              class="overflow-x-auto rounded-md p-1.5 focus-visible:outline-2 focus-visible:outline-accent-strong"
             >
               <div class="flex w-max flex-col gap-3">
                 <div class="grid grid-flow-col grid-rows-7 gap-1">
