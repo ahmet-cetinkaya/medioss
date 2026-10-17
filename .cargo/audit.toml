@@ -1,0 +1,7 @@
+[advisories]
+ignore = [
+  # rsa 0.9.10 (Marvin timing attack, no fix released). It is in Cargo.lock only via
+  # sqlx-macros-core -> sqlx-mysql, an optional MySQL backend that sqlx's macro crate lists
+  # for every build. MediOSS uses SQLite only; `cargo tree -i rsa` shows rsa is not compiled.
+  "RUSTSEC-2023-0071",
+]
