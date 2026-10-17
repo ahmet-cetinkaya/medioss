@@ -60,7 +60,7 @@ Settings come from environment variables; [`.env.example`](.env.example) is the 
 | `SESSION_TIMEOUT` | no | `7d` | Session lifetime |
 | `SESSION_COOKIE_SECURE` | no | `true` | Secure cookies need HTTPS; set `false` only for plain-HTTP local use |
 | `MEDIOSS_STATIC_DIR` | no | `src/apps/web-api/static` | Built UI served by the binary |
-| `MEDIOSS_BUILTIN_SOUNDS_DIR` | no | none | Built-in sound set to seed at startup |
+| `MEDIOSS_BUILTIN_SOUNDS_DIR` | no | probed | Built-in sound set; falls back to `/srv/medioss/builtin-sounds`, then `./builtin-sounds` |
 
 The binary also works as an operator CLI: `medioss reset-password <email>` and `medioss clear-throttle <identifier>` read `MEDIOSS_DATA_DIR` and need no running server.
 
