@@ -12,7 +12,7 @@ PRETTIER := bunx --bun prettier
 # $(1) = cargo subcommand line, $(2) = package providing it
 cargo-gate = if cargo $(firstword $(1)) --version >/dev/null 2>&1; then cargo $(1); else nix-shell -p $(2) --run "cargo $(1)"; fi
 
-.PHONY: help format build-ui build-service build dev-ui dev-service dev run lint test docker-build up down restart logs clean
+.PHONY: help format build-ui build-service build dev-ui dev-service dev run lint test docker-build up down restart logs clean demo demo-seed demo-screenshots
 
 help:
 	@printf '%s\n' \
@@ -21,6 +21,7 @@ help:
 		'make build          Build the frontend and release Rust binary' \
 		'make lint           Check formatting, frontend files, Clippy, and boundaries' \
 		'make test           Run frontend and workspace Rust tests' \
+		'make demo           Seed a throwaway instance and write screenshots to docs/screenshots (see docs/demo.md)' \
 		'make docker-build   Build the production Docker image' \
 		'make docker-up      Build and start the Docker Compose service' \
 		'make docker-down    Stop and remove Docker Compose containers' \
@@ -91,6 +92,16 @@ docker-restart:
 	docker compose up -d --build --force-recreate
 docker-logs:
 	docker compose logs -f
+
+# Demo content and screenshots (docs/demo.md). demo-seed and demo-screenshots
+# need a running empty instance on DEMO_PORT and SESSION_SECRET in the environment.
+DEMO_PORT ?= 3917
+demo:
+	./scripts/demo.sh
+demo-seed:
+	cd $(UI_DIR) && E2E_PORT=$(DEMO_PORT) bun demo/seed-demo.ts
+demo-screenshots:
+	cd $(UI_DIR) && E2E_PORT=$(DEMO_PORT) bun demo/screenshots.ts
 
 clean:
 	rm -rf target $(STATIC_DIR) $(UI_DIR)/dist

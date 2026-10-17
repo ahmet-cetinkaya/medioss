@@ -31,4 +31,7 @@ pub enum ConfigError {
 
     #[error("PORT must be a number between 0 and 65535, got `{value}`")]
     InvalidPort { value: String },
+
+    #[error("MEDIOSS_BIND must be an IP address such as 0.0.0.0 or 127.0.0.1, got `{value}`")]
+    InvalidBindHost { value: String },
 }
