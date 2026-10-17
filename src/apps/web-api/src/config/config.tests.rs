@@ -75,6 +75,24 @@ fn port_override_is_respected() {
 }
 
 #[test]
+fn bind_host_defaults_to_all_interfaces() {
+    let config = from_vars(&required_vars(&[])).unwrap();
+    assert_eq!(config.bind_host.to_string(), "0.0.0.0");
+}
+
+#[test]
+fn bind_host_override_is_respected() {
+    let config = from_vars(&required_vars(&[("MEDIOSS_BIND", "127.0.0.1")])).unwrap();
+    assert_eq!(config.bind_host.to_string(), "127.0.0.1");
+}
+
+#[test]
+fn invalid_bind_host_names_the_variable() {
+    let error = from_vars(&required_vars(&[("MEDIOSS_BIND", "localhost")])).unwrap_err();
+    assert!(error.to_string().contains("MEDIOSS_BIND"));
+}
+
+#[test]
 fn invalid_port_names_the_variable() {
     let error = from_vars(&required_vars(&[("PORT", "not-a-port")])).unwrap_err();
 

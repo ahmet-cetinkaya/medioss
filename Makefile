@@ -21,7 +21,7 @@ help:
 		'make build          Build the frontend and release Rust binary' \
 		'make lint           Check formatting, frontend files, Clippy, and boundaries' \
 		'make test           Run frontend and workspace Rust tests' \
-		'make demo            Seed a throwaway instance and write screenshots to docs/screenshots (see docs/demo.md)' \
+		'make demo           Seed a throwaway instance and write screenshots to docs/screenshots (see docs/demo.md)' \
 		'make docker-build   Build the production Docker image' \
 		'make docker-up      Build and start the Docker Compose service' \
 		'make docker-down    Stop and remove Docker Compose containers' \

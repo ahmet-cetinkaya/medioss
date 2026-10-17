@@ -85,7 +85,7 @@ async fn run(cli: Cli, server_config: Option<Config>) {
         fail(with_causes(&err));
     }
 
-    let listener = bind_listener(config.port).await;
+    let listener = bind_listener(config.bind_host, config.port).await;
     let database = web_api::bootstrap::database::open(&config.data_dir.join("medioss.db"))
         .await
         .unwrap_or_else(|err| fail(with_causes(&err)));
@@ -110,8 +110,8 @@ fn init_tracing() {
     tracing_subscriber::fmt().with_env_filter(filter).init();
 }
 
-async fn bind_listener(port: u16) -> tokio::net::TcpListener {
-    let addr = format!("0.0.0.0:{port}");
+async fn bind_listener(host: std::net::IpAddr, port: u16) -> tokio::net::TcpListener {
+    let addr = std::net::SocketAddr::new(host, port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap_or_else(|err| fail(format!("could not bind {addr}: {err}")));

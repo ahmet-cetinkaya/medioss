@@ -113,6 +113,7 @@ Create a `.env` file in the project root:
 # Application
 RUST_LOG=info
 PORT=3000
+# MEDIOSS_BIND=0.0.0.0   # listen address; 127.0.0.1 keeps the server local
 
 # Runtime data (see ARCHITECTURE.md: Runtime Data and Media Security).
 # Everything mutable — the SQLite file and uploaded media — lives under

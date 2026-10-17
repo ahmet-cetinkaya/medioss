@@ -3,7 +3,11 @@
 //! Fail-fast: a missing `MEDIOSS_DATA_DIR` aborts startup rather than silently
 //! writing runtime state into the source tree (docs/ARCHITECTURE.md L359-369).
 
-use std::{path::PathBuf, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    path::PathBuf,
+    time::Duration,
+};
 
 use url::{Position, Url};
 
@@ -19,6 +23,7 @@ pub use session_secret::SessionSecret;
 
 const DATA_DIR_VAR: &str = "MEDIOSS_DATA_DIR";
 const PORT_VAR: &str = "PORT";
+const BIND_HOST_VAR: &str = "MEDIOSS_BIND";
 const STATIC_DIR_VAR: &str = "MEDIOSS_STATIC_DIR";
 const SESSION_SECRET_VAR: &str = "SESSION_SECRET";
 const SESSION_TIMEOUT_VAR: &str = "SESSION_TIMEOUT";
@@ -27,6 +32,8 @@ const DEV_ORIGIN_VAR: &str = "MEDIOSS_DEV_ORIGIN";
 const SESSION_COOKIE_SECURE_VAR: &str = "SESSION_COOKIE_SECURE";
 
 const DEFAULT_PORT: u16 = 3000;
+// All interfaces, so the container's published port reaches the process.
+const DEFAULT_BIND_HOST: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 // Source-relative so `cargo run` from the repo root works without extra setup;
 // the container ships its assets elsewhere and overrides MEDIOSS_STATIC_DIR.
 const DEFAULT_STATIC_DIR: &str = "src/apps/web-api/static";
@@ -75,6 +82,14 @@ pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, Config
         None => DEFAULT_PORT,
     };
 
+    let bind_host = match vars(BIND_HOST_VAR) {
+        Some(value) => value
+            .trim()
+            .parse()
+            .map_err(|_| ConfigError::InvalidBindHost { value })?,
+        None => DEFAULT_BIND_HOST,
+    };
+
     let static_dir = vars(STATIC_DIR_VAR).unwrap_or_else(|| DEFAULT_STATIC_DIR.to_owned());
 
     let session_secret = vars(SESSION_SECRET_VAR)
@@ -106,6 +121,7 @@ pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, Config
 
     Ok(Config {
         data_dir: PathBuf::from(data_dir),
+        bind_host,
         port,
         static_dir: PathBuf::from(static_dir),
         session_secret,

@@ -1,6 +1,6 @@
 # Demo data and screenshots
 
-`make demo` starts a throwaway local instance, fills it with deterministic demo content, and writes PNG screenshots of the main screens to [`docs/screenshots/`](screenshots/). It is local only: nothing is deployed, and the data directory is deleted when the script ends.
+`make demo` starts a throwaway local instance, fills it with deterministic demo content, and writes PNG screenshots of the main screens to [`docs/screenshots/`](screenshots/). It is local only: the server binds to `127.0.0.1` (`MEDIOSS_BIND`), so it is not reachable from other machines, nothing is deployed, and the data directory is deleted when the script ends.
 
 ```bash
 nix develop -c make demo    # NixOS: the dev shell provides Chromium's libraries
