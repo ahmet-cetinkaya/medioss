@@ -1,6 +1,7 @@
 [package]
 name = "identity-infrastructure"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 argon2.workspace = true

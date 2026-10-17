@@ -4,7 +4,6 @@ id: 0009-ui-ux-design
 status: shipped
 capability: web-experience
 created: 2026-10-04
-plan: .agents/plans/ui-ux-design.md
 supersedes:
 ---
 
@@ -443,4 +442,4 @@ As any visitor or user, I want to choose whether the interface is in English or 
 - **Observed blocker:** The existing `GET /api/timeline` cursor cannot be parsed after the first page because its RFC 3339 timestamp contains colons, while the server splits the cursor at the first colon. Its continuation comparison also follows the wrong direction for the endpoint's descending sort order. A real second page therefore returns HTTP 400.
 - **Impact:** The approved UI-only implementation cannot satisfy History pagination against the real API. The History UI preserves the received cursor and de-duplicates appended records, but cannot repair an invalid backend cursor.
 - **Proposed resolution:** Make the smallest compatible backend bug fix: parse the unchanged `RFC3339:TimelineKind:id` cursor from the right and retain only records strictly after the cursor in the actual descending order. A scoped implementation and owning-router regression test exist in an isolated local worktree but have not been applied to this working tree.
-- **Status:** **resolved 2026-10-04.** The owner approved the minimal backend repair (cursor parsed from the right; continuation follows the endpoint's descending order). Applied in `src/modules/mood-tracker/presentation/src/router.rs` with a router regression test in `router.tests.rs`. History load-more verified against the real server: `.agents/evidence/ui-ux-design/T22/e2e-cursor-fix.log` (32 passed).
+- **Status:** **resolved 2026-10-04.** The owner approved the minimal backend repair (cursor parsed from the right; continuation follows the endpoint's descending order). Applied in `src/modules/mood-tracker/presentation/src/router.rs` with a router regression test in `router.tests.rs`. History load-more verified against the real server: an end-to-end run (32 passed).

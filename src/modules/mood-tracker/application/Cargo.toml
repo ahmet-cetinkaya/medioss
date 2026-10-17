@@ -1,6 +1,7 @@
 [package]
 name = "mood-tracker-application"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 async-trait.workspace = true

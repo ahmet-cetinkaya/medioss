@@ -1,0 +1,21 @@
+MediOSS
+Copyright (C) Ahmet Çetinkaya and MediOSS contributors
+
+MediOSS is licensed under the GNU Affero General Public License, version 3 or
+later (see LICENSE).
+
+Third-party works NOT covered by the AGPL
+-----------------------------------------
+The built-in ambient sound files in assets/sounds/soundscape-builtin/ come from
+the Moodist project (https://github.com/remvze/moodist). Moodist states that
+they are subject to the Pixabay Content License or CC0, without a per-file
+list. They are not licensed under the AGPL. See
+assets/sounds/soundscape-builtin/LICENSE for the details and open questions.
+
+Other bundled software
+----------------------
+- Dependencies keep their own licenses (Cargo.lock and
+  src/apps/web-ui/bun.lock list them).
+- @fontsource/poppins is licensed under the SIL Open Font License 1.1.
+- The Docker image installs FFmpeg from Debian as a separate program. It is
+  not linked into MediOSS and keeps its own license.

@@ -102,7 +102,7 @@ Avatars are user-uploaded image files (jpg/png/webp, ≤ 2 MB), resized server-s
 
 - Avatar source: user file upload only (jpg/png/webp, 2 MB cap, server-side ~256 px normalize) — user decision over a built-in set or both.
 - Visibility: owner's own UI (header, settings) + the admin user list; never member-to-member.
-- Numbering: this is `0007`, not the provisional "0008" from `.agents/spec-gap-analysis.md`; spec 0007's originally-sketched scope (lifecycle) joined spec 0004 instead, freeing the number.
+- Numbering: this is `0007`, not the provisional "0008" from an earlier internal gap analysis; spec 0007's originally-sketched scope (lifecycle) joined spec 0004 instead, freeing the number.
 
 ## Deviations
 

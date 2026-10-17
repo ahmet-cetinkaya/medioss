@@ -158,7 +158,7 @@ Two constraints are worth calling out, because breaking them produces confusing 
 
 ### Docker Compose Setup
 
-The stack is defined in [`docker-compose.yml`](../docker-compose.yml) at the repository root, and `make up` / `make down` drive it. It declares one service and one named volume.
+The stack is defined in [`docker-compose.yml`](../docker-compose.yml) at the repository root, and `make docker-up` / `make docker-down` drive it. It declares one service and one named volume.
 
 The service builds the image from the `Dockerfile` above, publishes the app on port 3000, restarts unless you stop it explicitly, and polls `/api/health` so an unhealthy container is visible in `docker ps` rather than silently serving errors. Its environment sets `MEDIOSS_DATA_DIR` to the mount point and passes required `SESSION_SECRET` and `MEDIOSS_ORIGIN` values through from your shell or the `.env` file described above; the secret is never baked into the image or committed. Session timeout and secure-cookie settings retain their documented defaults unless explicitly overridden.
 

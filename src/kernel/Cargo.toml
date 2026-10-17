@@ -1,5 +1,6 @@
 [package]
 name = "kernel"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
