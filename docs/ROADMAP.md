@@ -44,7 +44,7 @@ First real module; every later module depends on its `Actor` context. Delivered 
 - `kernel` gains `UserId`, `Actor`, `Role` (its first legitimate tenants)
 - `web-api` middleware: session → `Actor` in request extensions
 - First-run flow: instance starts with an admin account setup
-- CLI operator recovery: `medioss admin reset-password <email>` works against the local database without a running server (PRD: Operator Recovery)
+- CLI operator recovery: `medioss reset-password <email>` works against the local database without a running server (PRD: Operator Recovery)
 - Rate limiting on login attempts
 - Session timeout from `SESSION_TIMEOUT`
 

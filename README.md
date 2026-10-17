@@ -1,95 +1,85 @@
-# MediOSS Wellness App
+# MediOSS
 
-A self-hosted wellness application supporting mood regulation through meditation and white noise.
+A self-hosted wellness app for calmer days: a meditation library, an ambient soundscape mixer and a mood tracker, behind one account on your own server. Your data stays in one SQLite file that you control.
 
-## 🎯 Vision
+[![CI](https://github.com/ahmet-cetinkaya/medioss/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmet-cetinkaya/medioss/actions/workflows/ci.yml) [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
-Provide individuals with a private, self-hosted sanctuary for mental wellness through accessible meditation and ambient soundscapes.
+<p align="center">
+  <img src="docs/screenshots/home-desktop.png" alt="MediOSS home screen on desktop" width="720">
+  <img src="docs/screenshots/home-mobile.png" alt="MediOSS home screen on mobile" width="200">
+</p>
 
-## ✨ Features
+## Features
 
-- **🧘 Meditation Library** - Upload your own guided sessions with progress tracking
-- **🎵 White Noise Player** - Customizable ambient soundscapes
-- **📊 Mood Tracking** - Daily mood logs with trends and insights
-- **🔐 Multi-User** - Accounts with per-user data isolation
-- **🔒 Privacy First** - 100% self-hosted, no third-party dependencies
+- **Meditation library**: upload your own guided sessions, group them in programs with covers, and track your practice
+- **Soundscape mixer**: mix built-in and uploaded ambient sounds and save your mixes
+- **Mood tracking**: daily mood entries with notes, history and statistics
+- **Multi-user**: admin-created accounts with per-user data isolation (no public signup)
+- **Data portability**: export and import your mood and practice data as JSON or CSV
+- **Private by design**: no third-party services, no tracking, no accounts elsewhere
+- **Responsive UI**: mobile-first "Soft Glass" design
 
-## 🚀 Quick Start
+More screens: [library](docs/screenshots/library-desktop.png), [program](docs/screenshots/program-desktop.png), [player](docs/screenshots/player-desktop.png), [soundscape](docs/screenshots/soundscape-desktop.png), [mood](docs/screenshots/mood-desktop.png), [statistics](docs/screenshots/stats-desktop.png).
+
+## Quick start (Docker)
 
 ```bash
 git clone https://github.com/ahmet-cetinkaya/medioss.git
 cd medioss
-
-cp .env.example .env          # then set SESSION_SECRET: openssl rand -base64 32
-make docker-up                # build the image and start it in the background
+cp .env.example .env     # then set SESSION_SECRET: openssl rand -base64 32
+make docker-up           # build the image and start it in the background
 ```
 
-Visit `http://localhost:3000` to access your wellness app. `make docker-logs` follows the container output and `make docker-down` stops it.
+Open `http://localhost:3000` and register the first admin. The first-run setup asks for your `SESSION_SECRET` as proof that you control the host. `.env` ships with `SESSION_COOKIE_SECURE=true`, which needs HTTPS; for a plain-HTTP localhost trial, set it to `false` in `.env`. `make docker-logs` follows the logs and `make docker-down` stops the stack. Details: [Docker guide](docs/docker.md) and [Deployment guide](docs/DEPLOYMENT.md).
 
-`make docker-up` reads `SESSION_SECRET` from your environment or `.env` and refuses to start if it is empty. MediOSS uses it only as the constant-time possession proof that authorizes first-run setup; opaque session cookies contain random server-side IDs and are not signed with this secret.
+## Quick start (development)
 
-## 📋 Documentation
-
-- [Product Requirements Document](docs/PRD.md) - Comprehensive product specification
-- [Technical Architecture](docs/ARCHITECTURE.md) - Rust + Astro system design
-- [Deployment Guide](docs/DEPLOYMENT.md) - Self-hosting instructions
-
-## 🛠️ Tech Stack
-
-- **Backend:** Rust with Axum web framework (performance & safety)
-- **Database:** SQLite with SeaORM (type-safe query builder & migrations)
-- **Frontend:** Astro with TypeScript, Svelte 5 islands for interactivity
-- **Styling:** Tailwind CSS with shadcn-svelte components
-- **Audio:** Web Audio API
-- **Deployment:** Docker & Docker Compose (single binary)
-
-## 🎨 Design Principles
-
-- Calm, minimalist interface
-- Progressive disclosure of features
-- Mobile-first responsive design
-- WCAG 2.1 AA accessibility compliance
-
-## 🚀 Rust Backend Benefits
-
-- **Performance:** Memory-safe with zero-cost abstractions
-- **Safety:** Type-safe queries with SeaORM prevent SQL injection
-- **Deployment:** Single binary, minimal dependencies
-- **Efficiency:** 64-128MB RAM vs 512MB+ for Node.js
-- **Concurrency:** Fearless parallel audio processing
-
-## 📊 Current Status
-
-**Development Status:** Under active development. Identity, meditation library, soundscape mixer, mood tracker and data portability are implemented; see [`docs/ROADMAP.md`](docs/ROADMAP.md) for milestones.
-
-## 🤝 Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). This project aims to provide accessible mental wellness tools with complete user privacy.
-
-## 📄 License
-
-MediOSS is licensed under [AGPL-3.0-or-later](LICENSE). The built-in ambient sounds in `assets/sounds/soundscape-builtin/` are third-party works and are **not** covered by it; see [NOTICE](NOTICE).
-
-## 🙏 Acknowledgments
-
-Built for individuals seeking private, comprehensive wellness tools without subscription costs or data harvesting.
-
-## 🔧 Development
-
-Every workflow goes through the `Makefile`. Use the targets rather than the underlying `cargo` and `npm` commands: they wire up the frontend build and the required environment for you.
+You need Rust (version pinned in `rust-toolchain.toml`), [bun](https://bun.sh) and `ffmpeg` on your PATH.
 
 ```bash
-make run     # build the UI, then serve API + UI from one process on :3000
-make dev     # Astro dev server with hot reload on :4321
+make run     # build the UI, then serve API + UI from one process on :3000 (data in ./.data)
+make dev     # Astro dev server on :4321 with hot reload, plus the API on :3000
 make lint    # prettier, cargo fmt, clippy, boundary check
 make test    # bun test, cargo test --workspace, boundary-check self-test
-make build   # release binary at target/release/medioss, UI bundled in
-make docker-up  # run it in Docker exactly as deployed, on :3000
-make docker-down  # stop and remove the Docker stack
+make demo    # seed a throwaway instance and capture screenshots (see docs/demo.md)
 ```
 
-`make run` is the one to reach for day to day. Running `cargo run -p web-api` directly exits immediately, because `MEDIOSS_DATA_DIR` has no default and the app refuses to start without it; `make run` points it at `./.data` and rebuilds the Astro bundle into the API's static directory first. Override the location with `make run DATA_DIR=/srv/medioss`.
+Run `make` targets rather than raw `cargo` commands: they wire up the frontend build and environment. Running `cargo run -p web-api` directly exits because `MEDIOSS_DATA_DIR` has no default.
 
-For frontend work, run `make dev` for hot reload and `make run` in a second terminal for the API behind it. Two more targets round things out: `make docker-logs` follows the Docker output, and `make format` rewrites Markdown with Prettier and Rust with `cargo fmt`.
+## Configuration
 
-See [`.env.example`](.env.example) for the full environment contract. `MEDIOSS_DATA_DIR`, `SESSION_SECRET` and `MEDIOSS_ORIGIN` are the settings you normally need; the rest have defaults.
+Settings come from environment variables; [`.env.example`](.env.example) is the full contract.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `MEDIOSS_DATA_DIR` | yes | none | Directory for the SQLite database and uploaded media |
+| `SESSION_SECRET` | yes | none | Proof of host control for first-run setup; it does not sign cookies |
+| `MEDIOSS_ORIGIN` | yes | none | The exact URL users open; other origins are rejected for state-changing requests |
+| `PORT` | no | `3000` | Listen port |
+| `MEDIOSS_BIND` | no | `0.0.0.0` | Listen address; use `127.0.0.1` to keep the server local |
+| `SESSION_TIMEOUT` | no | `7d` | Session lifetime |
+| `SESSION_COOKIE_SECURE` | no | `true` | Secure cookies need HTTPS; set `false` only for plain-HTTP local use |
+| `MEDIOSS_DEV_ORIGIN` | no | none | Development only: one extra allowed origin, e.g. the Astro dev server (`make dev` sets it) |
+| `MEDIOSS_STATIC_DIR` | no | `src/apps/web-api/static` | Built UI served by the binary |
+| `MEDIOSS_BUILTIN_SOUNDS_DIR` | no | probed | Built-in sound set; falls back to `/srv/medioss/builtin-sounds`, then `./builtin-sounds` |
+
+The binary also works as an operator CLI: `medioss reset-password <email>` and `medioss clear-throttle <identifier>` read `MEDIOSS_DATA_DIR` and need no running server.
+
+## Tech stack
+
+Rust with Axum and SeaORM on SQLite, shipped as one binary that serves the API and the UI. The frontend is Astro with Svelte 5 islands, Tailwind CSS and shadcn-svelte, with audio through the Web Audio API. The backend is a modular monolith with enforced layer boundaries.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) and [Design system](docs/DESIGN_SYSTEM.md)
+- [Product requirements](docs/PRD.md) and [Roadmap](docs/ROADMAP.md)
+- [Deployment](docs/DEPLOYMENT.md), [Docker](docs/docker.md) and [Demo data](docs/demo.md)
+- [Documentation index](docs/README.md)
+
+## Contributing and security
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+MediOSS is licensed under [AGPL-3.0-or-later](LICENSE). The built-in ambient sounds in `assets/sounds/soundscape-builtin/` are third-party works and are **not** covered by it; see [NOTICE](NOTICE) for these and other bundled components.

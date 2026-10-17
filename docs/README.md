@@ -8,6 +8,8 @@ Welcome to the MediOSS wellness application documentation. This guide will help 
 
 - **[README](../README.md)** - Project overview and quick start guide
 - **[Deployment Guide](./DEPLOYMENT.md)** - Self-hosting instructions and setup
+- **[Docker Guide](./docker.md)** - Run MediOSS with Docker Compose
+- **[Demo data and screenshots](./demo.md)** - Seed a throwaway instance and capture screenshots
 
 ### 📋 Product Documentation
 
@@ -62,5 +64,5 @@ If you want to **understand the product strategy**:
 
 ### Community
 
-- GitHub Issues: [github.com/ahmet-cetinkaya/medioss/issues]
-- Discussions: [github.com/ahmet-cetinkaya/medioss/discussions]
+- GitHub Issues: [github.com/ahmet-cetinkaya/medioss/issues](https://github.com/ahmet-cetinkaya/medioss/issues)
+- Contributing: [CONTRIBUTING.md](../CONTRIBUTING.md); security reports: [SECURITY.md](../SECURITY.md)
