@@ -11,7 +11,7 @@ import { ensureUsers, loginAs, saveStorageState } from "../e2e/support/auth";
 import { baseURL } from "../e2e/support/server-env";
 import {
   DEMO_MIX_NAME,
-  DEMO_PROGRAMS,
+  DEMO_CATEGORIES,
   DEMO_SOUND_CATEGORY,
   DEMO_UPLOADED_SOUNDS,
   MEDITATION_DAYS,
@@ -41,41 +41,62 @@ async function main(): Promise<void> {
   }
 
   const meditationIds: number[] = [];
-  for (const [index, program] of DEMO_PROGRAMS.entries()) {
-    const created = await postMultipart<Id>(admin, "/api/meditation/programs", {
-      title: program.title,
-      description: program.description,
-      cover: {
-        name: "cover.png",
-        mimeType: "image/png",
-        buffer: fs.readFileSync(files.covers[index]),
-      },
+  let coverIndex = 0;
+  for (const demoCategory of DEMO_CATEGORIES) {
+    const category = await postJson<Id>(admin, "/api/meditation/categories", {
+      name: demoCategory.name,
     });
-    for (const name of program.meditations) {
-      const meditation = await postMultipart<Id>(
+    for (const program of demoCategory.programs) {
+      const created = await postMultipart<Id>(
         admin,
-        "/api/meditation/audio",
+        "/api/meditation/programs",
         {
-          name,
-          program_id: String(created.id),
-          file: {
-            name: "tone.mp3",
-            mimeType: "audio/mpeg",
-            buffer: fs.readFileSync(files.tone),
+          title: program.title,
+          description: program.description,
+          cover: {
+            name: "cover.png",
+            mimeType: "image/png",
+            buffer: fs.readFileSync(files.covers[coverIndex]),
           },
         },
       );
-      meditationIds.push(meditation.id);
+      coverIndex += 1;
+      await expectOk(
+        await admin.put(`/api/meditation/programs/${created.id}/category`, {
+          data: { category_id: category.id },
+        }),
+        "assign program category",
+      );
+      for (const name of program.meditations) {
+        const meditation = await postMultipart<Id>(
+          admin,
+          "/api/meditation/audio",
+          {
+            name,
+            program_id: String(created.id),
+            file: {
+              name: "tone.mp3",
+              mimeType: "audio/mpeg",
+              buffer: fs.readFileSync(files.tone),
+            },
+          },
+        );
+        meditationIds.push(meditation.id);
+      }
     }
   }
 
-  const category = await postJson<Id>(admin, "/api/soundscape/categories", {
-    name: DEMO_SOUND_CATEGORY,
-  });
+  const soundCategory = await postJson<Id>(
+    admin,
+    "/api/soundscape/categories",
+    {
+      name: DEMO_SOUND_CATEGORY,
+    },
+  );
   for (const name of DEMO_UPLOADED_SOUNDS) {
     await postMultipart<Sound>(admin, "/api/soundscape/sounds", {
       name,
-      category_id: String(category.id),
+      category_id: String(soundCategory.id),
       file: {
         name: "loop.ogg",
         mimeType: "audio/ogg",
