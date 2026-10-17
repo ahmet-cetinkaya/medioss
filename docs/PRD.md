@@ -9,7 +9,7 @@ MediOSS is a self-hosted wellness application designed to support human mood reg
 - **Self-hosted architecture** - Complete user control over data
 - **Integrated wellness ecosystem** - Three complementary mood regulation tools (meditation, white noise, mood tracking) behind a single account
 - **Privacy-first design** - No third-party tracking or data sharing
-- **Offline functionality** - Core features work without internet connectivity
+- **Offline functionality (planned)** - Core features should work without internet connectivity; not implemented yet
 
 ---
 
@@ -92,7 +92,7 @@ Because MediOSS collects no telemetry (see Non-Goals), success is measured only 
   - Rate limiting on login attempts
   - Optional: two-factor authentication (TOTP)
 - **Operator Recovery**
-  - CLI recovery command runnable by whoever has host access (for example `medioss admin reset-password <email>`), covering the case where the only admin loses their password on a single-user instance
+  - CLI recovery command runnable by whoever has host access (for example `medioss reset-password <email>`), covering the case where the only admin loses their password on a single-user instance
   - Works offline against the local database; requires no running web server and no email infrastructure
 
 #### Technical Requirements
@@ -323,7 +323,7 @@ Three deployment sizes are supported, distinguished by expected concurrent users
 - **Interactivity:** Svelte 5 islands (via `@astrojs/svelte`) with shared runes/nanostores for cross-island state
 - **Styling:** Tailwind CSS
 - **UI Components:** shadcn-svelte (copy-in, accessible component primitives)
-- **Audio:** Howler.js or Web Audio API
+- **Audio:** Web Audio API
 
 #### Backend
 
