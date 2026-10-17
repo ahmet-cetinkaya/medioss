@@ -3,5 +3,6 @@ ignore = [
   # rsa 0.9.10 (Marvin timing attack, no fix released). It is in Cargo.lock only via
   # sqlx-macros-core -> sqlx-mysql, an optional MySQL backend that sqlx's macro crate lists
   # for every build. MediOSS uses SQLite only; `cargo tree -i rsa` shows rsa is not compiled.
+  # Remove when sqlx drops the mysql macro dependency or rsa ships a fix.
   "RUSTSEC-2023-0071",
 ]

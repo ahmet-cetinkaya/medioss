@@ -32,6 +32,14 @@ jobs:
       - name: Dependency advisories
         run: cargo install cargo-audit --version 0.22.2 --locked && cargo audit
 
+      - name: Guard the rsa advisory ignore
+        run: |
+          # .cargo/audit.toml ignores RUSTSEC-2023-0071 only while rsa is not compiled.
+          if [ -n "$(cargo tree --locked --workspace -e normal -i rsa 2>/dev/null)" ]; then
+            echo "rsa is now in the build graph: remove the audit ignore and fix it" >&2
+            exit 1
+          fi
+
       - name: Dependency boundaries
         run: ./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
 
