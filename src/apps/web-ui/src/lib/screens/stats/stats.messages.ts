@@ -10,8 +10,14 @@ export const statsMessages = defineMessages({
   summaryHeading: { en: "Summary", tr: "Özet" },
   totalMinutes: { en: "Total minutes", tr: "Toplam dakika" },
   totalDays: { en: "Total practice days", tr: "Toplam pratik günü" },
-  currentStreak: { en: "Current streak", tr: "Güncel seri" },
-  longestStreak: { en: "Longest streak", tr: "En uzun seri" },
+  currentStreak: {
+    en: "Current streak (all time)",
+    tr: "Güncel seri (tüm zamanlar)",
+  },
+  longestStreak: {
+    en: "Longest streak (all time)",
+    tr: "En uzun seri (tüm zamanlar)",
+  },
   heatmapLabel: {
     en: "Practice calendar, one square per day; scroll sideways for earlier weeks",
     tr: "Pratik takvimi, her gün için bir kare; önceki haftalar için yana kaydırın",

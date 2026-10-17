@@ -218,7 +218,7 @@
                   {#each WEEKDAY_LABEL_ROWS as row (row)}
                     <span
                       aria-hidden="true"
-                      class="col-start-1 self-center"
+                      class="sticky left-0 z-10 col-start-1 self-center bg-surface-solid"
                       style="grid-row-start: {row + 2};"
                     >
                       {weekdayName(row)}
@@ -239,20 +239,20 @@
                     {/each}
                   {/each}
                 </div>
-                <div
-                  class="flex items-center gap-2 ps-10 text-xs text-ink-body"
-                  aria-hidden="true"
-                >
-                  <span>{t(m.heatmapLess)}</span>
-                  {#each levelClasses as levelClass, level (level)}
-                    <span
-                      class="size-4 rounded-[4px] {levelClass}"
-                      data-level={level}
-                    ></span>
-                  {/each}
-                  <span>{t(m.heatmapMore)}</span>
-                </div>
               </div>
+            </div>
+            <div
+              class="mt-3 flex items-center gap-2 ps-12 text-xs text-ink-body"
+              aria-hidden="true"
+            >
+              <span>{t(m.heatmapLess)}</span>
+              {#each levelClasses as levelClass, level (level)}
+                <span
+                  class="size-4 rounded-[4px] {levelClass}"
+                  data-level={level}
+                ></span>
+              {/each}
+              <span>{t(m.heatmapMore)}</span>
             </div>
           </RegionState>
         </Panel>
