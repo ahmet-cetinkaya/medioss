@@ -29,6 +29,9 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: Dependency advisories
+        run: cargo install cargo-audit --locked && cargo audit
+
       - name: Dependency boundaries
         run: ./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
 

@@ -1,6 +1,7 @@
 [package]
 name = "soundscape-presentation"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 axum = { workspace = true, features = ["multipart"] }

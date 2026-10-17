@@ -1,6 +1,7 @@
 [package]
 name = "meditation-application"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 unicode-normalization = "0.1"

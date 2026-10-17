@@ -1,6 +1,7 @@
 [package]
 name = "portability-infrastructure"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 kernel = { path = "../../../kernel" }

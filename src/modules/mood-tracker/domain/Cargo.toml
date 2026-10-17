@@ -1,6 +1,7 @@
 [package]
 name = "mood-tracker-domain"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 chrono.workspace = true

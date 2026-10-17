@@ -1,6 +1,7 @@
 [package]
 name = "media-store"
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 tokio = { workspace = true }
