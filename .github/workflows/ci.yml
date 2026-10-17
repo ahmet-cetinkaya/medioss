@@ -30,7 +30,7 @@ jobs:
         run: cargo test --workspace
 
       - name: Dependency advisories
-        run: cargo install cargo-audit --locked && cargo audit
+        run: cargo install cargo-audit --version 0.22.2 --locked && cargo audit
 
       - name: Dependency boundaries
         run: ./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh

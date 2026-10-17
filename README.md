@@ -81,7 +81,8 @@ Every workflow goes through the `Makefile`. Use the targets rather than the unde
 ```bash
 make run     # build the UI, then serve API + UI from one process on :3000
 make dev     # Astro dev server with hot reload on :4321
-make test    # the same gates CI runs: fmt, clippy, cargo test, boundary check
+make lint    # prettier, cargo fmt, clippy, boundary check
+make test    # bun test, cargo test --workspace, boundary-check self-test
 make build   # release binary at target/release/medioss, UI bundled in
 make docker-up  # run it in Docker exactly as deployed, on :3000
 make docker-down  # stop and remove the Docker stack
