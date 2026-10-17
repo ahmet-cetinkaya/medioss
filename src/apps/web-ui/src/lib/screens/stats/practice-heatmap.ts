@@ -6,8 +6,8 @@ import type { StatisticsDay } from "../../api/meditation-types";
 
 export const HEATMAP_LEVELS = 4;
 const DAYS_PER_WEEK = 7;
-const MIN_WEEKS = 12;
-const MAX_WEEKS = 53;
+export const MIN_WEEKS = 26;
+export const MAX_WEEKS = 52;
 
 export type HeatmapCell = {
   date: string;
@@ -35,41 +35,42 @@ export function heatmapLevel(minutes: number, maxMinutes: number): number {
   return Math.max(1, Math.ceil((minutes / maxMinutes) * HEATMAP_LEVELS));
 }
 
+/** Weeks that fit `availableWidth` px at `pitch` px per column, clamped to the supported span. */
+export function weeksThatFit(availableWidth: number, pitch: number): number {
+  const fit = Math.floor(availableWidth / pitch);
+  return Math.min(MAX_WEEKS, Math.max(MIN_WEEKS, fit));
+}
+
 /**
- * Weeks covering `[start, end]`. The window is the last 30 days for "last30",
- * today only for "today", otherwise from the first practice day (at least
- * MIN_WEEKS, at most MAX_WEEKS back).
+ * Weeks covering the range, newest last. "last30" is the last 30 days and
+ * "today" a single cell; "all" is `weeks` whole weeks ending with the current one.
  */
 export function buildHeatmap(
   calendar: readonly StatisticsDay[],
   range: "today" | "last30" | "all",
   today: string,
+  weeks: number = MAX_WEEKS,
 ): HeatmapWeek[] {
   const end = parseIso(today);
   const minutesByDate = new Map(calendar.map((d) => [d.date, d.minutes]));
   const maxMinutes = Math.max(0, ...calendar.map((d) => d.minutes));
 
-  let start: Date;
-  if (range === "today") start = end;
-  else if (range === "last30") start = addDays(end, -29);
-  else {
-    const first = calendar.map((d) => d.date).sort()[0];
-    const earliest = addDays(end, -(MAX_WEEKS * DAYS_PER_WEEK - 1));
-    const floor = addDays(end, -(MIN_WEEKS * DAYS_PER_WEEK - 1));
-    const wanted = first ? parseIso(first) : floor;
-    start = new Date(
-      Math.max(earliest.getTime(), Math.min(wanted.getTime(), floor.getTime())),
-    );
-  }
+  const gridEnd = addDays(end, -weekdayIndex(end));
+  const start =
+    range === "today"
+      ? end
+      : range === "last30"
+        ? addDays(end, -29)
+        : addDays(gridEnd, -(weeks - 1) * DAYS_PER_WEEK);
 
   const gridStart = addDays(start, -weekdayIndex(start));
-  const weeks: HeatmapWeek[] = [];
+  const grid: HeatmapWeek[] = [];
   for (
     let cursor = gridStart;
     cursor <= end;
     cursor = addDays(cursor, DAYS_PER_WEEK)
   ) {
-    weeks.push(
+    grid.push(
       Array.from({ length: DAYS_PER_WEEK }, (_, offset) => {
         const day = addDays(cursor, offset);
         if (day < start || day > end) return null;
@@ -79,5 +80,21 @@ export function buildHeatmap(
       }),
     );
   }
-  return weeks;
+  return grid;
+}
+
+export type MonthMark = { column: number; date: string };
+
+/** The first week column of each calendar month, for labels above the grid. */
+export function monthMarks(grid: readonly HeatmapWeek[]): MonthMark[] {
+  const marks: MonthMark[] = [];
+  let previousMonth = "";
+  grid.forEach((week, column) => {
+    const first = week.find((cell) => cell !== null);
+    if (!first) return;
+    const month = first.date.slice(0, 7);
+    if (month !== previousMonth) marks.push({ column, date: first.date });
+    previousMonth = month;
+  });
+  return marks;
 }

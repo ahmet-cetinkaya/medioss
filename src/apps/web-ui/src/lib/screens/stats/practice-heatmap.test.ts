@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { buildHeatmap, heatmapLevel, HEATMAP_LEVELS } from "./practice-heatmap";
+import {
+  buildHeatmap,
+  heatmapLevel,
+  HEATMAP_LEVELS,
+  monthMarks,
+  weeksThatFit,
+} from "./practice-heatmap";
 
 describe("heatmapLevel", () => {
   test("zero minutes is level 0", () => {
@@ -37,14 +43,25 @@ describe("buildHeatmap", () => {
     ).toEqual([{ date: today, minutes: 5, level: HEATMAP_LEVELS }]);
   });
 
-  test("all time covers at least 12 weeks and reaches the first practice day", () => {
-    expect(cells(buildHeatmap([], "all", today))).toHaveLength(84);
-    const old = buildHeatmap(
-      [{ date: "2025-12-01", minutes: 10 }],
-      "all",
-      today,
-    );
-    expect(cells(old)[0]?.date).toBe("2025-12-01");
+  test("all time is the requested number of whole weeks ending with the current one", () => {
+    const weeks = buildHeatmap([], "all", today, 30);
+    expect(weeks).toHaveLength(30);
+    expect(weeks.at(-1)?.[5]?.date).toBe(today);
+    expect(weeks.at(-1)?.[6]).toBeNull();
+  });
+
+  test("weeksThatFit clamps to 26..52", () => {
+    expect(weeksThatFit(100, 20)).toBe(26);
+    expect(weeksThatFit(800, 20)).toBe(40);
+    expect(weeksThatFit(5000, 20)).toBe(52);
+  });
+
+  test("monthMarks labels each new month once", () => {
+    const marks = monthMarks(buildHeatmap([], "last30", today));
+    expect(marks.map((m) => m.date.slice(0, 7))).toEqual([
+      "2026-09",
+      "2026-10",
+    ]);
   });
 
   test("minutes land on their day and scale by the busiest day", () => {

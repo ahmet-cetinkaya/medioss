@@ -156,11 +156,28 @@ function hslToHex(hue: number, saturation: number, lightness: number): string {
   return `0x${channel(0)}${channel(8)}${channel(4)}`;
 }
 
-/** A multi-stop gradient whose hues are unique per program index. */
+const MUDDY_HUE_FROM = 38;
+const MUDDY_HUE_TO = 98;
+const COVER_SATURATION = 0.72;
+const COVER_LIGHTNESS = 0.5;
+const COVER_HUE_STEP_DEGREES = 34;
+
+/** Olive and mustard mixes read as mud: move those hues to clean orange or lime. */
+function avoidMuddyHue(hue: number): number {
+  if (hue < MUDDY_HUE_FROM || hue > MUDDY_HUE_TO) return hue;
+  const middle = (MUDDY_HUE_FROM + MUDDY_HUE_TO) / 2;
+  return hue < middle ? MUDDY_HUE_FROM - 8 : MUDDY_HUE_TO + 8;
+}
+
+/** A saturated multi-stop gradient whose hues are unique per program index. */
 export function gradientSource(index: number): string {
   const baseHue = (index * GOLDEN_ANGLE_DEGREES) % 360;
   const colors = Array.from({ length: COVER_COLOR_STOPS }, (_, stop) =>
-    hslToHex((baseHue + stop * 38) % 360, 0.7, 0.42 + stop * 0.07),
+    hslToHex(
+      avoidMuddyHue((baseHue + stop * COVER_HUE_STEP_DEGREES) % 360),
+      COVER_SATURATION,
+      COVER_LIGHTNESS,
+    ),
   );
   const options = colors.map((color, stop) => `c${stop}=${color}`).join(":");
   return `gradients=s=800x450:${options}:nb_colors=${COVER_COLOR_STOPS}:seed=${index + 1}:speed=0:type=linear`;

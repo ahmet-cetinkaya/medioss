@@ -25,7 +25,7 @@
   import { formatNumber } from "$lib/i18n/formatting/number-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
   import { ROUTES } from "$lib/navigation/routes";
-  import { buildHeatmap } from "./practice-heatmap";
+  import { buildHeatmap, monthMarks, weeksThatFit } from "./practice-heatmap";
   import { statsMessages as m } from "./stats.messages";
 
   let range = $state<StatisticsRange>("all");
@@ -79,9 +79,33 @@
     const pad = (value: number) => String(value).padStart(2, "0");
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   };
+  // Cell 20px + gap 4px per week column; the label column is 2.5rem wide.
+  const CELL_PITCH_PX = 24;
+  const LABEL_COLUMN_PX = 48;
+  let heatmapWidth = $state(0);
   const weeks = $derived(
-    statistics ? buildHeatmap(statistics.calendar, range, localToday()) : [],
+    statistics
+      ? buildHeatmap(
+          statistics.calendar,
+          range,
+          localToday(),
+          weeksThatFit(heatmapWidth - LABEL_COLUMN_PX, CELL_PITCH_PX),
+        )
+      : [],
   );
+  const marks = $derived(monthMarks(weeks));
+  const monthName = (date: string) =>
+    formatCalendarDay(date, locale.current, { month: "short" });
+  // 2024-01-01 is a Monday; Monday, Wednesday, Friday label rows 1, 3, 5.
+  const WEEKDAY_LABEL_ROWS = [0, 2, 4];
+  const weekdayName = (row: number) =>
+    formatCalendarDay(`2024-01-0${row + 1}`, locale.current, {
+      weekday: "short",
+    });
+  // Newest week at the right edge: start scrolled to the end.
+  const scrollToNewest = (node: HTMLElement) => {
+    node.scrollLeft = node.scrollWidth;
+  };
   const levelClasses = [
     "bg-surface-solid/50 ring-1 ring-inset ring-ink-muted/25",
     "bg-accent-fill/25",
@@ -173,10 +197,33 @@
               role="region"
               aria-label={t(m.heatmapLabel)}
               tabindex="0"
+              bind:clientWidth={heatmapWidth}
+              use:scrollToNewest
               class="overflow-x-auto rounded-md p-1.5 focus-visible:outline-2 focus-visible:outline-accent-strong"
             >
               <div class="flex w-max flex-col gap-3">
-                <div class="grid grid-flow-col grid-rows-7 gap-1">
+                <div
+                  class="grid gap-1 text-xs text-ink-body"
+                  style="grid-template-columns: 2.5rem repeat({weeks.length}, 1.25rem); grid-template-rows: 1rem repeat(7, 1.25rem);"
+                >
+                  {#each marks as mark (mark.column)}
+                    <span
+                      aria-hidden="true"
+                      class="row-start-1 whitespace-nowrap"
+                      style="grid-column-start: {mark.column + 2};"
+                    >
+                      {monthName(mark.date)}
+                    </span>
+                  {/each}
+                  {#each WEEKDAY_LABEL_ROWS as row (row)}
+                    <span
+                      aria-hidden="true"
+                      class="col-start-1 self-center"
+                      style="grid-row-start: {row + 2};"
+                    >
+                      {weekdayName(row)}
+                    </span>
+                  {/each}
                   {#each weeks as week, weekIndex (weekIndex)}
                     {#each week as cell, dayIndex (dayIndex)}
                       {#if cell}
@@ -184,18 +231,16 @@
                           role="img"
                           aria-label={cellLabel(cell.date, cell.minutes)}
                           title={cellLabel(cell.date, cell.minutes)}
-                          class="size-4 rounded-[4px] {levelClasses[
-                            cell.level
-                          ]}"
+                          class="rounded-[4px] {levelClasses[cell.level]}"
+                          style="grid-column-start: {weekIndex +
+                            2}; grid-row-start: {dayIndex + 2};"
                         ></div>
-                      {:else}
-                        <div class="size-4" aria-hidden="true"></div>
                       {/if}
                     {/each}
                   {/each}
                 </div>
                 <div
-                  class="flex items-center gap-2 text-xs text-ink-body"
+                  class="flex items-center gap-2 ps-10 text-xs text-ink-body"
                   aria-hidden="true"
                 >
                   <span>{t(m.heatmapLess)}</span>
