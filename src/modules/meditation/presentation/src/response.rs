@@ -43,10 +43,10 @@ impl ApiError {
     }
 }
 
-/// Maps application errors onto the API contract (404 stays generic, no
-/// internal detail leaks).
-pub fn application_error_response(error: ApplicationError) -> Response {
-    let status = match &error {
+/// Maps application errors (including every cover normalizer outcome) onto
+/// HTTP statuses.
+pub(crate) fn status_for(error: &ApplicationError) -> StatusCode {
+    match error {
         ApplicationError::UnsupportedMedia => StatusCode::UNSUPPORTED_MEDIA_TYPE,
         ApplicationError::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
         ApplicationError::Busy => StatusCode::SERVICE_UNAVAILABLE,
@@ -58,7 +58,13 @@ pub fn application_error_response(error: ApplicationError) -> Response {
         ApplicationError::Storage(_) | ApplicationError::Repository(_) => {
             StatusCode::INTERNAL_SERVER_ERROR
         }
-    };
+    }
+}
+
+/// Maps application errors onto the API contract (404 stays generic, no
+/// internal detail leaks).
+pub fn application_error_response(error: ApplicationError) -> Response {
+    let status = status_for(&error);
     let message = match &error {
         ApplicationError::Repository(_) | ApplicationError::Storage(_) => {
             "internal error".to_owned()
@@ -105,3 +111,7 @@ pub fn ensure_browser_origin(headers: &HeaderMap, expected: &str) -> Result<(), 
     }
     Err(ApiError::StatusCode(StatusCode::FORBIDDEN))
 }
+
+#[cfg(test)]
+#[path = "response.tests.rs"]
+mod tests;

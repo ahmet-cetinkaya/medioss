@@ -140,7 +140,10 @@ export function serverReason(
     return { reason: "reorderMismatch" };
   if (action === "profile.avatar" && status === 413)
     return { reason: "avatarTooLarge" };
-  if (action === "profile.avatar" && message === "profile payload is invalid")
+  if (
+    action === "profile.avatar" &&
+    (status === 415 || message === "profile payload is invalid")
+  )
     return { reason: "avatarInvalid" };
 
   if (

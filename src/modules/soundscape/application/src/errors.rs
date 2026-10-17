@@ -23,13 +23,15 @@ pub enum ApplicationError {
     Repository(String),
 }
 
+const ICON_PROCESSING_FAILED: &str = "icon processing failed";
+
 impl From<ImageNormalizationError> for ApplicationError {
     fn from(error: ImageNormalizationError) -> Self {
         match error {
             ImageNormalizationError::InvalidPayload => Self::UnsupportedMedia,
             ImageNormalizationError::OutputTooLarge => Self::PayloadTooLarge,
             ImageNormalizationError::WorkerFailed => {
-                Self::Storage("icon processing failed".to_owned())
+                Self::Storage(ICON_PROCESSING_FAILED.to_owned())
             }
             ImageNormalizationError::Busy => Self::Busy,
         }

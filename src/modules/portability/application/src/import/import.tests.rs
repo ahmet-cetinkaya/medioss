@@ -505,3 +505,57 @@ async fn oversized_mood_note_and_empty_practice_note_reject_with_zero_writes() {
 
     assert!(practice.calls.lock().unwrap().is_empty());
 }
+
+struct MoodSinkFailingOnSecondInsert {
+    inserted: std::sync::Mutex<Vec<MoodRecord>>,
+}
+
+#[async_trait::async_trait]
+impl MoodRecordSink for MoodSinkFailingOnSecondInsert {
+    async fn insert(&self, _user: UserId, record: MoodRecord) -> Result<(), String> {
+        let mut inserted = self.inserted.lock().unwrap();
+        if inserted.len() == 1 {
+            return Err("disk full".into());
+        }
+        inserted.push(record);
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn sink_failure_stops_import_as_internal_error_keeping_earlier_writes() {
+    let store = FakeMoodStore::default();
+    let failing_sink = MoodSinkFailingOnSecondInsert {
+        inserted: Default::default(),
+    };
+    let practice = FakePracticeSink::default();
+    let both = document(
+        vec![entry(3, None, 20), entry(4, None, 10)],
+        snapshot(
+            vec![SessionRecord {
+                meditation_name: "Café Quietude".into(),
+                meditation_duration_ms: 120_000,
+                started_at: ts(30),
+                finished_at: ts(28),
+            }],
+            vec![],
+            vec![],
+        ),
+    );
+
+    let err = crate::import::import_document(
+        user(),
+        both,
+        &store,
+        &failing_sink,
+        &FakePracticeSource,
+        &practice,
+        &library(),
+    )
+    .await
+    .unwrap_err();
+
+    assert!(matches!(err, crate::import::ImportFailure::Internal(ref m) if m == "disk full"));
+    assert_eq!(failing_sink.inserted.lock().unwrap().len(), 1);
+    assert!(practice.calls.lock().unwrap().is_empty());
+}

@@ -1,8 +1,10 @@
 mod async_executor;
 mod fake_hasher;
 mod fake_login_admission;
+mod fake_login_throttle_repository;
 mod fake_repository;
 mod fake_repository_state;
+mod fake_user_repository;
 mod fixed_clock;
 
 use identity_domain::{Email, RawPassword};

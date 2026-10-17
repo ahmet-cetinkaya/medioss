@@ -1,16 +1,18 @@
 //! Meditation presentation: Axum routes, extractors, DTOs.
 
-// Handlers live beside the router; #[path] keeps router.rs a single module.
-#[path = "handlers_audio.rs"]
-pub mod handlers_audio;
-#[path = "handlers_notes.rs"]
-pub mod handlers_notes;
-#[path = "handlers_playback.rs"]
-pub mod handlers_playback;
-#[path = "handlers_programs.rs"]
-pub mod handlers_programs;
-#[path = "handlers_statistics.rs"]
-pub mod handlers_statistics;
+mod audio_stream;
+mod audio_upload;
+mod byte_range;
+mod categories;
+mod handlers_notes;
+mod handlers_playback;
+mod handlers_statistics;
+mod meditation_response;
+mod meditations;
+mod program_activity;
+mod program_cover;
+mod program_members;
+mod programs;
 
 pub mod extractors;
 pub mod response;
@@ -21,5 +23,5 @@ pub use response::{application_error_response, ensure_browser_origin, ApiError};
 pub use router::{meditation_router, MeditationDependencies, SharedDependencies};
 
 #[cfg(test)]
-#[path = "router.tests.rs"]
+#[path = "router_tests/mod.rs"]
 mod router_tests;

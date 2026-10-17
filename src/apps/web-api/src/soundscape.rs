@@ -26,20 +26,7 @@ impl soundscape_application::ports::media::ImageNormalizer for IconNormalizer {
             },
         )
         .await
-        .map_err(|error| match error {
-            crate::image_normalization::ImageNormalizationError::InvalidPayload => {
-                soundscape_application::ports::media::ImageNormalizationError::InvalidPayload
-            }
-            crate::image_normalization::ImageNormalizationError::OutputTooLarge => {
-                soundscape_application::ports::media::ImageNormalizationError::OutputTooLarge
-            }
-            crate::image_normalization::ImageNormalizationError::WorkerFailed => {
-                soundscape_application::ports::media::ImageNormalizationError::WorkerFailed
-            }
-            crate::image_normalization::ImageNormalizationError::Busy => {
-                soundscape_application::ports::media::ImageNormalizationError::Busy
-            }
-        })
+        .map_err(soundscape_application::ports::media::ImageNormalizationError::from)
     }
 }
 

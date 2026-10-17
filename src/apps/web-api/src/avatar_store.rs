@@ -42,18 +42,7 @@ impl AvatarStore for FileAvatarStore {
             },
         )
         .await
-        .map_err(|error| match error {
-            crate::image_normalization::ImageNormalizationError::InvalidPayload => {
-                AvatarStoreError::InvalidPayload
-            }
-            crate::image_normalization::ImageNormalizationError::OutputTooLarge => {
-                AvatarStoreError::OutputTooLarge
-            }
-            crate::image_normalization::ImageNormalizationError::WorkerFailed => {
-                AvatarStoreError::WorkerFailed
-            }
-            crate::image_normalization::ImageNormalizationError::Busy => AvatarStoreError::Busy,
-        })?;
+        .map_err(AvatarStoreError::from)?;
         Ok((normalized, "webp"))
     }
 

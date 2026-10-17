@@ -25,10 +25,13 @@ pub struct BoundedArgon2PasswordHasher {
     dummy_hash: PasswordHash,
 }
 
+// Argon2 is memory-hard; bounding concurrency bounds peak memory.
+const MAX_CONCURRENT_HASHES: usize = 2;
+
 impl BoundedArgon2PasswordHasher {
     pub fn new() -> Self {
         Self {
-            permits: Semaphore::new(2),
+            permits: Semaphore::new(MAX_CONCURRENT_HASHES),
             dummy_hash: PasswordHash::from_stored(dummy_phc()),
         }
     }

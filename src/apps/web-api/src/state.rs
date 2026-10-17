@@ -62,7 +62,7 @@ impl AppState {
             repository: Arc::clone(&repository),
             hasher: Arc::new(hasher),
             clock: Arc::new(SystemClock),
-            admission: Arc::new(TokioSemaphoreAdmission::new(2)),
+            admission: Arc::new(TokioSemaphoreAdmission::new(MAX_CONCURRENT_LOGINS)),
             dummy_password_hash,
             session_secret: Arc::new(config.session_secret.expose().to_owned()),
             medioss_origin: Arc::new(config.medioss_origin.clone()),
@@ -115,6 +115,10 @@ impl TokioSemaphoreAdmission {
     }
 }
 
+const MAX_CONCURRENT_LOGINS: usize = 2;
+// Hint returned to a login refused because every admission slot is taken.
+const LOGIN_RETRY_AFTER_MILLIS: u64 = 250;
+
 impl identity_application::ports::LoginAdmission for TokioSemaphoreAdmission {
     type Permit = tokio::sync::OwnedSemaphorePermit;
 
@@ -122,6 +126,6 @@ impl identity_application::ports::LoginAdmission for TokioSemaphoreAdmission {
         let semaphore = Arc::clone(&self.semaphore);
         semaphore
             .try_acquire_owned()
-            .map_err(|_| std::time::Duration::from_millis(250))
+            .map_err(|_| std::time::Duration::from_millis(LOGIN_RETRY_AFTER_MILLIS))
     }
 }

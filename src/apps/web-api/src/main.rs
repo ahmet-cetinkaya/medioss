@@ -1,7 +1,14 @@
 use std::{fmt::Display, sync::Arc};
 
 use tracing_subscriber::EnvFilter;
-use web_api::{bootstrap::ensure_data_dir, config, router::router};
+use web_api::{
+    bootstrap::{database::Database, ensure_data_dir},
+    config::{self, Config},
+    router::router,
+    state::AppState,
+};
+
+mod operator;
 
 fn fail(err: impl Display) -> ! {
     tracing::error!("{err}");
@@ -60,18 +67,38 @@ fn main() {
         .block_on(run(cli, server_config));
 }
 
-async fn run(cli: Cli, server_config: Option<config::Config>) {
+async fn run(cli: Cli, server_config: Option<Config>) {
     match cli.command {
         Some(Commands::ResetPassword { email }) => {
-            return run_reset_password(&email).await;
+            return operator::run_reset_password(&email).await;
         }
         Some(Commands::ClearThrottle { identifier }) => {
-            return run_clear_throttle(&identifier).await;
+            return operator::run_clear_throttle(&identifier).await;
         }
         None => {}
     }
     let Some(config) = server_config else { return };
 
+    init_tracing();
+    config::warn_about_weakened_defaults(&config);
+    if let Err(err) = ensure_data_dir(&config.data_dir) {
+        fail(with_causes(&err));
+    }
+
+    let listener = bind_listener(config.port).await;
+    let database = web_api::bootstrap::database::open(&config.data_dir.join("medioss.db"))
+        .await
+        .unwrap_or_else(|err| fail(with_causes(&err)));
+    migrate_all(&database).await;
+    seed_builtin_soundscapes(&database, &config).await;
+
+    let state = build_state(config, database).await;
+    if let Err(err) = axum::serve(listener, router(state)).await {
+        fail(format!("server error: {err}"));
+    }
+}
+
+fn init_tracing() {
     let filter = match std::env::var(EnvFilter::DEFAULT_ENV) {
         // The subscriber does not exist yet, so this one report cannot use tracing.
         Ok(directives) => EnvFilter::try_new(directives).unwrap_or_else(|err| {
@@ -81,13 +108,10 @@ async fn run(cli: Cli, server_config: Option<config::Config>) {
         Err(_) => EnvFilter::new("info"),
     };
     tracing_subscriber::fmt().with_env_filter(filter).init();
+}
 
-    config::warn_about_weakened_defaults(&config);
-    if let Err(err) = ensure_data_dir(&config.data_dir) {
-        fail(with_causes(&err));
-    }
-
-    let addr = format!("0.0.0.0:{}", config.port);
+async fn bind_listener(port: u16) -> tokio::net::TcpListener {
+    let addr = format!("0.0.0.0:{port}");
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap_or_else(|err| fail(format!("could not bind {addr}: {err}")));
@@ -96,11 +120,10 @@ async fn run(cli: Cli, server_config: Option<config::Config>) {
         Ok(bound) => tracing::info!("medioss listening on {bound}"),
         Err(err) => tracing::warn!("medioss listening on {addr}, bound address unavailable: {err}"),
     }
+    listener
+}
 
-    let database_path = config.data_dir.join("medioss.db");
-    let database = web_api::bootstrap::database::open(&database_path)
-        .await
-        .unwrap_or_else(|err| fail(with_causes(&err)));
+async fn migrate_all(database: &Database) {
     if let Err(err) = identity_infrastructure::migrate(&database.connection).await {
         fail(format!("identity migration failed: {err}"));
     }
@@ -113,6 +136,9 @@ async fn run(cli: Cli, server_config: Option<config::Config>) {
     if let Err(err) = mood_tracker_infrastructure::migrations::migrate(&database.connection).await {
         fail(format!("mood tracker migration failed: {err}"));
     }
+}
+
+async fn seed_builtin_soundscapes(database: &Database, config: &Config) {
     match soundscape_infrastructure::builtin::seed_if_present(
         &database.connection,
         &config.data_dir.join("media"),
@@ -123,186 +149,53 @@ async fn run(cli: Cli, server_config: Option<config::Config>) {
         Ok(false) => tracing::debug!("no built-in soundscape set found; skipping seed"),
         Err(err) => tracing::warn!("built-in soundscape seed failed: {err}"),
     }
+}
+
+async fn build_state(config: Config, database: Database) -> AppState {
     let session_store = tower_sessions_sqlx_store::SqliteStore::new(database.pool.clone());
     if let Err(err) = session_store.migrate().await {
         fail(format!("session store migration failed: {err}"));
     }
     let hasher = identity_infrastructure::BoundedArgon2PasswordHasher::new();
+    let origin = || Arc::new(config.medioss_origin.clone());
     let meditation = web_api::meditation::meditation_dependencies(
         database.connection.clone(),
         &config.data_dir,
-        std::sync::Arc::new(config.medioss_origin.clone()),
+        origin(),
     );
-    let portability = web_api::portability::portability_dependencies(
-        database.connection.clone(),
-        std::sync::Arc::new(config.medioss_origin.clone()),
-    );
-    let mood_tracker = web_api::mood_tracker::mood_tracker_dependencies(
-        database.connection.clone(),
-        std::sync::Arc::new(config.medioss_origin.clone()),
-    );
+    let portability =
+        web_api::portability::portability_dependencies(database.connection.clone(), origin());
+    let mood_tracker =
+        web_api::mood_tracker::mood_tracker_dependencies(database.connection.clone(), origin());
     let soundscape = web_api::soundscape::soundscape_dependencies(
         database.connection.clone(),
         &config.data_dir,
-        std::sync::Arc::new(config.medioss_origin.clone()),
+        origin(),
     );
-    let session_store = std::sync::Arc::new(session_store);
-    let deletion: std::sync::Arc<dyn identity_presentation::UserDeletionListener> =
-        std::sync::Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
-            std::sync::Arc::clone(&meditation.notes),
-            std::sync::Arc::clone(&meditation.playback),
-            std::sync::Arc::clone(&meditation.sessions),
-            std::sync::Arc::clone(&soundscape.mixes),
-            std::sync::Arc::clone(&mood_tracker.entries),
+    let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
+        Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
+            Arc::clone(&meditation.notes),
+            Arc::clone(&meditation.playback),
+            Arc::clone(&meditation.sessions),
+            Arc::clone(&soundscape.mixes),
+            Arc::clone(&mood_tracker.entries),
             config.data_dir.join("media"),
         ));
     let avatar_store = Arc::new(web_api::avatar_store::FileAvatarStore::new(
         config.data_dir.join("media"),
     ));
-    let state = web_api::state::AppState::new(
+    AppState::new(
         Arc::new(config),
-        session_store,
+        Arc::new(session_store),
         meditation,
         mood_tracker,
         soundscape,
         portability,
-        std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
+        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             database.connection,
         )),
         hasher,
         deletion,
         avatar_store,
-    );
-    if let Err(err) = axum::serve(listener, router(state)).await {
-        fail(format!("server error: {err}"));
-    }
-}
-
-async fn run_reset_password(email: &str) {
-    #[cfg(unix)]
-    set_umask(0o077);
-
-    let data_dir = match std::env::var("MEDIOSS_DATA_DIR") {
-        Ok(value) if !value.trim().is_empty() => std::path::PathBuf::from(value),
-        _ => {
-            eprintln!("MEDIOSS_DATA_DIR is required");
-            std::process::exit(1);
-        }
-    };
-    let database_path = data_dir.join("medioss.db");
-    if !database_path.exists() {
-        eprintln!("no database found at {}", database_path.display());
-        std::process::exit(1);
-    }
-
-    let database = match web_api::bootstrap::database::open(&database_path).await {
-        Ok(database) => database,
-        Err(err) => {
-            eprintln!("could not open database: {err}");
-            std::process::exit(1);
-        }
-    };
-    if let Err(err) = identity_infrastructure::migrate(&database.connection).await {
-        eprintln!("migration failed: {err}");
-        std::process::exit(1);
-    }
-
-    let repository = identity_infrastructure::SeaOrmUserRepository::new(database.connection);
-    let hasher = identity_infrastructure::BoundedArgon2PasswordHasher::new();
-
-    let parsed_email = match identity_domain::Email::parse(email) {
-        Ok(email) => email,
-        Err(_) => {
-            eprintln!("'{email}' is not a valid email address");
-            std::process::exit(1);
-        }
-    };
-    let user = match identity_application::ports::UserRepository::find_by_email(
-        &repository,
-        &parsed_email,
     )
-    .await
-    {
-        Ok(Some(user)) => user,
-        Ok(None) => {
-            eprintln!("no such user: {email}");
-            std::process::exit(1);
-        }
-        Err(err) => {
-            eprintln!("database read failed: {}", with_causes(&err));
-            std::process::exit(1);
-        }
-    };
-
-    let temporary_password = generate_temporary_password();
-    let raw = match identity_domain::RawPassword::parse(&temporary_password) {
-        Ok(raw) => raw,
-        Err(_) => {
-            eprintln!("generated password rejected by policy");
-            std::process::exit(1);
-        }
-    };
-    let expires_at = chrono::Utc::now() + chrono::TimeDelta::hours(24);
-    let password_hash = match identity_application::ports::PasswordHasher::hash(&hasher, &raw).await
-    {
-        Ok(hash) => hash,
-        Err(err) => {
-            eprintln!("password hashing failed: {}", with_causes(&err));
-            std::process::exit(1);
-        }
-    };
-    let credential_change = identity_application::ports::CredentialChange::temporary(
-        user.id(),
-        password_hash,
-        expires_at,
-    );
-    match identity_application::ports::UserRepository::apply_credential_change(
-        &repository,
-        credential_change,
-    )
-    .await
-    {
-        Ok(_) => {}
-        Err(err) => {
-            eprintln!("password reset failed: {}", with_causes(&err));
-            std::process::exit(1);
-        }
-    }
-
-    eprintln!("Temporary password (shown once; terminal scrollback may retain it):");
-    println!("{temporary_password}");
-}
-
-const TEMP_PASSWORD_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-
-fn generate_temporary_password() -> String {
-    use rand::Rng;
-    let mut rng = rand::rng();
-    (0..20)
-        .map(|_| {
-            let index = rng.random_range(0..TEMP_PASSWORD_ALPHABET.len());
-            TEMP_PASSWORD_ALPHABET[index] as char
-        })
-        .collect()
-}
-
-async fn run_clear_throttle(identifier: &str) {
-    let config = config::from_env().unwrap_or_else(|err| fail(with_causes(&err)));
-    let database_path = config.data_dir.join("medioss.db");
-    let database = web_api::bootstrap::database::open(&database_path)
-        .await
-        .unwrap_or_else(|err| fail(with_causes(&err)));
-
-    let repository = identity_infrastructure::SeaOrmUserRepository::new(database.connection);
-    match identity_application::commands::clear_login_throttle(&repository, identifier).await {
-        Ok(()) => eprintln!("throttle cleared for {identifier}"),
-        Err(err) => fail(format!("clear-throttle failed: {err}")),
-    }
-}
-
-#[cfg(unix)]
-fn set_umask(mask: u32) {
-    unsafe {
-        libc::umask(mask);
-    }
 }

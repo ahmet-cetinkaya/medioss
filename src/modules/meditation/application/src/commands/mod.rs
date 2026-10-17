@@ -93,5 +93,5 @@ pub(crate) fn validate_description(
 }
 
 #[cfg(test)]
-#[path = "commands.tests.rs"]
+#[path = "commands_tests/mod.rs"]
 mod tests;

@@ -4,6 +4,7 @@ pub mod config;
 pub mod image_normalization;
 pub mod meditation;
 pub mod mood_tracker;
+pub mod normalization_adapters;
 pub mod portability;
 pub mod router;
 pub mod session;
