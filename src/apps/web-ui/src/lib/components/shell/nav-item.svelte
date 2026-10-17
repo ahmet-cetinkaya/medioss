@@ -42,7 +42,7 @@
   const LAYOUT = {
     sidebar: "flex h-14 w-full items-center gap-3 px-6 text-base text-start",
     rail: "group relative grid size-12 place-items-center",
-    bar: "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-1 py-1 text-center text-[0.6875rem] leading-tight",
+    bar: "flex min-h-14 w-full flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center text-[0.6875rem] leading-tight",
   } as const;
 
   const classes = $derived(
@@ -73,7 +73,7 @@
          split mid-word); the other variants may wrap at spaces only. -->
     <span
       class={variant === "bar"
-        ? "min-w-0 text-[0.625rem]"
+        ? "min-w-0 text-[0.625rem] tracking-tight"
         : "min-w-0 wrap-anywhere"}>{label}</span
     >
   {/if}
