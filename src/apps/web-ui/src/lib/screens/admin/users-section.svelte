@@ -328,7 +328,7 @@
                 <AppIcon name="user" />
               {/if}
             </span>
-            <div class="grid grid-cols-1 min-w-0 flex-1 gap-0.5">
+            <div class="grid min-w-0 flex-[1_1_12rem] grid-cols-1 gap-0.5">
               <span class="font-medium break-words text-ink-strong">
                 {user.display_name ?? user.email}
               </span>
