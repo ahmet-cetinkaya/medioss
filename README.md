@@ -30,7 +30,7 @@ cp .env.example .env     # then set SESSION_SECRET: openssl rand -base64 32
 make docker-up           # build the image and start it in the background
 ```
 
-Open `http://localhost:3000` and register the first admin. The first-run setup asks for your `SESSION_SECRET` as proof that you control the host. Without HTTPS, set `SESSION_COOKIE_SECURE=false` in `.env` (local trials only). `make docker-logs` follows the logs and `make docker-down` stops the stack. Details: [Docker guide](docs/docker.md) and [Deployment guide](docs/DEPLOYMENT.md).
+Open `http://localhost:3000` and register the first admin. The first-run setup asks for your `SESSION_SECRET` as proof that you control the host. `.env` ships with `SESSION_COOKIE_SECURE=true`, which needs HTTPS; for a plain-HTTP localhost trial, set it to `false` in `.env`. `make docker-logs` follows the logs and `make docker-down` stops the stack. Details: [Docker guide](docs/docker.md) and [Deployment guide](docs/DEPLOYMENT.md).
 
 ## Quick start (development)
 
@@ -59,6 +59,7 @@ Settings come from environment variables; [`.env.example`](.env.example) is the 
 | `MEDIOSS_BIND` | no | `0.0.0.0` | Listen address; use `127.0.0.1` to keep the server local |
 | `SESSION_TIMEOUT` | no | `7d` | Session lifetime |
 | `SESSION_COOKIE_SECURE` | no | `true` | Secure cookies need HTTPS; set `false` only for plain-HTTP local use |
+| `MEDIOSS_DEV_ORIGIN` | no | none | Development only: one extra allowed origin, e.g. the Astro dev server (`make dev` sets it) |
 | `MEDIOSS_STATIC_DIR` | no | `src/apps/web-api/static` | Built UI served by the binary |
 | `MEDIOSS_BUILTIN_SOUNDS_DIR` | no | probed | Built-in sound set; falls back to `/srv/medioss/builtin-sounds`, then `./builtin-sounds` |
 
