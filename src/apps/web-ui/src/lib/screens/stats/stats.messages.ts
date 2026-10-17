@@ -12,6 +12,12 @@ export const statsMessages = defineMessages({
   totalDays: { en: "Total practice days", tr: "Toplam pratik günü" },
   currentStreak: { en: "Current streak", tr: "Güncel seri" },
   longestStreak: { en: "Longest streak", tr: "En uzun seri" },
+  heatmapLabel: {
+    en: "Practice calendar, one square per day; scroll sideways for earlier weeks",
+    tr: "Pratik takvimi, her gün için bir kare; önceki haftalar için yana kaydırın",
+  },
+  heatmapLess: { en: "Less", tr: "Az" },
+  heatmapMore: { en: "More", tr: "Çok" },
   daysHeading: { en: "Practiced days", tr: "Pratik yapılan günler" },
   noPracticeTitle: {
     en: "No practice in this range",

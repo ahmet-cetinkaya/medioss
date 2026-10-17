@@ -25,6 +25,7 @@
   import { formatNumber } from "$lib/i18n/formatting/number-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
   import { ROUTES } from "$lib/navigation/routes";
+  import { buildHeatmap } from "./practice-heatmap";
   import { statsMessages as m } from "./stats.messages";
 
   let range = $state<StatisticsRange>("all");
@@ -70,6 +71,26 @@
       }).message,
     ),
   );
+
+  // The heatmap's "today" is the browser's calendar day, as the server's
+  // calendar is built from the offset the client sends.
+  const localToday = () => {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  };
+  const weeks = $derived(
+    statistics ? buildHeatmap(statistics.calendar, range, localToday()) : [],
+  );
+  const levelClasses = [
+    "bg-surface-solid/50 ring-1 ring-inset ring-ink-muted/25",
+    "bg-accent-fill/25",
+    "bg-accent-fill/50",
+    "bg-accent-fill/75",
+    "bg-accent-fill",
+  ];
+  const cellLabel = (date: string, minutes: number) =>
+    `${formatCalendarDay(date, locale.current)}: ${withUnit(minutes, "minute")}`;
 
   const withUnit = (value: number, unit: string) =>
     formatNumber(value, locale.current, {
@@ -148,20 +169,46 @@
                 {t(m.openLibrary)}
               </Button>
             {/snippet}
-            <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {#each statistics.calendar as day (day.date)}
-                <li
-                  class="flex flex-wrap items-baseline justify-between gap-3 rounded-tile bg-surface-solid/50 px-4 py-3"
+            <div
+              role="region"
+              aria-label={t(m.heatmapLabel)}
+              tabindex="0"
+              class="overflow-x-auto rounded-tile p-1 focus-visible:outline-2 focus-visible:outline-accent-strong"
+            >
+              <div class="flex w-max flex-col gap-3">
+                <div class="grid grid-flow-col grid-rows-7 gap-1">
+                  {#each weeks as week, weekIndex (weekIndex)}
+                    {#each week as cell, dayIndex (dayIndex)}
+                      {#if cell}
+                        <div
+                          role="img"
+                          aria-label={cellLabel(cell.date, cell.minutes)}
+                          title={cellLabel(cell.date, cell.minutes)}
+                          class="size-4 rounded-[4px] {levelClasses[
+                            cell.level
+                          ]}"
+                        ></div>
+                      {:else}
+                        <div class="size-4" aria-hidden="true"></div>
+                      {/if}
+                    {/each}
+                  {/each}
+                </div>
+                <div
+                  class="flex items-center gap-2 text-xs text-ink-body"
+                  aria-hidden="true"
                 >
-                  <span class="font-medium text-ink-strong">
-                    {formatCalendarDay(day.date, locale.current)}
-                  </span>
-                  <span class="text-sm text-ink-body">
-                    {withUnit(day.minutes, "minute")}
-                  </span>
-                </li>
-              {/each}
-            </ul>
+                  <span>{t(m.heatmapLess)}</span>
+                  {#each levelClasses as levelClass, level (level)}
+                    <span
+                      class="size-4 rounded-[4px] {levelClass}"
+                      data-level={level}
+                    ></span>
+                  {/each}
+                  <span>{t(m.heatmapMore)}</span>
+                </div>
+              </div>
+            </div>
           </RegionState>
         </Panel>
       </div>
