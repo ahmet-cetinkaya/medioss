@@ -11,6 +11,9 @@ use serde::{Deserialize, Serialize};
 use crate::response::read_field_capped;
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
 
+// Descriptions stay modest: ten times the name bound.
+const DESCRIPTION_TO_NAME_LIMIT_RATIO: usize = 10;
+
 #[derive(Serialize)]
 pub struct ProgramResponse {
     pub id: i64,
@@ -130,8 +133,9 @@ pub async fn create_program(
                 title = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("description") => {
-                // Descriptions stay modest: ten times the name bound.
-                let text = read_field_capped(&mut field, max_text * 10).await?;
+                let text =
+                    read_field_capped(&mut field, max_text * DESCRIPTION_TO_NAME_LIMIT_RATIO)
+                        .await?;
                 description = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("cover") => {

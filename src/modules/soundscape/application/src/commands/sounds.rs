@@ -105,6 +105,7 @@ async fn attach_icon_or_roll_back(
         }
     }
 }
+
 async fn normalize_icon(
     normalizer: &dyn ImageNormalizer,
     bytes: Vec<u8>,

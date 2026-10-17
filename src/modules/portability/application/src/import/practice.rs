@@ -28,6 +28,22 @@ fn tally(disposition: &Disposition, report: &mut ImportReport) {
     }
 }
 
+/// Decides one incoming record, counts it in the report and returns the
+/// meditation to write it against, or `None` when it must be skipped.
+fn classify<K: Eq + std::hash::Hash>(
+    existing_keys: &HashSet<K>,
+    key: &K,
+    linked_meditation: Option<i64>,
+    report: &mut ImportReport,
+) -> Option<i64> {
+    let outcome = disposition(linked_meditation, existing_keys.contains(key));
+    tally(&outcome, report);
+    match outcome {
+        Disposition::Apply(id) => Some(id),
+        Disposition::Duplicate | Disposition::Unlinked => None,
+    }
+}
+
 pub(super) async fn apply_practice(
     user_id: UserId,
     incoming: PracticeSnapshot,
@@ -74,57 +90,45 @@ pub(super) async fn apply_practice(
     let link = |name: &str, duration_ms: i64| index.get(&(name, duration_ms)).copied();
 
     for session in incoming.sessions {
-        let duplicate = session_keys.contains(&(
+        let key = (
             session.meditation_name.as_str(),
             session.meditation_duration_ms,
             session.started_at,
-        ));
-        let outcome = disposition(
-            link(&session.meditation_name, session.meditation_duration_ms),
-            duplicate,
         );
-        if let Disposition::Apply(id) = outcome {
+        let linked = link(&session.meditation_name, session.meditation_duration_ms);
+        if let Some(id) = classify(&session_keys, &key, linked, report) {
             sink.record_session(user_id, id, session.started_at, session.finished_at)
                 .await?;
         }
-        tally(&outcome, report);
     }
     for note in incoming.notes {
-        let duplicate = note_keys.contains(&(
+        let key = (
             note.meditation_name.as_str(),
             note.meditation_duration_ms,
             note.text.as_str(),
             note.created_at,
-        ));
-        let outcome = disposition(
-            link(&note.meditation_name, note.meditation_duration_ms),
-            duplicate,
         );
-        if let Disposition::Apply(id) = outcome {
+        let linked = link(&note.meditation_name, note.meditation_duration_ms);
+        if let Some(id) = classify(&note_keys, &key, linked, report) {
             sink.insert_note(user_id, id, &note.text, note.created_at)
                 .await?;
         }
-        tally(&outcome, report);
     }
     for playback in incoming.playback {
-        let duplicate = playback_keys.contains(&(
+        let key = (
             playback.meditation_name.as_str(),
             playback.meditation_duration_ms,
             playback.position_ms,
             playback.completed,
-        ));
-        let outcome = disposition(
-            link(&playback.meditation_name, playback.meditation_duration_ms),
-            duplicate,
         );
-        if let Disposition::Apply(id) = outcome {
+        let linked = link(&playback.meditation_name, playback.meditation_duration_ms);
+        if let Some(id) = classify(&playback_keys, &key, linked, report) {
             sink.upsert_position(user_id, id, playback.position_ms)
                 .await?;
             if playback.completed {
                 sink.set_completed(user_id, id, true).await?;
             }
         }
-        tally(&outcome, report);
     }
     Ok(())
 }
