@@ -124,6 +124,11 @@
     transparent 45%,
     rgb(255 255 255 / 0.85)
   );
+  --gradient-image-scrim: linear-gradient(
+    to bottom,
+    transparent 35%,
+    rgb(26 16 40 / 0.78)
+  );
   --gradient-panel-tint: linear-gradient(
     to bottom,
     rgb(255 255 255 / 0.55),

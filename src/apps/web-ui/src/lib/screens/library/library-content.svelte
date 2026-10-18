@@ -188,6 +188,7 @@
             <ContentCard
               compact
               aspect="3/4"
+              overlay
               class="max-w-48"
               href={playerHref(meditation.id)}
               title={meditation.name}
@@ -256,6 +257,7 @@
               <li class={itemClass}>
                 <ContentCard
                   aspect="3/4"
+                  overlay
                   class="max-w-48"
                   href={programHref(program.id)}
                   title={program.title}
@@ -268,15 +270,7 @@
                   artworkSeed={program.id}
                   artworkCategory="meditation"
                   completed={program.progress >= 1}
-                >
-                  {#snippet actions()}
-                    {#if program.description}
-                      <p class="line-clamp-2 text-xs break-words text-ink-body">
-                        {program.description}
-                      </p>
-                    {/if}
-                  {/snippet}
-                </ContentCard>
+                ></ContentCard>
               </li>
             {/each}
           </ul>

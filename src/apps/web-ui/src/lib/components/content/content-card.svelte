@@ -10,7 +10,8 @@
   Props: `href`, `title` (user content, shown as-is), `meta` (formatted
   parts, joined by an aria-hidden bullet), `coverUrl`, `artworkSeed`,
   `artworkCategory`, `completed`, `headingLevel` (2 | 3 | 4, default 3),
-  `actions` (Snippet), `compact` (smaller artwork, text and
+  `actions` (Snippet), `overlay` (image-first variant: the title and meta sit
+  on the cover over a dark scrim and nothing renders below it; default false), `compact` (smaller artwork, text and
   spacing for horizontal rows; default false), `aspect` ("4/3" | "3/4" |
   "3/2" thumbnail ratio; default "4/3", or "3/2" when `compact`), `class`.
   Without `href` the card is a button: `onselect` runs on click, `ariaLabel`
@@ -46,6 +47,7 @@
     headingLevel?: 2 | 3 | 4;
     actions?: Snippet;
     compact?: boolean;
+    overlay?: boolean;
     class?: string;
   };
 
@@ -64,6 +66,7 @@
     headingLevel = 3,
     actions,
     compact = false,
+    overlay = false,
     class: className,
   }: Props = $props();
 
@@ -90,13 +93,17 @@
     this={href === undefined ? "button" : "a"}
     {...triggerProps}
     class={cn(
-      "group/card focus-ring glass-panel elevation-1 flex min-w-0 flex-col text-start rounded-panel border border-rim p-3 motion-safe:transition-colors motion-safe:duration-(--duration-fast) hover:text-accent-strong md:rounded-thumb md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none",
+      "group/card focus-ring flex min-w-0 flex-col text-start motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
+      overlay
+        ? "rounded-thumb elevation-1"
+        : "glass-panel elevation-1 rounded-panel border border-rim p-3 hover:text-accent-strong md:rounded-thumb md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none",
       compact ? "min-h-11 gap-2" : "gap-3",
     )}
   >
     <span
       class={cn(
-        "relative block overflow-hidden rounded-thumb md:elevation-1",
+        "relative block overflow-hidden rounded-thumb",
+        !overlay && "md:elevation-1",
         ASPECT_CLASS[thumbnailAspect],
       )}
     >
@@ -114,8 +121,19 @@
       {/if}
       <span
         aria-hidden="true"
-        class="absolute inset-0 bg-(image:--gradient-image-wash)"
+        class={cn(
+          "absolute inset-0",
+          overlay
+            ? "bg-(image:--gradient-image-scrim)"
+            : "bg-(image:--gradient-image-wash)",
+        )}
       ></span>
+      {#if overlay}
+        <span class="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
+          {@render heading("text-white")}
+          {@render metaLine("text-white/85")}
+        </span>
+      {/if}
       {#if completed}
         <span
           aria-hidden="true"
@@ -128,31 +146,14 @@
         </span>
       {/if}
     </span>
-    <div
-      class={cn("flex min-w-0 flex-col px-1", compact ? "gap-0.5" : "gap-1")}
-    >
-      <svelte:element
-        this={`h${headingLevel}`}
-        class={cn(
-          "font-medium break-words text-ink-strong",
-          compact ? "line-clamp-2 text-sm" : "text-body-lg",
-        )}
+    {#if !overlay}
+      <div
+        class={cn("flex min-w-0 flex-col px-1", compact ? "gap-0.5" : "gap-1")}
       >
-        {title}
-      </svelte:element>
-      {#if meta.length > 0}
-        <span
-          class="flex flex-wrap items-center gap-x-1.5 text-meta break-words text-ink-muted"
-        >
-          {#each meta as part, i (i)}
-            {#if i > 0}
-              <span aria-hidden="true" class="text-ink-faint">•</span>
-            {/if}
-            <span class="min-w-0">{part}</span>
-          {/each}
-        </span>
-      {/if}
-    </div>
+        {@render heading("text-ink-strong")}
+        {@render metaLine("text-ink-muted")}
+      </div>
+    {/if}
   </svelte:element>
   {#if actions}
     <div class="flex flex-wrap items-center gap-2 px-1">
@@ -160,3 +161,34 @@
     </div>
   {/if}
 </div>
+
+{#snippet heading(colorClass: string)}
+  <svelte:element
+    this={`h${headingLevel}`}
+    class={[
+      "font-medium break-words",
+      compact ? "line-clamp-2 text-sm" : "text-body-lg",
+      colorClass,
+    ]}
+  >
+    {title}
+  </svelte:element>
+{/snippet}
+
+{#snippet metaLine(colorClass: string)}
+  {#if meta.length > 0}
+    <span
+      class={cn(
+        "flex flex-wrap items-center gap-x-1.5 text-meta break-words",
+        colorClass,
+      )}
+    >
+      {#each meta as part, i (i)}
+        {#if i > 0}
+          <span aria-hidden="true" class="opacity-70">•</span>
+        {/if}
+        <span class="min-w-0">{part}</span>
+      {/each}
+    </span>
+  {/if}
+{/snippet}
