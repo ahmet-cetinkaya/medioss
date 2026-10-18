@@ -54,8 +54,8 @@ async function main(): Promise<void> {
           title: program.title,
           description: program.description,
           cover: {
-            name: "cover.png",
-            mimeType: "image/png",
+            name: "cover.jpg",
+            mimeType: "image/jpeg",
             buffer: fs.readFileSync(files.covers[coverIndex]),
           },
         },

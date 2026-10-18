@@ -294,6 +294,7 @@ The signature component.
 - **Overlay badge:** the reference uses it for a bookmark; MediOSS has no save/bookmark feature, so the slot shows a completion check (`completed`) or stays empty. If it ever becomes interactive it is a separate button with an `aria-label` and `aria-pressed`.
 - **Meta line:** `meta` style, `--text-muted`, items separated by a `•` (bullet) or a 1 px × 12 px vertical divider, 6–8 px gaps. Example: `10 min • 40 %` (duration and progress) or `Program title • 10 min`.
 - **Usage:** horizontal rows of 3–4 cards under a section heading. The card is one link.
+- **Overlay variant (`overlay`):** an image-first variant where the title and meta line sit on the cover over a dark scrim (`--gradient-image-scrim`) instead of below it; the ink flips to `--ink-on-image` / `--ink-on-image-muted`. Use it only where the artwork is the content — currently the Library's program and search-result cards. The default (text-below) variant stays the choice for the admin panels and horizontal compact rows.
 
 ### 5.8 Greeting hero
 
@@ -350,7 +351,7 @@ Use at most one primary button per view.
 
 ## 7. Imagery Guidelines
 
-- **Default artwork is generated, not photographed.** Category tiles and missing covers use CSS "aurora" backgrounds: 2–3 large blurred radial gradients per category palette (section 2.6), plus the white wash. This keeps the repository free of licensed photography and costs no network requests.
+- **Default artwork is generated, not photographed.** Category tiles and missing covers use CSS "aurora" backgrounds: 2–3 large blurred radial gradients per category palette (section 2.6), plus the white wash. This keeps the repository itself free of photography and costs no network requests. (The `make demo` screenshots are the one exception: they use Unsplash covers fetched at seed time and are credited in `docs/demo.md`; nothing in the app bundle depends on them.)
 - **User content wins.** Programs can have an uploaded cover (`has_cover`; meditations inherit it via `program_has_cover`). When one exists, use it in thumbnails and tiles with the same radius and, where text overlays it, the same white wash. Meditations without a program cover use the generated artwork.
 - **Per-category palettes** (proposed): meditation → pink/violet/orange; sleep → mint/sage/peach; soundscape → green/peach; mood → coral/orange; statistics → blue/peach.
 - Artwork is decorative: `alt=""` unless it conveys content.

@@ -153,7 +153,8 @@
                 artworkSeed={entry.program.id}
                 artworkCategory="meditation"
                 completed={entry.program.progress >= 1}
-                class="max-w-48 [&>a>span:first-child]:aspect-3/4"
+                aspect="3/4"
+                class="max-w-48"
               />
             </li>
           {/each}

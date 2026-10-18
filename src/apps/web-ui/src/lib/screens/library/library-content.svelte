@@ -187,13 +187,21 @@
           <li class="min-w-0">
             <ContentCard
               compact
-              class="max-w-48 [&>a>span:first-child]:aspect-3/4"
+              aspect="3/4"
+              overlay
+              class="max-w-48"
               href={playerHref(meditation.id)}
               title={meditation.name}
               meta={[
                 formatDuration(meditation.duration_ms, locale.current, "short"),
-                meditationProgressLabel(meditation, locale.current),
               ].filter((item): item is string => item !== null)}
+              progress={meditation.completed
+                ? 1
+                : meditation.progress_percent / 100}
+              progressLabel={meditationProgressLabel(
+                meditation,
+                locale.current,
+              ) ?? undefined}
               coverUrl={meditation.program_has_cover && meditation.program_id
                 ? programCoverUrl(meditation.program_id)
                 : null}
@@ -254,27 +262,23 @@
             {#each group.programs as program (program.id)}
               <li class={itemClass}>
                 <ContentCard
-                  class="max-w-48 [&>a>span:first-child]:aspect-3/4"
+                  aspect="3/4"
+                  overlay
+                  class="max-w-48"
                   href={programHref(program.id)}
                   title={program.title}
-                  meta={[
-                    programProgressLabel(program.progress, locale.current),
-                  ].filter((item): item is string => item !== null)}
+                  progress={program.progress}
+                  progressLabel={programProgressLabel(
+                    program.progress,
+                    locale.current,
+                  ) ?? undefined}
                   coverUrl={program.has_cover
                     ? programCoverUrl(program.id)
                     : null}
                   artworkSeed={program.id}
-                  artworkCategory="library"
+                  artworkCategory="meditation"
                   completed={program.progress >= 1}
-                >
-                  {#snippet actions()}
-                    {#if program.description}
-                      <p class="line-clamp-2 text-xs break-words text-ink-body">
-                        {program.description}
-                      </p>
-                    {/if}
-                  {/snippet}
-                </ContentCard>
+                ></ContentCard>
               </li>
             {/each}
           </ul>

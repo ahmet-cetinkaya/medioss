@@ -5,6 +5,33 @@ import fs from "node:fs";
 import path from "node:path";
 import { qaDir } from "../e2e/support/server-env";
 
+// Demo covers: calm, meditation-suitable Unsplash photos (one per program,
+// in DEMO_PROGRAMS order). Stable photo ids with size params keep the CDN
+// URL reproducible; images are cached under .agents/qa/demo/. Used under
+// the Unsplash License (free use, attribution appreciated but not
+// required); photographer credits are in docs/demo.md.
+const COVER_PHOTO_IDS = [
+  "photo-1499209974431-9dddcece7f88", // person with open arms at sunrise
+  "photo-1502082553048-f009c37129b9", // lone tree under a blue sky
+  "photo-1500462918059-b1a0cb512f1d", // pink and violet gradient doorway
+  "photo-1518495973542-4542c06a5843", // sunlight through a tree canopy
+  "photo-1472214103451-9374bd1c798e", // green hills with a stone circle at sunset
+  "photo-1469474968028-56623f02e42e", // misty rocks above a green valley
+  "photo-1470252649378-9c29740c9fa8", // sunset over a meadow
+  "photo-1439066615861-d1af74d74000", // still lake with a jetty
+  "photo-1476673160081-cf065607f449", // soft waves on a quiet beach
+  "photo-1509316785289-025f5b846b35", // desert mesas under a blue sky
+  "photo-1470071459604-3b5ec3a7fe05", // fog rolling over green cliffs
+  "photo-1505144808419-1957a94ca61e", // turquoise wave seen from above
+  "photo-1508739773434-c26b3d09e071", // red mountain peak in morning light
+  "photo-1519681393784-d120267933ba", // milky way over snowy peaks
+  "photo-1518709268805-4e9042af9f23", // misty castle gate
+  "photo-1500530855697-b586d89ba3ee", // desert road between red rocks
+] as const;
+
+const COVER_URL = (photoId: string) =>
+  `https://images.unsplash.com/${photoId}?w=800&h=450&fit=crop&q=80&fm=jpg`;
+
 export type DemoProgram = {
   title: string;
   description: string;
@@ -141,46 +168,29 @@ function ffmpeg(args: string[]): void {
   execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args]);
 }
 
-const COVER_COLOR_STOPS = 4;
-const GOLDEN_ANGLE_DEGREES = 137.5;
-
-function hslToHex(hue: number, saturation: number, lightness: number): string {
-  const chroma = saturation * Math.min(lightness, 1 - lightness);
-  const channel = (offset: number): string => {
-    const k = (offset + hue / 30) % 12;
-    const value = lightness - chroma * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(value * 255)
-      .toString(16)
-      .padStart(2, "0");
-  };
-  return `0x${channel(0)}${channel(8)}${channel(4)}`;
-}
-
-const MUDDY_HUE_FROM = 38;
-const MUDDY_HUE_TO = 98;
-const COVER_SATURATION = 0.72;
-const COVER_LIGHTNESS = 0.5;
-const COVER_HUE_STEP_DEGREES = 34;
-
-/** Olive and mustard mixes read as mud: move those hues to clean orange or lime. */
-function avoidMuddyHue(hue: number): number {
-  if (hue < MUDDY_HUE_FROM || hue > MUDDY_HUE_TO) return hue;
-  const middle = (MUDDY_HUE_FROM + MUDDY_HUE_TO) / 2;
-  return hue < middle ? MUDDY_HUE_FROM - 8 : MUDDY_HUE_TO + 8;
-}
-
-/** A saturated multi-stop gradient whose hues are unique per program index. */
-export function gradientSource(index: number): string {
-  const baseHue = (index * GOLDEN_ANGLE_DEGREES) % 360;
-  const colors = Array.from({ length: COVER_COLOR_STOPS }, (_, stop) =>
-    hslToHex(
-      avoidMuddyHue((baseHue + stop * COVER_HUE_STEP_DEGREES) % 360),
-      COVER_SATURATION,
-      COVER_LIGHTNESS,
-    ),
-  );
-  const options = colors.map((color, stop) => `c${stop}=${color}`).join(":");
-  return `gradients=s=800x450:${options}:nb_colors=${COVER_COLOR_STOPS}:seed=${index + 1}:speed=0:type=linear`;
+/** Downloads one Unsplash cover into the demo cache; existing files are reused. */
+function cachedCover(index: number): string {
+  if (index >= COVER_PHOTO_IDS.length) {
+    throw new Error(
+      `no cover photo for demo program ${index}: add it to COVER_PHOTO_IDS`,
+    );
+  }
+  const file = path.join(demoDir, `cover-${index}.jpg`);
+  if (!fs.existsSync(file)) {
+    // Download under a temp name so a failed run never leaves a truncated
+    // file that the next run would reuse.
+    const partial = `${file}.part`;
+    execFileSync("curl", [
+      "-fsSL",
+      "--retry",
+      "3",
+      "-o",
+      partial,
+      COVER_URL(COVER_PHOTO_IDS[index]),
+    ]);
+    fs.renameSync(partial, file);
+  }
+  return file;
 }
 
 export type DemoFiles = {
@@ -216,20 +226,6 @@ export function ensureDemoFiles(): DemoFiles {
       loop,
     ]);
   }
-  const covers = DEMO_PROGRAMS.map((_, index) => {
-    const file = path.join(demoDir, `cover-${index}.png`);
-    if (!fs.existsSync(file)) {
-      ffmpeg([
-        "-f",
-        "lavfi",
-        "-i",
-        gradientSource(index),
-        "-frames:v",
-        "1",
-        file,
-      ]);
-    }
-    return file;
-  });
+  const covers = DEMO_PROGRAMS.map((_, index) => cachedCover(index));
   return { tone, loop, covers };
 }
