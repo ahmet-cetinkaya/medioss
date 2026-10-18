@@ -1,6 +1,7 @@
 <!-- @component Programs panel: category-grouped program cards with an overflow menu. -->
 <script lang="ts">
   import { programCoverUrl, type Program } from "$lib/api/meditation";
+  import ContentCard from "$lib/components/content/content-card.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import OverflowItem from "$lib/components/ui/menu/overflow-item.svelte";
@@ -72,41 +73,20 @@
           <ul class="flex flex-wrap gap-4">
             {#each group.programs as program (program.id)}
               <li class="relative flex w-44 flex-col sm:w-48">
-                <button
-                  type="button"
-                  aria-label={t(m.selectProgram, {
-                    title: program.title,
-                  })}
-                  aria-current={program.id === selectedId ? "true" : undefined}
-                  class="focus-ring flex min-w-0 flex-col rounded-tile text-start"
-                  onclick={() => onSelect(program)}
-                >
-                  <span
-                    class="relative block aspect-3/4 w-full overflow-hidden rounded-tile bg-panel-tint"
-                  >
-                    {#if program.has_cover}
-                      <img
-                        src={programCoverUrl(
-                          program.id,
-                          coverVersion(program.id),
-                        )}
-                        alt=""
-                        loading="lazy"
-                        class="absolute inset-0 size-full object-cover"
-                      />
-                    {/if}
-                  </span>
-                  <span class="grid gap-1 p-1 pt-2">
-                    <span
-                      class="line-clamp-2 text-sm font-medium break-words text-ink-strong"
-                    >
-                      {program.title}
-                    </span>
-                    <span class="line-clamp-2 text-sm text-ink-body">
-                      {program.description || t(m.noProgramDescription)}
-                    </span>
-                  </span>
-                </button>
+                <ContentCard
+                  aspect="3/4"
+                  headingLevel={4}
+                  ariaLabel={t(m.selectProgram, { title: program.title })}
+                  current={program.id === selectedId}
+                  onselect={() => onSelect(program)}
+                  title={program.title}
+                  meta={[program.description || t(m.noProgramDescription)]}
+                  coverUrl={program.has_cover
+                    ? programCoverUrl(program.id, coverVersion(program.id))
+                    : null}
+                  artworkSeed={program.id}
+                  artworkCategory="meditation"
+                />
                 <div class="absolute end-0 top-0">
                   <OverflowMenu
                     label={t(m.programActions, {

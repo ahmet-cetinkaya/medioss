@@ -152,7 +152,7 @@
     data-shell-skeleton=""
   >
     <div
-      class="glass-shell flex min-h-dvh flex-col rounded-t-shell md:h-[calc(100dvh-2rem)] md:min-h-0 md:flex-row md:rounded-shell xl:h-[calc(100dvh-4rem)]"
+      class="glass-shell flex min-h-dvh flex-col md:h-[calc(100dvh-2rem)] md:min-h-0 md:flex-row md:rounded-shell xl:h-[calc(100dvh-4rem)]"
     >
       <div class="hidden w-64 shrink-0 flex-col gap-3 px-8 py-8 xl:flex">
         <div class="mb-6 size-10 rounded-full bg-surface-solid/70"></div>
@@ -200,7 +200,7 @@
   <SkipLink />
   <div class="min-h-dvh md:h-dvh md:overflow-hidden md:p-4 xl:p-8">
     <div
-      class="glass-shell elevation-2 flex min-h-dvh flex-col rounded-t-shell md:h-[calc(100dvh-2rem)] md:min-h-0 md:flex-row md:overflow-hidden md:rounded-shell xl:h-[calc(100dvh-4rem)]"
+      class="glass-shell elevation-2 flex min-h-dvh flex-col md:h-[calc(100dvh-2rem)] md:min-h-0 md:flex-row md:overflow-hidden md:rounded-shell xl:h-[calc(100dvh-4rem)]"
     >
       <SidebarNav
         class="hidden xl:flex"

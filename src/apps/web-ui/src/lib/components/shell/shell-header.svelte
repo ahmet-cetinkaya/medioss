@@ -21,7 +21,7 @@
 </script>
 
 <header
-  class="sticky top-0 z-20 flex h-16 items-center gap-3 px-4 max-md:glass-shell max-md:border-x-0 max-md:border-t-0 md:static md:h-auto md:gap-4 md:px-8 md:pt-8"
+  class="sticky top-0 z-20 flex h-16 items-center gap-3 px-4 max-md:glass-shell max-md:rounded-b-panel max-md:border-t-0 md:static md:h-auto md:gap-4 md:px-8 md:pt-8"
 >
   <BrandLockup compact href="/" class="md:hidden" />
   {#if title === null}

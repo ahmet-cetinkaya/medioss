@@ -11,7 +11,10 @@
   parts, joined by an aria-hidden bullet), `coverUrl`, `artworkSeed`,
   `artworkCategory`, `completed`, `headingLevel` (2 | 3 | 4, default 3),
   `actions` (Snippet), `compact` (smaller artwork, text and
-  spacing for horizontal rows; default false), `class`.
+  spacing for horizontal rows; default false), `aspect` ("4/3" | "3/4" |
+  "3/2" thumbnail ratio; default "4/3", or "3/2" when `compact`), `class`.
+  Without `href` the card is a button: `onselect` runs on click, `ariaLabel`
+  names it and `current` marks it as the selected card.
 -->
 <script lang="ts">
   import type { Snippet } from "svelte";
@@ -20,8 +23,20 @@
   import { cn } from "$lib/utils.js";
   import GeneratedArtwork from "./generated-artwork.svelte";
 
+  type Aspect = "4/3" | "3/4" | "3/2";
+
+  const ASPECT_CLASS: Record<Aspect, string> = {
+    "4/3": "aspect-4/3",
+    "3/4": "aspect-3/4",
+    "3/2": "aspect-3/2",
+  };
+
   type Props = {
-    href: string;
+    href?: string;
+    onselect?: () => void;
+    ariaLabel?: string;
+    current?: boolean;
+    aspect?: Aspect;
     title: string;
     meta?: string[];
     coverUrl?: string | null;
@@ -36,6 +51,10 @@
 
   let {
     href,
+    onselect,
+    ariaLabel,
+    current = false,
+    aspect,
     title,
     meta = [],
     coverUrl = null,
@@ -51,22 +70,34 @@
   // A broken cover falls back to artwork; a new URL gets a fresh try.
   let failedUrl = $state<string | null>(null);
   const showCover = $derived(Boolean(coverUrl) && coverUrl !== failedUrl);
+  const thumbnailAspect = $derived(aspect ?? (compact ? "3/2" : "4/3"));
+  const triggerProps = $derived(
+    href === undefined
+      ? {
+          type: "button",
+          "aria-label": ariaLabel,
+          "aria-current": current ? ("true" as const) : undefined,
+          onclick: onselect,
+        }
+      : { href },
+  );
 </script>
 
 <div
   class={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2", className)}
 >
-  <a
-    {href}
+  <svelte:element
+    this={href === undefined ? "button" : "a"}
+    {...triggerProps}
     class={cn(
-      "group/card focus-ring glass-panel elevation-1 flex min-w-0 flex-col rounded-panel border border-rim p-3 motion-safe:transition-colors motion-safe:duration-(--duration-fast) hover:text-accent-strong md:rounded-thumb md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none",
+      "group/card focus-ring glass-panel elevation-1 flex min-w-0 flex-col text-start rounded-panel border border-rim p-3 motion-safe:transition-colors motion-safe:duration-(--duration-fast) hover:text-accent-strong md:rounded-thumb md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none",
       compact ? "min-h-11 gap-2" : "gap-3",
     )}
   >
     <span
       class={cn(
         "relative block overflow-hidden rounded-thumb md:elevation-1",
-        compact ? "aspect-3/2" : "aspect-4/3",
+        ASPECT_CLASS[thumbnailAspect],
       )}
     >
       {#if showCover}
@@ -122,7 +153,7 @@
         </span>
       {/if}
     </div>
-  </a>
+  </svelte:element>
   {#if actions}
     <div class="flex flex-wrap items-center gap-2 px-1">
       {@render actions()}

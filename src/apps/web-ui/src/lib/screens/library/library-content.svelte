@@ -187,7 +187,8 @@
           <li class="min-w-0">
             <ContentCard
               compact
-              class="max-w-48 [&>a>span:first-child]:aspect-3/4"
+              aspect="3/4"
+              class="max-w-48"
               href={playerHref(meditation.id)}
               title={meditation.name}
               meta={[
@@ -254,7 +255,8 @@
             {#each group.programs as program (program.id)}
               <li class={itemClass}>
                 <ContentCard
-                  class="max-w-48 [&>a>span:first-child]:aspect-3/4"
+                  aspect="3/4"
+                  class="max-w-48"
                   href={programHref(program.id)}
                   title={program.title}
                   meta={[
@@ -264,7 +266,7 @@
                     ? programCoverUrl(program.id)
                     : null}
                   artworkSeed={program.id}
-                  artworkCategory="library"
+                  artworkCategory="meditation"
                   completed={program.progress >= 1}
                 >
                   {#snippet actions()}
