@@ -24,6 +24,7 @@
 
 <script lang="ts">
   import AppIcon from "$lib/components/icons/app-icon.svelte";
+  import type { IconName } from "$lib/components/icons/icon-name";
   import { t } from "$lib/i18n/translate";
   import { cn } from "$lib/utils.js";
   import { moodScoreMessages } from "./mood-score.messages";
@@ -66,6 +67,15 @@
     4: "text-mood-4",
     5: "text-mood-5",
   };
+  /* Each score shows its own expression, so the face carries meaning and
+     never color alone (FR-092). */
+  const MOOD_FACE: Record<MoodScore, IconName> = {
+    1: "smiley-sad",
+    2: "smiley-nervous",
+    3: "smiley-meh",
+    4: "smiley",
+    5: "smiley-wink",
+  };
 
   let fieldset: HTMLFieldSetElement | undefined = $state();
 
@@ -93,7 +103,7 @@
       class="flex flex-col items-center gap-1 pb-4 text-center"
       style="color: var(--mood-{chosen})"
     >
-      <AppIcon name="smiley" size={22} filled class="size-12" />
+      <AppIcon name={MOOD_FACE[chosen]} size={22} filled class="size-12" />
       <span class="text-title-lg font-semibold text-ink-strong">
         {t(moodScoreMessages[chosen as MoodScore])}
       </span>
@@ -178,7 +188,7 @@
             value={score}
             bind:group={value}
           />
-          <AppIcon name="smiley" size={20} filled={selected} />
+          <AppIcon name={MOOD_FACE[score]} size={20} filled={selected} />
           <span class="text-lg leading-none">{score}</span>
           <span class="text-xs leading-tight break-words">
             {t(moodScoreMessages[score])}

@@ -26,6 +26,10 @@
   import SignOutIcon from "phosphor-svelte/lib/SignOutIcon";
   import SkipBackIcon from "phosphor-svelte/lib/SkipBackIcon";
   import SmileyIcon from "phosphor-svelte/lib/SmileyIcon";
+  import SmileySadIcon from "phosphor-svelte/lib/SmileySadIcon";
+  import SmileyNervousIcon from "phosphor-svelte/lib/SmileyNervousIcon";
+  import SmileyMehIcon from "phosphor-svelte/lib/SmileyMehIcon";
+  import SmileyWinkIcon from "phosphor-svelte/lib/SmileyWinkIcon";
   import SpeakerHighIcon from "phosphor-svelte/lib/SpeakerHighIcon";
   import TimerIcon from "phosphor-svelte/lib/TimerIcon";
   import TrashIcon from "phosphor-svelte/lib/TrashIcon";
@@ -65,6 +69,10 @@
     books: BooksIcon,
     waveform: WaveformIcon,
     smiley: SmileyIcon,
+    "smiley-sad": SmileySadIcon,
+    "smiley-nervous": SmileyNervousIcon,
+    "smiley-meh": SmileyMehIcon,
+    "smiley-wink": SmileyWinkIcon,
     "clock-counter-clockwise": ClockCounterClockwiseIcon,
     "chart-bar": ChartBarIcon,
     "gear-six": GearSixIcon,
