@@ -6,6 +6,7 @@
   import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
   import ArrowUpRightIcon from "phosphor-svelte/lib/ArrowUpRightIcon";
   import BooksIcon from "phosphor-svelte/lib/BooksIcon";
+  import CalendarBlankIcon from "phosphor-svelte/lib/CalendarBlankIcon";
   import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
   import ChartBarIcon from "phosphor-svelte/lib/ChartBarIcon";
   import CheckCircleIcon from "phosphor-svelte/lib/CheckCircleIcon";
@@ -91,6 +92,7 @@
     plus: PlusIcon,
     "dots-three": DotsThreeIcon,
     "caret-down": CaretDownIcon,
+    "calendar-blank": CalendarBlankIcon,
     timer: TimerIcon,
     "skip-back": SkipBackIcon,
     "speaker-high": SpeakerHighIcon,

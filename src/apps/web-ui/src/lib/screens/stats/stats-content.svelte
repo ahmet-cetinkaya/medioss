@@ -1,7 +1,7 @@
 <!--
   @component
-  Statistics content (FR-063–FR-065, PB-11). Range chips (default All time)
-  drive one load; the summary always shows the four figures (zeros included,
+  Statistics content (FR-063–FR-065, PB-11). The date-range popover (presets
+  or a custom from/to, default All time) drives one load; the summary always shows the four figures (zeros included,
   FR-065) and the practiced days list each day's calendar date exactly as the
   server reports it (formatCalendarDay, never shifted) with its minutes.
 -->
@@ -18,7 +18,7 @@
     reasonOf,
   } from "$lib/api/failure";
   import RegionState from "$lib/components/feedback/region-state.svelte";
-  import RangeChips from "$lib/components/filters/range-chips.svelte";
+  import RangePopover from "$lib/components/filters/range-popover.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { formatCalendarDay } from "$lib/i18n/formatting/date-time-format";
@@ -141,12 +141,14 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <RangeChips
-    options={ranges}
-    bind:value={range}
-    name="stats-range"
-    legend={t(m.rangeLegend)}
-  />
+  <div>
+    <RangePopover
+      options={ranges}
+      bind:value={range}
+      name="stats-range"
+      legend={t(m.rangeLegend)}
+    />
+  </div>
 
   <RegionState
     {status}

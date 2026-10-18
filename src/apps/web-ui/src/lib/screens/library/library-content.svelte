@@ -39,15 +39,17 @@
   } from "$lib/meditation/progress-label";
   import { ROUTES, playerHref } from "$lib/navigation/routes";
   import { session } from "$lib/session/session.svelte";
-  import { groupPrograms } from "./library-groups";
+  import {
+    filterGroups,
+    groupPrograms,
+    type LibraryFilter,
+  } from "./library-groups";
   import { libraryMessages as m } from "./library.messages";
-
-  const ALL = "all";
 
   let programs = $state<Program[] | null>(null);
   let categories = $state<Category[]>([]);
   let groupsFailure = $state<ServerReason | null>(null);
-  let filter = $state(ALL);
+  let filter = $state<LibraryFilter>("all");
 
   let results = $state<Meditation[] | null>(null);
   let searchFailure = $state<ServerReason | null>(null);
@@ -56,15 +58,12 @@
   const query = $derived(libraryQuery.query);
 
   const groups = $derived(programs ? groupPrograms(programs, categories) : []);
-  const visibleGroups = $derived(
-    filter === ALL ? groups : groups.filter((group) => group.key === filter),
-  );
+  const visibleGroups = $derived(filterGroups(groups, filter));
   const chips = $derived([
-    { value: ALL, label: t(m.all) },
-    ...groups.map((group) => ({
-      value: group.key,
-      label: group.category?.name ?? t(m.uncategorized),
-    })),
+    { value: "all" as const, label: t(m.all) },
+    { value: "completed" as const, label: t(m.filterCompleted) },
+    { value: "in-progress" as const, label: t(m.filterInProgress) },
+    { value: "not-started" as const, label: t(m.filterNotStarted) },
   ]);
 
   const groupsStatus = $derived(
@@ -243,9 +242,17 @@
       <RangeChips
         options={chips}
         bind:value={filter}
-        name="library-category"
-        legend={t(m.categoryLegend)}
+        name="library-filter"
+        legend={t(m.filterLegend)}
       />
+      {#if visibleGroups.length === 0}
+        <p class="text-ink-muted" role="status">
+          <span class="font-medium text-ink-strong">
+            {t(m.filterEmptyTitle)}
+          </span>
+          {t(m.filterEmptyText)}
+        </p>
+      {/if}
       {#each visibleGroups as group (group.key)}
         <section
           aria-labelledby="library-group-{group.key}"

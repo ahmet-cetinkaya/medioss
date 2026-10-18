@@ -24,7 +24,8 @@
     playbackError: boolean;
     speedText: string;
     skipLabel: string;
-    mixOpen: boolean;
+    /** True while the background soundscape is actually playing. */
+    mixPlaying: boolean;
     onSeek: (seconds: number) => void;
     onRestart: () => void;
     onSkip: (delta: number) => void;
@@ -40,7 +41,7 @@
     playbackError,
     speedText,
     skipLabel,
-    mixOpen,
+    mixPlaying,
     onSeek,
     onRestart,
     onSkip,
@@ -127,12 +128,20 @@
   >
     {speedText}
   </Button>
+  <!-- The button opens the mixer dialog, so it is not a toggle (no
+       aria-pressed). While a soundscape plays it shows the active look and
+       says so in text; the sound-wave icon is decorative. -->
   <Button
     variant="secondary"
-    aria-pressed={mixOpen || undefined}
+    class={mixPlaying
+      ? "border-accent-fill bg-accent-soft text-accent-strong hover:bg-accent-soft"
+      : undefined}
     onclick={onOpenMix}
   >
     <AppIcon name="speaker-high" size={20} />
     {t(m.mixToggle)}
+    {#if mixPlaying}
+      <span class="sr-only">{t(m.mixPlaying)}</span>
+    {/if}
   </Button>
 </div>

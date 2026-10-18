@@ -1,7 +1,9 @@
 <!--
   @component
   The program cover (or generated artwork) filling its positioned parent.
-  Nothing renders while the program is still being looked up.
+  Nothing renders while the program is still being looked up. `wash` (default
+  true) adds the white wash for text-free covers; the scrim-captioned inline
+  cover turns it off so the scrim is the only layer over the image.
 -->
 <script lang="ts">
   import { programCoverUrl, type ProgramSummary } from "$lib/api/meditation";
@@ -13,9 +15,16 @@
     meditationId: string;
     showCover: boolean;
     onCoverError: () => void;
+    wash?: boolean;
   };
 
-  let { program, meditationId, showCover, onCoverError }: Props = $props();
+  let {
+    program,
+    meditationId,
+    showCover,
+    onCoverError,
+    wash = true,
+  }: Props = $props();
 </script>
 
 {#if program && showCover}
@@ -25,14 +34,16 @@
     class="absolute inset-0 size-full object-cover"
     onerror={onCoverError}
   />
-  <span
-    aria-hidden="true"
-    class="absolute inset-0 bg-(image:--gradient-image-wash)"
-  ></span>
+  {#if wash}
+    <span
+      aria-hidden="true"
+      class="absolute inset-0 bg-(image:--gradient-image-wash)"
+    ></span>
+  {/if}
 {:else if program !== undefined}
   <GeneratedArtwork
     seed={program?.id ?? meditationId}
     category="meditation"
-    wash
+    {wash}
   />
 {/if}

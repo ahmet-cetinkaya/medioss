@@ -12,7 +12,6 @@
   import {
     fetchProgram,
     fetchProgramMembers,
-    programCoverUrl,
     type Meditation,
     type Program,
   } from "$lib/api/meditation";
@@ -22,7 +21,6 @@
     NETWORK_OR_SERVER_REASONS,
     reasonOf,
   } from "$lib/api/failure";
-  import GeneratedArtwork from "$lib/components/content/generated-artwork.svelte";
   import { contentMessages } from "$lib/components/content/content.messages";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -37,6 +35,7 @@
   } from "$lib/meditation/progress-label";
   import { ROUTES, playerHref } from "$lib/navigation/routes";
   import { parseProgramId } from "./program-id";
+  import ProgramHero from "./program-hero.svelte";
   import { programPrimaryAction } from "./program-primary-action";
   import { programMessages as m } from "./program.messages";
 
@@ -45,7 +44,6 @@
   let programId = 0;
   let data = $state<Loaded | null>(null);
   let failure = $state<ServerReason | null>(null);
-  let failedCover = $state(false);
   let request = 0;
 
   const status = $derived(
@@ -79,7 +77,6 @@
     const current = ++request;
     data = null;
     failure = null;
-    failedCover = false;
     try {
       const [program, members] = await Promise.all([
         fetchProgram(id),
@@ -124,58 +121,45 @@
     <div class="flex flex-col gap-6">
       <section
         aria-labelledby="program-title"
-        data-elevation="featured"
-        class="elevation-3 flex min-w-0 flex-wrap items-center gap-3 rounded-tile border border-rim bg-surface-solid/70 p-3"
+        class="flex min-w-0 flex-col gap-4"
       >
-        <span
-          class="relative block size-16 shrink-0 overflow-hidden rounded-thumb sm:size-20"
-          aria-hidden="true"
-        >
-          {#if program.has_cover && !failedCover}
-            <img
-              src={programCoverUrl(program.id)}
-              alt=""
-              decoding="async"
-              class="absolute inset-0 size-full object-cover"
-              onerror={() => (failedCover = true)}
-            />
-          {:else}
-            <GeneratedArtwork seed={program.id} category="meditation" />
-          {/if}
-        </span>
-        <div class="flex min-w-0 flex-1 flex-col gap-1">
-          <h2
-            id="program-title"
-            class="text-heading break-words text-ink-strong"
-          >
-            {program.title}
-          </h2>
-          {#if program.description}
-            <p
-              class="text-body-md line-clamp-2 break-words whitespace-pre-line text-ink-body"
-            >
-              {program.description}
+        <ProgramHero
+          {program}
+          progress={program.progress}
+          progressLabel={programProgressLabel(
+            program.progress,
+            locale.current,
+          ) ?? ""}
+        />
+        <div class="flex min-w-0 flex-wrap items-start gap-4">
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            {#if program.description}
+              <p
+                class="text-body-md break-words whitespace-pre-line text-ink-body"
+              >
+                {program.description}
+              </p>
+            {/if}
+            <p class="text-meta text-ink-muted">
+              {programProgressLabel(program.progress, locale.current)}
             </p>
-          {/if}
-          <p class="text-meta text-ink-muted">
-            {programProgressLabel(program.progress, locale.current)}
-          </p>
-          {#if action.kind === "unavailable"}
-            <p id="program-action-reason" class="text-sm text-ink-body">
-              {t(m.unavailable)}
-            </p>
-          {/if}
-        </div>
-        <div class="self-center">
-          {#if action.kind === "unavailable"}
-            <Button disabled aria-describedby="program-action-reason">
-              {t(actionLabel)}
-            </Button>
-          {:else}
-            <Button href={playerHref(action.meditationId)}>
-              {t(actionLabel)}
-            </Button>
-          {/if}
+            {#if action.kind === "unavailable"}
+              <p id="program-action-reason" class="text-sm text-ink-body">
+                {t(m.unavailable)}
+              </p>
+            {/if}
+          </div>
+          <div class="self-center">
+            {#if action.kind === "unavailable"}
+              <Button disabled aria-describedby="program-action-reason">
+                {t(actionLabel)}
+              </Button>
+            {:else}
+              <Button href={playerHref(action.meditationId)}>
+                {t(actionLabel)}
+              </Button>
+            {/if}
+          </div>
         </div>
       </section>
 

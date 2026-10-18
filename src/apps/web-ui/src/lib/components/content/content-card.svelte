@@ -26,6 +26,7 @@
   import type { ArtworkCategory } from "$lib/artwork/artwork-palette";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { cn } from "$lib/utils.js";
+  import CoverOverlay from "./cover-overlay.svelte";
   import GeneratedArtwork from "./generated-artwork.svelte";
 
   type Aspect = "4/3" | "3/4" | "3/2";
@@ -130,17 +131,8 @@
       {:else}
         <GeneratedArtwork seed={artworkSeed} category={artworkCategory} />
       {/if}
-      <span
-        aria-hidden="true"
-        class={cn(
-          "absolute inset-0",
-          overlay
-            ? "bg-(image:--gradient-image-scrim)"
-            : "bg-(image:--gradient-image-wash)",
-        )}
-      ></span>
       {#if overlay}
-        <span class="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
+        <CoverOverlay>
           {@render heading("text-(--ink-on-image)")}
           {@render metaLine("text-(--ink-on-image-muted)")}
           {#if progressWidth > 0}
@@ -157,7 +149,12 @@
           {#if progressLabel}
             <span class="sr-only">{progressLabel}</span>
           {/if}
-        </span>
+        </CoverOverlay>
+      {:else}
+        <span
+          aria-hidden="true"
+          class="absolute inset-0 bg-(image:--gradient-image-wash)"
+        ></span>
       {/if}
       {#if completed}
         <span

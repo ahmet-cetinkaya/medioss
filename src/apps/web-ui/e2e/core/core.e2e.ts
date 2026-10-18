@@ -229,7 +229,11 @@ test("mood check-in saves from home dialog", async ({ page }) => {
     .click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await dialog.getByText("5 · Very good").click();
+  // The radio is visually hidden; the user clicks its stop's number.
+  await dialog.getByText("5", { exact: true }).click();
+  await expect(
+    dialog.getByRole("radio", { name: "5 · Very good" }),
+  ).toBeChecked();
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
 
@@ -261,9 +265,11 @@ test("mobile: bottom bar stays at the viewport bottom, no header avatar", async 
   const wordmark = page.locator("header").getByText("MediOSS");
   await expect(wordmark).toBeVisible();
   await expect(wordmark).toHaveCSS("font-size", "16px");
-  await expect(page.locator("main a[href^='/program/']").first()).toHaveCSS(
+  // Library cards are image-first overlays now (no glass), so the mobile
+  // glass check samples the header, which is still a glass shell surface.
+  await expect(page.locator("header").first()).toHaveCSS(
     "backdrop-filter",
-    /blur\(20px\)/,
+    /blur\(/,
   );
 });
 

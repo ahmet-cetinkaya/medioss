@@ -57,6 +57,10 @@
   --surface-solid: #ffffff;
   --surface-panel: rgb(255 255 255 / 0.45);
   --surface-shell: rgb(255 255 255 / 0.35);
+  /* Small controls (chips, pill inputs, selects, menus): between shell and
+     panel — see-through enough to tint, filled enough to read as one piece. */
+  --surface-control: rgb(255 255 255 / 0.55);
+  --surface-control-opaque: #f9f7f8;
   /* Opaque fills used under reduced transparency or without backdrop-filter (§8) */
   --surface-shell-opaque: #f7f5f5;
   --surface-panel-opaque: #fbfafa;
@@ -189,13 +193,15 @@
   :root {
     --surface-shell: var(--surface-shell-opaque);
     --surface-panel: var(--surface-panel-opaque);
+    --surface-control: var(--surface-control-opaque);
     --gradient-panel-tint: linear-gradient(
       var(--surface-panel-opaque),
       var(--surface-panel-opaque)
     );
   }
   .glass-shell,
-  .glass-panel {
+  .glass-panel,
+  .glass-control {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -207,10 +213,17 @@
   :root {
     --surface-shell: var(--surface-shell-opaque);
     --surface-panel: var(--surface-panel-opaque);
+    --surface-control: var(--surface-control-opaque);
     --gradient-panel-tint: linear-gradient(
       var(--surface-panel-opaque),
       var(--surface-panel-opaque)
     );
+  }
+  .glass-shell,
+  .glass-panel,
+  .glass-control {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
@@ -376,6 +389,24 @@
 @utility glass-solid {
   background-color: var(--surface-solid);
   border: 1px solid var(--surface-solid);
+}
+
+/* §2.2 for small controls: chips, pill inputs, selects, popover triggers and
+   menus. Panel glass (translucent white, rim, medium blur) instead of a flat
+   opaque fill, so the canvas gradient shows through like everywhere else.
+   The more interactive a control, the more opaque: selected states and open
+   menus layer surface-solid on top (.glass-control-active). */
+@utility glass-control {
+  background-color: var(--surface-control);
+  border: 1px solid var(--rim);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+/* The interactive layer of a glass control: selected chips, open popovers.
+   Opaque, so text over it keeps its tested contrast. */
+@utility glass-control-active {
+  background-color: var(--surface-solid);
 }
 
 /* Elevation (§2.3): one elevation-3 element per view. */

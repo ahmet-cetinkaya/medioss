@@ -29,6 +29,8 @@ struct MoodRequest {
 #[derive(Deserialize)]
 struct RangeQuery {
     range: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
     tz_offset_minutes: Option<i16>,
     limit: Option<u16>,
     cursor: Option<String>,
@@ -38,6 +40,8 @@ struct RangeQuery {
 #[derive(Deserialize)]
 struct StatisticsQuery {
     range: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
     tz_offset_minutes: Option<i16>,
 }
 #[derive(Serialize)]
@@ -59,16 +63,37 @@ impl From<mood_tracker_domain::MoodEntry> for EntryResponse {
         }
     }
 }
-fn range(range: Option<&str>) -> Result<MoodRange, ApiError> {
-    match range.unwrap_or("all") {
+/// Preset (`range=today|last7|last30|all`, default `all`) or a custom range
+/// of inclusive local dates (`from=YYYY-MM-DD&to=YYYY-MM-DD`). The two forms
+/// are exclusive: a request that sends `from`/`to` together with `range` is
+/// rejected, and `from` and `to` must come as a pair.
+fn range(range: Option<&str>, from: Option<&str>, to: Option<&str>) -> Result<MoodRange, ApiError> {
+    match (from, to) {
+        (None, None) => preset_range(range.unwrap_or("all")),
+        (Some(from), Some(to)) => {
+            if range.is_some() {
+                return Err(invalid("range cannot be combined with from/to"));
+            }
+            MoodRange::custom(local_date(from)?, local_date(to)?).map_err(ApiError::Application)
+        }
+        _ => Err(invalid("from and to must be given together")),
+    }
+}
+fn preset_range(name: &str) -> Result<MoodRange, ApiError> {
+    match name {
         "today" => Ok(MoodRange::Today),
         "last7" => Ok(MoodRange::Last7Days),
         "last30" => Ok(MoodRange::Last30Days),
         "all" => Ok(MoodRange::AllTime),
-        _ => Err(ApiError::Application(ApplicationError::InvalidInput(
-            "invalid mood range",
-        ))),
+        _ => Err(invalid("invalid mood range")),
     }
+}
+fn local_date(value: &str) -> Result<chrono::NaiveDate, ApiError> {
+    chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| invalid("dates must be YYYY-MM-DD"))
+}
+fn invalid(message: &'static str) -> ApiError {
+    ApiError::Application(ApplicationError::InvalidInput(message))
 }
 fn offset(tz_offset_minutes: Option<i16>) -> Result<i16, ApiError> {
     let value = tz_offset_minutes.unwrap_or(0);
@@ -201,7 +226,11 @@ async fn list(
     let page = queries::get_mood_history(
         deps.entries.as_ref(),
         actor.user_id(),
-        range(query.range.as_deref())?,
+        range(
+            query.range.as_deref(),
+            query.from.as_deref(),
+            query.to.as_deref(),
+        )?,
         offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
         query.limit.unwrap_or(50),
@@ -243,7 +272,11 @@ async fn statistics(
     let stats = queries::get_mood_statistics(
         deps.entries.as_ref(),
         actor.user_id(),
-        range(query.range.as_deref())?,
+        range(
+            query.range.as_deref(),
+            query.from.as_deref(),
+            query.to.as_deref(),
+        )?,
         offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
     )
@@ -296,7 +329,11 @@ async fn timeline(
         deps.entries.as_ref(),
         deps.meditation.as_ref(),
         actor.user_id(),
-        range(query.range.as_deref())?,
+        range(
+            query.range.as_deref(),
+            query.from.as_deref(),
+            query.to.as_deref(),
+        )?,
         offset(query.tz_offset_minutes)?,
         deps.clock.now().await,
         limit,

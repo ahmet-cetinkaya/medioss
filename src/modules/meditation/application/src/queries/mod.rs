@@ -18,7 +18,7 @@ pub use get_meditation::get_meditation;
 pub use get_meditation_detail::{get_meditation_detail, MeditationDetail};
 pub use get_playback_state::get_playback_state;
 pub use get_user_statistics::{
-    get_user_statistics, StatisticsDay, StatisticsRange, UserStatistics,
+    get_user_statistics, StatisticsDay, StatisticsRange, UserStatistics, MAX_CUSTOM_RANGE_DAYS,
 };
 pub use list_categories::list_categories;
 pub use list_library::list_library;

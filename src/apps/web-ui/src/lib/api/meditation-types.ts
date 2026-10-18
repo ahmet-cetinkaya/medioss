@@ -1,3 +1,5 @@
+import type { DateRangeValue } from "./date-range";
+
 /** The home-program summary the meditation detail response carries: the
  * Player borrows the cover and links to the program by title. */
 export interface ProgramSummary {
@@ -48,7 +50,8 @@ export interface PlaybackState {
   completed: boolean;
 }
 
-export type StatisticsRange = "today" | "last30" | "all";
+export type StatisticsPreset = "today" | "last30" | "all";
+export type StatisticsRange = DateRangeValue<StatisticsPreset>;
 
 export interface StatisticsDay {
   date: string;
@@ -56,7 +59,8 @@ export interface StatisticsDay {
 }
 
 export interface UserStatistics {
-  range: StatisticsRange;
+  /** The preset name, or "custom" for a from/to request. */
+  range: StatisticsPreset | "custom";
   total_minutes: number;
   total_days: number;
   current_streak: number;

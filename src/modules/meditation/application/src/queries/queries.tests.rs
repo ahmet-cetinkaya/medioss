@@ -482,3 +482,59 @@ async fn no_match_returns_an_empty_list() {
     let ids = search_library(&seeded, Some("xyzzy")).await;
     assert!(ids.is_empty());
 }
+
+fn local_day(month: u32, day: u32) -> chrono::NaiveDate {
+    chrono::NaiveDate::from_ymd_opt(2026, month, day).expect("test date")
+}
+
+#[test]
+fn custom_statistics_range_accepts_valid_spans_and_rejects_bad_ones() {
+    let from = local_day(9, 1);
+    assert_eq!(
+        StatisticsRange::custom(from, from).expect("one day"),
+        StatisticsRange::Custom { from, to: from }
+    );
+    let last_valid = from + Duration::days(MAX_CUSTOM_RANGE_DAYS - 1);
+    assert!(StatisticsRange::custom(from, last_valid).is_ok());
+    assert!(StatisticsRange::custom(from, last_valid + Duration::days(1)).is_err());
+    assert!(StatisticsRange::custom(local_day(9, 2), from).is_err());
+}
+
+#[tokio::test]
+async fn custom_statistics_range_counts_both_end_dates_but_not_neighbours() {
+    let state = RepoState::new();
+    let sessions = FakeSessionRepository(state);
+    let user = user_a();
+    record(&sessions, user, 1, at(3, 9, 0), 10).await;
+    record(&sessions, user, 2, at(4, 9, 0), 20).await;
+    record(&sessions, user, 3, at(5, 9, 0), 30).await;
+    record(&sessions, user, 4, at(6, 9, 0), 40).await;
+    let now = at(6, 12, 0);
+    let range =
+        StatisticsRange::custom(at(4, 0, 0).date_naive(), at(5, 0, 0).date_naive()).expect("range");
+
+    let stats = get_user_statistics(&sessions, user, range, 0, now)
+        .await
+        .expect("custom statistics");
+
+    assert_eq!(stats.total_minutes, 50, "20 + 30, neither neighbour");
+    assert_eq!(stats.total_days, 2);
+}
+
+#[tokio::test]
+async fn custom_statistics_range_never_reaches_past_today() {
+    let state = RepoState::new();
+    let sessions = FakeSessionRepository(state);
+    let user = user_a();
+    record(&sessions, user, 1, at(6, 9, 0), 15).await;
+    record(&sessions, user, 2, at(7, 9, 0), 60).await;
+    let now = at(6, 12, 0);
+    let range =
+        StatisticsRange::custom(at(6, 0, 0).date_naive(), at(7, 0, 0).date_naive()).expect("range");
+
+    let stats = get_user_statistics(&sessions, user, range, 0, now)
+        .await
+        .expect("custom statistics");
+
+    assert_eq!(stats.total_minutes, 15, "a future session is excluded");
+}

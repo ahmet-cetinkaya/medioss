@@ -6,6 +6,7 @@ import {
   storageStatePath,
 } from "../support/auth";
 import { localeOptions } from "../support/locale";
+import { pickPreset } from "../support/range-popover";
 import { expect, test } from "../support/test-fixture";
 
 // This file sorts before users.e2e.ts: make sure the member and its storage
@@ -48,11 +49,11 @@ test.describe("member, no events", () => {
 
     await page.locator("main label").filter({ hasText: "Notes only" }).click();
     await expect(
-      page.getByRole("switch", { name: "Notes only" }),
+      page.getByRole("checkbox", { name: "Notes only" }),
     ).toBeChecked();
     await expect(timeline).toContainText("Filter: All time, notes only.");
 
-    await page.locator("label").filter({ hasText: "Today" }).click();
+    await pickPreset(page, "Today");
     await expect(
       timeline.getByRole("heading", { name: "No history for Today" }),
     ).toBeVisible();

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+use chrono::{DateTime, FixedOffset, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodEntry;
 
@@ -27,12 +27,8 @@ where
     let offset = FixedOffset::east_opt(i32::from(tz_offset_minutes) * 60)
         .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
     let today = now.with_timezone(&offset).date_naive();
-    let start = match range {
-        super::MoodRange::Today => Some(today),
-        super::MoodRange::Last7Days => Some(today - Duration::days(6)),
-        super::MoodRange::Last30Days => Some(today - Duration::days(29)),
-        super::MoodRange::AllTime => None,
-    };
+    let start = range.start(today);
+    let end = range.end(today);
     let mut items: Vec<_> = entries
         .list_all_for_user(user_id)
         .await
@@ -40,7 +36,7 @@ where
         .into_iter()
         .filter(|entry| {
             let day = entry.recorded_at().with_timezone(&offset).date_naive();
-            day <= today && start.is_none_or(|start| day >= start)
+            day <= end && start.is_none_or(|start| day >= start)
         })
         .collect();
     if let Some((at, id)) = cursor {

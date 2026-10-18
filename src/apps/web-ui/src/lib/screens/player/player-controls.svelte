@@ -338,7 +338,7 @@
       {playbackError}
       {speedText}
       {skipLabel}
-      {mixOpen}
+      mixPlaying={mix.state.playing}
       onSeek={seekTo}
       onRestart={restart}
       onSkip={skip}

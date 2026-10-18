@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, FixedOffset, NaiveDate, Utc};
+use chrono::{DateTime, FixedOffset, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodEntry;
 
@@ -52,10 +52,11 @@ where
     let offset = FixedOffset::east_opt(i32::from(tz_offset_minutes) * 60)
         .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
     let today = now.with_timezone(&offset).date_naive();
-    let start = range_start(range, today);
+    let start = range.start(today);
+    let end = range.end(today);
     let includes = |at: DateTime<Utc>| {
         let day = at.with_timezone(&offset).date_naive();
-        day <= today && start.is_none_or(|start| day >= start)
+        day <= end && start.is_none_or(|start| day >= start)
     };
     let mut events = moods
         .list_all_for_user(user_id)
@@ -82,15 +83,6 @@ where
             .then_with(|| right.id.cmp(&left.id))
     });
     Ok(events)
-}
-
-fn range_start(range: MoodRange, today: NaiveDate) -> Option<NaiveDate> {
-    match range {
-        MoodRange::Today => Some(today),
-        MoodRange::Last7Days => Some(today - Duration::days(6)),
-        MoodRange::Last30Days => Some(today - Duration::days(29)),
-        MoodRange::AllTime => None,
-    }
 }
 
 fn mood_event(entry: MoodEntry) -> TimelineEvent {
