@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use tracing_subscriber::EnvFilter;
 use web_api::{
-    bootstrap::{database::Database, ensure_data_dir},
+    bootstrap::{database::Database, ensure_data_dir, media_layout::migrate_media_layout},
     config::{self, Config},
     router::router,
     state::AppState,
@@ -84,6 +84,7 @@ async fn run(cli: Cli, server_config: Option<Config>) {
     if let Err(err) = ensure_data_dir(&config.data_dir) {
         fail(with_causes(&err));
     }
+    migrate_media_layout(&config.data_dir);
 
     let listener = bind_listener(config.bind_host, config.port).await;
     let database = web_api::bootstrap::database::open(&config.data_dir.join("medioss.db"))
@@ -179,10 +180,10 @@ async fn build_state(config: Config, database: Database) -> AppState {
             Arc::clone(&meditation.sessions),
             Arc::clone(&soundscape.mixes),
             Arc::clone(&mood_tracker.entries),
-            config.data_dir.join("media"),
+            config.data_dir.join("media").join("identity"),
         ));
     let avatar_store = Arc::new(web_api::avatar_store::FileAvatarStore::new(
-        config.data_dir.join("media"),
+        config.data_dir.join("media").join("identity"),
     ));
     AppState::new(
         Arc::new(config),

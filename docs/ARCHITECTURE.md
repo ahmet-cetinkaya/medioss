@@ -380,11 +380,14 @@ No runtime state lives in the source tree. Everything mutable lives under `$MEDI
 $MEDIOSS_DATA_DIR/
 ├── medioss.db                  # SQLite: all module tables
 └── media/
-    └── {user_id}/
-        └── {opaque_id}         # no extension, no original filename
+    ├── meditation/             # program folders: audio (Ogg Opus) + covers
+    │   └── {program_folder}/
+    ├── soundscape/             # built-in sound audio and icons
+    └── identity/               # per-user avatars
+        └── {user_id}/
 ```
 
-Nothing is written under `src/`, and there is no `web-api/media` directory. Backing up `$MEDIOSS_DATA_DIR` captures everything.
+Each module owns one `media/` root, so a per-module backup or wipe never needs a path list. Stored files keep opaque names; titles, MIME types, and tags stay database metadata. Startup migrates a pre-0.5.0 flat `media/` layout once, renaming each legacy folder into its module root (never deleting). Nothing is written under `src/`, and there is no `web-api/media` directory. Backing up `$MEDIOSS_DATA_DIR` captures everything.
 
 **One database, module-owned schemas.** All modules share one SQLite file, but each module owns its tables exclusively and ships its own migrations in its `infrastructure` crate. Two rules keep that from collapsing into a shared schema:
 

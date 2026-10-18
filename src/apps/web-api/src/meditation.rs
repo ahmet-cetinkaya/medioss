@@ -121,7 +121,7 @@ pub fn meditation_dependencies(
             "ffmpeg not found on PATH: meditation uploads will fail with 503 until it is installed"
         );
     }
-    let media_root = data_dir.join("media");
+    let media_root = data_dir.join("media").join("meditation");
     Arc::new(meditation_presentation::MeditationDependencies {
         meditations: Arc::new(SeaOrmMeditationRepository::new(connection.clone())),
         programs: Arc::new(SeaOrmProgramRepository::new(connection.clone())),
