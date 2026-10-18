@@ -46,9 +46,7 @@
     aria-hidden="true"
     class={cn(
       "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
-      checked
-        ? "border-accent-fill bg-accent-fill"
-        : "border-control-border bg-surface-solid",
+      checked ? "border-accent-fill bg-accent-fill" : "glass-control",
     )}
   >
     <span

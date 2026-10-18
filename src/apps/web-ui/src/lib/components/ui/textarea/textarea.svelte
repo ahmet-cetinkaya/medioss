@@ -40,7 +40,7 @@
   bind:this={ref}
   data-slot="textarea"
   class={cn(
-    "focus-ring block min-h-12 w-full min-w-0 resize-none overflow-hidden border border-control-border bg-surface-solid px-5 py-3 text-base leading-6 text-ink-strong placeholder:text-ink-muted aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-60",
+    "glass-control focus-ring block min-h-12 w-full min-w-0 resize-none overflow-hidden rounded-panel px-5 py-3 text-base leading-6 text-ink-strong placeholder:text-ink-muted aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-60",
     multiline ? "rounded-panel" : "rounded-full",
     className,
   )}

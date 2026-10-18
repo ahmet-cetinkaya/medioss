@@ -109,6 +109,10 @@ for (let i = 0; i < canvasStops.length; i++) {
 
 type Surface = { name: string; rgb: Rgb };
 
+function allSurfacesSoFar(out: Surface[]): Surface[] {
+  return [...out];
+}
+
 function surfaces(): Surface[] {
   const out: Surface[] = [];
   const shell = color("--surface-shell");
@@ -139,6 +143,19 @@ function surfaces(): Surface[] {
   out.push({
     name: "surface-panel-opaque",
     rgb: opaque("--surface-panel-opaque"),
+  });
+  // The glass-control fill over every canvas and surface: controls sit on
+  // the shell and panels, so their translucent white lands on all of it.
+  const control = color("--surface-control");
+  for (const base of allSurfacesSoFar(out)) {
+    out.push({
+      name: `surface-control over ${base.name}`,
+      rgb: over(control, base.rgb),
+    });
+  }
+  out.push({
+    name: "surface-control-opaque",
+    rgb: opaque("--surface-control-opaque"),
   });
   out.push({
     name: "accent-soft over surface-solid",
@@ -200,6 +217,8 @@ describe("global.css parser guard", () => {
       "--surface-shell",
       "--surface-panel",
       "--surface-solid",
+      "--surface-control",
+      "--surface-control-opaque",
     ]) {
       expect(() => color(name)).not.toThrow();
     }
