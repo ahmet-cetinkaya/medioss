@@ -39,7 +39,7 @@ The health check calls `GET /api/health`. For HTTPS, put a reverse proxy in fron
 
 ## Publishing the image
 
-`.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. Pull requests, and every run before `DOCKERHUB_IMAGE` is set, only build it (no login, no push), so CI stays green. Pushes to `main` publish `latest`, and `v*` tags publish `X.Y.Z`, `X.Y` and `X`.
+`.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. Pull requests, pushes to `main`, and every run before `DOCKERHUB_IMAGE` is set, only build it (no login, no push), so CI stays green. `v*` tags publish `X.Y.Z`, `X.Y`, `X` and move `latest` to the released version; `latest` always points at the last release, not at every main push.
 
 Set these in the repository settings before the first publish:
 

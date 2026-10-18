@@ -1,10 +1,11 @@
 name: Docker image
 
-# Builds the Dockerfile for amd64 and arm64. Pull requests, and runs
-# before the repository variable DOCKERHUB_IMAGE is set, only build (no
-# registry login, no push). Pushes to main publish `latest`; v* tags publish
-# the semver tags. Needs the repository secrets DOCKERHUB_USERNAME and
-# DOCKERHUB_TOKEN (a Docker Hub access token, not the account password).
+# Builds the Dockerfile for amd64 and arm64. Pull requests, pushes to
+# main, and runs before the repository variable DOCKERHUB_IMAGE is set,
+# only build (no registry login, no push). `v*` tags publish the semver
+# tags and move `latest` to the released version. Needs the repository
+# secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (a Docker Hub access
+# token, not the account password).
 on:
   push:
     branches: [main]
@@ -15,9 +16,10 @@ env:
   # PLACEHOLDER until the owner picks the Docker Hub namespace and name.
   # Override without editing this file via the repository variable DOCKERHUB_IMAGE.
   IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE || 'CHANGE-ME/medioss' }}
-  # Publishing stays off (build-only, CI green) until DOCKERHUB_IMAGE is set
-  # and this is not a pull request.
-  PUBLISH: ${{ vars.DOCKERHUB_IMAGE != '' && github.event_name != 'pull_request' }}
+  # Publishing stays off (build-only, CI green) except on v* tags, and only
+  # once DOCKERHUB_IMAGE is set. `latest` must track the last release, not
+  # every main push.
+  PUBLISH: ${{ vars.DOCKERHUB_IMAGE != '' && startsWith(github.ref, 'refs/tags/v') }}
 
 permissions:
   contents: read
@@ -45,7 +47,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
