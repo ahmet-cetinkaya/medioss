@@ -5,28 +5,28 @@ import fs from "node:fs";
 import path from "node:path";
 import { qaDir } from "../e2e/support/server-env";
 
-// Demo covers: abstract, meditation-suitable Unsplash photos (one per
-// program, in DEMO_PROGRAMS order). Stable photo ids with size params keep
-// the CDN URL reproducible; images are cached under .agents/qa/demo/. Used
-// under the Unsplash License (free use, attribution appreciated but not
-// required); each photo's credit lives on its unsplash.com page.
+// Demo covers: calm, meditation-suitable Unsplash photos (one per program,
+// in DEMO_PROGRAMS order). Stable photo ids with size params keep the CDN
+// URL reproducible; images are cached under .agents/qa/demo/. Used under
+// the Unsplash License (free use, attribution appreciated but not
+// required); photographer credits are in docs/demo.md.
 const COVER_PHOTO_IDS = [
-  "photo-1499209974431-9dddcece7f88", // layered pink/blue abstract
-  "photo-1502082553048-f009c37129b9", // green fronds in sunlight
-  "photo-1500462918059-b1a0cb512f1d", // deep blue/purple waves
-  "photo-1518495973542-4542c06a5843", // sunlight through leaves
-  "photo-1472214103451-9374bd1c798e", // mist between forest ridges
-  "photo-1469474968028-56623f02e42e", // mountain layers at sunrise
-  "photo-1470252649378-9c29740c9fa8", // sunset over water
-  "photo-1490718720478-364a07a997cd", // misty valley
-  "photo-1439066615861-d1af74d74000", // still water and peaks
-  "photo-1509316785289-025f5b846b35", // pink desert dunes
-  "photo-1470071459604-3b5ec3a7fe05", // foggy pine hills
-  "photo-1505144808419-1957a94ca61e", // gradient sky over water
-  "photo-1508739773434-c26b3d09e071", // sunset cloud study
-  "photo-1519681393784-d120267933ba", // night over snowy mountains
-  "photo-1518709268805-4e9042af9f23", // dusk sky silhouette
-  "photo-1500530855697-b586d89ba3ee", // river winding through forest
+  "photo-1499209974431-9dddcece7f88", // soft pink haze over water
+  "photo-1502082553048-f009c37129b9", // green leaves in sunlight
+  "photo-1500462918059-b1a0cb512f1d", // pink/purple gradient wall
+  "photo-1518495973542-4542c06a5843", // sunlight through canopy
+  "photo-1472214103451-9374bd1c798e", // green valley at sunset
+  "photo-1469474968028-56623f02e42e", // misty green highlands
+  "photo-1470252649378-9c29740c9fa8", // sunset over meadow
+  "photo-1439066615861-d1af74d74000", // still lake and jetty
+  "photo-1476673160081-cf065607f449", // soft waves on a quiet beach
+  "photo-1509316785289-025f5b846b35", // fog rolling over green cliffs
+  "photo-1470071459604-3b5ec3a7fe05", // turquoise wave from above
+  "photo-1505144808419-1957a94ca61e", // alpine ridge in morning light
+  "photo-1508739773434-c26b3d09e071", // milky way over snowy peaks
+  "photo-1519681393784-d120267933ba", // foggy pine forest
+  "photo-1518709268805-4e9042af9f23", // night sky over mountains
+  "photo-1500530855697-b586d89ba3ee", // desert road between red rocks
 ] as const;
 
 const COVER_URL = (photoId: string) =>
@@ -177,14 +177,18 @@ function cachedCover(index: number): string {
   }
   const file = path.join(demoDir, `cover-${index}.jpg`);
   if (!fs.existsSync(file)) {
+    // Download under a temp name so a failed run never leaves a truncated
+    // file that the next run would reuse.
+    const partial = `${file}.part`;
     execFileSync("curl", [
       "-fsSL",
       "--retry",
       "3",
       "-o",
-      file,
+      partial,
       COVER_URL(COVER_PHOTO_IDS[index]),
     ]);
+    fs.renameSync(partial, file);
   }
   return file;
 }

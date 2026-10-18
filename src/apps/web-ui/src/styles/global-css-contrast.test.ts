@@ -153,6 +153,16 @@ function surfaces(): Surface[] {
   return out;
 }
 
+// The overlay card's on-image ink sits on the scrim over any artwork; the
+// worst case is the brightest artwork (white) under each visible scrim
+// stop. A stop too faint to carry text fails here, so the gradient must
+// reach full strength before the text band begins.
+function scrimSurfaces(): Rgb[] {
+  return gradientStops("--gradient-image-scrim")
+    .filter((c) => c.a > 0)
+    .map((stop) => over(stop, [255, 255, 255]));
+}
+
 const allSurfaces = surfaces();
 
 function worst(token: string): { ratio: number; on: string } {
@@ -281,6 +291,24 @@ describe("mood scale (--mood-1..5, the score selector)", () => {
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
   }
+});
+
+describe("on-image ink over the image scrim (overlay cards, §5.7)", () => {
+  const surfaces = scrimSurfaces();
+
+  test("--ink-on-image over the scrim on white artwork, >= 4.5:1", () => {
+    const fg = opaque("--ink-on-image");
+    for (const surface of surfaces) {
+      expect(contrast(fg, surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  test("--ink-on-image-muted over the scrim on white artwork, >= 4.5:1", () => {
+    const fg = parseColor(resolveToken("--ink-on-image-muted"));
+    for (const surface of surfaces) {
+      expect(contrast(fg.rgb, surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
 });
 
 describe("labels on fills, >= 4.5:1", () => {

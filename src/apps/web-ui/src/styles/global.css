@@ -127,8 +127,12 @@
   --gradient-image-scrim: linear-gradient(
     to bottom,
     transparent 35%,
-    rgb(26 16 40 / 0.78)
+    rgb(26 16 40 / 0.78) 75%
   );
+  /* Ink for text sitting directly on imagery over the scrim (§5.7 overlay
+     cards). Fixed, not theme tokens: the scrim is the same in every theme. */
+  --ink-on-image: #ffffff;
+  --ink-on-image-muted: rgb(255 255 255 / 0.85);
   --gradient-panel-tint: linear-gradient(
     to bottom,
     rgb(255 255 255 / 0.55),

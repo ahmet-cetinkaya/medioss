@@ -130,8 +130,8 @@
       ></span>
       {#if overlay}
         <span class="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
-          {@render heading("text-white")}
-          {@render metaLine("text-white/85")}
+          {@render heading("text-(--ink-on-image)")}
+          {@render metaLine("text-(--ink-on-image-muted)")}
         </span>
       {/if}
       {#if completed}
@@ -147,12 +147,12 @@
       {/if}
     </span>
     {#if !overlay}
-      <div
+      <span
         class={cn("flex min-w-0 flex-col px-1", compact ? "gap-0.5" : "gap-1")}
       >
         {@render heading("text-ink-strong")}
         {@render metaLine("text-ink-muted")}
-      </div>
+      </span>
     {/if}
   </svelte:element>
   {#if actions}
@@ -163,8 +163,10 @@
 </div>
 
 {#snippet heading(colorClass: string)}
+  <!-- A button must not contain a heading, so the button variant flattens
+       the title to a span (24-F3). -->
   <svelte:element
-    this={`h${headingLevel}`}
+    this={href === undefined ? "span" : `h${headingLevel}`}
     class={[
       "font-medium break-words",
       compact ? "line-clamp-2 text-sm" : "text-body-lg",
@@ -187,7 +189,7 @@
         {#if i > 0}
           <span aria-hidden="true" class="opacity-70">•</span>
         {/if}
-        <span class="min-w-0">{part}</span>
+        <span class="line-clamp-2 min-w-0">{part}</span>
       {/each}
     </span>
   {/if}
