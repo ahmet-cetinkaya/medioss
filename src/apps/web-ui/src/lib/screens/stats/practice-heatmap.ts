@@ -2,7 +2,11 @@
 // columns starting on Monday, with an intensity level 0..HEATMAP_LEVELS
 // derived from that day's practiced minutes (the figure statistics already hold).
 
-import type { StatisticsDay } from "../../api/meditation-types";
+import { isCustomRange } from "../../api/date-range";
+import type {
+  StatisticsDay,
+  StatisticsRange,
+} from "../../api/meditation-types";
 
 export const HEATMAP_LEVELS = 4;
 const DAYS_PER_WEEK = 7;
@@ -30,6 +34,14 @@ const addDays = (date: Date, days: number): Date =>
 const weekdayIndex = (date: Date): number =>
   (date.getUTCDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
 
+function rangeStart(range: StatisticsRange, end: Date, weeks: number): Date {
+  if (isCustomRange(range)) return parseIso(range.from);
+  if (range === "today") return end;
+  if (range === "last30") return addDays(end, -29);
+  const gridEnd = addDays(end, -weekdayIndex(end));
+  return addDays(gridEnd, -(weeks - 1) * DAYS_PER_WEEK);
+}
+
 export function heatmapLevel(minutes: number, maxMinutes: number): number {
   if (minutes <= 0 || maxMinutes <= 0) return 0;
   return Math.max(1, Math.ceil((minutes / maxMinutes) * HEATMAP_LEVELS));
@@ -43,25 +55,24 @@ export function weeksThatFit(availableWidth: number, pitch: number): number {
 
 /**
  * Weeks covering the range, newest last. "last30" is the last 30 days and
- * "today" a single cell; "all" is `weeks` whole weeks ending with the current one.
+ * "today" a single cell; "all" is `weeks` whole weeks ending with the current
+ * one; a custom range spans its own first to last day, never past `today`.
  */
 export function buildHeatmap(
   calendar: readonly StatisticsDay[],
-  range: "today" | "last30" | "all",
+  range: StatisticsRange,
   today: string,
   weeks: number = MAX_WEEKS,
 ): HeatmapWeek[] {
-  const end = parseIso(today);
+  const todayDate = parseIso(today);
+  const end =
+    isCustomRange(range) && parseIso(range.to) < todayDate
+      ? parseIso(range.to)
+      : todayDate;
   const minutesByDate = new Map(calendar.map((d) => [d.date, d.minutes]));
   const maxMinutes = Math.max(0, ...calendar.map((d) => d.minutes));
 
-  const gridEnd = addDays(end, -weekdayIndex(end));
-  const start =
-    range === "today"
-      ? end
-      : range === "last30"
-        ? addDays(end, -29)
-        : addDays(gridEnd, -(weeks - 1) * DAYS_PER_WEEK);
+  const start = rangeStart(range, end, weeks);
 
   const gridStart = addDays(start, -weekdayIndex(start));
   const grid: HeatmapWeek[] = [];

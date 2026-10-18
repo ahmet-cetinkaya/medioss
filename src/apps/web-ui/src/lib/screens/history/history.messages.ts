@@ -8,6 +8,7 @@ export const historyMessages = defineMessages({
   rangeLast7: { en: "Last 7 days", tr: "Son 7 gün" },
   rangeLast30: { en: "Last 30 days", tr: "Son 30 gün" },
   rangeAll: { en: "All time", tr: "Tüm zamanlar" },
+  rangeCustom: { en: "{from} – {to}", tr: "{from} – {to}" },
   notesOnly: { en: "Notes only", tr: "Yalnızca notlar" },
   timelineHeading: { en: "Timeline", tr: "Zaman çizelgesi" },
   moodEvent: {

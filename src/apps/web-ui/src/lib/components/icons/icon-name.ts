@@ -63,6 +63,7 @@ export const ICON_NAMES = [
   "plus",
   "dots-three",
   "caret-down",
+  "calendar-blank",
   "timer",
   "skip-back",
   "speaker-high",

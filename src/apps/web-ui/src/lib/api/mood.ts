@@ -1,6 +1,8 @@
+import { rangeQuery, type DateRangeValue } from "./date-range";
 import { request } from "./request";
 
-export type MoodRange = "today" | "last7" | "last30" | "all";
+export type MoodPreset = "today" | "last7" | "last30" | "all";
+export type MoodRange = DateRangeValue<MoodPreset>;
 export interface MoodEntry {
   id: number;
   score: number;
@@ -32,7 +34,7 @@ export interface TimelinePage {
   next_cursor: string | null;
 }
 const query = (range: MoodRange) =>
-  `range=${range}&tz_offset_minutes=${-new Date().getTimezoneOffset()}`;
+  `${rangeQuery(range)}&tz_offset_minutes=${-new Date().getTimezoneOffset()}`;
 export const listMood = (range: MoodRange, cursor?: string) =>
   request<MoodHistoryPage>(
     `/api/mood?${query(range)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,

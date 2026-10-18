@@ -50,6 +50,39 @@ describe("buildHeatmap", () => {
     expect(weeks.at(-1)?.[6]).toBeNull();
   });
 
+  test("a custom range spans its own first to last day", () => {
+    const all = cells(
+      buildHeatmap(
+        [{ date: "2026-10-05", minutes: 10 }],
+        { from: "2026-10-01", to: "2026-10-10" },
+        today,
+      ),
+    );
+    expect(all).toHaveLength(10);
+    expect(all[0]?.date).toBe("2026-10-01");
+    expect(all.at(-1)?.date).toBe("2026-10-10");
+    expect(all.find((cell) => cell?.date === "2026-10-05")?.level).toBe(
+      HEATMAP_LEVELS,
+    );
+  });
+
+  test("a custom range ending after today stops at today", () => {
+    const all = cells(
+      buildHeatmap([], { from: "2026-10-15", to: "2026-12-31" }, today),
+    );
+    expect(all.map((cell) => cell?.date)).toEqual([
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-17",
+    ]);
+  });
+
+  test("a one-day custom range is a single cell", () => {
+    expect(
+      cells(buildHeatmap([], { from: "2026-10-12", to: "2026-10-12" }, today)),
+    ).toHaveLength(1);
+  });
+
   test("weeksThatFit clamps to 26..52", () => {
     expect(weeksThatFit(100, 20)).toBe(26);
     expect(weeksThatFit(800, 20)).toBe(40);

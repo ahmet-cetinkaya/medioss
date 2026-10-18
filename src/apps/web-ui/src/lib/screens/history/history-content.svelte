@@ -1,7 +1,7 @@
 <!--
   @component
-  History content (FR-060–FR-062, PB-10). Range chips (default All time) and
-  the notes-only switch drive one load; "Load more" appends the next cursor
+  History content (FR-060–FR-062, PB-10). The date-range popover (presets or
+  a custom from/to, default All time) and the notes-only checkbox drive one load; "Load more" appends the next cursor
   page de-duplicated by kind+id (appendPage). Each feed item states its event
   type in text with the meditation title or mood score, the local date and
   time, and the note. Events link nowhere (plan scope: no History links).
@@ -9,16 +9,18 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { timeline, type MoodRange, type TimelineEvent } from "$lib/api/mood";
+  import { isCustomRange } from "$lib/api/date-range";
+  import { formatCalendarDay } from "$lib/i18n/formatting/date-time-format";
   import { type ServerReason } from "$lib/api/server-reason";
   import { failureMessage, reasonOf } from "$lib/api/failure";
   import FeedItem from "$lib/components/content/feed-item.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
-  import RangeChips from "$lib/components/filters/range-chips.svelte";
+  import RangePopover from "$lib/components/filters/range-popover.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
-  import { Toggle } from "$lib/components/ui/toggle/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { formatDateTime } from "$lib/i18n/formatting/date-time-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
@@ -48,7 +50,12 @@
   ]);
 
   const rangeLabel = $derived(
-    ranges.find((option) => option.value === range)?.label ?? "",
+    isCustomRange(range)
+      ? t(m.rangeCustom, {
+          from: formatCalendarDay(range.from, locale.current),
+          to: formatCalendarDay(range.to, locale.current),
+        })
+      : (ranges.find((option) => option.value === range)?.label ?? ""),
   );
 
   const reasonText = (reason: ServerReason, fallback: typeof m.loadFailed) =>
@@ -114,14 +121,14 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <RangeChips
+  <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+    <RangePopover
       options={ranges}
       bind:value={range}
       name="history-range"
       legend={t(m.rangeLegend)}
     />
-    <Toggle bind:checked={notesOnly} label={t(m.notesOnly)} />
+    <Checkbox bind:checked={notesOnly} label={t(m.notesOnly)} />
   </div>
 
   <Panel aria-labelledby="history-timeline-heading">

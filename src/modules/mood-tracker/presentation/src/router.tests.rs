@@ -131,3 +131,80 @@ async fn timeline_cursor_continues_descending_without_duplicates() {
         .iter()
         .any(|first_item| first_item.id == item.id)));
 }
+
+async fn status_of(app: &TestApp, path: &str) -> StatusCode {
+    let mut request = Request::get(path).body(Body::empty()).expect("request");
+    request.extensions_mut().insert(member_actor());
+    app.router
+        .clone()
+        .oneshot(request)
+        .await
+        .expect("response")
+        .status()
+}
+
+fn at_noon(month: u32, day: u32) -> DateTime<Utc> {
+    Utc.with_ymd_and_hms(2026, month, day, 12, 0, 0)
+        .single()
+        .expect("test instant")
+}
+
+#[tokio::test]
+async fn custom_range_returns_only_events_inside_both_inclusive_dates() {
+    let app = app(vec![
+        event(1, at_noon(9, 9)),
+        event(2, at_noon(9, 10)),
+        event(3, at_noon(9, 20)),
+        event(4, at_noon(9, 21)),
+    ]);
+
+    let (_, page) = timeline_page(&app, "/timeline?from=2026-09-10&to=2026-09-20").await;
+
+    let mut ids: Vec<_> = page.items.iter().map(|item| item.id).collect();
+    ids.sort_unstable();
+    assert_eq!(ids, [2, 3], "first and last date count, neighbours do not");
+}
+
+#[tokio::test]
+async fn custom_range_is_validated_with_a_400_for_every_bad_shape() {
+    let app = app(Vec::new());
+    for (name, path) in [
+        ("from after to", "/timeline?from=2026-09-20&to=2026-09-10"),
+        (
+            "more than 366 days",
+            "/timeline?from=2025-01-01&to=2026-09-30",
+        ),
+        ("only from", "/timeline?from=2026-09-10"),
+        ("only to", "/timeline?to=2026-09-10"),
+        ("not a date", "/timeline?from=yesterday&to=today"),
+        ("impossible date", "/timeline?from=2026-02-30&to=2026-03-02"),
+        (
+            "preset mixed with custom",
+            "/timeline?range=last7&from=2026-09-10&to=2026-09-20",
+        ),
+        ("history endpoint", "/mood?from=2026-09-20&to=2026-09-10"),
+        (
+            "statistics endpoint",
+            "/mood/statistics?from=2026-09-20&to=2026-09-10",
+        ),
+    ] {
+        assert_eq!(
+            status_of(&app, path).await,
+            StatusCode::BAD_REQUEST,
+            "{name}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn presets_still_work_and_a_366_day_span_is_the_longest_custom_range() {
+    let app = app(Vec::new());
+    for path in [
+        "/timeline",
+        "/timeline?range=last7",
+        "/mood/statistics?range=last30",
+        "/timeline?from=2025-09-30&to=2026-09-30",
+    ] {
+        assert_eq!(status_of(&app, path).await, StatusCode::OK, "{path}");
+    }
+}

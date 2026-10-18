@@ -10,7 +10,7 @@ use kernel::UserId;
 use crate::{ports::SessionRepository, ApplicationError};
 
 pub use self::statistics_day::StatisticsDay;
-pub use self::statistics_range::StatisticsRange;
+pub use self::statistics_range::{StatisticsRange, MAX_CUSTOM_RANGE_DAYS};
 pub use self::user_statistics::UserStatistics;
 
 pub async fn get_user_statistics<R>(
@@ -27,11 +27,8 @@ where
     let offset = FixedOffset::east_opt(offset_seconds)
         .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
     let today = now.with_timezone(&offset).date_naive();
-    let range_start = match range {
-        StatisticsRange::Today => Some(today),
-        StatisticsRange::Last30Days => Some(today - Duration::days(29)),
-        StatisticsRange::AllTime => None,
-    };
+    let range_start = range.start(today);
+    let range_end = range.end(today);
 
     let mut all_days = BTreeSet::new();
     let mut calendar_seconds = BTreeMap::<NaiveDate, i64>::new();
@@ -44,7 +41,7 @@ where
     {
         let day = session.started_at.with_timezone(&offset).date_naive();
         all_days.insert(day);
-        if range_start.is_none_or(|start| day >= start) && day <= today {
+        if range_start.is_none_or(|start| day >= start) && day <= range_end {
             let seconds = session
                 .finished_at
                 .signed_duration_since(session.started_at)
