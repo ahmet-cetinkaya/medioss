@@ -2,8 +2,12 @@ name: Docker image
 
 # Builds the Dockerfile for amd64 and arm64. Pull requests, pushes to
 # main, and runs before the repository variable DOCKERHUB_IMAGE is set,
-# only build (no registry login, no push). `v*` tags publish the semver
-# tags and move `latest` to the released version. Needs the repository
+# only build (no registry login, no push). Only stable semver tags
+# (vX.Y.Z, no prerelease suffix like -rc.1) publish and move `latest`;
+# prerelease tags never touch the registry (23-F1). Publishes in one
+# step: build-push applies the semver tags and `latest` atomically in a
+# single manifest push, so there is no window where `latest` lags the
+# version tags (23-F2, one-step, documented). Needs the repository
 # secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (a Docker Hub access
 # token, not the account password).
 on:
@@ -16,10 +20,12 @@ env:
   # PLACEHOLDER until the owner picks the Docker Hub namespace and name.
   # Override without editing this file via the repository variable DOCKERHUB_IMAGE.
   IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE || 'CHANGE-ME/medioss' }}
-  # Publishing stays off (build-only, CI green) except on v* tags, and only
-  # once DOCKERHUB_IMAGE is set. `latest` must track the last release, not
-  # every main push.
-  PUBLISH: ${{ vars.DOCKERHUB_IMAGE != '' && startsWith(github.ref, 'refs/tags/v') }}
+  # Publishing stays off (build-only, CI green) except on stable semver tags
+  # (vX.Y.Z, no prerelease suffix), and only once DOCKERHUB_IMAGE is set.
+  # `latest` must track the last stable release: v1.0.0-rc.1 or v-foo can
+  # never publish or move it (23-F1).
+  STABLE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') == false }}
+  PUBLISH: ${{ vars.DOCKERHUB_IMAGE != '' && env.STABLE_TAG == 'true' }}
 
 permissions:
   contents: read
@@ -47,10 +53,10 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ env.STABLE_TAG == 'true' }}
+            type=semver,pattern={{version}},enable=${{ env.STABLE_TAG == 'true' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ env.STABLE_TAG == 'true' }}
+            type=semver,pattern={{major}},enable=${{ env.STABLE_TAG == 'true' }}
 
       - name: Build and push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
