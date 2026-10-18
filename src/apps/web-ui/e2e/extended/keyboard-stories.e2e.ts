@@ -283,29 +283,30 @@ test.describe("member", () => {
     await api.dispose();
   });
 
-  test("US6: statistics range chips change with arrow keys", async ({
+  test("US6: the statistics range popover opens and changes by keyboard", async ({
     page,
   }) => {
     await page.goto("/stats/");
     await expect(page.locator("main dl dt")).toHaveCount(4);
-    await expect(page.getByRole("radio", { name: "All time" })).toBeChecked();
-    await tabTo(page, page.getByRole("radio", { checked: true }));
+    const trigger = page.getByRole("button", { name: /^Date range:/ });
+    await expect(trigger).toHaveAccessibleName("Date range: All time");
 
-    const ranges = async (key: string, range: string) => {
-      const response = page.waitForResponse(
-        (r) =>
-          r.url().includes("/api/meditation/statistics?") &&
-          new URL(r.url()).searchParams.get("range") === range,
-      );
-      await page.keyboard.press(key);
-      expect((await response).status()).toBe(200);
-    };
-    await ranges("ArrowLeft", "last30");
-    await expect(
-      page.getByRole("radio", { name: "Last 30 days" }),
-    ).toBeChecked();
-    await ranges("ArrowRight", "all");
-    await expect(page.getByRole("radio", { name: "All time" })).toBeChecked();
+    await tabTo(page, trigger);
+    await page.keyboard.press("Enter");
+    const panel = page.getByRole("dialog");
+    await expect(panel).toBeVisible();
+    await tabTo(page, panel.getByRole("radio", { checked: true }));
+
+    const response = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/meditation/statistics?") &&
+        new URL(r.url()).searchParams.get("range") === "last30",
+    );
+    await page.keyboard.press("ArrowLeft");
+    expect((await response).status()).toBe(200);
+    await expect(trigger).toHaveAccessibleName("Date range: Last 30 days");
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
     await expect(page.locator("main dl dt")).toHaveCount(4);
   });
 });

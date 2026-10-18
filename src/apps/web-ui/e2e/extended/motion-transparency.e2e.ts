@@ -15,7 +15,7 @@ import { viewport } from "../support/viewport";
 const MAX_DURATION_S = 0.00001 + 1e-9;
 const HOVER_SAMPLE = 60;
 
-type Screen = { key: string; path: string };
+type Screen = { key: string; path: string; kind?: string };
 
 function screens(role: Role): Screen[] {
   const seed = readSeed();
@@ -132,6 +132,8 @@ function surfaces(page: Page): Promise<Surface[]> {
       ],
       ["bottom-bar", 'nav[aria-label="Bottom navigation"]'],
       ["chip", "label:has(input[type=radio])"],
+      // The History/Statistics range popover trigger is a solid pill.
+      ["range-trigger", 'button[aria-label^="Date range:"]'],
     ];
     const out: {
       kind: string;
@@ -229,17 +231,18 @@ for (const role of ["member", "admin"] as const) {
           transparency: "reduce",
           reducedMotion: "reduce",
         });
-        // Chips: Mood score selector and Stats / History range chips.
+        // Chips: the Mood score selector; the History and Stats range
+        // triggers (the chips live inside their popover now).
         for (const screen of [
-          { key: "mood", path: "/mood/" },
-          { key: "history", path: "/history/" },
-          { key: "stats", path: "/stats/" },
+          { key: "mood", path: "/mood/", kind: "chip" },
+          { key: "history", path: "/history/", kind: "range-trigger" },
+          { key: "stats", path: "/stats/", kind: "range-trigger" },
         ]) {
           await openScreen(page, screen);
           const found = await surfaces(page);
           expect(
-            found.filter((s) => s.kind === "chip").length,
-            `${screen.key}: chips sampled`,
+            found.filter((s) => s.kind === screen.kind).length,
+            `${screen.key}: ${screen.kind} sampled`,
           ).toBeGreaterThan(0);
           expectOpaque(found, `${screen.key} chips`);
         }

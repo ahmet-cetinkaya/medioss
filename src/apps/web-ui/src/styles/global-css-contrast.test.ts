@@ -328,6 +328,29 @@ describe("progress bar on the image scrim (non-text, >= 3:1)", () => {
   });
 });
 
+describe("mood picker track and fill (non-text, >= 3:1)", () => {
+  // The slider-style picker draws a filled track up to the chosen score in
+  // that score's mood color, on the unfilled track (--control-border at 40 %),
+  // over the glass surfaces it sits on.
+  const UNFILLED_TRACK_ALPHA = 0.4;
+  const unfilled = { rgb: opaque("--control-border"), a: UNFILLED_TRACK_ALPHA };
+
+  for (const score of [1, 2, 3, 4, 5] as const) {
+    test(`--mood-${score} fill against the unfilled track, >= 3:1`, () => {
+      const fill = opaque(`--mood-${score}`);
+      for (const surface of allSurfaces) {
+        expect(
+          contrast(fill, over(unfilled, surface.rgb)),
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+
+  test("the unselected stop's border (--control-border) is a >= 3:1 boundary", () => {
+    expectAtLeast("--control-border", 3);
+  });
+});
+
 describe("labels on fills, >= 4.5:1", () => {
   const pairs: [string, string][] = [
     ["--primary-foreground", "--primary"],

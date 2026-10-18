@@ -287,6 +287,7 @@ The signature component.
   - _Unselected:_ transparent fill, 1 px `--chip-outline` border, weight 400, `--text-body`.
   - _Hover (unselected):_ `surface-solid` at ≈ 50 %.
 - **Semantics:** single-select filters are a `radiogroup` (or toggle buttons with `aria-pressed`); the selected state must not rely on fill alone — the weight change is part of the signal.
+- **Date-range popover (History, Statistics):** a date range is not a chip row. A solid pill trigger (calendar icon, current choice, caret) opens a popover holding the quick presets as this chip group plus a custom From/To pair (native date inputs, inclusive local dates, at most 366 days) and an Apply button; invalid pairs are refused with a message before any request. Each screen passes only the presets its API supports. Notes-only is a labelled checkbox beside the trigger.
 
 ### 5.7 Content card
 
@@ -294,7 +295,7 @@ The signature component.
 - **Overlay badge:** the reference uses it for a bookmark; MediOSS has no save/bookmark feature, so the slot shows a completion check (`completed`) or stays empty. If it ever becomes interactive it is a separate button with an `aria-label` and `aria-pressed`.
 - **Meta line:** `meta` style, `--text-muted`, items separated by a `•` (bullet) or a 1 px × 12 px vertical divider, 6–8 px gaps. Example: `10 min • 40 %` (duration and progress) or `Program title • 10 min`.
 - **Usage:** horizontal rows of 3–4 cards under a section heading. The card is one link.
-- **Overlay variant (`overlay`):** an image-first variant where the title and meta line sit on the cover over a dark scrim (`--gradient-image-scrim`) instead of below it; the ink flips to `--ink-on-image` / `--ink-on-image-muted`. Use it only where the artwork is the content — currently the Library's program and search-result cards. The default (text-below) variant stays the choice for the admin panels and horizontal compact rows.
+- **Overlay variant (`overlay`):** an image-first variant where the title and meta line sit on the cover over a dark scrim (`--gradient-image-scrim`) instead of below it; the ink flips to `--ink-on-image` / `--ink-on-image-muted`. The scrim and caption live in one shared piece (`cover-overlay.svelte`), also used by the Player cover and the Program hero (wide 16:9 cover, title on the scrim, description and the primary action below it), so the treatment cannot drift. Use it only where the artwork is the content — the Library's program and search-result cards, the Player cover and the Program hero. The default (text-below) variant stays the choice for the admin panels and horizontal compact rows.
 
 ### 5.8 Greeting hero
 

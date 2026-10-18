@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { storageStatePath, USERS } from "../support/auth";
 import { saveScreenshot } from "../support/evidence";
 import { localeOptions, NEW_YORK, type AppLocale } from "../support/locale";
+import { pickPreset, rangeTrigger } from "../support/range-popover";
 import { readSeed } from "../support/seed-content";
 import { expect, test } from "../support/test-fixture";
 import { viewport } from "../support/viewport";
@@ -140,7 +141,9 @@ test.describe("member", () => {
 
   test("ranges switch; All time is the default", async ({ page }) => {
     await openStats(page);
-    await expect(page.getByRole("radio", { name: "All time" })).toBeChecked();
+    await expect(rangeTrigger(page)).toHaveAccessibleName(
+      "Date range: All time",
+    );
 
     for (const [label, range] of [
       ["Last 30 days", "last30"],
@@ -152,9 +155,11 @@ test.describe("member", () => {
           r.url().includes("/api/meditation/statistics?") &&
           new URL(r.url()).searchParams.get("range") === range,
       );
-      await page.locator("label").filter({ hasText: label }).click();
+      await pickPreset(page, label);
       expect((await response).status()).toBe(200);
-      await expect(page.getByRole("radio", { name: label })).toBeChecked();
+      await expect(rangeTrigger(page)).toHaveAccessibleName(
+        `Date range: ${label}`,
+      );
       await expect(page.locator("main dl dt")).toHaveCount(4);
       await expect(page.locator("main dl dd").first()).toHaveText(
         COPY.en.minute,
@@ -171,7 +176,7 @@ test.describe("member", () => {
         : route.continue(),
     );
     await openStats(page);
-    await page.locator("label").filter({ hasText: "Today" }).click();
+    await pickPreset(page, "Today");
 
     await expect(page.locator("main dl dd")).toHaveText([
       "0 minutes",
