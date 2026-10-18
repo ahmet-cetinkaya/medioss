@@ -11,21 +11,21 @@ import { qaDir } from "../e2e/support/server-env";
 // the Unsplash License (free use, attribution appreciated but not
 // required); photographer credits are in docs/demo.md.
 const COVER_PHOTO_IDS = [
-  "photo-1499209974431-9dddcece7f88", // soft pink haze over water
-  "photo-1502082553048-f009c37129b9", // green leaves in sunlight
-  "photo-1500462918059-b1a0cb512f1d", // pink/purple gradient wall
-  "photo-1518495973542-4542c06a5843", // sunlight through canopy
-  "photo-1472214103451-9374bd1c798e", // green valley at sunset
-  "photo-1469474968028-56623f02e42e", // misty green highlands
-  "photo-1470252649378-9c29740c9fa8", // sunset over meadow
-  "photo-1439066615861-d1af74d74000", // still lake and jetty
+  "photo-1499209974431-9dddcece7f88", // person with open arms at sunrise
+  "photo-1502082553048-f009c37129b9", // lone tree under a blue sky
+  "photo-1500462918059-b1a0cb512f1d", // pink and violet gradient doorway
+  "photo-1518495973542-4542c06a5843", // sunlight through a tree canopy
+  "photo-1472214103451-9374bd1c798e", // green hills with a stone circle at sunset
+  "photo-1469474968028-56623f02e42e", // misty rocks above a green valley
+  "photo-1470252649378-9c29740c9fa8", // sunset over a meadow
+  "photo-1439066615861-d1af74d74000", // still lake with a jetty
   "photo-1476673160081-cf065607f449", // soft waves on a quiet beach
-  "photo-1509316785289-025f5b846b35", // fog rolling over green cliffs
-  "photo-1470071459604-3b5ec3a7fe05", // turquoise wave from above
-  "photo-1505144808419-1957a94ca61e", // alpine ridge in morning light
-  "photo-1508739773434-c26b3d09e071", // milky way over snowy peaks
-  "photo-1519681393784-d120267933ba", // foggy pine forest
-  "photo-1518709268805-4e9042af9f23", // night sky over mountains
+  "photo-1509316785289-025f5b846b35", // desert mesas under a blue sky
+  "photo-1470071459604-3b5ec3a7fe05", // fog rolling over green cliffs
+  "photo-1505144808419-1957a94ca61e", // turquoise wave seen from above
+  "photo-1508739773434-c26b3d09e071", // red mountain peak in morning light
+  "photo-1519681393784-d120267933ba", // milky way over snowy peaks
+  "photo-1518709268805-4e9042af9f23", // misty castle gate
   "photo-1500530855697-b586d89ba3ee", // desert road between red rocks
 ] as const;
 

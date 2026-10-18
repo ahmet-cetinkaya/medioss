@@ -311,6 +311,23 @@ describe("on-image ink over the image scrim (overlay cards, §5.7)", () => {
   });
 });
 
+describe("progress bar on the image scrim (non-text, >= 3:1)", () => {
+  test("--ink-on-image-fill against its track over the scrim on white artwork", () => {
+    const fill = opaque("--ink-on-image-fill");
+    const track = parseColor(resolveToken("--ink-on-image-track"));
+    for (const surface of scrimSurfaces()) {
+      expect(contrast(fill, over(track, surface))).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  test("the track against the scrim on white artwork", () => {
+    const track = parseColor(resolveToken("--ink-on-image-track"));
+    for (const surface of scrimSurfaces()) {
+      expect(contrast(over(track, surface), surface)).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
 describe("labels on fills, >= 4.5:1", () => {
   const pairs: [string, string][] = [
     ["--primary-foreground", "--primary"],

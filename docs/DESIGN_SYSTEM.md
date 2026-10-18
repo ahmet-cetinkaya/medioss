@@ -351,7 +351,7 @@ Use at most one primary button per view.
 
 ## 7. Imagery Guidelines
 
-- **Default artwork is generated, not photographed.** Category tiles and missing covers use CSS "aurora" backgrounds: 2–3 large blurred radial gradients per category palette (section 2.6), plus the white wash. This keeps the repository free of licensed photography and costs no network requests.
+- **Default artwork is generated, not photographed.** Category tiles and missing covers use CSS "aurora" backgrounds: 2–3 large blurred radial gradients per category palette (section 2.6), plus the white wash. This keeps the repository itself free of photography and costs no network requests. (The `make demo` screenshots are the one exception: they use Unsplash covers fetched at seed time and are credited in `docs/demo.md`; nothing in the app bundle depends on them.)
 - **User content wins.** Programs can have an uploaded cover (`has_cover`; meditations inherit it via `program_has_cover`). When one exists, use it in thumbnails and tiles with the same radius and, where text overlays it, the same white wash. Meditations without a program cover use the generated artwork.
 - **Per-category palettes** (proposed): meditation → pink/violet/orange; sleep → mint/sage/peach; soundscape → green/peach; mood → coral/orange; statistics → blue/peach.
 - Artwork is decorative: `alt=""` unless it conveys content.

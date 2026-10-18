@@ -12,8 +12,10 @@
   `artworkCategory`, `completed`, `headingLevel` (2 | 3 | 4, default 3),
   `actions` (Snippet), `overlay` (image-first variant: the title and meta sit
   on the cover over a dark scrim and nothing renders below it; default false),
-  `progress` (0..1, overlay only: a thin fill bar at the cover's bottom edge
-  instead of a text percentage), `compact` (smaller artwork, text and
+  `progress` (0..1, overlay only: a thin fill bar at the cover's bottom edge,
+  drawn only above 0) with `progressLabel` (the localized state, e.g.
+  "40% complete" or "Completed", read by screen readers since the bar and
+  the check badge are decorative), `compact` (smaller artwork, text and
   spacing for horizontal rows; default false), `aspect` ("4/3" | "3/4" |
   "3/2" thumbnail ratio; default "4/3", or "3/2" when `compact`), `class`.
   Without `href` the card is a button: `onselect` runs on click, `ariaLabel`
@@ -51,6 +53,7 @@
     compact?: boolean;
     overlay?: boolean;
     progress?: number;
+    progressLabel?: string;
     class?: string;
   };
 
@@ -71,12 +74,16 @@
     compact = false,
     overlay = false,
     progress,
+    progressLabel,
     class: className,
   }: Props = $props();
 
   // A broken cover falls back to artwork; a new URL gets a fresh try.
   let failedUrl = $state<string | null>(null);
   const showCover = $derived(Boolean(coverUrl) && coverUrl !== failedUrl);
+  const progressWidth = $derived(
+    progress === undefined ? 0 : Math.min(Math.max(progress, 0), 1) * 100,
+  );
   const thumbnailAspect = $derived(aspect ?? (compact ? "3/2" : "4/3"));
   const triggerProps = $derived(
     href === undefined
@@ -136,19 +143,19 @@
         <span class="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
           {@render heading("text-(--ink-on-image)")}
           {@render metaLine("text-(--ink-on-image-muted)")}
-          {#if progress != null}
-            <!-- The fill itself is decorative (state is in the check badge
-                 and the bar position); SR users get the same signal from
-                 the meta line's text. -->
+          {#if progressWidth > 0}
             <span
               aria-hidden="true"
-              class="mt-1 block h-1 overflow-hidden rounded-full bg-white/25"
+              class="mt-1 block h-1 overflow-hidden rounded-full bg-(--ink-on-image-track)"
             >
               <span
-                class="block h-full rounded-full bg-white"
-                style={`width:${Math.min(Math.max(progress, 0), 1) * 100}%`}
+                class="block h-full rounded-full bg-(--ink-on-image-fill)"
+                style:width="{progressWidth}%"
               ></span>
             </span>
+          {/if}
+          {#if progressLabel}
+            <span class="sr-only">{progressLabel}</span>
           {/if}
         </span>
       {/if}
