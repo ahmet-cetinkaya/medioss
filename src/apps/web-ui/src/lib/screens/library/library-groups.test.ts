@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { Category, Program } from "../../api/meditation";
-import { groupPrograms, UNCATEGORIZED } from "./library-groups";
+import {
+  filterGroups,
+  groupPrograms,
+  programState,
+  UNCATEGORIZED,
+} from "./library-groups";
 
 const program = (id: number, category_id: number | null): Program => ({
   id,
@@ -50,5 +55,64 @@ describe("groupPrograms", () => {
 
   test("no programs → no groups", () => {
     expect(groupPrograms([], categories)).toEqual([]);
+  });
+});
+
+describe("programState", () => {
+  test("0 is not started, between is in progress, 1 or more is completed", () => {
+    expect(programState(0)).toBe("not-started");
+    expect(programState(0.01)).toBe("in-progress");
+    expect(programState(0.99)).toBe("in-progress");
+    expect(programState(1)).toBe("completed");
+    expect(programState(1.2)).toBe("completed");
+  });
+});
+
+describe("filterGroups", () => {
+  const withProgress = (id: number, category_id: number, progress: number) => ({
+    ...program(id, category_id),
+    progress,
+  });
+  const groups = groupPrograms(
+    [
+      withProgress(1, 1, 1),
+      withProgress(2, 1, 0.5),
+      withProgress(3, 2, 0),
+      withProgress(4, 2, 0),
+    ],
+    categories,
+  );
+
+  const ids = (filter: Parameters<typeof filterGroups>[1]) =>
+    filterGroups(groups, filter).map((group) =>
+      group.programs.map((p) => p.id),
+    );
+
+  test("all keeps every group and program", () => {
+    expect(ids("all")).toEqual([
+      [3, 4],
+      [1, 2],
+    ]);
+  });
+
+  test("each state keeps only its programs", () => {
+    expect(ids("completed")).toEqual([[1]]);
+    expect(ids("in-progress")).toEqual([[2]]);
+    expect(ids("not-started")).toEqual([[3, 4]]);
+  });
+
+  test("a group left empty by the filter is dropped, not shown as a bare heading", () => {
+    expect(filterGroups(groups, "completed").map((g) => g.key)).toEqual([
+      "category-1",
+    ]);
+  });
+
+  test("a filter nothing matches returns no groups", () => {
+    expect(
+      filterGroups(
+        groupPrograms([withProgress(1, 1, 0)], categories),
+        "completed",
+      ),
+    ).toEqual([]);
   });
 });

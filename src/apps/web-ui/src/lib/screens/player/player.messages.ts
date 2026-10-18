@@ -5,6 +5,7 @@ import { defineMessages } from "../../i18n/message";
 export const playerMessages = defineMessages({
   controlsHeading: { en: "Now playing", tr: "Şimdi çalıyor" },
   mixToggle: { en: "Soundscape", tr: "Ses manzarası" },
+  mixPlaying: { en: "(playing)", tr: "(çalıyor)" },
   programLink: { en: "Open program {name}", tr: "{name} programını aç" },
   skipBack: { en: "Back 10 seconds", tr: "10 saniye geri" },
   skipForward: { en: "Forward 10 seconds", tr: "10 saniye ileri" },

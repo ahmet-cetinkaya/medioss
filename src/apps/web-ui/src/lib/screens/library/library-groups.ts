@@ -37,3 +37,31 @@ export function groupPrograms(
     groups.push({ key: UNCATEGORIZED, category: null, programs: rest });
   return groups;
 }
+
+export type ProgramState = "completed" | "in-progress" | "not-started";
+export type LibraryFilter = "all" | ProgramState;
+
+/** Where a program stands, from its 0..1 progress. */
+export function programState(progress: number): ProgramState {
+  if (progress >= 1) return "completed";
+  return progress > 0 ? "in-progress" : "not-started";
+}
+
+/**
+ * Keeps the programs matching the filter and drops groups left empty, so a
+ * filter never shows a heading with nothing under it.
+ */
+export function filterGroups(
+  groups: readonly LibraryGroup[],
+  filter: LibraryFilter,
+): LibraryGroup[] {
+  if (filter === "all") return [...groups];
+  return groups
+    .map((group) => ({
+      ...group,
+      programs: group.programs.filter(
+        (program) => programState(program.progress) === filter,
+      ),
+    }))
+    .filter((group) => group.programs.length > 0);
+}

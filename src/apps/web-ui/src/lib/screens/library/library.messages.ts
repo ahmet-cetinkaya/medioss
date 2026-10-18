@@ -3,8 +3,19 @@
 import { defineMessages } from "../../i18n/message";
 
 export const libraryMessages = defineMessages({
-  categoryLegend: { en: "Program categories", tr: "Program kategorileri" },
+  filterLegend: { en: "Show programs", tr: "Programları göster" },
   all: { en: "All", tr: "Tümü" },
+  filterCompleted: { en: "Completed", tr: "Bitirilenler" },
+  filterInProgress: { en: "In progress", tr: "Devam edenler" },
+  filterNotStarted: { en: "Not started", tr: "Hiç başlanmamışlar" },
+  filterEmptyTitle: {
+    en: "No programs here",
+    tr: "Burada program yok",
+  },
+  filterEmptyText: {
+    en: "No programs match this filter. Pick another one to see more.",
+    tr: "Bu filtreyle eşleşen program yok. Daha fazlasını görmek için başka bir filtre seçin.",
+  },
   uncategorized: { en: "Uncategorized", tr: "Kategorisiz" },
   programsLabel: { en: "Programs", tr: "Programlar" },
   emptyTitle: { en: "No programs yet", tr: "Henüz program yok" },
