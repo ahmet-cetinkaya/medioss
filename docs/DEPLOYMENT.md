@@ -172,8 +172,9 @@ Runtime data lives under `$MEDIOSS_DATA_DIR`:
 $MEDIOSS_DATA_DIR/
 ├── medioss.db                  # SQLite: identity + meditation tables
 └── media/
-    ├── meditation/             # stored audio (Ogg Opus, opaque keys)
-    └── program-cover/          # program cover images
+    ├── meditation/             # program folders: audio (Ogg Opus) + covers
+    ├── soundscape/             # built-in sound audio and icons
+    └── identity/               # per-user avatars
 ```
 
 Backups capture everything when they capture this directory. Restoring a backup restores the whole instance.

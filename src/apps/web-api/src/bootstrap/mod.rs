@@ -7,6 +7,7 @@ use std::path::Path;
 
 pub mod database;
 pub mod error;
+pub mod media_layout;
 
 pub use error::BootstrapError;
 
