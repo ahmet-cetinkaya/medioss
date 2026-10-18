@@ -34,7 +34,7 @@
 
   const classes = $derived(
     cn(
-      "focus-ring h-12 w-full min-w-0 rounded-full border border-control-border bg-surface-solid px-5 text-base text-ink-strong placeholder:text-ink-muted aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-60 file:mr-3 file:border-0 file:bg-transparent file:py-3 file:text-sm file:font-medium file:text-ink-strong",
+      "glass-control focus-ring h-12 w-full min-w-0 rounded-full px-5 text-base text-ink-strong placeholder:text-ink-muted aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-60 file:mr-3 file:border-0 file:bg-transparent file:py-3 file:text-sm file:font-medium file:text-ink-strong",
       className,
     ),
   );

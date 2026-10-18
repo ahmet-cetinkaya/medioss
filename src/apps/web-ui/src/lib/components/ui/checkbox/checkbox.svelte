@@ -39,7 +39,7 @@
       "inline-flex size-6 shrink-0 items-center justify-center rounded-md border text-primary-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
       checked
         ? "border-accent-fill bg-accent-fill"
-        : "border-control-border bg-surface-solid",
+        : "glass-control",
     )}
   >
     {#if checked}

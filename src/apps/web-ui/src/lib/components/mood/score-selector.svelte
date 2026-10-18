@@ -143,10 +143,7 @@
                       "border-transparent text-primary-foreground shadow-md motion-safe:scale-110",
                       MOOD_FILL[score],
                     )
-                  : cn(
-                      "border-control-border bg-surface-solid",
-                      MOOD_TEXT[score],
-                    ),
+                  : cn("glass-control", MOOD_TEXT[score]),
               )}
             >
               {score}

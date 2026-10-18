@@ -45,10 +45,10 @@
       {@const selected = value === option.value}
       <label
         class={cn(
-          "relative inline-flex min-h-11 min-w-11 max-w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-control-border px-4.5 py-1 text-center text-sm break-words [&_svg]:shrink-0 leading-tight select-none has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
+          "glass-control relative inline-flex min-h-11 min-w-11 max-w-full cursor-pointer items-center justify-center gap-1.5 rounded-full px-4.5 py-1 text-center text-sm break-words [&_svg]:shrink-0 leading-tight select-none has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
           selected
-            ? "bg-surface-solid font-semibold text-ink-strong"
-            : "bg-transparent font-normal text-ink-body hover:bg-surface-solid/50",
+            ? "glass-control-active font-semibold text-ink-strong"
+            : "font-normal text-ink-body hover:bg-surface-solid/50",
         )}
       >
         <input

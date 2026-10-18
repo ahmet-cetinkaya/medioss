@@ -19,7 +19,7 @@
 <select
   bind:value
   class={cn(
-    "focus-ring h-12 w-full min-w-0 rounded-full border border-control-border bg-surface-solid px-5 text-base text-ink-strong disabled:cursor-not-allowed disabled:opacity-60",
+    "glass-control focus-ring h-12 w-full min-w-0 rounded-full px-5 text-base text-ink-strong disabled:cursor-not-allowed disabled:opacity-60",
     className,
   )}
   {...restProps}

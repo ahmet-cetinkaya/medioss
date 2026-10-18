@@ -99,7 +99,7 @@
   <Popover.Trigger
     aria-label={t(m.triggerLabel, { range: currentLabel })}
     class={cn(
-      "focus-ring inline-flex min-h-11 max-w-full items-center gap-2 rounded-full border border-control-border bg-surface-solid px-4.5 py-1 text-sm font-medium text-ink-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
+      "glass-control focus-ring inline-flex min-h-11 max-w-full items-center gap-2 rounded-full px-4.5 py-1 text-sm font-medium text-ink-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
       className,
     )}
   >
