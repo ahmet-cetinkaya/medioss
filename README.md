@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/orb.svg" alt="" width="68" align="center">
+</p>
+
 # MediOSS
 
 A self-hosted wellness app for calmer days: a meditation library, an ambient soundscape mixer and a mood tracker, behind one account on your own server. Your data stays in one SQLite file that you control.
@@ -6,7 +10,6 @@ A self-hosted wellness app for calmer days: a meditation library, an ambient sou
 
 <p align="center">
   <img src="docs/screenshots/home-desktop.png" alt="MediOSS home screen on desktop" width="720">
-  <img src="docs/screenshots/home-mobile.png" alt="MediOSS home screen on mobile" width="200">
 </p>
 
 ## Features
