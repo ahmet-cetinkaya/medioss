@@ -21,6 +21,7 @@
     type Meditation,
     type Program,
   } from "$lib/api/meditation";
+
   import { type ServerReason } from "$lib/api/server-reason";
   import { failureMessage, reasonOf } from "$lib/api/failure";
   import ContentCard from "$lib/components/content/content-card.svelte";
@@ -33,10 +34,6 @@
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
   import { libraryQuery } from "$lib/library/library-query.svelte";
-  import {
-    meditationProgressLabel,
-    programProgressLabel,
-  } from "$lib/meditation/progress-label";
   import { ROUTES, playerHref } from "$lib/navigation/routes";
   import { session } from "$lib/session/session.svelte";
   import { groupPrograms } from "./library-groups";
@@ -194,8 +191,12 @@
               title={meditation.name}
               meta={[
                 formatDuration(meditation.duration_ms, locale.current, "short"),
-                meditationProgressLabel(meditation, locale.current),
               ].filter((item): item is string => item !== null)}
+              progress={meditation.completed
+                ? 1
+                : meditation.progress_percent > 0
+                  ? meditation.progress_percent / 100
+                  : undefined}
               coverUrl={meditation.program_has_cover && meditation.program_id
                 ? programCoverUrl(meditation.program_id)
                 : null}
@@ -261,9 +262,9 @@
                   class="max-w-48"
                   href={programHref(program.id)}
                   title={program.title}
-                  meta={[
-                    programProgressLabel(program.progress, locale.current),
-                  ].filter((item): item is string => item !== null)}
+                  progress={program.progress == null
+                    ? undefined
+                    : program.progress}
                   coverUrl={program.has_cover
                     ? programCoverUrl(program.id)
                     : null}

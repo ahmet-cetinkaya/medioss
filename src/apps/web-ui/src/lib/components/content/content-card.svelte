@@ -11,7 +11,9 @@
   parts, joined by an aria-hidden bullet), `coverUrl`, `artworkSeed`,
   `artworkCategory`, `completed`, `headingLevel` (2 | 3 | 4, default 3),
   `actions` (Snippet), `overlay` (image-first variant: the title and meta sit
-  on the cover over a dark scrim and nothing renders below it; default false), `compact` (smaller artwork, text and
+  on the cover over a dark scrim and nothing renders below it; default false),
+  `progress` (0..1, overlay only: a thin fill bar at the cover's bottom edge
+  instead of a text percentage), `compact` (smaller artwork, text and
   spacing for horizontal rows; default false), `aspect` ("4/3" | "3/4" |
   "3/2" thumbnail ratio; default "4/3", or "3/2" when `compact`), `class`.
   Without `href` the card is a button: `onselect` runs on click, `ariaLabel`
@@ -48,6 +50,7 @@
     actions?: Snippet;
     compact?: boolean;
     overlay?: boolean;
+    progress?: number;
     class?: string;
   };
 
@@ -67,6 +70,7 @@
     actions,
     compact = false,
     overlay = false,
+    progress,
     class: className,
   }: Props = $props();
 
@@ -132,6 +136,20 @@
         <span class="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
           {@render heading("text-(--ink-on-image)")}
           {@render metaLine("text-(--ink-on-image-muted)")}
+          {#if progress != null}
+            <!-- The fill itself is decorative (state is in the check badge
+                 and the bar position); SR users get the same signal from
+                 the meta line's text. -->
+            <span
+              aria-hidden="true"
+              class="mt-1 block h-1 overflow-hidden rounded-full bg-white/25"
+            >
+              <span
+                class="block h-full rounded-full bg-white"
+                style={`width:${Math.min(Math.max(progress, 0), 1) * 100}%`}
+              ></span>
+            </span>
+          {/if}
         </span>
       {/if}
       {#if completed}
