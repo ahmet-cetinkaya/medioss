@@ -6,6 +6,11 @@ UI_DIR := src/apps/web-ui
 STATIC_DIR := src/apps/web-api/static
 UI_SETUP := cd $(UI_DIR) && bun install --frozen-lockfile
 PRETTIER := bunx --bun prettier
+# Two prettier runs: web-ui sources with its plugins (web-ui/.prettierrc), and
+# every Markdown, YAML and JSON file in the rest of the repo from the repo root
+# (docs/, specs/, .github/, root files; see .prettierignore).
+PRETTIER_UI_FILES := '**/*.{astro,svelte,ts,tsx,css,md}'
+PRETTIER_REPO_FILES := '**/*.{md,yml,yaml,json}' '!src/apps/web-ui/**'
 
 # `cargo fmt`/`cargo clippy` ship with rustup on CI runners but are separate
 # packages on Nix, so run them directly when present and pull them in otherwise.
@@ -29,7 +34,8 @@ help:
 		'make docker-logs    Follow Docker Compose logs'
 
 format:
-	$(UI_SETUP) && $(PRETTIER) --write '**/*.{astro,svelte,ts,tsx,css,md}'
+	$(UI_SETUP) && $(PRETTIER) --write $(PRETTIER_UI_FILES)
+	$(PRETTIER) --write $(PRETTIER_REPO_FILES)
 	@$(call cargo-gate,fmt --all,rustfmt)
 
 build-ui:
@@ -72,7 +78,8 @@ run: build
 	MEDIOSS_DATA_DIR=$(DATA_DIR) PORT=$(PORT) cargo run -p web-api
 
 lint:
-	$(UI_SETUP) && $(PRETTIER) --check '**/*.{astro,svelte,ts,tsx,css,md}'
+	$(UI_SETUP) && $(PRETTIER) --check $(PRETTIER_UI_FILES)
+	$(PRETTIER) --check $(PRETTIER_REPO_FILES)
 	@$(call cargo-gate,fmt --all --check,rustfmt)
 	@$(call cargo-gate,clippy --workspace --all-targets -- -D warnings,clippy)
 	./scripts/check-boundaries.sh

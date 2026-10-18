@@ -130,10 +130,12 @@
     void search(query);
   });
 
-  // Independent scrolling row; negative margin + padding keep focus rings and
-  // elevation unclipped. min-w-0 on the flex parent chain prevents page scroll.
-  const rowClass = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
-  const itemClass = "min-w-0";
+  // One horizontally scrolling row per category: cards keep their natural
+  // width and pack from the left, so a short row never stretches. Negative
+  // margin + padding keep focus rings and elevation unclipped.
+  const rowClass =
+    "-mx-2 flex scroll-px-2 snap-x snap-proximity gap-4 overflow-x-auto px-2 py-2";
+  const itemClass = "w-48 shrink-0 snap-start";
 
   // Browsers skip scrolling a partly visible focus target, so a Tab into a
   // half-clipped card would leave it half-clipped. Bring it fully into view.
@@ -182,7 +184,7 @@
       {/snippet}
       <ul class="flex flex-wrap gap-4">
         {#each results ?? [] as meditation (meditation.id)}
-          <li class={itemClass}>
+          <li class="min-w-0">
             <ContentCard
               compact
               class="max-w-48 [&>a>span:first-child]:aspect-3/4"

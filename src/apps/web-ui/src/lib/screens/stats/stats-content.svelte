@@ -25,6 +25,7 @@
   import { formatNumber } from "$lib/i18n/formatting/number-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
   import { ROUTES } from "$lib/navigation/routes";
+  import { buildHeatmap, monthMarks, weeksThatFit } from "./practice-heatmap";
   import { statsMessages as m } from "./stats.messages";
 
   let range = $state<StatisticsRange>("all");
@@ -70,6 +71,50 @@
       }).message,
     ),
   );
+
+  // The heatmap's "today" is the browser's calendar day, as the server's
+  // calendar is built from the offset the client sends.
+  const localToday = () => {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  };
+  // Cell 20px + gap 4px per week column; the label column is 2.5rem wide.
+  const CELL_PITCH_PX = 24;
+  const LABEL_COLUMN_PX = 48;
+  let heatmapWidth = $state(0);
+  const weeks = $derived(
+    statistics
+      ? buildHeatmap(
+          statistics.calendar,
+          range,
+          localToday(),
+          weeksThatFit(heatmapWidth - LABEL_COLUMN_PX, CELL_PITCH_PX),
+        )
+      : [],
+  );
+  const marks = $derived(monthMarks(weeks));
+  const monthName = (date: string) =>
+    formatCalendarDay(date, locale.current, { month: "short" });
+  // 2024-01-01 is a Monday; Monday, Wednesday, Friday label rows 1, 3, 5.
+  const WEEKDAY_LABEL_ROWS = [0, 2, 4];
+  const weekdayName = (row: number) =>
+    formatCalendarDay(`2024-01-0${row + 1}`, locale.current, {
+      weekday: "short",
+    });
+  // Newest week at the right edge: start scrolled to the end.
+  const scrollToNewest = (node: HTMLElement) => {
+    node.scrollLeft = node.scrollWidth;
+  };
+  const levelClasses = [
+    "bg-surface-solid/50 ring-1 ring-inset ring-ink-muted/25",
+    "bg-accent-fill/25",
+    "bg-accent-fill/50",
+    "bg-accent-fill/75",
+    "bg-accent-fill",
+  ];
+  const cellLabel = (date: string, minutes: number) =>
+    `${formatCalendarDay(date, locale.current)}: ${withUnit(minutes, "minute")}`;
 
   const withUnit = (value: number, unit: string) =>
     formatNumber(value, locale.current, {
@@ -148,20 +193,67 @@
                 {t(m.openLibrary)}
               </Button>
             {/snippet}
-            <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {#each statistics.calendar as day (day.date)}
-                <li
-                  class="flex flex-wrap items-baseline justify-between gap-3 rounded-tile bg-surface-solid/50 px-4 py-3"
+            <div
+              role="region"
+              aria-label={t(m.heatmapLabel)}
+              tabindex="0"
+              bind:clientWidth={heatmapWidth}
+              use:scrollToNewest
+              class="overflow-x-auto rounded-md p-1.5 focus-visible:outline-2 focus-visible:outline-accent-strong"
+            >
+              <div class="flex w-max flex-col gap-3">
+                <div
+                  class="grid gap-1 text-xs text-ink-body"
+                  style="grid-template-columns: 2.5rem repeat({weeks.length}, 1.25rem); grid-template-rows: 1rem repeat(7, 1.25rem);"
                 >
-                  <span class="font-medium text-ink-strong">
-                    {formatCalendarDay(day.date, locale.current)}
-                  </span>
-                  <span class="text-sm text-ink-body">
-                    {withUnit(day.minutes, "minute")}
-                  </span>
-                </li>
+                  {#each marks as mark (mark.column)}
+                    <span
+                      aria-hidden="true"
+                      class="row-start-1 whitespace-nowrap"
+                      style="grid-column-start: {mark.column + 2};"
+                    >
+                      {monthName(mark.date)}
+                    </span>
+                  {/each}
+                  {#each WEEKDAY_LABEL_ROWS as row (row)}
+                    <span
+                      aria-hidden="true"
+                      class="sticky left-0 z-10 col-start-1 self-center bg-surface-solid"
+                      style="grid-row-start: {row + 2};"
+                    >
+                      {weekdayName(row)}
+                    </span>
+                  {/each}
+                  {#each weeks as week, weekIndex (weekIndex)}
+                    {#each week as cell, dayIndex (dayIndex)}
+                      {#if cell}
+                        <div
+                          role="img"
+                          aria-label={cellLabel(cell.date, cell.minutes)}
+                          title={cellLabel(cell.date, cell.minutes)}
+                          class="rounded-[4px] {levelClasses[cell.level]}"
+                          style="grid-column-start: {weekIndex +
+                            2}; grid-row-start: {dayIndex + 2};"
+                        ></div>
+                      {/if}
+                    {/each}
+                  {/each}
+                </div>
+              </div>
+            </div>
+            <div
+              class="mt-3 flex items-center gap-2 ps-12 text-xs text-ink-body"
+              aria-hidden="true"
+            >
+              <span>{t(m.heatmapLess)}</span>
+              {#each levelClasses as levelClass, level (level)}
+                <span
+                  class="size-4 rounded-[4px] {levelClass}"
+                  data-level={level}
+                ></span>
               {/each}
-            </ul>
+              <span>{t(m.heatmapMore)}</span>
+            </div>
           </RegionState>
         </Panel>
       </div>

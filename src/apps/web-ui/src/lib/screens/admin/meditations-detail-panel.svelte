@@ -149,7 +149,7 @@
             id="{id}-row-{meditation.id}"
             class="flex flex-wrap items-center gap-2 rounded-tile bg-surface-solid/50 p-2 ps-4"
           >
-            <div class="grid min-w-0 flex-1 grid-cols-1 gap-0.5">
+            <div class="grid min-w-0 flex-[1_1_12rem] grid-cols-1 gap-0.5">
               <span class="font-medium break-words text-ink-strong">
                 {meditation.name}
               </span>

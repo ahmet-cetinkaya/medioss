@@ -1,0 +1,12 @@
+target/
+node_modules/
+dist/
+src/apps/web-api/static/
+src/apps/web-ui/dist/
+src/apps/web-ui/.astro/
+.agents/
+.data/
+Cargo.lock
+bun.lock
+assets/
+docs/screenshots/

@@ -49,14 +49,17 @@
   )}
 >
   <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-    {#if avatar}
-      {@render avatar()}
-    {:else}
-      <Orb size="inline" variant={end ? "user" : "brand"} />
-    {/if}
-    <span class="min-w-0 font-semibold break-words text-ink-strong">
-      {source}
-    </span>
+    <!-- Marker and name wrap together, so the marker never sits alone on a line. -->
+    <div class="flex min-w-0 items-center gap-2">
+      {#if avatar}
+        {@render avatar()}
+      {:else}
+        <Orb size="inline" variant={end ? "user" : "brand"} />
+      {/if}
+      <span class="min-w-0 font-semibold break-words text-ink-strong">
+        {source}
+      </span>
+    </div>
     {#if meta}
       <span class="text-meta text-ink-muted">{meta}</span>
     {/if}
