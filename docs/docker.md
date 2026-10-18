@@ -36,3 +36,12 @@ docker compose exec backend medioss reset-password <email>
 ```
 
 The health check calls `GET /api/health`. For HTTPS, put a reverse proxy in front and set `MEDIOSS_ORIGIN` to its public URL. More detail is in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Publishing the image
+
+`.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. Pull requests, and every run before `DOCKERHUB_IMAGE` is set, only build it (no login, no push), so CI stays green. Pushes to `main` publish `latest`, and `v*` tags publish `X.Y.Z`, `X.Y` and `X`.
+
+Set these in the repository settings before the first publish:
+
+- Secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token with write scope).
+- Variable `DOCKERHUB_IMAGE`, for example `your-namespace/medioss`. Until it is set the workflow only builds and never publishes.
