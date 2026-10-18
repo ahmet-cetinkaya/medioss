@@ -1,6 +1,23 @@
 name: CI
 
-on: [push, pull_request]
+# Push runs only on main: feature branches are covered by their PR's
+# pull_request run, so a pushed branch does not burn a second run (the
+# 2026-10-18 asset-commit incident triggered ~56 billing-blocked runs
+# that way). Docs-only changes skip the heavy jobs.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   rust:
