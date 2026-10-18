@@ -16,6 +16,10 @@ on:
     tags: ["v*"]
   pull_request:
 
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # PLACEHOLDER until the owner picks the Docker Hub namespace and name.
   # Override without editing this file via the repository variable DOCKERHUB_IMAGE.
@@ -62,7 +66,9 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          # PRs prove the Dockerfile builds on one arch only; full amd64+arm64
+          # is built where the image is actually used (main pushes, tags).
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ env.PUBLISH == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
