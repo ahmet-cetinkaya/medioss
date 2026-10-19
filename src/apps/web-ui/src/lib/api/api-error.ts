@@ -5,6 +5,8 @@
 /** Every API client call names its action, so refusals map to a reason. */
 export type ApiAction =
   | "generic"
+  // meta (About)
+  | "loadMeta"
   // identity
   | "login"
   | "logout"
