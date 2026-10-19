@@ -14,7 +14,7 @@ Include the affected version or commit, steps to reproduce, and the impact you e
 
 ## Supported versions
 
-MediOSS has no tagged releases yet. Only the latest commit on `main` is supported.
+Only the latest tagged release is supported. Once v1.0.0 is tagged, reports against it (or any later release) are in scope; until the first tag exists, only the latest commit on `main` is.
 
 ## Scope
 
