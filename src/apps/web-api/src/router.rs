@@ -37,6 +37,7 @@ pub fn router(state: AppState) -> Router {
 
     let api = Router::new()
         .route("/health", get(health))
+        .route("/meta", get(meta))
         .merge(identity)
         .merge(meditation)
         .merge(mood_tracker)
@@ -127,6 +128,21 @@ fn session_layer(state: &AppState) -> SessionManagerLayer<tower_sessions_sqlx_st
 
 async fn health() -> impl IntoResponse {
     (StatusCode::OK, Json(serde_json::json!({ "status": "ok" })))
+}
+
+/// Instance facts for the About screen: app name and version. Version comes
+/// from the single source of truth (the binary's Cargo version); public on
+/// purpose — it carries no user data.
+async fn meta() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "name": "MediOSS",
+            "version": env!("CARGO_PKG_VERSION"),
+            "source": "https://github.com/ahmet-cetinkaya/medioss",
+            "license": "AGPL-3.0-or-later",
+        })),
+    )
 }
 
 async fn unknown_api_route() -> impl IntoResponse {

@@ -351,6 +351,27 @@ async fn health_endpoint_returns_ok() {
 }
 
 #[tokio::test]
+async fn meta_endpoint_reports_name_version_and_license_without_auth() {
+    let response = get("/api/meta").await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_json_content_type(&response);
+
+    let body: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("read body"),
+    )
+    .expect("json body");
+    assert_eq!(body["name"], "MediOSS");
+    assert_eq!(
+        body["version"],
+        serde_json::json!(env!("CARGO_PKG_VERSION"))
+    );
+    assert_eq!(body["license"], "AGPL-3.0-or-later");
+}
+
+#[tokio::test]
 async fn every_response_carries_nosniff() {
     for path in ["/api/health", "/api/does-not-exist", "/nonexistent"] {
         let response = get(path).await;

@@ -143,3 +143,19 @@ export const deleteAccountMessages = defineMessages({
     tr: "Hesabınız silinemedi. Yeniden deneyin.",
   },
 });
+
+export const aboutMessages = defineMessages({
+  heading: { en: "About", tr: "Hakkında" },
+  version: { en: "Version", tr: "Sürüm" },
+  license: { en: "License", tr: "Lisans" },
+  source: { en: "Source code", tr: "Kaynak kodu" },
+  donate: { en: "Donate", tr: "Bağış yap" },
+  donateIntro: {
+    en: "MediOSS is free software built in a spare time. Donations keep it going.",
+    tr: "MediOSS boş zamanlarda geliştirilen özgün bir yazılımdır. Bağışlar gelişimini sürdürür.",
+  },
+  loadFailed: {
+    en: "Version information could not be loaded.",
+    tr: "Sürüm bilgisi yüklenemedi.",
+  },
+});
