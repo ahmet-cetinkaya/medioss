@@ -1,6 +1,6 @@
 // SC-013 / FR-090: every text and indicator token in global.css meets WCAG AA
 // over the composited glass it actually sits on, sampled across the canvas
-// gradient (worst case: the bottom-right lavender stop #c9aaf2).
+// gradient (worst case: the darkest stop, slate blue #9dbbe3).
 //
 // The parser reads the top-level `:root` blocks of global.css (never `.dark`
 // or the indented fallback blocks) and understands these value forms:
@@ -223,7 +223,7 @@ describe("global.css parser guard", () => {
       expect(() => color(name)).not.toThrow();
     }
     const hexes = canvasStops.map((c) => c.rgb.join(","));
-    for (const stop of ["#ebc0a6", "#eaa8b8", "#c9aaf2", "#aacdf2"]) {
+    for (const stop of ["#9dbbe3", "#8fd3d0", "#dfeaf2"]) {
       expect(hexes).toContain(parseColor(stop).rgb.join(","));
     }
     expect(color("--surface-shell").a).toBeLessThan(1);
