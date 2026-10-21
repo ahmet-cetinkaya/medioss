@@ -79,13 +79,13 @@
   --elevation-3: 0 30px 60px -20px rgb(150 100 120 / 0.3);
 
   /* Gradients (§3.2). Use with bg-(image:--gradient-orb) and friends. */
-  /* Cool Serene palette: minimal, modern, technology + wellness */
+  /* Hybrid: Soft Nature colors + Cool Serene orb compat */
   --gradient-canvas: linear-gradient(
     135deg,
-    #f8f6f3,
-    #d4ccc5 25%,
-    #8b9db4 65%,
-    #9abfb5 100%
+    #f5f1ea 0%,
+    #d8d3d0 25%,
+    #a8c5a8 65%,
+    #c5d9e8 100%
   );
   /* Brand orb (§2.4): canvas hues condensed into a glass sphere. The deep purple rim
      stays darker than every canvas stop, so the mark does not dissolve into
@@ -154,7 +154,7 @@
 
   /* shadcn variables mapped onto the tokens (§10) */
   --radius: 2rem; /* panel radius */
-  --background: #f8f6f3; /* canvas base: Cool Serene cream */
+  --background: #f5f1ea; /* canvas base: Hybrid palette cream */
   --foreground: var(--text-strong);
   --card: var(--surface-panel);
   --card-foreground: var(--text-strong);
