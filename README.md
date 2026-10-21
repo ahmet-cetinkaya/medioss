@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file MD041 -->
 
 <p align="center">
-  <img src="docs/orb.svg" alt="MediOSS orb" width="68">
+  <img src="docs/medioss-cover.png" alt="MediOSS cover: soft glass design with orb logo" width="100%">
 </p>
 
 # MediOSS
