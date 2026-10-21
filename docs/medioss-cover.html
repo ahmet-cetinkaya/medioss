@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediOSS Cover</title>
+    <title>MediOSS Banner</title>
     <style>
         * {
             margin: 0;
@@ -12,9 +12,15 @@
         }
 
         body {
-            width: 1200px;
-            height: 630px;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            width: 1400px;
+            height: 350px;
+            /* Canvas gradient: Cool Serene Palette */
+            background: linear-gradient(135deg,
+                #F8F6F3 0%,      /* top-left: cream */
+                #D4CCC5 25%,     /* warm gray transition */
+                #8B9DB4 65%,     /* slate blue */
+                #9ABFB5 100%     /* soft teal */
+            );
             display: flex;
             align-items: center;
             justify-content: center;
@@ -23,149 +29,119 @@
             position: relative;
         }
 
-        /* Soft glass background gradient shimmer */
-        body::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-            filter: blur(40px);
-        }
-
-        body::after {
-            content: '';
-            position: absolute;
-            bottom: -20%;
-            left: -5%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-            filter: blur(50px);
-        }
-
         .container {
             position: relative;
             z-index: 10;
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 60px 80px;
+            padding: 40px 60px;
         }
 
-        /* Soft glass card effect */
+        /* Soft glass card effect (Design System §2.2, §3: elevation-1) */
         .card {
             position: relative;
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 32px;
-            padding: 60px 80px;
+            background: rgb(255 255 255 / 0.45);
+            border: 1px solid rgb(255 255 255 / 0.75);
+            border-radius: 2rem;
+            padding: 40px 50px;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            box-shadow:
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 1px rgba(255, 255, 255, 0.1),
-                inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 6px 20px -8px rgb(150 100 120 / 0.18);
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 24px;
-            max-width: 900px;
+            gap: 50px;
+            max-width: 1280px;
+            width: 100%;
         }
 
-        /* Orb logo */
+        /* Orb logo - left side (Design System §3.2: no animation) */
+        .orb-container {
+            flex-shrink: 0;
+        }
+
         .orb {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 16px;
+            width: 120px;
+            height: 120px;
         }
 
         .orb-circle {
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at 30% 30%, #a78bfa, #7c3aed 50%, #5b21b6);
+            /* Orb gradient: Design System §3.2 — white specular → lavender → amethyst → deep purple */
+            background: radial-gradient(circle at 30% 30%,
+                #ffffff 0%,
+                #EEE6FF 25%,
+                #B58AE6 60%,
+                #67418F 100%
+            );
             border-radius: 50%;
+            /* Orb shadow: low-opacity, diffuse (Design System §2.1) */
             box-shadow:
-                0 0 40px rgba(124, 58, 237, 0.6),
-                0 0 80px rgba(99, 102, 241, 0.3),
-                inset -20px -20px 40px rgba(0, 0, 0, 0.3);
+                0 0 30px -5px rgb(103 65 143 / 0.25),
+                inset -15px -15px 30px rgb(0 0 0 / 0.15);
             position: relative;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-12px); }
         }
 
         .orb-shimmer {
             position: absolute;
-            width: 25px;
-            height: 25px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent 70%);
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.6), transparent 70%);
             border-radius: 50%;
-            top: 12px;
-            left: 16px;
+            top: 16px;
+            left: 20px;
             filter: blur(4px);
         }
 
-        /* Title */
-        h1 {
-            font-size: 56px;
-            font-weight: 700;
-            color: #f1f5f9;
-            letter-spacing: -0.5px;
-            text-align: center;
-            margin: 0;
-            background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        /* Content - right side */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        /* Description */
+        /* Title (Design System §3: near-monochrome, text-strong) */
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            color: #2a2a2a;
+            letter-spacing: -0.5px;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        /* Description (Design System §3: text-muted) */
         .description {
-            font-size: 18px;
-            line-height: 1.6;
-            color: #cbd5e1;
-            text-align: center;
-            max-width: 700px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #575757;
             margin: 0;
             font-weight: 400;
-        }
-
-        /* Accent line */
-        .accent {
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #6366f1, transparent);
-            margin: 8px 0;
-            border-radius: 2px;
+            max-width: 600px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <div class="orb">
-                <div class="orb-circle">
-                    <div class="orb-shimmer"></div>
+            <div class="orb-container">
+                <div class="orb">
+                    <div class="orb-circle">
+                        <div class="orb-shimmer"></div>
+                    </div>
                 </div>
             </div>
-            <div class="accent"></div>
-            <h1>MediOSS</h1>
-            <div class="accent"></div>
-            <p class="description">
-                Self-hosted wellness: meditation, soundscape mixer, mood tracker<br>
-                Your data, your server, your control
-            </p>
+            <div class="content">
+                <h1>MediOSS</h1>
+                <p class="description">
+                    Self-hosted wellness: meditation, soundscape mixer, mood tracker<br>
+                    Your data, your server, your control
+                </p>
+            </div>
         </div>
     </div>
 </body>
