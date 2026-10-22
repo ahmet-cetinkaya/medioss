@@ -79,14 +79,14 @@
   --elevation-3: 0 30px 60px -20px rgb(150 100 120 / 0.3);
 
   /* Gradients (§3.2). Use with bg-(image:--gradient-orb) and friends. */
-  /* Hybrid: Soft Nature colors + Cool Serene orb compat */
-  --gradient-canvas: linear-gradient(
-    135deg,
-    #f5f1ea 0%,
-    #d8d3d0 25%,
-    #a8c5a8 65%,
-    #c5d9e8 100%
-  );
+  /* Cool Serene mesh: three soft radial blooms (slate blue, teal, pale cream-teal)
+     over a slate-blue base, so every palette color is visible at once. The
+     blooms are drifted by a transform on body::before, never by repainting. */
+  --gradient-canvas:
+    radial-gradient(60% 70% at 15% 20%, #9dbbe3, transparent 70%),
+    radial-gradient(55% 65% at 80% 30%, #8fd3d0, transparent 70%),
+    radial-gradient(40% 40% at 45% 95%, #dfeaf2, transparent 70%),
+    radial-gradient(50% 55% at 92% 92%, #aac6ee, transparent 70%);
   /* Brand orb (§2.4): canvas hues condensed into a glass sphere. The deep purple rim
      stays darker than every canvas stop, so the mark does not dissolve into
      the page; self-contained gradients avoid backdrop-filter fallbacks. */
@@ -154,7 +154,7 @@
 
   /* shadcn variables mapped onto the tokens (§10) */
   --radius: 2rem; /* panel radius */
-  --background: #f5f1ea; /* canvas base: Hybrid palette cream */
+  --background: #dfeaf2; /* shadcn base: the light cream stop (text never sits on the raw canvas) */
   --foreground: var(--text-strong);
   --card: var(--surface-panel);
   --card-foreground: var(--text-strong);
@@ -473,10 +473,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: #9dbbe3;
+  }
+  /* Fixed, oversized layer: only its transform animates (GPU, no repaint). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -25%;
+    z-index: -1;
+    pointer-events: none;
     background-image: var(--gradient-canvas);
-    background-size: 300% 100%;
-    background-attachment: fixed;
-    background-color: #ebc0a6;
   }
 
   /* FR-093: no motion when the user asks for less. 0.01ms (not 0) keeps
@@ -499,16 +505,17 @@
 @keyframes canvas-color-drift {
   0%,
   100% {
-    background-position: 0% 50%;
+    transform: translate3d(-4%, -3%, 0) scale(1);
   }
   50% {
-    background-position: 100% 50%;
+    transform: translate3d(4%, 3%, 0) scale(1.12);
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  body {
-    animation: canvas-color-drift 90s ease-in-out infinite;
+  body::before {
+    animation: canvas-color-drift 60s ease-in-out infinite;
+    will-change: transform;
   }
 }
 
@@ -591,15 +598,8 @@
 }
 
 @utility focus-overlay-wash {
-  background-image: linear-gradient(
-    115deg,
-    #ebc0a6,
-    #eaa8b8,
-    #c9aaf2,
-    #aacdf2,
-    #ebc0a6
-  );
-  background-size: 300% 100%;
+  background-image: var(--gradient-canvas);
+  background-color: #9dbbe3;
   &[data-over-cover] {
     opacity: 0.5;
   }
