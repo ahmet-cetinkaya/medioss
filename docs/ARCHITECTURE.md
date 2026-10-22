@@ -151,7 +151,20 @@ Layer boundaries are enforced by the Cargo graph; these rules govern the files _
 
 **One type per file**, named after the type in snake_case. A type and its error are separate files in the same topic folder.
 
-**Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory.
+**One use case is one folder** in `application/src/commands/` or `application/src/queries/`, holding four files:
+
+```text
+commands/record_completion/
+├── mod.rs                                # re-exports only
+├── record_completion.rs                  # the command struct (data only)
+├── record_completion_handler.rs          # trait: async fn handle(&self, cmd) -> Result<..>
+├── record_completion_service.rs          # struct with its dependencies, impl of the trait
+└── record_completion_service.tests.rs    # tests of the service, fakes from test_support
+```
+
+Queries follow the same shape (`get_mood_history/`, `GetMoodHistory` + `Handler` + `Service`); result types tuned for display get their own files in the same folder. The presentation layer depends only on the handler traits (generic or `Arc<dyn …>`), never on repositories; `web-api` constructs services from infrastructure adapters and injects them at the composition root — plain constructor injection, no mediator, no registry, no runtime dispatch by message type.
+
+**Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory. Every logic-bearing file has a sibling `.tests.rs`; files holding no logic are exempt — `mod.rs`/`lib.rs` re-export files, trait-only declarations, command/query/DTO data structs, and SeaORM entity/migration declarations. `scripts/check-boundaries.sh` enforces this rule (inline test blocks fail; missing siblings warn until the layout migration completes).
 
 **A topic's `mod.rs` is its public face** — it holds the topic's own functions and constants and re-exports its types, so consumers import from the topic rather than an internal file path (`web_api::config::Config`). Moving a type between files inside a topic is therefore not a breaking change.
 
@@ -368,7 +381,7 @@ The `presentation` crate never sees SeaORM, and neither `application` nor `domai
 
 ## CQRS Organization
 
-Commands and queries are separated as an **organizational** discipline, nothing more. Commands live in `<module>-application/src/commands/` and mutate state; queries live in `<module>-application/src/queries/`, are read-only, and may return shapes tuned for display rather than domain aggregates. Callers invoke the service function directly; there is no mediator, no handler registry, and no runtime dispatch by message type.
+Commands and queries are separated as an **organizational** discipline, nothing more. Commands live in `<module>-application/src/commands/` and mutate state; queries live in `<module>-application/src/queries/`, are read-only, and may return shapes tuned for display rather than domain aggregates. Each use case is one folder exporting a command/query struct, a handler trait, and a service implementing it (see _File Organization Inside a Crate_). Callers depend on the handler trait and invoke it directly; there is no mediator, no handler registry, and no runtime dispatch by message type.
 
 ---
 

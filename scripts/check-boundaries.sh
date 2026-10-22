@@ -161,6 +161,36 @@ member_count() {
     jq -r '.workspace_members | length'
 }
 
+# Reports file-layout drift against docs/ARCHITECTURE.md "File Organization
+# Inside a Crate": no inline test modules, and a sibling <name>.tests.rs beside
+# every logic-bearing file. Advisory (WARN, never fails) until the layout
+# migration completes; flip to failing then. Files holding no logic are exempt:
+# re-export mod.rs/lib.rs, trait-only declarations, data-only structs, and
+# generated/fixture trees (migrations, entities, test support, crate tests/).
+check_file_layout() {
+  local root="$1" file warnings=""
+  while IFS= read -r file; do
+    case "$file" in
+      */mod.rs | */lib.rs | *.tests.rs | */test_support/* | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
+    esac
+    if grep -q 'mod tests {' "$file"; then
+      warnings+="  inline test module: $file"$'\n'
+      continue
+    fi
+    # Trait-only files hold signatures, not logic; data-only files hold neither
+    # functions nor impls. Everything else needs a sibling .tests.rs.
+    if grep -qE '\bimpl\b' "$file"; then
+      [ -f "${file%.rs}.tests.rs" ] || warnings+="  missing tests: $file"$'\n'
+    elif grep -qE '\bfn\b' "$file" && ! grep -qE '\btrait\b' "$file"; then
+      [ -f "${file%.rs}.tests.rs" ] || warnings+="  missing tests: $file"$'\n'
+    fi
+  done < <(find "$root/src" -name '*.rs')
+  if [ -n "$warnings" ]; then
+    echo "LAYOUT WARNINGS (advisory until the layout migration completes):"
+    printf '%s' "$warnings"
+  fi
+}
+
 # Writes a crate named $1 at directory $2; its manifest body (dependency
 # sections) is read from stdin. Path dependencies are absolute so a fixture
 # manifest never has to count `../` hops.
@@ -434,6 +464,7 @@ main() {
   root="$(git rev-parse --show-toplevel)"
   check_workspace "$root/Cargo.toml"
   echo "boundary check: OK ($(member_count "$root/Cargo.toml") workspace members)"
+  check_file_layout "$root"
 }
 
 main "$@"
