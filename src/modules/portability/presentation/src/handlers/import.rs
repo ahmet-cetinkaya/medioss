@@ -1,12 +1,14 @@
 use crate::extractors::CurrentActor;
+use crate::formats;
 use crate::router::SharedDependencies;
-use crate::support::{bad_request, internal};
-use crate::support::{ensure_browser_origin, mood_csv_document, read_import_file};
+use crate::support::{
+    bad_request, ensure_browser_origin, internal, mood_csv_document, read_import_file,
+};
 use axum::extract::{Multipart, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use portability_application::commands::import_own_data::{ImportFailure, ImportOwnDataHandler};
+use portability_application::commands::import_own_data::{ImportFailure, ImportOwnData};
 
 pub async fn import(
     CurrentActor(actor): CurrentActor,
@@ -23,7 +25,7 @@ pub async fn import(
     };
 
     let document = match bytes.iter().find(|b| !b.is_ascii_whitespace()) {
-        Some(b'{') => crate::formats::from_json(&bytes),
+        Some(b'{') => formats::from_json(&bytes),
         _ => mood_csv_document(&bytes),
     }
     .map_err(bad_request);
@@ -32,20 +34,12 @@ pub async fn import(
         Ok(d) => d,
         Err(r) => return r,
     };
-    let service = portability_application::commands::import_own_data::ImportOwnDataService::new(
-        deps.mood_source.clone(),
-        deps.mood_sink.clone(),
-        deps.practice_source.clone(),
-        deps.practice_sink.clone(),
-        deps.meditations.clone(),
-    );
-    match service
-        .handle(
-            portability_application::commands::import_own_data::ImportOwnData {
-                user_id: actor.user_id(),
-                document,
-            },
-        )
+    match deps
+        .import_own_data
+        .handle(ImportOwnData {
+            user_id: actor.user_id(),
+            document,
+        })
         .await
     {
         Ok(report) => (StatusCode::OK, Json(report)).into_response(),

@@ -209,31 +209,60 @@ pub fn portability_dependencies(
     db: DatabaseConnection,
     medioss_origin: Arc<String>,
 ) -> SharedDependencies {
+    let mood_records = || {
+        Arc::new(MoodRecords {
+            entries: SeaOrmMoodEntryRepository::new(db.clone()),
+        }) as Arc<dyn OwnMoodRecords>
+    };
+    let mood_sink = || {
+        Arc::new(MoodRecords {
+            entries: SeaOrmMoodEntryRepository::new(db.clone()),
+        }) as Arc<dyn MoodRecordSink>
+    };
+    let practice_source = || {
+        Arc::new(PracticeRecords {
+            meditations: SeaOrmMeditationRepository::new(db.clone()),
+            sessions: SeaOrmSessionRepository::new(db.clone()),
+            notes: SeaOrmNoteRepository::new(db.clone()),
+            playback: SeaOrmPlaybackRepository::new(db.clone()),
+        }) as Arc<dyn OwnPracticeRecords>
+    };
+    let practice_sink = || {
+        Arc::new(PracticeRecords {
+            meditations: SeaOrmMeditationRepository::new(db.clone()),
+            sessions: SeaOrmSessionRepository::new(db.clone()),
+            notes: SeaOrmNoteRepository::new(db.clone()),
+            playback: SeaOrmPlaybackRepository::new(db.clone()),
+        }) as Arc<dyn PracticeSink>
+    };
+
+    let export_own_data =
+        portability_application::queries::export_own_data::ExportOwnDataService::new(
+            mood_records(),
+            practice_source(),
+            Arc::new(ProfileNames {
+                users: identity_infrastructure::SeaOrmUserRepository::new(db.clone()),
+            }),
+        );
+    let export_mood_records =
+        portability_application::queries::export_mood_records::ExportMoodRecordsService::new(
+            mood_records(),
+        );
+    let import_own_data =
+        portability_application::commands::import_own_data::ImportOwnDataService::new(
+            mood_records(),
+            mood_sink(),
+            practice_source(),
+            practice_sink(),
+            Arc::new(Library {
+                meditations: SeaOrmMeditationRepository::new(db.clone()),
+            }),
+        );
+
     SharedDependencies {
-        mood_source: Arc::new(MoodRecords {
-            entries: SeaOrmMoodEntryRepository::new(db.clone()),
-        }),
-        mood_sink: Arc::new(MoodRecords {
-            entries: SeaOrmMoodEntryRepository::new(db.clone()),
-        }),
-        practice_source: Arc::new(PracticeRecords {
-            meditations: SeaOrmMeditationRepository::new(db.clone()),
-            sessions: SeaOrmSessionRepository::new(db.clone()),
-            notes: SeaOrmNoteRepository::new(db.clone()),
-            playback: SeaOrmPlaybackRepository::new(db.clone()),
-        }),
-        practice_sink: Arc::new(PracticeRecords {
-            meditations: SeaOrmMeditationRepository::new(db.clone()),
-            sessions: SeaOrmSessionRepository::new(db.clone()),
-            notes: SeaOrmNoteRepository::new(db.clone()),
-            playback: SeaOrmPlaybackRepository::new(db.clone()),
-        }),
-        meditations: Arc::new(Library {
-            meditations: SeaOrmMeditationRepository::new(db.clone()),
-        }),
+        export_own_data: Arc::new(export_own_data),
+        export_mood_records: Arc::new(export_mood_records),
+        import_own_data: Arc::new(import_own_data),
         medioss_origin,
-        profile: Arc::new(ProfileNames {
-            users: identity_infrastructure::SeaOrmUserRepository::new(db),
-        }),
     }
 }

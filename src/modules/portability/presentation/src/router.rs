@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
 use axum::routing::{get, post};
+use portability_application::commands::import_own_data::ImportOwnDataHandler;
+use portability_application::queries::export_mood_records::ExportMoodRecordsHandler;
+use portability_application::queries::export_own_data::ExportOwnDataHandler;
 
 #[derive(Clone)]
 pub struct SharedDependencies {
-    pub mood_source: Arc<dyn portability_application::ports::own_mood_records::OwnMoodRecords>,
-    pub mood_sink: Arc<dyn portability_application::ports::mood_record_sink::MoodRecordSink>,
-    pub practice_source:
-        Arc<dyn portability_application::ports::own_practice_records::OwnPracticeRecords>,
-    pub practice_sink: Arc<dyn portability_application::ports::practice_sink::PracticeSink>,
-    pub meditations: Arc<dyn portability_application::ports::meditation_lookup::MeditationLookup>,
-    pub profile:
-        Arc<dyn portability_application::ports::display_name_resolver::DisplayNameResolver>,
+    pub export_own_data: Arc<dyn ExportOwnDataHandler>,
+    pub export_mood_records: Arc<dyn ExportMoodRecordsHandler>,
+    pub import_own_data: Arc<dyn ImportOwnDataHandler>,
     pub medioss_origin: Arc<String>,
 }
 

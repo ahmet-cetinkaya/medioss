@@ -1885,17 +1885,9 @@ dependencies = [
  "async-trait",
  "chrono",
  "kernel",
- "portability-domain",
  "serde",
  "thiserror 2.0.21",
  "tokio",
-]
-
-[[package]]
-name = "portability-domain"
-version = "0.0.0"
-dependencies = [
- "kernel",
 ]
 
 [[package]]
@@ -1904,7 +1896,6 @@ version = "0.0.0"
 dependencies = [
  "kernel",
  "portability-application",
- "portability-domain",
 ]
 
 [[package]]
@@ -1917,7 +1908,6 @@ dependencies = [
  "csv",
  "kernel",
  "portability-application",
- "portability-domain",
  "serde",
  "serde_json",
  "tokio",
