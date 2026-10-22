@@ -151,7 +151,7 @@ Layer boundaries are enforced by the Cargo graph; these rules govern the files _
 
 **One type per file**, named after the type in snake_case. A type and its error are separate files in the same topic folder.
 
-**One use case is one folder** in `application/src/commands/` or `application/src/queries/`, holding four files:
+**One use case is one folder** in `application/src/commands/` or `application/src/queries/`. The folder holds one file per role — the command/query struct, the handler trait, the service implementing it, the service's tests — plus any private helper files the service needs:
 
 ```text
 commands/record_completion/
@@ -162,7 +162,7 @@ commands/record_completion/
 └── record_completion_service.tests.rs    # tests of the service, fakes from test_support
 ```
 
-Queries follow the same shape (`get_mood_history/`, `GetMoodHistory` + `Handler` + `Service`); result types tuned for display get their own files in the same folder. The presentation layer depends only on the handler traits (generic or `Arc<dyn …>`), never on repositories; `web-api` constructs services from infrastructure adapters and injects them at the composition root — plain constructor injection, no mediator, no registry, no runtime dispatch by message type.
+Queries follow the same shape (`get_mood_history/`, `GetMoodHistory` + `Handler` + `Service`); result types tuned for display get their own files in the same folder, and use-case helper files (`mood.rs`, `meditation_index.rs` in the portability pilot) live inside the use-case folder next to the service that owns them. The presentation layer depends only on the handler traits (generic or `Arc<dyn …>`), never on repositories; `web-api` constructs services from infrastructure adapters and injects them at the composition root — plain constructor injection, no mediator, no registry, no runtime dispatch by message type.
 
 **Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory. Every logic-bearing file has a sibling `.tests.rs`; files holding no logic are exempt — `mod.rs`/`lib.rs` re-export files, trait-only declarations, command/query/DTO data structs, and SeaORM entity/migration declarations. `scripts/check-boundaries.sh` enforces this rule (inline test blocks fail; missing siblings warn until the layout migration completes).
 
