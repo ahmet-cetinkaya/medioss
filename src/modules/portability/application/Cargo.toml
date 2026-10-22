@@ -7,9 +7,11 @@ license.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
 kernel = { path = "../../../kernel" }
-portability-domain = { path = "../domain" }
 serde.workspace = true
 thiserror.workspace = true
+
+[features]
+test-support = []
 
 [dev-dependencies]
 tokio.workspace = true

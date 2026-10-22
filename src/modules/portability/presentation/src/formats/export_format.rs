@@ -171,3 +171,7 @@ struct JsonDocument {
     mood_entries: Vec<JsonMoodEntry>,
     practice: JsonPractice,
 }
+
+#[cfg(test)]
+#[path = "export_format.tests.rs"]
+mod tests;

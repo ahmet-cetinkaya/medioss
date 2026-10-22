@@ -1,9 +1,12 @@
-#[cfg(test)]
-#[path = "formats.tests.rs"]
-mod formats_tests;
+// Presentation is organized by file type: handlers/ (one per endpoint),
+// formats/ (serialization), support/ (cross-cutting helpers). The
+// folder-per-file nesting below is deliberate, not module inception.
+#![allow(clippy::module_inception)]
 
-pub mod export_format;
 pub mod extractors;
-pub mod mood_csv;
+pub mod formats;
+pub mod handlers;
 pub mod router;
+pub mod support;
+
 pub use router::SharedDependencies;

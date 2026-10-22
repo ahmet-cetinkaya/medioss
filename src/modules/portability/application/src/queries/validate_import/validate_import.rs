@@ -1,9 +1,28 @@
-use super::ImportError;
 use crate::models::export_document::ExportDocument;
+use crate::FORMAT_VERSION;
 use chrono::Utc;
 
-pub(super) fn validate(document: &ExportDocument) -> Result<(), ImportError> {
-    if document.format_version != crate::export::FORMAT_VERSION {
+#[derive(Debug)]
+pub enum ImportError {
+    UnknownFormatVersion(u32),
+    InvalidMoodScore(u8),
+    InvalidRecord(String),
+}
+
+impl std::fmt::Display for ImportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ImportError::UnknownFormatVersion(v) => {
+                write!(f, "unknown export format version {v}")
+            }
+            ImportError::InvalidMoodScore(s) => write!(f, "mood score {s} outside 1-5"),
+            ImportError::InvalidRecord(reason) => write!(f, "invalid record: {reason}"),
+        }
+    }
+}
+
+pub fn validate_document(document: &ExportDocument) -> Result<(), ImportError> {
+    if document.format_version != FORMAT_VERSION {
         return Err(ImportError::UnknownFormatVersion(document.format_version));
     }
     for e in &document.mood_entries {
@@ -45,3 +64,7 @@ pub(super) fn validate(document: &ExportDocument) -> Result<(), ImportError> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "validate_import.tests.rs"]
+mod tests;
