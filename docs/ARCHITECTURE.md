@@ -46,7 +46,7 @@ This is a **draft**. Final business-module boundaries are decided feature by fea
 
 ## Module Pattern
 
-Every business module is four independent Cargo crates, one per Clean Architecture layer:
+Every business module is independent Cargo crates, one per Clean Architecture layer it actually uses — a layer with no content (for example a module with no domain rules of its own) gets no crate:
 
 | Layer | Crate name | Contents |
 | --- | --- | --- |
@@ -88,11 +88,11 @@ medioss/
     │   │   │   ├── Cargo.toml
     │   │   │   └── src/
     │   │   │       ├── lib.rs
-    │   │   │       ├── ports/              # MeditationRepository, MeditationAudioStore
-    │   │   │       ├── commands/           # UploadMeditation, RecordSession
-    │   │   │       ├── queries/            # SearchLibrary, GetStreak
-    │   │   │       ├── services/           # use-case services, module facade
-    │   │   │       └── error.rs            # application errors
+    │   │   │       ├── ports/              # one trait per file: MeditationRepository, ...
+    │   │   │       ├── commands/           # <use-case>/ folders: struct + handler trait + service + tests
+    │   │   │       ├── queries/            # <use-case>/ folders: same shape, read-only
+    │   │   │       ├── services/           # implementations shared by several use cases (when they exist)
+    │   │   │       └── models/             # shared data contracts + models/errors/
     │   │   ├── infrastructure/
     │   │   │   ├── Cargo.toml
     │   │   │   └── src/
@@ -105,10 +105,12 @@ medioss/
     │   │   └── presentation/
     │   │       ├── Cargo.toml
     │   │       └── src/
-    │   │           ├── lib.rs              # pub fn router(...) -> Router
-    │   │           ├── routes/
-    │   │           ├── extractors/
-    │   │           └── dto/
+    │   │           ├── lib.rs              # module exports, pub use router::SharedDependencies
+    │   │           ├── router.rs           # calls each route's register() helper
+    │   │           ├── handlers/           # one file per route: request DTO + handler + register()
+    │   │           ├── formats/            # serialization (json/csv), each with .tests.rs
+    │   │           ├── support/            # cross-cutting helpers (origin, multipart, responses)
+    │   │           └── extractors.rs       # CurrentActor and friends
     │   │
     │   └── <module>/                       # future modules follow the same shape
     │       ├── domain/
@@ -147,7 +149,9 @@ medioss/
 
 Layer boundaries are enforced by the Cargo graph; these rules govern the files _within_ one crate. They apply to every crate in the workspace, including each new module's four layer crates.
 
-**Group by domain topic.** A crate's `src/` is organized into folders named after the concern they own, not the kind of construct they hold. A topic's type, its error, the functions operating on it, and its tests live together. There are no `models/`, `types/`, `errors/`, or `utils/` buckets — splitting one concern across category folders is what this rule exists to prevent.
+**Group by domain topic in domain and application.** Those crates are organized into folders named after the concern they own, not the kind of construct they hold: a topic's type, the functions operating on it, and its tests live together. There are no `types/` or `utils/` buckets, and no single `error.rs` dump — errors belong to the topic or use case that owns them, shared application errors live in `models/errors/`, and shared data contracts cross-cutting several use cases live in `models/` (`MoodRecord`, `ExportDocument` in the portability pilot). A `models/` folder is a home for shared contracts, never a catch-all: a type belongs there only when more than one use case speaks it.
+
+**Presentation groups by role.** The organization axis there is the job a piece of code does, not the business topic: `handlers/` (one file per route: its request DTO, its handler function, and its `register()` helper), `formats/` (serialization), `support/` (cross-cutting helpers), plus a `router.rs` that only calls the `register()` helpers and an `extractors.rs`. The reason is dependency shape: endpoints never depend on each other, they all depend on the shared formats and helpers, so "related code side by side" puts roles side by side. A module is still the topic; this is the layout of its HTTP surface.
 
 **One type per file**, named after the type in snake_case. A type and its error are separate files in the same topic folder.
 
@@ -162,7 +166,7 @@ commands/record_completion/
 └── record_completion_service.tests.rs    # tests of the service, fakes from test_support
 ```
 
-Queries follow the same shape (`get_mood_history/`, `GetMoodHistory` + `Handler` + `Service`); result types tuned for display get their own files in the same folder, and use-case helper files (`mood.rs`, `meditation_index.rs` in the portability pilot) live inside the use-case folder next to the service that owns them. The presentation layer depends only on the handler traits (generic or `Arc<dyn …>`), never on repositories; `web-api` constructs services from infrastructure adapters and injects them at the composition root — plain constructor injection, no mediator, no registry, no runtime dispatch by message type.
+Queries follow the same shape (`get_mood_history/`, `GetMoodHistory` + `Handler` + `Service`); result types tuned for display get their own files in the same folder, and use-case helper files (`mood.rs`, `meditation_index.rs` in the portability pilot) live inside the use-case folder next to the service that owns them. `application/src/services/` is reserved for service implementations **shared by several use cases**; a module with no such shared implementation has no `services/` folder at all. The presentation layer depends only on the handler traits (generic or `Arc<dyn …>`), never on repositories; `web-api` constructs services from infrastructure adapters and injects them at the composition root — plain constructor injection, no mediator, no registry, no runtime dispatch by message type.
 
 **Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory. Every logic-bearing file has a sibling `.tests.rs`; files holding no logic are exempt — `mod.rs`/`lib.rs` re-export files, trait-only declarations, command/query/DTO data structs, and SeaORM entity/migration declarations. `scripts/check-boundaries.sh` enforces this rule (inline test blocks fail; missing siblings warn until the layout migration completes).
 
@@ -470,7 +474,7 @@ Cargo tracks dependencies per crate. Changing a crate's source invalidates that 
 | Domain unit tests | `<module>-domain` | `kernel` only | Entities, value objects, invariants, domain errors. Pure functions, no I/O, no fakes. |
 | Application unit tests | `<module>-application` | Own `domain` plus in-memory port fakes | Commands, queries, use-case orchestration, authorization decisions. No I/O, no database. |
 | Infrastructure integration tests | `<module>-infrastructure/tests/` | Temporary SQLite file and temporary directory, removed on drop | Migrations apply cleanly, mappers round-trip, repository queries return the right rows, storage adapters move real bytes. |
-| Presentation router tests | `<module>-presentation/tests/` | Axum test client, mocked application services, `Actor` inserted directly into extensions | Routing, extractors, DTO serialization, status codes, auth guards, error mapping. No database. |
+| Presentation router tests | `<module>-presentation/src/**.tests.rs` beside the handlers they cover | Axum test client, mocked application services, `Actor` inserted directly into extensions | Routing, extractors, DTO serialization, status codes, auth guards, error mapping. No database. |
 | Smoke and E2E tests | `web-api/tests/` | Full binary, temporary data directory pointed to by `MEDIOSS_DATA_DIR` | End-to-end request flow through the real composition root: config loading, migrations, router, and every mounted module. |
 
 Run them with `cargo test --workspace`; `default-members` would otherwise limit a bare `cargo test` to the binary and silently skip every module.
