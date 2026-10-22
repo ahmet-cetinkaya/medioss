@@ -1,24 +1,21 @@
 use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
+use axum::http::StatusCode;
 use kernel::Actor;
 
 pub struct CurrentActor(pub Actor);
 
-impl<S> FromRequestParts<S> for CurrentActor
-where
-    S: Send + Sync,
-{
-    type Rejection = (axum::http::StatusCode, &'static str);
+impl<S: Send + Sync> FromRequestParts<S> for CurrentActor {
+    type Rejection = StatusCode;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut axum::http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
         parts
             .extensions
             .get::<Actor>()
             .cloned()
-            .map(CurrentActor)
-            .ok_or((
-                axum::http::StatusCode::UNAUTHORIZED,
-                "authentication required",
-            ))
+            .map(Self)
+            .ok_or(StatusCode::UNAUTHORIZED)
     }
 }

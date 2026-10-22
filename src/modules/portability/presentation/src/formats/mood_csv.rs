@@ -52,3 +52,7 @@ pub fn mood_records_from_csv(bytes: &[u8]) -> Result<Vec<MoodRecord>, String> {
     }
     Ok(records)
 }
+
+#[cfg(test)]
+#[path = "mood_csv.tests.rs"]
+mod tests;
