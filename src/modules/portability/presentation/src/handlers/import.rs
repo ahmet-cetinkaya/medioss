@@ -49,3 +49,13 @@ pub async fn import(
         Err(e) => internal(e.to_string()),
     }
 }
+
+/// Mounts this route on the module router.
+pub fn register(router: axum::Router<SharedDependencies>) -> axum::Router<SharedDependencies> {
+    router.route(
+        "/portability/import",
+        axum::routing::post(import).layer(axum::extract::DefaultBodyLimit::max(
+            crate::support::IMPORT_FILE_CAP_BYTES + 64 * 1024,
+        )),
+    )
+}

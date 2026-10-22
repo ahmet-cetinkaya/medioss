@@ -25,3 +25,8 @@ pub async fn export_csv(
         Err(e) => internal(e),
     }
 }
+
+/// Mounts this route on the module router.
+pub fn register(router: axum::Router<SharedDependencies>) -> axum::Router<SharedDependencies> {
+    router.route("/portability/export/csv", axum::routing::get(export_csv))
+}
