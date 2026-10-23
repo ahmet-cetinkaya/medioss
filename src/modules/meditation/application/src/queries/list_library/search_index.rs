@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use super::fold::fold;
 use crate::ports::{
     Category, CategoryRepository, MembershipRepository, Program, ProgramRepository,
 };
-use crate::services::fold;
 use crate::ApplicationError;
 
 pub struct SearchIndex {

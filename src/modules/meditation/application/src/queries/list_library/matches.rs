@@ -1,4 +1,4 @@
-use super::fold;
+use super::fold::fold;
 
 pub(crate) fn matches(query: &str, haystack: &str) -> bool {
     let folded_query = fold(query);

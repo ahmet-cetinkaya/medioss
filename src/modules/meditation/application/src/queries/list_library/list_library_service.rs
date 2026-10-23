@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use super::list_library::ListLibrary;
 use super::list_library_handler::ListLibraryHandler;
-use crate::models::SearchIndex;
+use super::matches::matches;
+use super::search_index::SearchIndex;
 use crate::ports::{
     CategoryRepository, MeditationRepository, MembershipRepository, ProgramRepository,
 };
-use crate::services::matches;
 use crate::ApplicationError;
 use meditation_domain::Meditation;
 
