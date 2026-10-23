@@ -1,17 +1,18 @@
-mod actors;
-mod byte_range;
-mod categories;
-mod dependencies;
-mod error_mapping;
-mod icons;
-mod mixes;
-mod multipart_field;
-mod origin_guard;
-pub mod router;
-mod sounds;
+// The layout convention (docs/ARCHITECTURE.md) organizes this crate by role
+// (handlers/, support/, extractors, router); same-name file nesting is
+// deliberate, not module inception.
+#![allow(clippy::module_inception)]
 
-pub use router::{soundscape_router, SharedDependencies, SoundscapeDependencies};
+mod extractors;
+mod handlers;
+mod router;
+mod support;
 
 #[cfg(test)]
-#[path = "router_tests/mod.rs"]
+#[path = "router.tests.rs"]
 mod router_tests;
+
+#[cfg(test)]
+mod test_support;
+
+pub use router::{soundscape_router, SharedDependencies, SoundscapeDependencies};
