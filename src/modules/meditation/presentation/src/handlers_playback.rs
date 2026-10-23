@@ -6,7 +6,18 @@ use axum::{
     Json,
 };
 use chrono::{DateTime, Utc};
-use meditation_application::{commands, queries};
+use meditation_application::commands::record_completion::{
+    RecordCompletion, RecordCompletionHandler, RecordCompletionService,
+};
+use meditation_application::commands::record_position::{
+    RecordPosition, RecordPositionHandler, RecordPositionService,
+};
+use meditation_application::commands::set_completed::{
+    SetCompleted, SetCompletedHandler, SetCompletedService,
+};
+use meditation_application::queries::get_playback_state::{
+    GetPlaybackState, GetPlaybackStateHandler, GetPlaybackStateService,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{ensure_browser_origin, ApiError, CurrentActor, SharedDependencies};
@@ -29,14 +40,13 @@ pub async fn playback_state(
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<PlaybackStateResponse>, ApiError> {
-    let state = queries::get_playback_state(
-        deps.meditations.as_ref(),
-        deps.playback.as_ref(),
-        actor.user_id(),
-        id,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    let state = GetPlaybackStateService::new(deps.meditations.clone(), deps.playback.clone())
+        .handle(GetPlaybackState {
+            user_id: actor.user_id(),
+            meditation_id: id,
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(Json(PlaybackStateResponse {
         position_ms: state.position_ms,
         completed: state.completed,
@@ -53,15 +63,14 @@ pub async fn position(
     Json(request): Json<PositionRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::record_position(
-        deps.meditations.as_ref(),
-        deps.playback.as_ref(),
-        actor.user_id(),
-        id,
-        request.position_ms,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    RecordPositionService::new(deps.meditations.clone(), deps.playback.clone())
+        .handle(RecordPosition {
+            user_id: actor.user_id(),
+            meditation_id: id,
+            position_ms: request.position_ms,
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -88,15 +97,17 @@ pub async fn completion(
     Json(request): Json<CompletionRequest>,
 ) -> Result<(StatusCode, Json<CompletionResponse>), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    let session = commands::record_completion(
-        deps.meditations.as_ref(),
-        deps.playback.as_ref(),
-        deps.sessions.as_ref(),
-        actor.user_id(),
-        id,
-        request.started_at,
-        request.finished_at,
+    let session = RecordCompletionService::new(
+        deps.meditations.clone(),
+        deps.playback.clone(),
+        deps.sessions.clone(),
     )
+    .handle(RecordCompletion {
+        user_id: actor.user_id(),
+        meditation_id: id,
+        started_at: request.started_at,
+        finished_at: request.finished_at,
+    })
     .await
     .map_err(ApiError::Application)?;
     Ok((
@@ -124,14 +135,13 @@ pub async fn set_completed(
     Json(request): Json<CompletedRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::set_completed(
-        deps.meditations.as_ref(),
-        deps.playback.as_ref(),
-        actor.user_id(),
-        id,
-        request.completed,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    SetCompletedService::new(deps.meditations.clone(), deps.playback.clone())
+        .handle(SetCompleted {
+            user_id: actor.user_id(),
+            meditation_id: id,
+            completed: request.completed,
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }

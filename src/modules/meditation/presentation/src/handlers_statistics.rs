@@ -2,10 +2,10 @@ use axum::{
     extract::{Query, State},
     Json,
 };
-use meditation_application::{
-    queries::{self, StatisticsRange},
-    ApplicationError,
+use meditation_application::queries::get_user_statistics::{
+    GetUserStatistics, GetUserStatisticsHandler, GetUserStatisticsService, StatisticsRange,
 };
+use meditation_application::ApplicationError;
 use serde::{Deserialize, Serialize};
 
 use crate::{ApiError, CurrentActor, SharedDependencies};
@@ -49,15 +49,15 @@ pub async fn statistics(
         )));
     }
     let now = deps.clock.now().await;
-    let statistics = queries::get_user_statistics(
-        deps.sessions.as_ref(),
-        actor.user_id(),
-        range,
-        query.tz_offset_minutes,
-        now,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    let statistics = GetUserStatisticsService::new(deps.sessions.clone())
+        .handle(GetUserStatistics {
+            user_id: actor.user_id(),
+            range,
+            tz_offset_minutes: query.tz_offset_minutes,
+            now,
+        })
+        .await
+        .map_err(ApiError::Application)?;
 
     Ok(Json(StatisticsResponse {
         range: query.range.unwrap_or_else(|| "custom".to_owned()),

@@ -5,7 +5,12 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use meditation_application::queries;
+use meditation_application::queries::get_continue_program::{
+    GetContinueProgram, GetContinueProgramHandler, GetContinueProgramService,
+};
+use meditation_application::queries::list_recent_programs::{
+    ListRecentPrograms, ListRecentProgramsHandler, ListRecentProgramsService,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::programs::{program_response, progress_for, ProgramResponse};
@@ -23,12 +28,14 @@ pub async fn continue_program(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Response, ApiError> {
-    let found = queries::get_continue_program(
-        deps.playback.as_ref(),
-        deps.memberships.as_ref(),
-        deps.programs.as_ref(),
-        actor.user_id(),
+    let found = GetContinueProgramService::new(
+        deps.playback.clone(),
+        deps.memberships.clone(),
+        deps.programs.clone(),
     )
+    .handle(GetContinueProgram {
+        user_id: actor.user_id(),
+    })
     .await
     .map_err(ApiError::Application)?;
     let Some(found) = found else {
@@ -61,13 +68,15 @@ pub async fn recent_programs(
     State(deps): State<SharedDependencies>,
     axum::extract::Query(query): axum::extract::Query<RecentProgramsQuery>,
 ) -> Result<Json<Vec<RecentProgramResponse>>, ApiError> {
-    let listed = queries::list_recent_programs(
-        deps.playback.as_ref(),
-        deps.memberships.as_ref(),
-        deps.programs.as_ref(),
-        actor.user_id(),
-        query.limit,
+    let listed = ListRecentProgramsService::new(
+        deps.playback.clone(),
+        deps.memberships.clone(),
+        deps.programs.clone(),
     )
+    .handle(ListRecentPrograms {
+        user_id: actor.user_id(),
+        limit: query.limit,
+    })
     .await
     .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());

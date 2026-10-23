@@ -6,7 +6,22 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use meditation_application::{commands, queries};
+use meditation_application::commands::delete_meditation::{
+    DeleteMeditation, DeleteMeditationHandler, DeleteMeditationService,
+};
+use meditation_application::commands::update_meditation_description::{
+    UpdateMeditationDescription, UpdateMeditationDescriptionHandler,
+    UpdateMeditationDescriptionService,
+};
+use meditation_application::queries::get_daily_suggestion::{
+    GetDailySuggestion, GetDailySuggestionHandler, GetDailySuggestionService,
+};
+use meditation_application::queries::get_meditation_detail::{
+    GetMeditationDetail, GetMeditationDetailHandler, GetMeditationDetailService,
+};
+use meditation_application::queries::list_library::{
+    ListLibrary, ListLibraryHandler, ListLibraryService,
+};
 
 use crate::meditation_response::{
     meditation_response, with_playback, MeditationResponse, ProgramSummary,
@@ -19,12 +34,13 @@ pub async fn daily_suggestion(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Response, ApiError> {
-    let found = queries::get_daily_suggestion(
-        deps.meditations.as_ref(),
-        deps.clock.as_ref(),
-        deps.memberships.as_ref(),
-        deps.programs.as_ref(),
+    let found = GetDailySuggestionService::new(
+        deps.meditations.clone(),
+        deps.clock.clone(),
+        deps.memberships.clone(),
+        deps.programs.clone(),
     )
+    .handle(GetDailySuggestion)
     .await
     .map_err(ApiError::Application)?;
     let Some(found) = found else {
@@ -53,13 +69,13 @@ pub async fn update_description(
     Json(request): Json<UpdateDescriptionRequest>,
 ) -> Result<Json<MeditationResponse>, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    let updated = commands::update_meditation_description(
-        deps.meditations.as_ref(),
-        id,
-        request.description.as_deref(),
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    let updated = UpdateMeditationDescriptionService::new(deps.meditations.clone())
+        .handle(UpdateMeditationDescription {
+            meditation_id: id,
+            description: request.description.clone(),
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(Json(meditation_response(&updated)))
 }
 
@@ -80,13 +96,15 @@ pub async fn library(
     if q.is_some_and(|q| q.chars().count() > MAX_QUERY_CHARS) {
         return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST));
     }
-    let listed = queries::list_library(
-        deps.meditations.as_ref(),
-        deps.memberships.as_ref(),
-        deps.programs.as_ref(),
-        deps.categories.as_ref(),
-        q,
+    let listed = ListLibraryService::new(
+        deps.meditations.clone(),
+        deps.memberships.clone(),
+        deps.programs.clone(),
+        deps.categories.clone(),
     )
+    .handle(ListLibrary {
+        query: q.map(str::to_owned),
+    })
     .await
     .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
@@ -111,12 +129,12 @@ pub async fn meditation(
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<MeditationResponse>, ApiError> {
-    let found = queries::get_meditation_detail(
-        deps.meditations.as_ref(),
-        deps.memberships.as_ref(),
-        deps.programs.as_ref(),
-        id,
+    let found = GetMeditationDetailService::new(
+        deps.meditations.clone(),
+        deps.memberships.clone(),
+        deps.programs.clone(),
     )
+    .handle(GetMeditationDetail { meditation_id: id })
     .await
     .map_err(ApiError::Application)?;
     let mut response =
@@ -141,13 +159,13 @@ pub async fn delete_meditation(
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::delete_meditation(
-        deps.meditations.as_ref(),
-        deps.memberships.as_ref(),
-        deps.notes.as_ref(),
-        deps.store.as_ref(),
-        id,
+    DeleteMeditationService::new(
+        deps.meditations.clone(),
+        deps.memberships.clone(),
+        deps.notes.clone(),
+        deps.store.clone(),
     )
+    .handle(DeleteMeditation { meditation_id: id })
     .await
     .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

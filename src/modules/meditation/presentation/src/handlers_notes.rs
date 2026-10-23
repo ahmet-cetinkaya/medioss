@@ -5,7 +5,16 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::{commands, queries};
+use meditation_application::commands::create_note::{
+    CreateNote, CreateNoteHandler, CreateNoteService,
+};
+use meditation_application::commands::delete_note::{
+    DeleteNote, DeleteNoteHandler, DeleteNoteService,
+};
+use meditation_application::commands::update_note::{
+    UpdateNote, UpdateNoteHandler, UpdateNoteService,
+};
+use meditation_application::queries::list_notes::{ListNotes, ListNotesHandler, ListNotesService};
 use serde::{Deserialize, Serialize};
 
 use crate::{ensure_browser_origin, ApiError, CurrentActor, SharedDependencies};
@@ -39,14 +48,13 @@ pub async fn notes(
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<NoteResponse>>, ApiError> {
-    let listed = queries::list_notes(
-        deps.meditations.as_ref(),
-        deps.notes.as_ref(),
-        actor.user_id(),
-        id,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    let listed = ListNotesService::new(deps.meditations.clone(), deps.notes.clone())
+        .handle(ListNotes {
+            user_id: actor.user_id(),
+            meditation_id: id,
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(Json(listed.iter().map(note_response).collect()))
 }
 
@@ -59,14 +67,16 @@ pub async fn create_note(
     Json(request): Json<NoteRequest>,
 ) -> Result<(StatusCode, Json<NoteResponse>), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    let note = commands::create_note(
-        deps.meditations.as_ref(),
-        deps.notes.as_ref(),
-        deps.clock.as_ref(),
-        actor.user_id(),
-        id,
-        &request.text,
+    let note = CreateNoteService::new(
+        deps.meditations.clone(),
+        deps.notes.clone(),
+        deps.clock.clone(),
     )
+    .handle(CreateNote {
+        user_id: actor.user_id(),
+        meditation_id: id,
+        text: request.text.clone(),
+    })
     .await
     .map_err(ApiError::Application)?;
     Ok((StatusCode::CREATED, Json(note_response(&note))))
@@ -82,16 +92,15 @@ pub async fn update_note(
     Json(request): Json<NoteRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::update_note(
-        deps.notes.as_ref(),
-        deps.clock.as_ref(),
-        note_id,
-        id,
-        actor.user_id(),
-        &request.text,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    UpdateNoteService::new(deps.notes.clone(), deps.clock.clone())
+        .handle(UpdateNote {
+            note_id,
+            meditation_id: id,
+            user_id: actor.user_id(),
+            text: request.text.clone(),
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -103,7 +112,12 @@ pub async fn delete_note(
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::delete_note(deps.notes.as_ref(), note_id, id, actor.user_id())
+    DeleteNoteService::new(deps.notes.clone())
+        .handle(DeleteNote {
+            note_id,
+            meditation_id: id,
+            user_id: actor.user_id(),
+        })
         .await
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

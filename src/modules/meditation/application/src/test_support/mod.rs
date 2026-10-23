@@ -14,6 +14,8 @@ mod fake_session_repository;
 mod fake_validator;
 mod fixed_clock;
 mod repo_state;
+mod test_deps;
+mod user_ids;
 
 pub use fake_blob_store::FakeBlobStore;
 pub use fake_category_repository::FakeCategoryRepository;
@@ -28,3 +30,5 @@ pub use fake_session_repository::FakeSessionRepository;
 pub use fake_validator::{sniff_audio, FakeValidator};
 pub use fixed_clock::FixedClock;
 pub use repo_state::RepoState;
+pub use test_deps::TestDeps;
+pub use user_ids::{user_a, user_b};

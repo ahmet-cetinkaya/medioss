@@ -50,3 +50,7 @@ impl StatisticsRange {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "statistics_range.tests.rs"]
+mod tests;

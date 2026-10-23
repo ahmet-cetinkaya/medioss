@@ -5,7 +5,22 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::{commands, queries};
+use meditation_application::commands;
+use meditation_application::commands::create_program::{
+    CreateProgram, CreateProgramHandler, CreateProgramService,
+};
+use meditation_application::commands::delete_program::{
+    DeleteProgram, DeleteProgramHandler, DeleteProgramService,
+};
+use meditation_application::commands::update_program::{
+    UpdateProgram, UpdateProgramHandler, UpdateProgramService,
+};
+use meditation_application::queries::list_program_members::{
+    ListProgramMembers, ListProgramMembersHandler, ListProgramMembersService,
+};
+use meditation_application::queries::list_programs::{
+    ListPrograms, ListProgramsHandler, ListProgramsService,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::response::read_field_capped;
@@ -49,7 +64,9 @@ pub(crate) async fn progress_for(
     user_id: kernel::UserId,
     program_id: i64,
 ) -> f64 {
-    let Ok(members) = queries::list_program_members(deps.memberships.as_ref(), program_id).await
+    let Ok(members) = ListProgramMembersService::new(deps.memberships.clone())
+        .handle(ListProgramMembers { program_id })
+        .await
     else {
         return 0.0;
     };
@@ -77,7 +94,8 @@ pub async fn programs(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Json<Vec<ProgramResponse>>, ApiError> {
-    let listed = queries::list_programs(deps.programs.as_ref())
+    let listed = ListProgramsService::new(deps.programs.clone())
+        .handle(ListPrograms)
         .await
         .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
@@ -148,15 +166,17 @@ pub async fn create_program(
     }
 
     let title = title.ok_or(ApiError::StatusCode(StatusCode::BAD_REQUEST))?;
-    let program = commands::create_program(
-        deps.programs.as_ref(),
-        deps.cover_validator.as_ref(),
-        deps.store.as_ref(),
-        deps.clock.as_ref(),
-        &title,
-        description.as_deref(),
-        cover,
+    let program = CreateProgramService::new(
+        deps.programs.clone(),
+        deps.cover_validator.clone(),
+        deps.store.clone(),
+        deps.clock.clone(),
     )
+    .handle(CreateProgram {
+        title: title.clone(),
+        description: description.clone(),
+        cover_bytes: cover,
+    })
     .await
     .map_err(ApiError::Application)?;
     Ok((StatusCode::CREATED, Json(program_response(&program, 0.0))))
@@ -177,14 +197,14 @@ pub async fn update_program(
     Json(request): Json<UpdateProgramRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::update_program(
-        deps.programs.as_ref(),
-        id,
-        &request.title,
-        request.description.as_deref(),
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    UpdateProgramService::new(deps.programs.clone())
+        .handle(UpdateProgram {
+            program_id: id,
+            title: request.title.clone(),
+            description: request.description.clone(),
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -197,13 +217,13 @@ pub async fn delete_program(
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::delete_program(
-        deps.programs.as_ref(),
-        deps.memberships.as_ref(),
-        deps.meditations.as_ref(),
-        deps.store.as_ref(),
-        id,
+    DeleteProgramService::new(
+        deps.programs.clone(),
+        deps.memberships.clone(),
+        deps.meditations.clone(),
+        deps.store.clone(),
     )
+    .handle(DeleteProgram { program_id: id })
     .await
     .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

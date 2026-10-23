@@ -4,7 +4,9 @@ use axum::{
     http::{header, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
 };
-use meditation_application::queries;
+use meditation_application::queries::get_meditation::{
+    GetMeditation, GetMeditationHandler, GetMeditationService,
+};
 
 use crate::byte_range::{parse_range, Unsatisfiable};
 use crate::{ApiError, CurrentActor, SharedDependencies};
@@ -16,7 +18,8 @@ pub async fn audio(
     Path(id): Path<i64>,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
-    let meditation = queries::get_meditation(deps.meditations.as_ref(), id)
+    let meditation = GetMeditationService::new(deps.meditations.clone())
+        .handle(GetMeditation { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
     serve_blob(
@@ -37,7 +40,8 @@ pub async fn download(
     Path(id): Path<i64>,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
-    let meditation = queries::get_meditation(deps.meditations.as_ref(), id)
+    let meditation = GetMeditationService::new(deps.meditations.clone())
+        .handle(GetMeditation { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
     serve_blob(
