@@ -5,6 +5,9 @@ use axum::{
     Json,
 };
 use meditation_application::commands;
+use meditation_application::commands::upload_meditation::{
+    UploadMeditation, UploadMeditationHandler, UploadMeditationService,
+};
 
 use crate::meditation_response::{meditation_response, MeditationResponse};
 use crate::response::read_field_capped;
@@ -104,19 +107,21 @@ async fn persist_upload(
     deps: &SharedDependencies,
     upload: ValidUpload,
 ) -> Result<meditation_domain::Meditation, ApiError> {
-    commands::upload_meditation(
-        deps.meditations.as_ref(),
-        deps.memberships.as_ref(),
-        deps.programs.as_ref(),
-        deps.validator.as_ref(),
-        deps.converter.as_ref(),
-        deps.store.as_ref(),
-        deps.clock.as_ref(),
-        &upload.name,
-        upload.program_id,
-        upload.bytes,
-        upload.description.as_deref(),
+    UploadMeditationService::new(
+        deps.meditations.clone(),
+        deps.memberships.clone(),
+        deps.programs.clone(),
+        deps.validator.clone(),
+        deps.converter.clone(),
+        deps.store.clone(),
+        deps.clock.clone(),
     )
+    .handle(UploadMeditation {
+        name: upload.name.clone(),
+        program_id: upload.program_id,
+        bytes: upload.bytes,
+        description: upload.description.clone(),
+    })
     .await
     .map_err(ApiError::Application)
 }

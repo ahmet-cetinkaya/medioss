@@ -4,7 +4,19 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::{commands, queries};
+use meditation_application::commands::add_member::{AddMember, AddMemberHandler, AddMemberService};
+use meditation_application::commands::remove_member::{
+    RemoveMember, RemoveMemberHandler, RemoveMemberService,
+};
+use meditation_application::commands::update_program_order::{
+    UpdateProgramOrder, UpdateProgramOrderHandler, UpdateProgramOrderService,
+};
+use meditation_application::queries::get_meditation::{
+    GetMeditation, GetMeditationHandler, GetMeditationService,
+};
+use meditation_application::queries::list_program_members::{
+    ListProgramMembers, ListProgramMembersHandler, ListProgramMembersService,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::meditation_response::{with_playback, MeditationResponse};
@@ -25,12 +37,16 @@ pub async fn program_members(
         .ok_or(ApiError::Application(
             meditation_application::ApplicationError::NotFound,
         ))?;
-    let members = queries::list_program_members(deps.memberships.as_ref(), id)
+    let members = ListProgramMembersService::new(deps.memberships.clone())
+        .handle(ListProgramMembers { program_id: id })
         .await
         .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(members.len());
     for member in &members {
-        let meditation = queries::get_meditation(deps.meditations.as_ref(), member.meditation_id)
+        let meditation = GetMeditationService::new(deps.meditations.clone())
+            .handle(GetMeditation {
+                meditation_id: member.meditation_id,
+            })
             .await
             .map_err(ApiError::Application)?;
         responses.push(with_playback(deps.playback.as_ref(), actor.user_id(), &meditation).await);
@@ -52,14 +68,16 @@ pub async fn add_member(
     Json(request): Json<MemberRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::add_member(
-        deps.meditations.as_ref(),
-        deps.programs.as_ref(),
-        deps.memberships.as_ref(),
-        deps.clock.as_ref(),
-        id,
-        request.meditation_id,
+    AddMemberService::new(
+        deps.meditations.clone(),
+        deps.programs.clone(),
+        deps.memberships.clone(),
+        deps.clock.clone(),
     )
+    .handle(AddMember {
+        program_id: id,
+        meditation_id: request.meditation_id,
+    })
     .await
     .map_err(ApiError::Application)?;
     Ok(StatusCode::CREATED)
@@ -85,14 +103,13 @@ pub async fn update_order(
     Json(request): Json<MemberOrderRequest>,
 ) -> Result<Json<MemberOrderResponse>, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::update_program_order(
-        deps.programs.as_ref(),
-        deps.memberships.as_ref(),
-        id,
-        &request.meditation_ids,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    UpdateProgramOrderService::new(deps.programs.clone(), deps.memberships.clone())
+        .handle(UpdateProgramOrder {
+            program_id: id,
+            meditation_ids: request.meditation_ids.clone(),
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(Json(MemberOrderResponse {
         program_id: id,
         meditation_ids: request.meditation_ids,
@@ -108,13 +125,12 @@ pub async fn remove_member(
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    commands::remove_member(
-        deps.programs.as_ref(),
-        deps.memberships.as_ref(),
-        id,
-        meditation_id,
-    )
-    .await
-    .map_err(ApiError::Application)?;
+    RemoveMemberService::new(deps.programs.clone(), deps.memberships.clone())
+        .handle(RemoveMember {
+            program_id: id,
+            meditation_id,
+        })
+        .await
+        .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -1,0 +1,7 @@
+mod update_meditation_description;
+mod update_meditation_description_handler;
+mod update_meditation_description_service;
+
+pub use update_meditation_description::UpdateMeditationDescription;
+pub use update_meditation_description_handler::UpdateMeditationDescriptionHandler;
+pub use update_meditation_description_service::UpdateMeditationDescriptionService;
