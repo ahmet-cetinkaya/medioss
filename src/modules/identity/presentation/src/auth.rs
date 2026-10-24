@@ -3,10 +3,10 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use identity_application::commands::authenticate::Authenticate;
-use identity_application::commands::change_password::ChangePassword;
-use identity_application::commands::setup_admin::SetupAdmin;
-use identity_application::queries::setup_status::IsSetupRequired;
+use identity_application::commands::authenticate::AuthenticateCommand;
+use identity_application::commands::change_password::ChangePasswordCommand;
+use identity_application::commands::setup_admin::SetupAdminCommand;
+use identity_application::queries::setup_status::SetupStatusQuery;
 use identity_domain::{Email, RawPassword};
 use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
@@ -26,7 +26,7 @@ pub(crate) struct SetupStatusResponse {
 pub(crate) async fn setup_status(
     State(dependencies): State<SharedDependencies>,
 ) -> Result<Json<SetupStatusResponse>, ApiError> {
-    let setup_required = dependencies.setup_status.handle(IsSetupRequired).await?;
+    let setup_required = dependencies.setup_status.handle(SetupStatusQuery).await?;
     Ok(Json(SetupStatusResponse { setup_required }))
 }
 
@@ -52,7 +52,7 @@ pub(crate) async fn setup(
     let password = RawPassword::parse(&request.password)?;
     let user = dependencies
         .setup_admin
-        .handle(SetupAdmin { email, password })
+        .handle(SetupAdminCommand { email, password })
         .await?;
     Ok((StatusCode::CREATED, Json(user_response(&user))))
 }
@@ -66,7 +66,7 @@ pub(crate) async fn login(
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     let user = dependencies
         .authenticate
-        .handle(Authenticate {
+        .handle(AuthenticateCommand {
             identifier: request.email,
             password: request.password,
             bypass_throttle: false,
@@ -117,7 +117,7 @@ pub(crate) async fn me_password(
     let new_password = RawPassword::parse(&request.password)?;
     let user = dependencies
         .change_password
-        .handle(ChangePassword {
+        .handle(ChangePasswordCommand {
             user_id: actor.user_id(),
             new_password,
         })

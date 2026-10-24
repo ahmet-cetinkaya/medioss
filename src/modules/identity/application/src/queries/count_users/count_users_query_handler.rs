@@ -14,7 +14,7 @@ impl CountUsersQueryHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
             repository,
-            validator: CountUsersQueryValidator::default(),
+            validator: CountUsersQueryValidator,
         }
     }
 }

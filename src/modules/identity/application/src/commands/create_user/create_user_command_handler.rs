@@ -20,7 +20,7 @@ impl CreateUserCommandHandler {
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
-            validator: CreateUserCommandValidator::default(),
+            validator: CreateUserCommandValidator,
             repository,
             hasher,
             clock,

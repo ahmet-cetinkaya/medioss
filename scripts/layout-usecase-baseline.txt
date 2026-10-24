@@ -1,23 +1,7 @@
 # Use-case folders not yet migrated to option D (<name>_command.rs, <name>_command_handler.rs,
 # <name>_command_validator.rs + tests; queries use _query). May only shrink: migrate, then delete the line.
 # Unlisted folders must already comply. Stale entries (folder migrated or gone) fail the check.
-# count: 73
-src/modules/identity/application/src/commands/authenticate
-src/modules/identity/application/src/commands/change_password
-src/modules/identity/application/src/commands/clear_avatar
-src/modules/identity/application/src/commands/clear_login_throttle
-src/modules/identity/application/src/commands/create_user
-src/modules/identity/application/src/commands/delete_own_account
-src/modules/identity/application/src/commands/delete_user_as_admin
-src/modules/identity/application/src/commands/read_avatar
-src/modules/identity/application/src/commands/replace_avatar
-src/modules/identity/application/src/commands/set_display_name
-src/modules/identity/application/src/commands/set_user_status
-src/modules/identity/application/src/commands/setup_admin
-src/modules/identity/application/src/queries/count_users
-src/modules/identity/application/src/queries/find_user_by_id
-src/modules/identity/application/src/queries/list_users
-src/modules/identity/application/src/queries/setup_status
+# count: 57
 src/modules/meditation/application/src/commands/add_member
 src/modules/meditation/application/src/commands/create_category
 src/modules/meditation/application/src/commands/create_note

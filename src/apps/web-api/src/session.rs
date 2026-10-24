@@ -36,7 +36,7 @@ pub async fn resolve_actor(
             .identity
             .find_user_by_id
             .handle(
-                identity_application::queries::find_user_by_id::FindUserById {
+                identity_application::queries::find_user_by_id::FindUserByIdQuery {
                     id: kernel::UserId::new(user_id),
                 },
             )

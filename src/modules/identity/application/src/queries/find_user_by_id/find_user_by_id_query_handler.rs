@@ -15,7 +15,7 @@ impl FindUserByIdQueryHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
             repository,
-            validator: FindUserByIdQueryValidator::default(),
+            validator: FindUserByIdQueryValidator,
         }
     }
 }

@@ -254,14 +254,14 @@ pub(crate) fn services(
     hasher: Arc<NullHasher>,
     clock: Arc<NullClock>,
     admission: Arc<NullAdmission>,
-) -> identity_application::commands::authenticate::AuthenticateService {
+) -> identity_application::commands::authenticate::AuthenticateCommandHandler {
     let throttle: Arc<dyn identity_application::ports::LoginThrottleRepository> =
         repository.clone();
     let repository: Arc<dyn identity_application::ports::UserRepository> = repository;
     let hasher: Arc<dyn identity_application::ports::PasswordHasher> = hasher;
     let clock: Arc<dyn identity_application::ports::Clock> = clock;
     let admission: Arc<dyn identity_application::ports::LoginAdmission> = admission;
-    identity_application::commands::authenticate::AuthenticateService::new(
+    identity_application::commands::authenticate::AuthenticateCommandHandler::new(
         repository.clone(),
         throttle,
         hasher.clone(),
@@ -278,125 +278,104 @@ pub(crate) fn dependencies(
     admission: Arc<NullAdmission>,
     avatar_store: Arc<dyn identity_application::ports::AvatarStore>,
 ) -> SharedDependencies {
-    let authenticate: Arc<dyn identity_application::commands::authenticate::AuthenticateHandler> =
-        Arc::new(services(
-            repository.clone(),
+    let authenticate = Arc::new(services(
+        repository.clone(),
+        hasher.clone(),
+        clock.clone(),
+        admission.clone(),
+    ));
+    let create_user = Arc::new(
+        identity_application::commands::create_user::CreateUserCommandHandler::new(
+            repository_arc(&repository),
             hasher.clone(),
             clock.clone(),
-            admission.clone(),
-        ));
-    let create_user: Arc<dyn identity_application::commands::create_user::CreateUserHandler> =
-        Arc::new(
-            identity_application::commands::create_user::CreateUserService::new(
-                repository_arc(&repository),
-                hasher.clone(),
-                clock.clone(),
-            ),
-        );
-    let change_password: Arc<
-        dyn identity_application::commands::change_password::ChangePasswordHandler,
-    > = Arc::new(
-        identity_application::commands::change_password::ChangePasswordService::new(
+        ),
+    );
+    let change_password = Arc::new(
+        identity_application::commands::change_password::ChangePasswordCommandHandler::new(
             repository_arc(&repository),
             hasher.clone(),
         ),
     );
-    let delete_own_account: Arc<
-        dyn identity_application::commands::delete_own_account::DeleteOwnAccountHandler,
-    > = Arc::new(
-        identity_application::commands::delete_own_account::DeleteOwnAccountService::new(
+    let delete_own_account = Arc::new(
+        identity_application::commands::delete_own_account::DeleteOwnAccountCommandHandler::new(
             repository_arc(&repository),
         ),
     );
-    let delete_user_as_admin: Arc<
-        dyn identity_application::commands::delete_user_as_admin::DeleteUserAsAdminHandler,
-    > = Arc::new(
-        identity_application::commands::delete_user_as_admin::DeleteUserAsAdminService::new(
+    let delete_user_as_admin = Arc::new(
+        identity_application::commands::delete_user_as_admin::DeleteUserAsAdminCommandHandler::new(
             repository_arc(&repository),
         ),
     );
-    let set_display_name: Arc<
-        dyn identity_application::commands::set_display_name::SetDisplayNameHandler,
-    > = Arc::new(
-        identity_application::commands::set_display_name::SetDisplayNameService::new(
+    let set_display_name = Arc::new(
+        identity_application::commands::set_display_name::SetDisplayNameCommandHandler::new(
             repository_arc(&repository),
         ),
     );
-    let set_user_status: Arc<
-        dyn identity_application::commands::set_user_status::SetUserStatusHandler,
-    > = Arc::new(
-        identity_application::commands::set_user_status::SetUserStatusService::new(repository_arc(
-            &repository,
-        )),
+    let set_user_status = Arc::new(
+        identity_application::commands::set_user_status::SetUserStatusCommandHandler::new(
+            repository_arc(&repository),
+        ),
     );
-    let setup_admin: Arc<dyn identity_application::commands::setup_admin::SetupAdminHandler> =
-        Arc::new(
-            identity_application::commands::setup_admin::SetupAdminService::new(
-                repository_arc(&repository),
-                hasher.clone(),
-                clock.clone(),
-            ),
-        );
-    let clear_login_throttle: Arc<
-        dyn identity_application::commands::clear_login_throttle::ClearLoginThrottleHandler,
-    > = Arc::new(
-        identity_application::commands::clear_login_throttle::ClearLoginThrottleService::new(
+    let setup_admin = Arc::new(
+        identity_application::commands::setup_admin::SetupAdminCommandHandler::new(
+            repository_arc(&repository),
+            hasher.clone(),
+            clock.clone(),
+        ),
+    );
+    let clear_login_throttle = Arc::new(
+        identity_application::commands::clear_login_throttle::ClearLoginThrottleCommandHandler::new(
             throttle_arc(&repository),
         ),
     );
-    let replace_avatar: Arc<
-        dyn identity_application::commands::replace_avatar::ReplaceAvatarHandler,
-    > = Arc::new(
-        identity_application::commands::replace_avatar::ReplaceAvatarService::new(
+    let replace_avatar = Arc::new(
+        identity_application::commands::replace_avatar::ReplaceAvatarCommandHandler::new(
             repository_arc(&repository),
             avatar_store.clone(),
         ),
     );
-    let clear_avatar: Arc<dyn identity_application::commands::clear_avatar::ClearAvatarHandler> =
-        Arc::new(
-            identity_application::commands::clear_avatar::ClearAvatarService::new(
-                repository_arc(&repository),
-                avatar_store.clone(),
-            ),
-        );
-    let read_avatar: Arc<dyn identity_application::commands::read_avatar::ReadAvatarHandler> =
-        Arc::new(
-            identity_application::commands::read_avatar::ReadAvatarService::new(
-                repository_arc(&repository),
-                avatar_store.clone(),
-            ),
-        );
-    let count_users: Arc<dyn identity_application::queries::count_users::CountUsersHandler> =
-        Arc::new(
-            identity_application::queries::count_users::CountUsersService::new(repository_arc(
-                &repository,
-            )),
-        );
-    let find_user_by_id: Arc<
-        dyn identity_application::queries::find_user_by_id::FindUserByIdHandler,
-    > = Arc::new(
-        identity_application::queries::find_user_by_id::FindUserByIdService::new(repository_arc(
+    let clear_avatar = Arc::new(
+        identity_application::commands::clear_avatar::ClearAvatarCommandHandler::new(
+            repository_arc(&repository),
+            avatar_store.clone(),
+        ),
+    );
+    let read_avatar = Arc::new(
+        identity_application::commands::read_avatar::ReadAvatarCommandHandler::new(
+            repository_arc(&repository),
+            avatar_store.clone(),
+        ),
+    );
+    let count_users = Arc::new(
+        identity_application::queries::count_users::CountUsersQueryHandler::new(repository_arc(
             &repository,
         )),
     );
-    let list_users: Arc<dyn identity_application::queries::list_users::ListUsersHandler> = Arc::new(
-        identity_application::queries::list_users::ListUsersService::new(repository_arc(
+    let find_user_by_id = Arc::new(
+        identity_application::queries::find_user_by_id::FindUserByIdQueryHandler::new(
+            repository_arc(&repository),
+        ),
+    );
+    let list_users = Arc::new(
+        identity_application::queries::list_users::ListUsersQueryHandler::new(repository_arc(
             &repository,
         )),
     );
-    let setup_status: Arc<dyn identity_application::queries::setup_status::IsSetupRequiredHandler> =
-        Arc::new(
-            identity_application::queries::setup_status::SetupStatusService::new(repository_arc(
-                &repository,
-            )),
-        );
+    let setup_status = Arc::new(
+        identity_application::queries::setup_status::SetupStatusQueryHandler::new(repository_arc(
+            &repository,
+        )),
+    );
 
     Arc::new(IdentityDependencies {
         authenticate,
         create_user,
         change_password,
-        delete_own_account,
-        delete_user_as_admin,
+        delete_own_account: delete_own_account.clone(),
+        own_account_deletion_guard: delete_own_account,
+        delete_user_as_admin: delete_user_as_admin.clone(),
+        user_deletion_guard: delete_user_as_admin,
         set_display_name,
         set_user_status,
         setup_admin,

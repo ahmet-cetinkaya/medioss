@@ -17,7 +17,7 @@ impl ReadAvatarCommandHandler {
         Self {
             repository,
             store,
-            validator: ReadAvatarCommandValidator::default(),
+            validator: ReadAvatarCommandValidator,
         }
     }
 }

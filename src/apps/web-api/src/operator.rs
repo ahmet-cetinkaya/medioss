@@ -121,14 +121,14 @@ pub(crate) async fn run_clear_throttle(identifier: &str) {
         std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
             database.connection,
         ));
-    use identity_application::commands::clear_login_throttle::ClearLoginThrottleHandler;
+    use identity_application::ports::CommandHandler;
     let service =
-        identity_application::commands::clear_login_throttle::ClearLoginThrottleService::new(
+        identity_application::commands::clear_login_throttle::ClearLoginThrottleCommandHandler::new(
             repository,
         );
     match service
         .handle(
-            identity_application::commands::clear_login_throttle::ClearLoginThrottle {
+            identity_application::commands::clear_login_throttle::ClearLoginThrottleCommand {
                 identifier: identifier.to_owned(),
             },
         )

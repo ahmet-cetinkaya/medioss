@@ -14,7 +14,7 @@ pub struct SetUserStatusCommandHandler {
 impl SetUserStatusCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
-            validator: SetUserStatusCommandValidator::default(),
+            validator: SetUserStatusCommandValidator,
             repository,
         }
     }

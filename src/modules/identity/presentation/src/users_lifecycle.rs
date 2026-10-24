@@ -8,9 +8,9 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use identity_application::commands::delete_own_account::DeleteOwnAccount;
-use identity_application::commands::delete_user_as_admin::DeleteUserAsAdmin;
-use identity_application::commands::set_user_status::SetUserStatus;
+use identity_application::commands::delete_own_account::DeleteOwnAccountCommand;
+use identity_application::commands::delete_user_as_admin::DeleteUserAsAdminCommand;
+use identity_application::commands::set_user_status::SetUserStatusCommand;
 use identity_application::ApplicationError;
 use kernel::UserId;
 use serde::Deserialize;
@@ -55,7 +55,7 @@ pub async fn user_status(
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     dependencies
         .set_user_status
-        .handle(SetUserStatus {
+        .handle(SetUserStatusCommand {
             actor: actor.0,
             target: UserId::new(id),
             disabled: request.disabled,
@@ -76,7 +76,7 @@ pub async fn user_delete(
     // Guards first: a refused request (last admin, unknown target) must
     // never destroy the target's data.
     dependencies
-        .delete_user_as_admin
+        .user_deletion_guard
         .ensure_admin_can_delete_user(&actor, target)
         .await?;
     dependencies
@@ -86,7 +86,7 @@ pub async fn user_delete(
         .map_err(|_| ApiError::from(ApplicationError::Repository))?;
     dependencies
         .delete_user_as_admin
-        .handle(DeleteUserAsAdmin { actor, target })
+        .handle(DeleteUserAsAdminCommand { actor, target })
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -101,7 +101,7 @@ pub async fn me_delete(
     // Guards first: a refused self-deletion (last admin) must never
     // destroy the caller's data.
     dependencies
-        .delete_own_account
+        .own_account_deletion_guard
         .ensure_can_delete_own_account(&actor)
         .await?;
     dependencies
@@ -111,7 +111,7 @@ pub async fn me_delete(
         .map_err(|_| ApiError::from(ApplicationError::Repository))?;
     dependencies
         .delete_own_account
-        .handle(DeleteOwnAccount { actor })
+        .handle(DeleteOwnAccountCommand { actor })
         .await?;
     session.flush().await?;
     Ok(StatusCode::NO_CONTENT)

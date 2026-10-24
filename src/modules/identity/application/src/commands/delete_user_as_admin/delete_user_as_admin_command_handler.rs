@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::delete_user_as_admin_command::DeleteUserAsAdminCommand;
 use super::delete_user_as_admin_command_validator::DeleteUserAsAdminCommandValidator;
 use super::last_active_admin_guard::ensure_not_last_active_admin;
-use crate::ports::{CommandHandler, UserRepository};
+use crate::ports::{CommandHandler, UserDeletionGuard, UserRepository};
 use crate::ApplicationError;
 use kernel::Role;
 
@@ -15,29 +15,9 @@ pub struct DeleteUserAsAdminCommandHandler {
 impl DeleteUserAsAdminCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
-            validator: DeleteUserAsAdminCommandValidator::default(),
+            validator: DeleteUserAsAdminCommandValidator,
             repository,
         }
-    }
-
-    /// Runs every guard for an admin-initiated deletion without mutating
-    /// anything. The composition root calls this before purging module
-    /// data, so a refused request never destroys the target's data.
-    pub async fn ensure_admin_can_delete_user(
-        &self,
-        actor: &kernel::Actor,
-        target: kernel::UserId,
-    ) -> Result<(), ApplicationError> {
-        if actor.role() != Role::Admin {
-            return Err(ApplicationError::Forbidden);
-        }
-        let user = self
-            .repository
-            .find_by_id(target)
-            .await
-            .map_err(ApplicationError::from)?
-            .ok_or(ApplicationError::UserNotFound)?;
-        ensure_not_last_active_admin(self.repository.as_ref(), &user).await
     }
 
     async fn delete_user_as_admin(
@@ -65,6 +45,26 @@ impl DeleteUserAsAdminCommandHandler {
             return Err(ApplicationError::UserNotFound);
         }
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl UserDeletionGuard for DeleteUserAsAdminCommandHandler {
+    async fn ensure_admin_can_delete_user(
+        &self,
+        actor: &kernel::Actor,
+        target: kernel::UserId,
+    ) -> Result<(), ApplicationError> {
+        if actor.role() != Role::Admin {
+            return Err(ApplicationError::Forbidden);
+        }
+        let user = self
+            .repository
+            .find_by_id(target)
+            .await
+            .map_err(ApplicationError::from)?
+            .ok_or(ApplicationError::UserNotFound)?;
+        ensure_not_last_active_admin(self.repository.as_ref(), &user).await
     }
 }
 

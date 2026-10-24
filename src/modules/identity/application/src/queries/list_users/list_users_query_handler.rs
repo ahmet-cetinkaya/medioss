@@ -15,7 +15,7 @@ impl ListUsersQueryHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
             repository,
-            validator: ListUsersQueryValidator::default(),
+            validator: ListUsersQueryValidator,
         }
     }
 }

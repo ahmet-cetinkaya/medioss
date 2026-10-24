@@ -4,7 +4,7 @@ use kernel::{Actor, UserId};
 use std::sync::Arc;
 
 use super::{DeleteOwnAccountCommand, DeleteOwnAccountCommandHandler};
-use crate::ports::CommandHandler as _;
+use crate::ports::{CommandHandler as _, OwnAccountDeletionGuard as _};
 use crate::{
     ports::Clock as _,
     test_support::{block_on, FakeRepository, FixedClock},

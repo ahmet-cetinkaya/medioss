@@ -3,8 +3,8 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use identity_application::commands::create_user::CreateUser;
-use identity_application::queries::list_users::ListUsers;
+use identity_application::commands::create_user::CreateUserCommand;
+use identity_application::queries::list_users::ListUsersQuery;
 use identity_domain::{Email, RawPassword};
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ pub(crate) async fn users(
     let temporary_password = RawPassword::parse(&request.password)?;
     let user = dependencies
         .create_user
-        .handle(CreateUser {
+        .handle(CreateUserCommand {
             actor,
             email,
             temporary_password,
@@ -56,7 +56,7 @@ pub(crate) async fn users_list(
     _actor: AdminActor,
     State(dependencies): State<SharedDependencies>,
 ) -> Result<Json<Vec<UserListItem>>, ApiError> {
-    let users = dependencies.list_users.handle(ListUsers).await?;
+    let users = dependencies.list_users.handle(ListUsersQuery).await?;
     Ok(Json(
         users
             .into_iter()

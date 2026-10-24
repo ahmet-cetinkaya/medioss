@@ -16,7 +16,7 @@ impl SetDisplayNameCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
             repository,
-            validator: SetDisplayNameCommandValidator::default(),
+            validator: SetDisplayNameCommandValidator,
         }
     }
 

@@ -82,9 +82,19 @@ pub fn identity_dependencies(
         Arc::new(TokioSemaphoreAdmission::new(MAX_CONCURRENT_LOGINS));
     let avatar_store: Arc<dyn identity_application::ports::AvatarStore> = avatar_store;
 
+    let delete_own_account = Arc::new(
+        identity_application::commands::delete_own_account::DeleteOwnAccountCommandHandler::new(
+            repository.clone(),
+        ),
+    );
+    let delete_user_as_admin = Arc::new(
+        identity_application::commands::delete_user_as_admin::DeleteUserAsAdminCommandHandler::new(
+            repository.clone(),
+        ),
+    );
     Arc::new(identity_presentation::IdentityDependencies {
         authenticate: Arc::new(
-            identity_application::commands::authenticate::AuthenticateService::new(
+            identity_application::commands::authenticate::AuthenticateCommandHandler::new(
                 repository.clone(),
                 throttle.clone(),
                 hasher.clone(),
@@ -94,81 +104,75 @@ pub fn identity_dependencies(
             ),
         ),
         create_user: Arc::new(
-            identity_application::commands::create_user::CreateUserService::new(
+            identity_application::commands::create_user::CreateUserCommandHandler::new(
                 repository.clone(),
                 hasher.clone(),
                 clock.clone(),
             ),
         ),
         change_password: Arc::new(
-            identity_application::commands::change_password::ChangePasswordService::new(
+            identity_application::commands::change_password::ChangePasswordCommandHandler::new(
                 repository.clone(),
                 hasher.clone(),
             ),
         ),
-        delete_own_account: Arc::new(
-            identity_application::commands::delete_own_account::DeleteOwnAccountService::new(
-                repository.clone(),
-            ),
-        ),
-        delete_user_as_admin: Arc::new(
-            identity_application::commands::delete_user_as_admin::DeleteUserAsAdminService::new(
-                repository.clone(),
-            ),
-        ),
+        delete_own_account: delete_own_account.clone(),
+        own_account_deletion_guard: delete_own_account,
+        delete_user_as_admin: delete_user_as_admin.clone(),
+        user_deletion_guard: delete_user_as_admin,
         set_display_name: Arc::new(
-            identity_application::commands::set_display_name::SetDisplayNameService::new(
+            identity_application::commands::set_display_name::SetDisplayNameCommandHandler::new(
                 repository.clone(),
             ),
         ),
         set_user_status: Arc::new(
-            identity_application::commands::set_user_status::SetUserStatusService::new(
+            identity_application::commands::set_user_status::SetUserStatusCommandHandler::new(
                 repository.clone(),
             ),
         ),
         setup_admin: Arc::new(
-            identity_application::commands::setup_admin::SetupAdminService::new(
+            identity_application::commands::setup_admin::SetupAdminCommandHandler::new(
                 repository.clone(),
                 hasher.clone(),
                 clock.clone(),
             ),
         ),
         clear_login_throttle: Arc::new(
-            identity_application::commands::clear_login_throttle::ClearLoginThrottleService::new(
+            identity_application::commands::clear_login_throttle::ClearLoginThrottleCommandHandler::new(
                 throttle,
             ),
         ),
         replace_avatar: Arc::new(
-            identity_application::commands::replace_avatar::ReplaceAvatarService::new(
+            identity_application::commands::replace_avatar::ReplaceAvatarCommandHandler::new(
                 repository.clone(),
                 avatar_store.clone(),
             ),
         ),
         clear_avatar: Arc::new(
-            identity_application::commands::clear_avatar::ClearAvatarService::new(
+            identity_application::commands::clear_avatar::ClearAvatarCommandHandler::new(
                 repository.clone(),
                 avatar_store.clone(),
             ),
         ),
         read_avatar: Arc::new(
-            identity_application::commands::read_avatar::ReadAvatarService::new(
+            identity_application::commands::read_avatar::ReadAvatarCommandHandler::new(
                 repository.clone(),
                 avatar_store.clone(),
             ),
         ),
         count_users: Arc::new(
-            identity_application::queries::count_users::CountUsersService::new(repository.clone()),
+            identity_application::queries::count_users::CountUsersQueryHandler::new(repository.clone()),
         ),
         find_user_by_id: Arc::new(
-            identity_application::queries::find_user_by_id::FindUserByIdService::new(
+            identity_application::queries::find_user_by_id::FindUserByIdQueryHandler::new(
                 repository.clone(),
             ),
         ),
         list_users: Arc::new(
-            identity_application::queries::list_users::ListUsersService::new(repository.clone()),
+            identity_application::queries::list_users::ListUsersQueryHandler::new(repository.clone()),
         ),
         setup_status: Arc::new(
-            identity_application::queries::setup_status::SetupStatusService::new(repository),
+            identity_application::queries::setup_status::SetupStatusQueryHandler::new(repository),
         ),
         dummy_password_hash,
         session_secret: Arc::new(config.session_secret.expose().to_owned()),

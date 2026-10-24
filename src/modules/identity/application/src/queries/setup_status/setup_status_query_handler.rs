@@ -15,7 +15,7 @@ impl SetupStatusQueryHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
         Self {
             count_users: CountUsersQueryHandler::new(repository),
-            validator: SetupStatusQueryValidator::default(),
+            validator: SetupStatusQueryValidator,
         }
     }
 }

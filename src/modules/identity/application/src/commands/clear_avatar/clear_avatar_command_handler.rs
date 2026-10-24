@@ -16,7 +16,7 @@ impl ClearAvatarCommandHandler {
         Self {
             repository,
             store,
-            validator: ClearAvatarCommandValidator::default(),
+            validator: ClearAvatarCommandValidator,
         }
     }
 }

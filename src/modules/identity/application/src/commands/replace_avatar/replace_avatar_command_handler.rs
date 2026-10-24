@@ -17,7 +17,7 @@ impl ReplaceAvatarCommandHandler {
         Self {
             repository,
             store,
-            validator: ReplaceAvatarCommandValidator::default(),
+            validator: ReplaceAvatarCommandValidator,
         }
     }
 
