@@ -18,7 +18,7 @@ async fn icon_at_the_size_limit_is_accepted() {
     let mut bytes = PNG_MAGIC.to_vec();
     bytes.resize(MAX_ICON_BYTES, 0);
     let normalizer = FakeImageNormalizer(Ok(vec![1]));
-    assert!(normalize_icon(&normalizer, bytes).await.is_ok());
+    assert_eq!(normalize_icon(&normalizer, bytes).await.unwrap(), vec![1]);
 }
 
 #[tokio::test]
