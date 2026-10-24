@@ -1,7 +1,7 @@
-mod add_member;
-mod add_member_handler;
-mod add_member_service;
+mod add_member_command;
+mod add_member_command_handler;
+mod add_member_command_validator;
 
-pub use add_member::AddMember;
-pub use add_member_handler::AddMemberHandler;
-pub use add_member_service::AddMemberService;
+pub use add_member_command::AddMemberCommand;
+pub use add_member_command_handler::AddMemberCommandHandler;
+pub use add_member_command_validator::AddMemberCommandValidator;

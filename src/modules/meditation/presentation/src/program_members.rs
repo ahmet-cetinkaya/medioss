@@ -4,11 +4,11 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::commands::add_member::AddMember;
-use meditation_application::commands::remove_member::RemoveMember;
-use meditation_application::commands::update_program_order::UpdateProgramOrder;
-use meditation_application::queries::get_meditation::GetMeditation;
-use meditation_application::queries::list_program_members::ListProgramMembers;
+use meditation_application::commands::add_member::AddMemberCommand;
+use meditation_application::commands::remove_member::RemoveMemberCommand;
+use meditation_application::commands::update_program_order::UpdateProgramOrderCommand;
+use meditation_application::queries::get_meditation::GetMeditationQuery;
+use meditation_application::queries::list_program_members::ListProgramMembersQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::meditation_response::{with_playback, MeditationResponse};
@@ -23,14 +23,14 @@ pub async fn program_members(
 ) -> Result<Json<Vec<MeditationResponse>>, ApiError> {
     let members = deps
         .list_program_members
-        .handle(ListProgramMembers { program_id: id })
+        .handle(ListProgramMembersQuery { program_id: id })
         .await
         .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(members.len());
     for member in &members {
         let meditation = deps
             .get_meditation
-            .handle(GetMeditation {
+            .handle(GetMeditationQuery {
                 meditation_id: member.meditation_id,
             })
             .await
@@ -62,7 +62,7 @@ pub async fn add_member(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.add_member
-        .handle(AddMember {
+        .handle(AddMemberCommand {
             program_id: id,
             meditation_id: request.meditation_id,
         })
@@ -92,7 +92,7 @@ pub async fn update_order(
 ) -> Result<Json<MemberOrderResponse>, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.update_program_order
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: id,
             meditation_ids: request.meditation_ids.clone(),
         })
@@ -114,7 +114,7 @@ pub async fn remove_member(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.remove_member
-        .handle(RemoveMember {
+        .handle(RemoveMemberCommand {
             program_id: id,
             meditation_id,
         })

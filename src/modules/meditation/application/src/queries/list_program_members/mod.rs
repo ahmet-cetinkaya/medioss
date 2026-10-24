@@ -1,7 +1,7 @@
-mod list_program_members;
-mod list_program_members_handler;
-mod list_program_members_service;
+mod list_program_members_query;
+mod list_program_members_query_handler;
+mod list_program_members_query_validator;
 
-pub use list_program_members::ListProgramMembers;
-pub use list_program_members_handler::ListProgramMembersHandler;
-pub use list_program_members_service::ListProgramMembersService;
+pub use list_program_members_query::ListProgramMembersQuery;
+pub use list_program_members_query_handler::ListProgramMembersQueryHandler;
+pub use list_program_members_query_validator::ListProgramMembersQueryValidator;

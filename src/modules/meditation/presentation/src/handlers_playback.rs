@@ -6,10 +6,10 @@ use axum::{
     Json,
 };
 use chrono::{DateTime, Utc};
-use meditation_application::commands::record_completion::RecordCompletion;
-use meditation_application::commands::record_position::RecordPosition;
-use meditation_application::commands::set_completed::SetCompleted;
-use meditation_application::queries::get_playback_state::GetPlaybackState;
+use meditation_application::commands::record_completion::RecordCompletionCommand;
+use meditation_application::commands::record_position::RecordPositionCommand;
+use meditation_application::commands::set_completed::SetCompletedCommand;
+use meditation_application::queries::get_playback_state::GetPlaybackStateQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::{ensure_browser_origin, ApiError, CurrentActor, SharedDependencies};
@@ -34,7 +34,7 @@ pub async fn playback_state(
 ) -> Result<Json<PlaybackStateResponse>, ApiError> {
     let state = deps
         .get_playback_state
-        .handle(GetPlaybackState {
+        .handle(GetPlaybackStateQuery {
             user_id: actor.user_id(),
             meditation_id: id,
         })
@@ -57,7 +57,7 @@ pub async fn position(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.record_position
-        .handle(RecordPosition {
+        .handle(RecordPositionCommand {
             user_id: actor.user_id(),
             meditation_id: id,
             position_ms: request.position_ms,
@@ -92,7 +92,7 @@ pub async fn completion(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     let session = deps
         .record_completion
-        .handle(RecordCompletion {
+        .handle(RecordCompletionCommand {
             user_id: actor.user_id(),
             meditation_id: id,
             started_at: request.started_at,
@@ -126,7 +126,7 @@ pub async fn set_completed(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.set_completed
-        .handle(SetCompleted {
+        .handle(SetCompletedCommand {
             user_id: actor.user_id(),
             meditation_id: id,
             completed: request.completed,

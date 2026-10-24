@@ -1,40 +1,7 @@
 # Use-case folders not yet migrated to option D (<name>_command.rs, <name>_command_handler.rs,
 # <name>_command_validator.rs + tests; queries use _query). May only shrink: migrate, then delete the line.
 # Unlisted folders must already comply. Stale entries (folder migrated or gone) fail the check.
-# count: 57
-src/modules/meditation/application/src/commands/add_member
-src/modules/meditation/application/src/commands/create_category
-src/modules/meditation/application/src/commands/create_note
-src/modules/meditation/application/src/commands/create_program
-src/modules/meditation/application/src/commands/delete_category
-src/modules/meditation/application/src/commands/delete_meditation
-src/modules/meditation/application/src/commands/delete_note
-src/modules/meditation/application/src/commands/delete_program
-src/modules/meditation/application/src/commands/record_completion
-src/modules/meditation/application/src/commands/record_position
-src/modules/meditation/application/src/commands/remove_member
-src/modules/meditation/application/src/commands/rename_category
-src/modules/meditation/application/src/commands/replace_program_cover
-src/modules/meditation/application/src/commands/set_completed
-src/modules/meditation/application/src/commands/set_program_category
-src/modules/meditation/application/src/commands/update_meditation_description
-src/modules/meditation/application/src/commands/update_note
-src/modules/meditation/application/src/commands/update_program
-src/modules/meditation/application/src/commands/update_program_order
-src/modules/meditation/application/src/commands/upload_meditation
-src/modules/meditation/application/src/queries/get_continue_program
-src/modules/meditation/application/src/queries/get_daily_suggestion
-src/modules/meditation/application/src/queries/get_meditation
-src/modules/meditation/application/src/queries/get_meditation_detail
-src/modules/meditation/application/src/queries/get_playback_state
-src/modules/meditation/application/src/queries/get_program_cover
-src/modules/meditation/application/src/queries/get_user_statistics
-src/modules/meditation/application/src/queries/list_categories
-src/modules/meditation/application/src/queries/list_library
-src/modules/meditation/application/src/queries/list_notes
-src/modules/meditation/application/src/queries/list_program_members
-src/modules/meditation/application/src/queries/list_programs
-src/modules/meditation/application/src/queries/list_recent_programs
+# count: 24
 src/modules/mood-tracker/application/src/commands/create_mood_entry
 src/modules/mood-tracker/application/src/commands/delete_mood_entry
 src/modules/mood-tracker/application/src/commands/update_mood_entry

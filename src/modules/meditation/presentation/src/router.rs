@@ -12,43 +12,10 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-use meditation_application::commands::add_member::AddMemberHandler;
-use meditation_application::commands::create_category::CreateCategoryHandler;
-use meditation_application::commands::create_note::CreateNoteHandler;
-use meditation_application::commands::create_program::CreateProgramHandler;
-use meditation_application::commands::delete_category::DeleteCategoryHandler;
-use meditation_application::commands::delete_meditation::DeleteMeditationHandler;
-use meditation_application::commands::delete_note::DeleteNoteHandler;
-use meditation_application::commands::delete_program::DeleteProgramHandler;
-use meditation_application::commands::record_completion::RecordCompletionHandler;
-use meditation_application::commands::record_position::RecordPositionHandler;
-use meditation_application::commands::remove_member::RemoveMemberHandler;
-use meditation_application::commands::rename_category::RenameCategoryHandler;
-use meditation_application::commands::replace_program_cover::ReplaceProgramCoverHandler;
-use meditation_application::commands::set_completed::SetCompletedHandler;
-use meditation_application::commands::set_program_category::SetProgramCategoryHandler;
-use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionHandler;
-use meditation_application::commands::update_note::UpdateNoteHandler;
-use meditation_application::commands::update_program::UpdateProgramHandler;
-use meditation_application::commands::update_program_order::UpdateProgramOrderHandler;
-use meditation_application::commands::upload_meditation::UploadMeditationHandler;
 use meditation_application::commands::{MAX_COVER_BYTES, MAX_UPLOAD_BYTES};
 use meditation_application::ports::{
     BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository,
 };
-use meditation_application::queries::get_continue_program::GetContinueProgramHandler;
-use meditation_application::queries::get_daily_suggestion::GetDailySuggestionHandler;
-use meditation_application::queries::get_meditation::GetMeditationHandler;
-use meditation_application::queries::get_meditation_detail::GetMeditationDetailHandler;
-use meditation_application::queries::get_playback_state::GetPlaybackStateHandler;
-use meditation_application::queries::get_program_cover::GetProgramCoverHandler;
-use meditation_application::queries::get_user_statistics::GetUserStatisticsHandler;
-use meditation_application::queries::list_categories::ListCategoriesHandler;
-use meditation_application::queries::list_library::ListLibraryHandler;
-use meditation_application::queries::list_notes::ListNotesHandler;
-use meditation_application::queries::list_program_members::ListProgramMembersHandler;
-use meditation_application::queries::list_programs::ListProgramsHandler;
-use meditation_application::queries::list_recent_programs::ListRecentProgramsHandler;
 
 use crate::audio_stream::{audio, download};
 use crate::audio_upload::upload;
@@ -74,39 +41,39 @@ use crate::programs::{create_program, delete_program, program, programs, update_
 /// the statistics clock. The audio validator and Opus converter stay
 /// web-api-side: only the upload service consumes them.
 pub struct MeditationDependencies {
-    pub create_category: Arc<dyn CreateCategoryHandler>,
-    pub rename_category: Arc<dyn RenameCategoryHandler>,
-    pub delete_category: Arc<dyn DeleteCategoryHandler>,
-    pub set_program_category: Arc<dyn SetProgramCategoryHandler>,
-    pub list_categories: Arc<dyn ListCategoriesHandler>,
-    pub create_program: Arc<dyn CreateProgramHandler>,
-    pub update_program: Arc<dyn UpdateProgramHandler>,
-    pub delete_program: Arc<dyn DeleteProgramHandler>,
-    pub list_programs: Arc<dyn ListProgramsHandler>,
-    pub list_program_members: Arc<dyn ListProgramMembersHandler>,
-    pub add_member: Arc<dyn AddMemberHandler>,
-    pub remove_member: Arc<dyn RemoveMemberHandler>,
-    pub update_program_order: Arc<dyn UpdateProgramOrderHandler>,
-    pub upload_meditation: Arc<dyn UploadMeditationHandler>,
-    pub delete_meditation: Arc<dyn DeleteMeditationHandler>,
-    pub update_meditation_description: Arc<dyn UpdateMeditationDescriptionHandler>,
-    pub get_meditation: Arc<dyn GetMeditationHandler>,
-    pub get_meditation_detail: Arc<dyn GetMeditationDetailHandler>,
-    pub get_daily_suggestion: Arc<dyn GetDailySuggestionHandler>,
-    pub list_library: Arc<dyn ListLibraryHandler>,
-    pub get_playback_state: Arc<dyn GetPlaybackStateHandler>,
-    pub get_program_cover: Arc<dyn GetProgramCoverHandler>,
-    pub replace_program_cover: Arc<dyn ReplaceProgramCoverHandler>,
-    pub record_position: Arc<dyn RecordPositionHandler>,
-    pub record_completion: Arc<dyn RecordCompletionHandler>,
-    pub set_completed: Arc<dyn SetCompletedHandler>,
-    pub get_user_statistics: Arc<dyn GetUserStatisticsHandler>,
-    pub create_note: Arc<dyn CreateNoteHandler>,
-    pub update_note: Arc<dyn UpdateNoteHandler>,
-    pub delete_note: Arc<dyn DeleteNoteHandler>,
-    pub list_notes: Arc<dyn ListNotesHandler>,
-    pub get_continue_program: Arc<dyn GetContinueProgramHandler>,
-    pub list_recent_programs: Arc<dyn ListRecentProgramsHandler>,
+    pub create_category: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::create_category::CreateCategoryCommand, Output = meditation_application::ports::Category>>,
+    pub rename_category: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::rename_category::RenameCategoryCommand, Output = ()>>,
+    pub delete_category: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::delete_category::DeleteCategoryCommand, Output = ()>>,
+    pub set_program_category: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::set_program_category::SetProgramCategoryCommand, Output = ()>>,
+    pub list_categories: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_categories::ListCategoriesQuery, Output = Vec<meditation_application::ports::Category>>>,
+    pub create_program: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::create_program::CreateProgramCommand, Output = meditation_application::ports::Program>>,
+    pub update_program: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_program::UpdateProgramCommand, Output = ()>>,
+    pub delete_program: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::delete_program::DeleteProgramCommand, Output = ()>>,
+    pub list_programs: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_programs::ListProgramsQuery, Output = Vec<meditation_application::ports::Program>>>,
+    pub list_program_members: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_program_members::ListProgramMembersQuery, Output = Vec<meditation_application::ports::Membership>>>,
+    pub add_member: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::add_member::AddMemberCommand, Output = ()>>,
+    pub remove_member: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::remove_member::RemoveMemberCommand, Output = ()>>,
+    pub update_program_order: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_program_order::UpdateProgramOrderCommand, Output = ()>>,
+    pub upload_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::upload_meditation::UploadMeditationCommand, Output = meditation_domain::Meditation>>,
+    pub delete_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::delete_meditation::DeleteMeditationCommand, Output = ()>>,
+    pub update_meditation_description: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommand, Output = meditation_domain::Meditation>>,
+    pub get_meditation: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_meditation::GetMeditationQuery, Output = meditation_domain::Meditation>>,
+    pub get_meditation_detail: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_meditation_detail::GetMeditationDetailQuery, Output = meditation_application::queries::get_meditation_detail::MeditationDetail>>,
+    pub get_daily_suggestion: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_daily_suggestion::GetDailySuggestionQuery, Output = Option<meditation_application::queries::get_daily_suggestion::DailySuggestion>>>,
+    pub list_library: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_library::ListLibraryQuery, Output = Vec<meditation_application::queries::list_library::LibraryEntry>>>,
+    pub get_playback_state: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_playback_state::GetPlaybackStateQuery, Output = meditation_application::ports::PlaybackState>>,
+    pub get_program_cover: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_program_cover::GetProgramCoverQuery, Output = Option<meditation_application::queries::get_program_cover::ProgramCover>>>,
+    pub replace_program_cover: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommand, Output = ()>>,
+    pub record_position: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::record_position::RecordPositionCommand, Output = ()>>,
+    pub record_completion: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::record_completion::RecordCompletionCommand, Output = meditation_application::ports::MeditationSession>>,
+    pub set_completed: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::set_completed::SetCompletedCommand, Output = ()>>,
+    pub get_user_statistics: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_user_statistics::GetUserStatisticsQuery, Output = meditation_application::queries::get_user_statistics::UserStatistics>>,
+    pub create_note: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::create_note::CreateNoteCommand, Output = meditation_application::ports::Note>>,
+    pub update_note: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_note::UpdateNoteCommand, Output = ()>>,
+    pub delete_note: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::delete_note::DeleteNoteCommand, Output = ()>>,
+    pub list_notes: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_notes::ListNotesQuery, Output = Vec<meditation_application::ports::Note>>>,
+    pub get_continue_program: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_continue_program::GetContinueProgramQuery, Output = Option<meditation_application::queries::get_continue_program::ContinueProgram>>>,
+    pub list_recent_programs: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_recent_programs::ListRecentProgramsQuery, Output = Vec<meditation_application::queries::list_recent_programs::RecentProgram>>>,
     /// Program rows for the existence gates and the cover surfaces.
     pub programs: Arc<dyn ProgramRepository>,
     /// Home-program map decorating the library rows.

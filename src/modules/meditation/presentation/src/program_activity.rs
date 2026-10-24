@@ -5,8 +5,8 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use meditation_application::queries::get_continue_program::GetContinueProgram;
-use meditation_application::queries::list_recent_programs::ListRecentPrograms;
+use meditation_application::queries::get_continue_program::GetContinueProgramQuery;
+use meditation_application::queries::list_recent_programs::ListRecentProgramsQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::programs::{program_response, progress_for, ProgramResponse};
@@ -26,7 +26,7 @@ pub async fn continue_program(
 ) -> Result<Response, ApiError> {
     let found = deps
         .get_continue_program
-        .handle(GetContinueProgram {
+        .handle(GetContinueProgramQuery {
             user_id: actor.user_id(),
         })
         .await
@@ -63,7 +63,7 @@ pub async fn recent_programs(
 ) -> Result<Json<Vec<RecentProgramResponse>>, ApiError> {
     let listed = deps
         .list_recent_programs
-        .handle(ListRecentPrograms {
+        .handle(ListRecentProgramsQuery {
             user_id: actor.user_id(),
             limit: query.limit,
         })

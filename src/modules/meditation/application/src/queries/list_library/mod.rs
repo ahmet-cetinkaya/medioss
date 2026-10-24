@@ -1,10 +1,12 @@
 mod fold;
-mod list_library;
-mod list_library_handler;
-mod list_library_service;
+mod library_entry;
+mod list_library_query;
+mod list_library_query_handler;
+mod list_library_query_validator;
 mod matches;
 mod search_index;
 
-pub use list_library::ListLibrary;
-pub use list_library_handler::ListLibraryHandler;
-pub use list_library_service::ListLibraryService;
+pub use library_entry::LibraryEntry;
+pub use list_library_query::ListLibraryQuery;
+pub use list_library_query_handler::ListLibraryQueryHandler;
+pub use list_library_query_validator::ListLibraryQueryValidator;

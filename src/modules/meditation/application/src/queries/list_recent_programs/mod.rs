@@ -1,9 +1,9 @@
-mod list_recent_programs;
-mod list_recent_programs_handler;
-mod list_recent_programs_service;
+mod list_recent_programs_query;
+mod list_recent_programs_query_handler;
+mod list_recent_programs_query_validator;
 mod recent_program;
 
-pub use list_recent_programs::ListRecentPrograms;
-pub use list_recent_programs_handler::ListRecentProgramsHandler;
-pub use list_recent_programs_service::ListRecentProgramsService;
+pub use list_recent_programs_query::ListRecentProgramsQuery;
+pub use list_recent_programs_query_handler::ListRecentProgramsQueryHandler;
+pub use list_recent_programs_query_validator::ListRecentProgramsQueryValidator;
 pub use recent_program::RecentProgram;

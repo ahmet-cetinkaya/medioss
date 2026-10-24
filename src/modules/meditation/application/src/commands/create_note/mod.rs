@@ -1,7 +1,7 @@
-mod create_note;
-mod create_note_handler;
-mod create_note_service;
+mod create_note_command;
+mod create_note_command_handler;
+mod create_note_command_validator;
 
-pub use create_note::CreateNote;
-pub use create_note_handler::CreateNoteHandler;
-pub use create_note_service::CreateNoteService;
+pub use create_note_command::CreateNoteCommand;
+pub use create_note_command_handler::CreateNoteCommandHandler;
+pub use create_note_command_validator::CreateNoteCommandValidator;

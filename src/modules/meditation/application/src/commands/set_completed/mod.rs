@@ -1,7 +1,7 @@
-mod set_completed;
-mod set_completed_handler;
-mod set_completed_service;
+mod set_completed_command;
+mod set_completed_command_handler;
+mod set_completed_command_validator;
 
-pub use set_completed::SetCompleted;
-pub use set_completed_handler::SetCompletedHandler;
-pub use set_completed_service::SetCompletedService;
+pub use set_completed_command::SetCompletedCommand;
+pub use set_completed_command_handler::SetCompletedCommandHandler;
+pub use set_completed_command_validator::SetCompletedCommandValidator;

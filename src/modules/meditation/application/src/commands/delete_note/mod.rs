@@ -1,7 +1,7 @@
-mod delete_note;
-mod delete_note_handler;
-mod delete_note_service;
+mod delete_note_command;
+mod delete_note_command_handler;
+mod delete_note_command_validator;
 
-pub use delete_note::DeleteNote;
-pub use delete_note_handler::DeleteNoteHandler;
-pub use delete_note_service::DeleteNoteService;
+pub use delete_note_command::DeleteNoteCommand;
+pub use delete_note_command_handler::DeleteNoteCommandHandler;
+pub use delete_note_command_validator::DeleteNoteCommandValidator;

@@ -1,7 +1,7 @@
-mod record_completion;
-mod record_completion_handler;
-mod record_completion_service;
+mod record_completion_command;
+mod record_completion_command_handler;
+mod record_completion_command_validator;
 
-pub use record_completion::RecordCompletion;
-pub use record_completion_handler::RecordCompletionHandler;
-pub use record_completion_service::RecordCompletionService;
+pub use record_completion_command::RecordCompletionCommand;
+pub use record_completion_command_handler::RecordCompletionCommandHandler;
+pub use record_completion_command_validator::RecordCompletionCommandValidator;

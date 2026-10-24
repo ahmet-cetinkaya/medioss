@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use meditation_application::commands;
-use meditation_application::commands::upload_meditation::UploadMeditation;
+use meditation_application::commands::upload_meditation::UploadMeditationCommand;
 
 use crate::meditation_response::{meditation_response, MeditationResponse};
 use crate::response::read_field_capped;
@@ -106,7 +106,7 @@ async fn persist_upload(
     upload: ValidUpload,
 ) -> Result<meditation_domain::Meditation, ApiError> {
     deps.upload_meditation
-        .handle(UploadMeditation {
+        .handle(UploadMeditationCommand {
             name: upload.name,
             program_id: upload.program_id,
             bytes: upload.bytes,

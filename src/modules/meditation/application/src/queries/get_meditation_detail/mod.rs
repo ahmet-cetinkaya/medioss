@@ -1,9 +1,9 @@
-mod get_meditation_detail;
-mod get_meditation_detail_handler;
-mod get_meditation_detail_service;
+mod get_meditation_detail_query;
+mod get_meditation_detail_query_handler;
+mod get_meditation_detail_query_validator;
 mod meditation_detail;
 
-pub use get_meditation_detail::GetMeditationDetail;
-pub use get_meditation_detail_handler::GetMeditationDetailHandler;
-pub use get_meditation_detail_service::GetMeditationDetailService;
+pub use get_meditation_detail_query::GetMeditationDetailQuery;
+pub use get_meditation_detail_query_handler::GetMeditationDetailQueryHandler;
+pub use get_meditation_detail_query_validator::GetMeditationDetailQueryValidator;
 pub use meditation_detail::MeditationDetail;

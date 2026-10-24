@@ -1,7 +1,7 @@
-mod delete_meditation;
-mod delete_meditation_handler;
-mod delete_meditation_service;
+mod delete_meditation_command;
+mod delete_meditation_command_handler;
+mod delete_meditation_command_validator;
 
-pub use delete_meditation::DeleteMeditation;
-pub use delete_meditation_handler::DeleteMeditationHandler;
-pub use delete_meditation_service::DeleteMeditationService;
+pub use delete_meditation_command::DeleteMeditationCommand;
+pub use delete_meditation_command_handler::DeleteMeditationCommandHandler;
+pub use delete_meditation_command_validator::DeleteMeditationCommandValidator;

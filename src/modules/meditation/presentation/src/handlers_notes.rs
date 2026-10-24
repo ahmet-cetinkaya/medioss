@@ -5,10 +5,10 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::commands::create_note::CreateNote;
-use meditation_application::commands::delete_note::DeleteNote;
-use meditation_application::commands::update_note::UpdateNote;
-use meditation_application::queries::list_notes::ListNotes;
+use meditation_application::commands::create_note::CreateNoteCommand;
+use meditation_application::commands::delete_note::DeleteNoteCommand;
+use meditation_application::commands::update_note::UpdateNoteCommand;
+use meditation_application::queries::list_notes::ListNotesQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::{ensure_browser_origin, ApiError, CurrentActor, SharedDependencies};
@@ -44,7 +44,7 @@ pub async fn notes(
 ) -> Result<Json<Vec<NoteResponse>>, ApiError> {
     let listed = deps
         .list_notes
-        .handle(ListNotes {
+        .handle(ListNotesQuery {
             user_id: actor.user_id(),
             meditation_id: id,
         })
@@ -64,7 +64,7 @@ pub async fn create_note(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     let note = deps
         .create_note
-        .handle(CreateNote {
+        .handle(CreateNoteCommand {
             user_id: actor.user_id(),
             meditation_id: id,
             text: request.text,
@@ -85,7 +85,7 @@ pub async fn update_note(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.update_note
-        .handle(UpdateNote {
+        .handle(UpdateNoteCommand {
             note_id,
             meditation_id: id,
             user_id: actor.user_id(),
@@ -105,7 +105,7 @@ pub async fn delete_note(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.delete_note
-        .handle(DeleteNote {
+        .handle(DeleteNoteCommand {
             note_id,
             meditation_id: id,
             user_id: actor.user_id(),

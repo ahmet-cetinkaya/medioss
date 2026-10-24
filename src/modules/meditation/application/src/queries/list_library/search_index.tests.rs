@@ -1,8 +1,9 @@
 use super::SearchIndex;
 use crate::commands::set_program_category::{
-    SetProgramCategory, SetProgramCategoryHandler, SetProgramCategoryService,
+    SetProgramCategoryCommand, SetProgramCategoryCommandHandler,
 };
 use crate::ports::CategoryRepository;
+use crate::ports::CommandHandler as _;
 use crate::test_support::TestDeps;
 
 async fn build(deps: &TestDeps) -> SearchIndex {
@@ -25,8 +26,8 @@ async fn haystack_includes_name_program_title_and_category_name() {
         .insert("Sleep Aids".into(), deps.clock.0)
         .await
         .unwrap();
-    SetProgramCategoryService::new(deps.programs.clone(), deps.categories.clone())
-        .handle(SetProgramCategory {
+    SetProgramCategoryCommandHandler::new(deps.programs.clone(), deps.categories.clone())
+        .handle(SetProgramCategoryCommand {
             program_id: program,
             category_id: Some(category.id),
         })

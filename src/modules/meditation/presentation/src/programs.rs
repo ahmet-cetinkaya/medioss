@@ -6,11 +6,11 @@ use axum::{
     Json,
 };
 use meditation_application::commands;
-use meditation_application::commands::create_program::CreateProgram;
-use meditation_application::commands::delete_program::DeleteProgram;
-use meditation_application::commands::update_program::UpdateProgram;
-use meditation_application::queries::list_program_members::ListProgramMembers;
-use meditation_application::queries::list_programs::ListPrograms;
+use meditation_application::commands::create_program::CreateProgramCommand;
+use meditation_application::commands::delete_program::DeleteProgramCommand;
+use meditation_application::commands::update_program::UpdateProgramCommand;
+use meditation_application::queries::list_program_members::ListProgramMembersQuery;
+use meditation_application::queries::list_programs::ListProgramsQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::response::read_field_capped;
@@ -56,7 +56,7 @@ pub(crate) async fn progress_for(
 ) -> f64 {
     let Ok(members) = deps
         .list_program_members
-        .handle(ListProgramMembers { program_id })
+        .handle(ListProgramMembersQuery { program_id })
         .await
     else {
         return 0.0;
@@ -87,7 +87,7 @@ pub async fn programs(
 ) -> Result<Json<Vec<ProgramResponse>>, ApiError> {
     let listed = deps
         .list_programs
-        .handle(ListPrograms)
+        .handle(ListProgramsQuery)
         .await
         .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
@@ -160,7 +160,7 @@ pub async fn create_program(
     let title = title.ok_or(ApiError::StatusCode(StatusCode::BAD_REQUEST))?;
     let program = deps
         .create_program
-        .handle(CreateProgram {
+        .handle(CreateProgramCommand {
             title,
             description,
             cover_bytes: cover,
@@ -186,7 +186,7 @@ pub async fn update_program(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.update_program
-        .handle(UpdateProgram {
+        .handle(UpdateProgramCommand {
             program_id: id,
             title: request.title,
             description: request.description,
@@ -206,7 +206,7 @@ pub async fn delete_program(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.delete_program
-        .handle(DeleteProgram { program_id: id })
+        .handle(DeleteProgramCommand { program_id: id })
         .await
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

@@ -1,7 +1,7 @@
-mod get_meditation;
-mod get_meditation_handler;
-mod get_meditation_service;
+mod get_meditation_query;
+mod get_meditation_query_handler;
+mod get_meditation_query_validator;
 
-pub use get_meditation::GetMeditation;
-pub use get_meditation_handler::GetMeditationHandler;
-pub use get_meditation_service::GetMeditationService;
+pub use get_meditation_query::GetMeditationQuery;
+pub use get_meditation_query_handler::GetMeditationQueryHandler;
+pub use get_meditation_query_validator::GetMeditationQueryValidator;

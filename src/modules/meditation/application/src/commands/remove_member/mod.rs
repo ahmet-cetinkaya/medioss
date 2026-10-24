@@ -1,7 +1,7 @@
-mod remove_member;
-mod remove_member_handler;
-mod remove_member_service;
+mod remove_member_command;
+mod remove_member_command_handler;
+mod remove_member_command_validator;
 
-pub use remove_member::RemoveMember;
-pub use remove_member_handler::RemoveMemberHandler;
-pub use remove_member_service::RemoveMemberService;
+pub use remove_member_command::RemoveMemberCommand;
+pub use remove_member_command_handler::RemoveMemberCommandHandler;
+pub use remove_member_command_validator::RemoveMemberCommandValidator;

@@ -1,7 +1,7 @@
-mod record_position;
-mod record_position_handler;
-mod record_position_service;
+mod record_position_command;
+mod record_position_command_handler;
+mod record_position_command_validator;
 
-pub use record_position::RecordPosition;
-pub use record_position_handler::RecordPositionHandler;
-pub use record_position_service::RecordPositionService;
+pub use record_position_command::RecordPositionCommand;
+pub use record_position_command_handler::RecordPositionCommandHandler;
+pub use record_position_command_validator::RecordPositionCommandValidator;

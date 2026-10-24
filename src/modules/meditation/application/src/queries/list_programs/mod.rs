@@ -1,7 +1,7 @@
-mod list_programs;
-mod list_programs_handler;
-mod list_programs_service;
+mod list_programs_query;
+mod list_programs_query_handler;
+mod list_programs_query_validator;
 
-pub use list_programs::ListPrograms;
-pub use list_programs_handler::ListProgramsHandler;
-pub use list_programs_service::ListProgramsService;
+pub use list_programs_query::ListProgramsQuery;
+pub use list_programs_query_handler::ListProgramsQueryHandler;
+pub use list_programs_query_validator::ListProgramsQueryValidator;

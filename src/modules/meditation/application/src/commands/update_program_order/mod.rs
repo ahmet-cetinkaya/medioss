@@ -1,7 +1,7 @@
-mod update_program_order;
-mod update_program_order_handler;
-mod update_program_order_service;
+mod update_program_order_command;
+mod update_program_order_command_handler;
+mod update_program_order_command_validator;
 
-pub use update_program_order::UpdateProgramOrder;
-pub use update_program_order_handler::UpdateProgramOrderHandler;
-pub use update_program_order_service::UpdateProgramOrderService;
+pub use update_program_order_command::UpdateProgramOrderCommand;
+pub use update_program_order_command_handler::UpdateProgramOrderCommandHandler;
+pub use update_program_order_command_validator::UpdateProgramOrderCommandValidator;

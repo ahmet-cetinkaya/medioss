@@ -10,39 +10,39 @@ use axum::{
 use kernel::{Actor, Role, UserId};
 use tower::ServiceExt;
 
-use meditation_application::commands::add_member::AddMemberService;
-use meditation_application::commands::create_category::CreateCategoryService;
-use meditation_application::commands::create_note::CreateNoteService;
-use meditation_application::commands::create_program::CreateProgramService;
-use meditation_application::commands::delete_category::DeleteCategoryService;
-use meditation_application::commands::delete_meditation::DeleteMeditationService;
-use meditation_application::commands::delete_note::DeleteNoteService;
-use meditation_application::commands::delete_program::DeleteProgramService;
-use meditation_application::commands::record_completion::RecordCompletionService;
-use meditation_application::commands::record_position::RecordPositionService;
-use meditation_application::commands::remove_member::RemoveMemberService;
-use meditation_application::commands::rename_category::RenameCategoryService;
-use meditation_application::commands::replace_program_cover::ReplaceProgramCoverService;
-use meditation_application::commands::set_completed::SetCompletedService;
-use meditation_application::commands::set_program_category::SetProgramCategoryService;
-use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionService;
-use meditation_application::commands::update_note::UpdateNoteService;
-use meditation_application::commands::update_program::UpdateProgramService;
-use meditation_application::commands::update_program_order::UpdateProgramOrderService;
-use meditation_application::commands::upload_meditation::UploadMeditationService;
-use meditation_application::queries::get_continue_program::GetContinueProgramService;
-use meditation_application::queries::get_daily_suggestion::GetDailySuggestionService;
-use meditation_application::queries::get_meditation::GetMeditationService;
-use meditation_application::queries::get_meditation_detail::GetMeditationDetailService;
-use meditation_application::queries::get_playback_state::GetPlaybackStateService;
-use meditation_application::queries::get_program_cover::GetProgramCoverService;
-use meditation_application::queries::get_user_statistics::GetUserStatisticsService;
-use meditation_application::queries::list_categories::ListCategoriesService;
-use meditation_application::queries::list_library::ListLibraryService;
-use meditation_application::queries::list_notes::ListNotesService;
-use meditation_application::queries::list_program_members::ListProgramMembersService;
-use meditation_application::queries::list_programs::ListProgramsService;
-use meditation_application::queries::list_recent_programs::ListRecentProgramsService;
+use meditation_application::commands::add_member::AddMemberCommandHandler;
+use meditation_application::commands::create_category::CreateCategoryCommandHandler;
+use meditation_application::commands::create_note::CreateNoteCommandHandler;
+use meditation_application::commands::create_program::CreateProgramCommandHandler;
+use meditation_application::commands::delete_category::DeleteCategoryCommandHandler;
+use meditation_application::commands::delete_meditation::DeleteMeditationCommandHandler;
+use meditation_application::commands::delete_note::DeleteNoteCommandHandler;
+use meditation_application::commands::delete_program::DeleteProgramCommandHandler;
+use meditation_application::commands::record_completion::RecordCompletionCommandHandler;
+use meditation_application::commands::record_position::RecordPositionCommandHandler;
+use meditation_application::commands::remove_member::RemoveMemberCommandHandler;
+use meditation_application::commands::rename_category::RenameCategoryCommandHandler;
+use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommandHandler;
+use meditation_application::commands::set_completed::SetCompletedCommandHandler;
+use meditation_application::commands::set_program_category::SetProgramCategoryCommandHandler;
+use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommandHandler;
+use meditation_application::commands::update_note::UpdateNoteCommandHandler;
+use meditation_application::commands::update_program::UpdateProgramCommandHandler;
+use meditation_application::commands::update_program_order::UpdateProgramOrderCommandHandler;
+use meditation_application::commands::upload_meditation::UploadMeditationCommandHandler;
+use meditation_application::queries::get_continue_program::GetContinueProgramQueryHandler;
+use meditation_application::queries::get_daily_suggestion::GetDailySuggestionQueryHandler;
+use meditation_application::queries::get_meditation::GetMeditationQueryHandler;
+use meditation_application::queries::get_meditation_detail::GetMeditationDetailQueryHandler;
+use meditation_application::queries::get_playback_state::GetPlaybackStateQueryHandler;
+use meditation_application::queries::get_program_cover::GetProgramCoverQueryHandler;
+use meditation_application::queries::get_user_statistics::GetUserStatisticsQueryHandler;
+use meditation_application::queries::list_categories::ListCategoriesQueryHandler;
+use meditation_application::queries::list_library::ListLibraryQueryHandler;
+use meditation_application::queries::list_notes::ListNotesQueryHandler;
+use meditation_application::queries::list_program_members::ListProgramMembersQueryHandler;
+use meditation_application::queries::list_programs::ListProgramsQueryHandler;
+use meditation_application::queries::list_recent_programs::ListRecentProgramsQueryHandler;
 use meditation_application::test_support::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
     FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
@@ -91,56 +91,56 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
     let clock: Arc<dyn meditation_application::ports::Clock> =
         Arc::new(FixedClock(chrono::Utc::now()));
     MeditationDependencies {
-        create_category: Arc::new(CreateCategoryService::new(
+        create_category: Arc::new(CreateCategoryCommandHandler::new(
             categories.clone(),
             clock.clone(),
         )),
-        rename_category: Arc::new(RenameCategoryService::new(
+        rename_category: Arc::new(RenameCategoryCommandHandler::new(
             categories.clone(),
             clock.clone(),
         )),
-        delete_category: Arc::new(DeleteCategoryService::new(
+        delete_category: Arc::new(DeleteCategoryCommandHandler::new(
             categories.clone(),
             programs.clone(),
         )),
-        set_program_category: Arc::new(SetProgramCategoryService::new(
+        set_program_category: Arc::new(SetProgramCategoryCommandHandler::new(
             programs.clone(),
             categories.clone(),
         )),
-        list_categories: Arc::new(ListCategoriesService::new(categories.clone())),
-        create_program: Arc::new(CreateProgramService::new(
+        list_categories: Arc::new(ListCategoriesQueryHandler::new(categories.clone())),
+        create_program: Arc::new(CreateProgramCommandHandler::new(
             programs.clone(),
             cover_validator.clone(),
             store_port.clone(),
             clock.clone(),
         )),
-        update_program: Arc::new(UpdateProgramService::new(programs.clone())),
-        delete_program: Arc::new(DeleteProgramService::new(
+        update_program: Arc::new(UpdateProgramCommandHandler::new(programs.clone())),
+        delete_program: Arc::new(DeleteProgramCommandHandler::new(
             programs.clone(),
             memberships.clone(),
             meditations.clone(),
             store_port.clone(),
         )),
-        list_programs: Arc::new(ListProgramsService::new(programs.clone())),
-        list_program_members: Arc::new(ListProgramMembersService::new(
+        list_programs: Arc::new(ListProgramsQueryHandler::new(programs.clone())),
+        list_program_members: Arc::new(ListProgramMembersQueryHandler::new(
             programs.clone(),
             memberships.clone(),
         )),
-        add_member: Arc::new(AddMemberService::new(
+        add_member: Arc::new(AddMemberCommandHandler::new(
             meditations.clone(),
             programs.clone(),
             memberships.clone(),
             clock.clone(),
         )),
-        remove_member: Arc::new(RemoveMemberService::new(
+        remove_member: Arc::new(RemoveMemberCommandHandler::new(
             programs.clone(),
             memberships.clone(),
         )),
-        update_program_order: Arc::new(UpdateProgramOrderService::new(
+        update_program_order: Arc::new(UpdateProgramOrderCommandHandler::new(
             programs.clone(),
             memberships.clone(),
         )),
-        upload_meditation: Arc::new(UploadMeditationService::new(
+        upload_meditation: Arc::new(UploadMeditationCommandHandler::new(
             meditations.clone(),
             memberships.clone(),
             programs.clone(),
@@ -149,73 +149,73 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             store_port.clone(),
             clock.clone(),
         )),
-        delete_meditation: Arc::new(DeleteMeditationService::new(
+        delete_meditation: Arc::new(DeleteMeditationCommandHandler::new(
             meditations.clone(),
             memberships.clone(),
             notes.clone(),
             store_port.clone(),
         )),
-        update_meditation_description: Arc::new(UpdateMeditationDescriptionService::new(
+        update_meditation_description: Arc::new(UpdateMeditationDescriptionCommandHandler::new(
             meditations.clone(),
         )),
-        get_meditation: Arc::new(GetMeditationService::new(meditations.clone())),
-        get_meditation_detail: Arc::new(GetMeditationDetailService::new(
+        get_meditation: Arc::new(GetMeditationQueryHandler::new(meditations.clone())),
+        get_meditation_detail: Arc::new(GetMeditationDetailQueryHandler::new(
             meditations.clone(),
             memberships.clone(),
             programs.clone(),
         )),
-        get_daily_suggestion: Arc::new(GetDailySuggestionService::new(
+        get_daily_suggestion: Arc::new(GetDailySuggestionQueryHandler::new(
             meditations.clone(),
             clock.clone(),
             memberships.clone(),
             programs.clone(),
         )),
-        list_library: Arc::new(ListLibraryService::new(
+        list_library: Arc::new(ListLibraryQueryHandler::new(
             meditations.clone(),
             memberships.clone(),
             programs.clone(),
             categories,
         )),
-        get_program_cover: Arc::new(GetProgramCoverService::new(
+        get_program_cover: Arc::new(GetProgramCoverQueryHandler::new(
             programs.clone(),
             store_port.clone(),
         )),
-        replace_program_cover: Arc::new(ReplaceProgramCoverService::new(
+        replace_program_cover: Arc::new(ReplaceProgramCoverCommandHandler::new(
             programs.clone(),
             store_port.clone(),
         )),
-        get_playback_state: Arc::new(GetPlaybackStateService::new(
+        get_playback_state: Arc::new(GetPlaybackStateQueryHandler::new(
             meditations.clone(),
             playback.clone(),
         )),
-        record_position: Arc::new(RecordPositionService::new(
+        record_position: Arc::new(RecordPositionCommandHandler::new(
             meditations.clone(),
             playback.clone(),
         )),
-        record_completion: Arc::new(RecordCompletionService::new(
+        record_completion: Arc::new(RecordCompletionCommandHandler::new(
             meditations.clone(),
             playback.clone(),
             sessions.clone(),
         )),
-        set_completed: Arc::new(SetCompletedService::new(
+        set_completed: Arc::new(SetCompletedCommandHandler::new(
             meditations.clone(),
             playback.clone(),
         )),
-        get_user_statistics: Arc::new(GetUserStatisticsService::new(sessions, clock.clone())),
-        create_note: Arc::new(CreateNoteService::new(
+        get_user_statistics: Arc::new(GetUserStatisticsQueryHandler::new(sessions, clock.clone())),
+        create_note: Arc::new(CreateNoteCommandHandler::new(
             meditations.clone(),
             notes.clone(),
             clock.clone(),
         )),
-        update_note: Arc::new(UpdateNoteService::new(notes.clone(), clock.clone())),
-        delete_note: Arc::new(DeleteNoteService::new(notes.clone())),
-        list_notes: Arc::new(ListNotesService::new(meditations, notes)),
-        get_continue_program: Arc::new(GetContinueProgramService::new(
+        update_note: Arc::new(UpdateNoteCommandHandler::new(notes.clone(), clock.clone())),
+        delete_note: Arc::new(DeleteNoteCommandHandler::new(notes.clone())),
+        list_notes: Arc::new(ListNotesQueryHandler::new(meditations, notes)),
+        get_continue_program: Arc::new(GetContinueProgramQueryHandler::new(
             playback.clone(),
             memberships.clone(),
             programs.clone(),
         )),
-        list_recent_programs: Arc::new(ListRecentProgramsService::new(
+        list_recent_programs: Arc::new(ListRecentProgramsQueryHandler::new(
             playback.clone(),
             memberships.clone(),
             programs.clone(),
