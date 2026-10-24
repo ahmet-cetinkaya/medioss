@@ -1,6 +1,6 @@
 use web_api::config;
 
-use crate::{fail, with_causes};
+use web_api::bootstrap::report::{fail, with_causes};
 
 pub(crate) async fn run_reset_password(email: &str) {
     #[cfg(unix)]
