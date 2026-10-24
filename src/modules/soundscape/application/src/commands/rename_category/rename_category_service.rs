@@ -27,3 +27,7 @@ impl RenameCategoryHandler for RenameCategoryService {
             .ok_or(ApplicationError::NotFound)
     }
 }
+
+#[cfg(test)]
+#[path = "rename_category_service.tests.rs"]
+mod tests;

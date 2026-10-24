@@ -39,3 +39,7 @@ impl ClearSoundIconHandler for ClearSoundIconService {
         Ok(sound)
     }
 }
+
+#[cfg(test)]
+#[path = "clear_sound_icon_service.tests.rs"]
+mod tests;

@@ -12,3 +12,7 @@ pub(crate) async fn ensure_category_exists(
         .map(|_| ())
         .ok_or(ApplicationError::NotFound)
 }
+
+#[cfg(test)]
+#[path = "ensure_category_exists.tests.rs"]
+mod tests;

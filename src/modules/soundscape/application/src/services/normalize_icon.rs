@@ -15,3 +15,7 @@ pub(crate) async fn normalize_icon(
         .await
         .map_err(ApplicationError::from)
 }
+
+#[cfg(test)]
+#[path = "normalize_icon.tests.rs"]
+mod tests;

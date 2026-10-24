@@ -27,3 +27,7 @@ impl FindSoundIconHandler for FindSoundIconService {
             .ok_or(ApplicationError::NotFound)
     }
 }
+
+#[cfg(test)]
+#[path = "find_sound_icon_service.tests.rs"]
+mod tests;

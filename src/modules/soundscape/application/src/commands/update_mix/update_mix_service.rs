@@ -48,3 +48,7 @@ impl UpdateMixHandler for UpdateMixService {
             .ok_or(ApplicationError::NotFound)
     }
 }
+
+#[cfg(test)]
+#[path = "update_mix_service.tests.rs"]
+mod tests;

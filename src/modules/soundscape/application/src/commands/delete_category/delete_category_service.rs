@@ -30,3 +30,7 @@ impl DeleteCategoryHandler for DeleteCategoryService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "delete_category_service.tests.rs"]
+mod tests;

@@ -19,3 +19,7 @@ pub(crate) fn validate_mix_items(items: &[MixItem]) -> Result<(), ApplicationErr
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "validate_mix_items.tests.rs"]
+mod tests;

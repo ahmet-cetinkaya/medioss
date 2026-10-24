@@ -50,3 +50,7 @@ impl From<ImageNormalizationError> for ApplicationError {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "application_error.tests.rs"]
+mod tests;
