@@ -170,7 +170,7 @@ member_count() {
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 # Upper bound the exemption list's `# count: N` header may never exceed. Only
 # lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=21
+EXEMPTION_CEILING=20
 
 # True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
 # asserts something, so commented-out, #[ignore]d or empty tests do not count.
@@ -235,6 +235,68 @@ is_data_only_entity_file() {
     grep -qvE '^[[:space:]]*impl ActiveModelBehavior for ActiveModel \{\}[[:space:]]*$'
 }
 
+# Kind C: test_support.rs / test_support/ is exempt only when its crate root
+# declares it exactly once as `mod test_support;`, directly under a literal
+# `#[cfg(test)]` (or the cross-crate fakes gate `#[cfg(any(test, feature =
+# "test-support"))]`) at line start, with no #[path] redirect, and nothing but
+# cfg(test) code uses it. Other cfg(any(..)), cfg(not(test)) and comments fail.
+test_support_declaration_is_gated() {
+  local parent="$1"
+  grep -vE '^[[:space:]]*//' "$parent" | awk '
+    /^#\[path/ { redirected = 1 }
+    /^#\[cfg\(test\)\][[:space:]]*$/ { gated = 1; next }
+    /^#\[cfg\(any\(test, feature = "test-support"\)\)\][[:space:]]*$/ { gated = 1; next }
+    /^#\[/ { next }
+    /^(pub(\([a-z]+\))? )?mod test_support;[[:space:]]*$/ { decls++; if (gated && !redirected) ok++ }
+    { gated = 0; redirected = 0 }
+    END { exit (decls == 1 && ok == 1) ? 0 : 1 }'
+}
+
+# True when $1 is a test-only module: a .tests.rs, a router_tests/ file, or a
+# file its sibling lib.rs/mod.rs declares directly under #[cfg(test)].
+is_test_only_module() {
+  local file="$1" dir stem
+  dir="$(dirname "$file")"
+  stem="$(basename "$file" .rs)"
+  case "$file" in *.tests.rs | */router_tests/* | */test_support/*) return 0 ;; esac
+  local parent
+  for parent in "$dir/lib.rs" "$dir/mod.rs"; do
+    [ -f "$parent" ] && declares_under_cfg_test "$parent" "$stem" && return 0
+  done
+  return 1
+}
+
+is_gated_test_support() {
+  local file="$1" dir root parent user
+  dir="$(dirname "$file")"
+  case "$file" in
+    */test_support.rs) root="$file" ;;
+    *)
+      while [ "$(basename "$dir")" != "test_support" ]; do
+        [ "$dir" = "/" ] || [ "$dir" = "." ] && return 1
+        dir="$(dirname "$dir")"
+      done
+      root="$dir"
+      dir="$(dirname "$dir")"
+      ;;
+  esac
+  case "$file" in */test_support.rs) dir="$(dirname "$file")" ;; esac
+  parent=""
+  for user in lib.rs mod.rs main.rs; do
+    [ -f "$dir/$user" ] && { parent="$dir/$user"; break; }
+  done
+  [ -n "$parent" ] || return 1
+  test_support_declaration_is_gated "$parent" || return 1
+  [ "$(grep -vE '^[[:space:]]*//' "$parent" | grep -c 'test_support')" -eq 1 ] || return 1
+  [ -f "$root" ] && grep -q 'fn main' "$root" && return 1
+  while IFS= read -r user; do
+    [ "$user" = "$parent" ] && continue
+    is_test_only_module "$user" && continue
+    grep -vE '^[[:space:]]*//' "$user" | grep -qE '(crate|self|super)::test_support|mod test_support|use test_support' && return 1
+  done < <(find "$dir" -name '*.rs' -not -path '*/test_support/*' -not -name test_support.rs)
+  return 0
+}
+
 # Fails when the exemption list's `# count: N` is missing, below the real
 # entry count, or above the ceiling.
 check_exemption_budget() {
@@ -255,8 +317,19 @@ check_file_layout() {
   local exemptions="$root/scripts/layout-test-exemptions.txt"
   local violations="" exempt_listed
   while IFS= read -r file; do
+    relative="${file#"$root"/}"
     case "$file" in
-      */mod.rs | */lib.rs | *.tests.rs | */test_support/* | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
+      */test_support/* | */test_support.rs)
+        if ! is_gated_test_support "$file"; then
+          violations+="  test_support not gated by a single literal #[cfg(test)] declaration: $relative"$'\n'
+        elif [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
+          violations+="  stale exemption (exempt by kind; remove it from layout-test-exemptions.txt): $relative"$'\n'
+        fi
+        continue
+        ;;
+    esac
+    case "$file" in
+      */mod.rs | */lib.rs | *.tests.rs | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
     esac
     relative="${file#"$root"/}"
     if grep -q 'mod tests {' "$file"; then
@@ -543,6 +616,25 @@ expect_hook() {
   fi
 }
 
+# Checks check_file_layout on a fresh fixture crate whose lib.rs is $4, whose
+# test_support/shipped.rs holds branching logic, and whose extra file $5 (path
+# under src/, may be empty) has content $6; yields verdict $2.
+expect_support() {
+  local verdict="$2" label="$3" lib="$4" extra="${5:-}" extra_body="${6:-}" dir accepted=reject
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src/test_support"
+  printf "$lib" >"$dir/src/lib.rs"
+  printf 'pub fn pick(a: bool) -> u8 { if a { 1 } else { 2 } }\n' >"$dir/src/test_support/shipped.rs"
+  [ -z "$extra" ] || printf "$extra_body" >"$dir/src/$extra"
+  check_file_layout "$dir" >/dev/null && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   ${verdict%e}ed: $label"
+  else
+    echo "  FAIL wrongly ${accepted%e}ed: $label"
+    return 1
+  fi
+}
+
 # Checks check_exemption_budget on file $1 with ceiling $2 yields verdict $3.
 expect_budget() {
   local verdict="$3" label="$4" accepted=reject
@@ -607,6 +699,26 @@ layout_self_test() {
     '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert!(true); }\n' || ok=1
   expect_hook "$dir" accept "36. literal cfg(test) hook, real assertion" \
     '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_support "$dir" accept "37. test_support under literal cfg(test), declared once" \
+    '#[cfg(test)]\nmod test_support;\n' || ok=1
+  expect_support "$dir" accept "38. test_support under the cross-crate test-support gate" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' || ok=1
+  expect_support "$dir" reject "39. test_support declared without cfg" \
+    'pub mod test_support;\n' || ok=1
+  expect_support "$dir" reject "40. cfg(test) only in a comment" \
+    '// #[cfg(test)]\nmod test_support;\n' || ok=1
+  expect_support "$dir" reject "41. test_support under cfg(any(test, debug_assertions))" \
+    '#[cfg(any(test, debug_assertions))]\nmod test_support;\n' || ok=1
+  expect_support "$dir" reject "42. test_support under cfg(not(test))" \
+    '#[cfg(not(test))]\nmod test_support;\n' || ok=1
+  expect_support "$dir" reject "43. pub use leaks test_support" \
+    '#[cfg(test)]\nmod test_support;\npub use test_support::shipped::pick;\n' || ok=1
+  expect_support "$dir" reject "44. #[path] redirect on test_support" \
+    '#[cfg(test)]\n#[path = "elsewhere.rs"]\nmod test_support;\n' || ok=1
+  expect_support "$dir" reject "45. test_support declared twice" \
+    '#[cfg(test)]\nmod test_support;\n#[cfg(test)]\nmod test_support;\n' || ok=1
+  expect_support "$dir" reject "46. production file uses crate::test_support" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' prod.rs 'use crate::test_support::shipped::pick;\npub fn run() -> u8 { pick(true) }\n' || ok=1
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
