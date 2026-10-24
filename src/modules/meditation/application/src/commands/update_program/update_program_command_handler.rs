@@ -1,31 +1,37 @@
 use std::sync::Arc;
 
-use super::update_program::UpdateProgram;
-use super::update_program_handler::UpdateProgramHandler;
+use super::update_program_command::UpdateProgramCommand;
+use super::update_program_command_validator::UpdateProgramCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::ProgramRepository;
-use crate::services::validate_name;
 use crate::ApplicationError;
 
-pub struct UpdateProgramService {
+pub struct UpdateProgramCommandHandler {
+    validator: UpdateProgramCommandValidator,
     programs: Arc<dyn ProgramRepository>,
 }
 
-impl UpdateProgramService {
+impl UpdateProgramCommandHandler {
     pub fn new(programs: Arc<dyn ProgramRepository>) -> Self {
-        Self { programs }
+        Self {
+            validator: UpdateProgramCommandValidator,
+            programs,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl UpdateProgramHandler for UpdateProgramService {
-    async fn handle(&self, command: UpdateProgram) -> Result<(), ApplicationError> {
+impl CommandHandler<UpdateProgramCommand> for UpdateProgramCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: UpdateProgramCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         // Updates title and description (spec FR-025).
-        let UpdateProgram {
+        let UpdateProgramCommand {
             program_id,
             title,
             description,
         } = command;
-        validate_name(&title)?;
         let updated = self
             .programs
             .update(
@@ -48,5 +54,5 @@ impl UpdateProgramHandler for UpdateProgramService {
 }
 
 #[cfg(test)]
-#[path = "update_program_service.tests.rs"]
+#[path = "update_program_command_handler.tests.rs"]
 mod tests;

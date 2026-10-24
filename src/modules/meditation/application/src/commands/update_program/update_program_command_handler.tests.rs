@@ -1,15 +1,16 @@
-use crate::commands::update_program::{UpdateProgram, UpdateProgramHandler, UpdateProgramService};
+use crate::commands::update_program::{UpdateProgramCommand, UpdateProgramCommandHandler};
+use crate::ports::CommandHandler as _;
 use crate::ports::ProgramRepository;
 use crate::services::MAX_NAME_LENGTH;
 use crate::test_support::TestDeps;
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> UpdateProgramService {
-    UpdateProgramService::new(deps.programs.clone())
+fn service(deps: &TestDeps) -> UpdateProgramCommandHandler {
+    UpdateProgramCommandHandler::new(deps.programs.clone())
 }
 
-fn command(program_id: i64, title: &str, description: Option<&str>) -> UpdateProgram {
-    UpdateProgram {
+fn command(program_id: i64, title: &str, description: Option<&str>) -> UpdateProgramCommand {
+    UpdateProgramCommand {
         program_id,
         title: title.into(),
         description: description.map(str::to_owned),

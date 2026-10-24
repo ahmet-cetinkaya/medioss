@@ -1,24 +1,26 @@
 use std::sync::Arc;
 
-use super::delete_note::DeleteNote;
-use super::delete_note_handler::DeleteNoteHandler;
+use super::delete_note_command::DeleteNoteCommand;
+use crate::ports::CommandHandler;
 use crate::ports::NoteRepository;
 use crate::ApplicationError;
 
-pub struct DeleteNoteService {
+pub struct DeleteNoteCommandHandler {
     notes: Arc<dyn NoteRepository>,
 }
 
-impl DeleteNoteService {
+impl DeleteNoteCommandHandler {
     pub fn new(notes: Arc<dyn NoteRepository>) -> Self {
         Self { notes }
     }
 }
 
 #[async_trait::async_trait]
-impl DeleteNoteHandler for DeleteNoteService {
-    async fn handle(&self, command: DeleteNote) -> Result<(), ApplicationError> {
-        let DeleteNote {
+impl CommandHandler<DeleteNoteCommand> for DeleteNoteCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: DeleteNoteCommand) -> Result<(), ApplicationError> {
+        let DeleteNoteCommand {
             note_id,
             meditation_id,
             user_id,
@@ -37,5 +39,5 @@ impl DeleteNoteHandler for DeleteNoteService {
 }
 
 #[cfg(test)]
-#[path = "delete_note_service.tests.rs"]
+#[path = "delete_note_command_handler.tests.rs"]
 mod tests;

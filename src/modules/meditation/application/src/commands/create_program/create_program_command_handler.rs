@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
-use super::create_program::CreateProgram;
-use super::create_program::MAX_COVER_BYTES;
-use super::create_program_handler::CreateProgramHandler;
+use super::create_program_command::CreateProgramCommand;
+use super::create_program_command_validator::CreateProgramCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::Program;
 use crate::ports::{BlobStore, Clock, CoverValidator, ProgramRepository};
-use crate::services::validate_name;
 use crate::ApplicationError;
 
-pub struct CreateProgramService {
+pub struct CreateProgramCommandHandler {
+    validator: CreateProgramCommandValidator,
     programs: Arc<dyn ProgramRepository>,
     cover_validator: Arc<dyn CoverValidator>,
     store: Arc<dyn BlobStore>,
     clock: Arc<dyn Clock>,
 }
 
-impl CreateProgramService {
+impl CreateProgramCommandHandler {
     pub fn new(
         programs: Arc<dyn ProgramRepository>,
         cover_validator: Arc<dyn CoverValidator>,
@@ -23,6 +23,7 @@ impl CreateProgramService {
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
+            validator: CreateProgramCommandValidator,
             programs,
             cover_validator,
             store,
@@ -32,19 +33,18 @@ impl CreateProgramService {
 }
 
 #[async_trait::async_trait]
-impl CreateProgramHandler for CreateProgramService {
-    async fn handle(&self, command: CreateProgram) -> Result<Program, ApplicationError> {
-        let CreateProgram {
+impl CommandHandler<CreateProgramCommand> for CreateProgramCommandHandler {
+    type Output = Program;
+
+    async fn handle(&self, command: CreateProgramCommand) -> Result<Program, ApplicationError> {
+        self.validator.validate(&command)?;
+        let CreateProgramCommand {
             title,
             description,
             cover_bytes,
         } = command;
-        validate_name(&title)?;
         let cover = match cover_bytes {
             Some(bytes) => {
-                if bytes.len() > MAX_COVER_BYTES {
-                    return Err(ApplicationError::PayloadTooLarge);
-                }
                 let normalized = self
                     .cover_validator
                     .normalize(bytes)
@@ -98,5 +98,5 @@ impl CreateProgramHandler for CreateProgramService {
 }
 
 #[cfg(test)]
-#[path = "create_program_service.tests.rs"]
+#[path = "create_program_command_handler.tests.rs"]
 mod tests;

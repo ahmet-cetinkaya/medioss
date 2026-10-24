@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use super::update_program_order::UpdateProgramOrder;
-use super::update_program_order_handler::UpdateProgramOrderHandler;
+use super::update_program_order_command::UpdateProgramOrderCommand;
+use crate::ports::CommandHandler;
 use crate::ports::{MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 
-pub struct UpdateProgramOrderService {
+pub struct UpdateProgramOrderCommandHandler {
     programs: Arc<dyn ProgramRepository>,
     memberships: Arc<dyn MembershipRepository>,
 }
 
-impl UpdateProgramOrderService {
+impl UpdateProgramOrderCommandHandler {
     pub fn new(
         programs: Arc<dyn ProgramRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -23,11 +23,13 @@ impl UpdateProgramOrderService {
 }
 
 #[async_trait::async_trait]
-impl UpdateProgramOrderHandler for UpdateProgramOrderService {
-    async fn handle(&self, command: UpdateProgramOrder) -> Result<(), ApplicationError> {
+impl CommandHandler<UpdateProgramOrderCommand> for UpdateProgramOrderCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: UpdateProgramOrderCommand) -> Result<(), ApplicationError> {
         // `meditation_ids` must be exactly the program's current meditations,
         // each once; anything else is rejected.
-        let UpdateProgramOrder {
+        let UpdateProgramOrderCommand {
             program_id,
             meditation_ids,
         } = command;
@@ -58,5 +60,5 @@ impl UpdateProgramOrderHandler for UpdateProgramOrderService {
 }
 
 #[cfg(test)]
-#[path = "update_program_order_service.tests.rs"]
+#[path = "update_program_order_command_handler.tests.rs"]
 mod tests;

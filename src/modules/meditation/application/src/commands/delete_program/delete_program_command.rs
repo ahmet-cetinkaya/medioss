@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct DeleteProgram {
+pub struct DeleteProgramCommand {
     pub program_id: i64,
 }
 

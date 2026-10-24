@@ -1,25 +1,28 @@
 use std::sync::Arc;
 
-use super::create_note::CreateNote;
-use super::create_note_handler::CreateNoteHandler;
+use super::create_note_command::CreateNoteCommand;
+use super::create_note_command_validator::CreateNoteCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::Note;
 use crate::ports::{Clock, MeditationRepository, NoteRepository};
 use crate::services::ensure_meditation_exists;
 use crate::ApplicationError;
 
-pub struct CreateNoteService {
+pub struct CreateNoteCommandHandler {
+    validator: CreateNoteCommandValidator,
     meditations: Arc<dyn MeditationRepository>,
     notes: Arc<dyn NoteRepository>,
     clock: Arc<dyn Clock>,
 }
 
-impl CreateNoteService {
+impl CreateNoteCommandHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         notes: Arc<dyn NoteRepository>,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
+            validator: CreateNoteCommandValidator,
             meditations,
             notes,
             clock,
@@ -28,20 +31,18 @@ impl CreateNoteService {
 }
 
 #[async_trait::async_trait]
-impl CreateNoteHandler for CreateNoteService {
-    async fn handle(&self, command: CreateNote) -> Result<Note, ApplicationError> {
-        let CreateNote {
+impl CommandHandler<CreateNoteCommand> for CreateNoteCommandHandler {
+    type Output = Note;
+
+    async fn handle(&self, command: CreateNoteCommand) -> Result<Note, ApplicationError> {
+        self.validator.validate(&command)?;
+        let CreateNoteCommand {
             user_id,
             meditation_id,
             text,
         } = command;
         ensure_meditation_exists(self.meditations.as_ref(), meditation_id).await?;
         let text = text.trim();
-        if text.is_empty() {
-            return Err(ApplicationError::InvalidInput(
-                "note text must not be empty",
-            ));
-        }
         let now = self.clock.now().await;
         self.notes
             .insert(user_id, meditation_id, text.to_owned(), now)
@@ -51,5 +52,5 @@ impl CreateNoteHandler for CreateNoteService {
 }
 
 #[cfg(test)]
-#[path = "create_note_service.tests.rs"]
+#[path = "create_note_command_handler.tests.rs"]
 mod tests;

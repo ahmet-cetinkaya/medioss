@@ -1,10 +1,11 @@
+use crate::ports::CommandHandler as _;
 use std::sync::Arc;
 
 use chrono::{Duration, Utc};
 
-use crate::commands::create_note::{CreateNote, CreateNoteHandler, CreateNoteService};
-use crate::commands::delete_note::{DeleteNote, DeleteNoteHandler, DeleteNoteService};
-use crate::commands::update_note::{UpdateNote, UpdateNoteHandler, UpdateNoteService};
+use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
+use crate::commands::delete_note::{DeleteNoteCommand, DeleteNoteCommandHandler};
+use crate::commands::update_note::{UpdateNoteCommand, UpdateNoteCommandHandler};
 use crate::queries::list_notes::{ListNotes, ListNotesHandler, ListNotesService};
 use crate::test_support::{user_a, user_b, FixedClock, TestDeps};
 use crate::ApplicationError;
@@ -13,24 +14,24 @@ use crate::ApplicationError;
 async fn notes_are_author_scoped_and_newest_first() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
-    CreateNoteService::new(
+    CreateNoteCommandHandler::new(
         deps.meditations.clone(),
         deps.notes.clone(),
         Arc::new(FixedClock(Utc::now() - Duration::seconds(60))),
     )
-    .handle(CreateNote {
+    .handle(CreateNoteCommand {
         user_id: user_a(),
         meditation_id: meditation.id(),
         text: "older".into(),
     })
     .await
     .expect("first note");
-    CreateNoteService::new(
+    CreateNoteCommandHandler::new(
         deps.meditations.clone(),
         deps.notes.clone(),
         deps.clock.clone(),
     )
-    .handle(CreateNote {
+    .handle(CreateNoteCommand {
         user_id: user_a(),
         meditation_id: meditation.id(),
         text: "newer".into(),
@@ -60,9 +61,9 @@ async fn notes_are_author_scoped_and_newest_first() {
 
     // B cannot update or delete A's note: indistinguishable from unknown.
     let a_note_id = listed[0].id;
-    let update = UpdateNoteService::new(deps.notes.clone(), deps.clock.clone());
+    let update = UpdateNoteCommandHandler::new(deps.notes.clone(), deps.clock.clone());
     let updated = update
-        .handle(UpdateNote {
+        .handle(UpdateNoteCommand {
             note_id: a_note_id,
             meditation_id: meditation.id(),
             user_id: user_b(),
@@ -70,8 +71,8 @@ async fn notes_are_author_scoped_and_newest_first() {
         })
         .await;
     assert_eq!(updated.unwrap_err(), ApplicationError::NotFound);
-    let deleted = DeleteNoteService::new(deps.notes.clone())
-        .handle(DeleteNote {
+    let deleted = DeleteNoteCommandHandler::new(deps.notes.clone())
+        .handle(DeleteNoteCommand {
             note_id: a_note_id,
             meditation_id: meditation.id(),
             user_id: user_b(),
@@ -84,7 +85,7 @@ async fn notes_are_author_scoped_and_newest_first() {
     // decorative.
     let other_meditation = deps.seeded_meditation().await;
     let wrong_meditation = update
-        .handle(UpdateNote {
+        .handle(UpdateNoteCommand {
             note_id: a_note_id,
             meditation_id: other_meditation.id(),
             user_id: user_a(),

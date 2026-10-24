@@ -1,3 +1,4 @@
+use crate::ports::CommandHandler as _;
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -7,7 +8,7 @@ use super::{
     FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
     FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
 };
-use crate::commands::create_program::{CreateProgram, CreateProgramHandler, CreateProgramService};
+use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
 use crate::commands::upload_meditation::{
     UploadMeditation, UploadMeditationHandler, UploadMeditationService,
 };
@@ -43,13 +44,13 @@ impl TestDeps {
 
     /// A ready program whose folder receives uploads in tests.
     pub async fn seed_program(&self, title: &str) -> i64 {
-        CreateProgramService::new(
+        CreateProgramCommandHandler::new(
             self.programs.clone(),
             Arc::new(FakeCoverValidator),
             self.store.clone(),
             self.clock.clone(),
         )
-        .handle(CreateProgram {
+        .handle(CreateProgramCommand {
             title: title.to_owned(),
             description: None,
             cover_bytes: None,

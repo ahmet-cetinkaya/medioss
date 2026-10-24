@@ -1,7 +1,7 @@
-mod update_program;
-mod update_program_handler;
-mod update_program_service;
+mod update_program_command;
+mod update_program_command_handler;
+mod update_program_command_validator;
 
-pub use update_program::UpdateProgram;
-pub use update_program_handler::UpdateProgramHandler;
-pub use update_program_service::UpdateProgramService;
+pub use update_program_command::UpdateProgramCommand;
+pub use update_program_command_handler::UpdateProgramCommandHandler;
+pub use update_program_command_validator::UpdateProgramCommandValidator;

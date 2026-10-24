@@ -1,14 +1,18 @@
+use crate::ports::CommandHandler as _;
 use std::sync::Arc;
 
 use crate::commands::create_program::{
-    CreateProgram, CreateProgramHandler, CreateProgramService, MAX_COVER_BYTES,
+    CreateProgramCommand, CreateProgramCommandHandler, MAX_COVER_BYTES,
 };
 use crate::ports::{CoverNormalizationError, CoverValidator};
 use crate::test_support::{FailingCoverValidator, FakeCoverValidator, TestDeps};
 use crate::ApplicationError;
 
-fn service_with(deps: &TestDeps, validator: Arc<dyn CoverValidator>) -> CreateProgramService {
-    CreateProgramService::new(
+fn service_with(
+    deps: &TestDeps,
+    validator: Arc<dyn CoverValidator>,
+) -> CreateProgramCommandHandler {
+    CreateProgramCommandHandler::new(
         deps.programs.clone(),
         validator,
         deps.store.clone(),
@@ -16,8 +20,8 @@ fn service_with(deps: &TestDeps, validator: Arc<dyn CoverValidator>) -> CreatePr
     )
 }
 
-fn program_with_cover(title: &str, cover_bytes: Vec<u8>) -> CreateProgram {
-    CreateProgram {
+fn program_with_cover(title: &str, cover_bytes: Vec<u8>) -> CreateProgramCommand {
+    CreateProgramCommand {
         title: title.to_owned(),
         description: None,
         cover_bytes: Some(cover_bytes),

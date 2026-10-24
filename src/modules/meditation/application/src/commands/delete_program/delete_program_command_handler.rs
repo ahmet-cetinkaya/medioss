@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
-use super::delete_program::DeleteProgram;
-use super::delete_program::UNFILED;
-use super::delete_program_handler::DeleteProgramHandler;
+use super::delete_program_command::DeleteProgramCommand;
+use super::delete_program_command::UNFILED;
+use crate::ports::CommandHandler;
 use crate::ports::{BlobStore, MeditationRepository, MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 
-pub struct DeleteProgramService {
+pub struct DeleteProgramCommandHandler {
     programs: Arc<dyn ProgramRepository>,
     memberships: Arc<dyn MembershipRepository>,
     meditations: Arc<dyn MeditationRepository>,
     store: Arc<dyn BlobStore>,
 }
 
-impl DeleteProgramService {
+impl DeleteProgramCommandHandler {
     pub fn new(
         programs: Arc<dyn ProgramRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -30,8 +30,10 @@ impl DeleteProgramService {
 }
 
 #[async_trait::async_trait]
-impl DeleteProgramHandler for DeleteProgramService {
-    async fn handle(&self, command: DeleteProgram) -> Result<(), ApplicationError> {
+impl CommandHandler<DeleteProgramCommand> for DeleteProgramCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: DeleteProgramCommand) -> Result<(), ApplicationError> {
         // Every meditation whose file actually lives in the program's folder is
         // relocated to `_unfiled/` first (decided by `storage_key` prefix, not
         // by the membership snapshot, so a concurrent upload or a missing
@@ -101,5 +103,5 @@ impl DeleteProgramHandler for DeleteProgramService {
 }
 
 #[cfg(test)]
-#[path = "delete_program_service.tests.rs"]
+#[path = "delete_program_command_handler.tests.rs"]
 mod tests;

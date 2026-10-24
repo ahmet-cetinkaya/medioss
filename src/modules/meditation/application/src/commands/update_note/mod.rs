@@ -1,7 +1,7 @@
-mod update_note;
-mod update_note_handler;
-mod update_note_service;
+mod update_note_command;
+mod update_note_command_handler;
+mod update_note_command_validator;
 
-pub use update_note::UpdateNote;
-pub use update_note_handler::UpdateNoteHandler;
-pub use update_note_service::UpdateNoteService;
+pub use update_note_command::UpdateNoteCommand;
+pub use update_note_command_handler::UpdateNoteCommandHandler;
+pub use update_note_command_validator::UpdateNoteCommandValidator;

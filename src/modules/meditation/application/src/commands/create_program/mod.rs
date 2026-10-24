@@ -1,7 +1,7 @@
-mod create_program;
-mod create_program_handler;
-mod create_program_service;
+mod create_program_command;
+mod create_program_command_handler;
+mod create_program_command_validator;
 
-pub use create_program::{CreateProgram, MAX_COVER_BYTES};
-pub use create_program_handler::CreateProgramHandler;
-pub use create_program_service::CreateProgramService;
+pub use create_program_command::{CreateProgramCommand, MAX_COVER_BYTES};
+pub use create_program_command_handler::CreateProgramCommandHandler;
+pub use create_program_command_validator::CreateProgramCommandValidator;

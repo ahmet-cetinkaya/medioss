@@ -1,12 +1,13 @@
 use crate::commands::update_program_order::{
-    UpdateProgramOrder, UpdateProgramOrderHandler, UpdateProgramOrderService,
+    UpdateProgramOrderCommand, UpdateProgramOrderCommandHandler,
 };
+use crate::ports::CommandHandler as _;
 use crate::ports::MembershipRepository;
 use crate::test_support::TestDeps;
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> UpdateProgramOrderService {
-    UpdateProgramOrderService::new(deps.programs.clone(), deps.memberships.clone())
+fn service(deps: &TestDeps) -> UpdateProgramOrderCommandHandler {
+    UpdateProgramOrderCommandHandler::new(deps.programs.clone(), deps.memberships.clone())
 }
 
 async fn member_ids(deps: &TestDeps, program_id: i64) -> Vec<i64> {
@@ -33,7 +34,7 @@ async fn reorders_members() {
     assert_eq!(member_ids(&deps, program).await, vec![first, second]);
 
     service(&deps)
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: program,
             meditation_ids: vec![second, first],
         })
@@ -49,7 +50,7 @@ async fn missing_member_is_an_invalid_order() {
     let (program, first, _) = program_with_two(&deps).await;
 
     let result = service(&deps)
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: program,
             meditation_ids: vec![first],
         })
@@ -64,13 +65,13 @@ async fn foreign_or_duplicate_ids_are_an_invalid_order() {
     let (program, first, second) = program_with_two(&deps).await;
 
     let foreign = service(&deps)
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: program,
             meditation_ids: vec![first, 9999],
         })
         .await;
     let duplicate = service(&deps)
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: program,
             meditation_ids: vec![first, first],
         })
@@ -87,7 +88,7 @@ async fn empty_program_accepts_an_empty_order() {
     let program = deps.seed_program("Empty").await;
 
     let result = service(&deps)
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: program,
             meditation_ids: vec![],
         })
@@ -101,7 +102,7 @@ async fn unknown_program_is_not_found() {
     let deps = TestDeps::new();
 
     let result = service(&deps)
-        .handle(UpdateProgramOrder {
+        .handle(UpdateProgramOrderCommand {
             program_id: 9999,
             meditation_ids: vec![],
         })

@@ -1,16 +1,17 @@
-use crate::commands::create_note::{CreateNote, CreateNoteHandler, CreateNoteService};
-use crate::commands::update_note::{UpdateNote, UpdateNoteHandler, UpdateNoteService};
+use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
+use crate::commands::update_note::{UpdateNoteCommand, UpdateNoteCommandHandler};
+use crate::ports::CommandHandler as _;
 use crate::ports::NoteRepository;
 use crate::test_support::{user_a, user_b, TestDeps};
 use crate::ApplicationError;
 
 async fn seed_note(deps: &TestDeps, meditation_id: i64) -> i64 {
-    CreateNoteService::new(
+    CreateNoteCommandHandler::new(
         deps.meditations.clone(),
         deps.notes.clone(),
         deps.clock.clone(),
     )
-    .handle(CreateNote {
+    .handle(CreateNoteCommand {
         user_id: user_a(),
         meditation_id,
         text: "before".into(),
@@ -20,12 +21,12 @@ async fn seed_note(deps: &TestDeps, meditation_id: i64) -> i64 {
     .id
 }
 
-fn service(deps: &TestDeps) -> UpdateNoteService {
-    UpdateNoteService::new(deps.notes.clone(), deps.clock.clone())
+fn service(deps: &TestDeps) -> UpdateNoteCommandHandler {
+    UpdateNoteCommandHandler::new(deps.notes.clone(), deps.clock.clone())
 }
 
-fn command(note_id: i64, meditation_id: i64, text: &str) -> UpdateNote {
-    UpdateNote {
+fn command(note_id: i64, meditation_id: i64, text: &str) -> UpdateNoteCommand {
+    UpdateNoteCommand {
         note_id,
         meditation_id,
         user_id: user_a(),
@@ -83,7 +84,7 @@ async fn another_authors_note_is_not_found() {
     let note_id = seed_note(&deps, meditation.id()).await;
 
     let result = service(&deps)
-        .handle(UpdateNote {
+        .handle(UpdateNoteCommand {
             user_id: user_b(),
             ..command(note_id, meditation.id(), "hijack")
         })

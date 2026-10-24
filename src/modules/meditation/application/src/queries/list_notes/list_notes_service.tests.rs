@@ -1,4 +1,5 @@
-use crate::commands::create_note::{CreateNote, CreateNoteHandler, CreateNoteService};
+use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
+use crate::ports::CommandHandler as _;
 use crate::queries::list_notes::{ListNotes, ListNotesHandler, ListNotesService};
 use crate::test_support::{user_a, user_b, TestDeps};
 use crate::ApplicationError;
@@ -11,12 +12,12 @@ fn service(deps: &TestDeps) -> ListNotesService {
 async fn lists_only_the_requesters_notes() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
-    CreateNoteService::new(
+    CreateNoteCommandHandler::new(
         deps.meditations.clone(),
         deps.notes.clone(),
         deps.clock.clone(),
     )
-    .handle(CreateNote {
+    .handle(CreateNoteCommand {
         user_id: user_a(),
         meditation_id: meditation.id(),
         text: "mine".into(),

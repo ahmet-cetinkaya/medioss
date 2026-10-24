@@ -1,38 +1,42 @@
 use std::sync::Arc;
 
-use super::update_note::UpdateNote;
-use super::update_note_handler::UpdateNoteHandler;
+use super::update_note_command::UpdateNoteCommand;
+use super::update_note_command_validator::UpdateNoteCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::{Clock, NoteRepository};
 use crate::ApplicationError;
 
-pub struct UpdateNoteService {
+pub struct UpdateNoteCommandHandler {
+    validator: UpdateNoteCommandValidator,
     notes: Arc<dyn NoteRepository>,
     clock: Arc<dyn Clock>,
 }
 
-impl UpdateNoteService {
+impl UpdateNoteCommandHandler {
     pub fn new(notes: Arc<dyn NoteRepository>, clock: Arc<dyn Clock>) -> Self {
-        Self { notes, clock }
+        Self {
+            validator: UpdateNoteCommandValidator,
+            notes,
+            clock,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl UpdateNoteHandler for UpdateNoteService {
-    async fn handle(&self, command: UpdateNote) -> Result<(), ApplicationError> {
+impl CommandHandler<UpdateNoteCommand> for UpdateNoteCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: UpdateNoteCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         // Another author's, unknown, or mismatched-meditation id is NotFound
         // (spec FR-036/037).
-        let UpdateNote {
+        let UpdateNoteCommand {
             note_id,
             meditation_id,
             user_id,
             text,
         } = command;
         let text = text.trim();
-        if text.is_empty() {
-            return Err(ApplicationError::InvalidInput(
-                "note text must not be empty",
-            ));
-        }
         let updated = self
             .notes
             .update(
@@ -53,5 +57,5 @@ impl UpdateNoteHandler for UpdateNoteService {
 }
 
 #[cfg(test)]
-#[path = "update_note_service.tests.rs"]
+#[path = "update_note_command_handler.tests.rs"]
 mod tests;
