@@ -6,7 +6,8 @@ use chrono::{Duration, Utc};
 use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
 use crate::commands::delete_note::{DeleteNoteCommand, DeleteNoteCommandHandler};
 use crate::commands::update_note::{UpdateNoteCommand, UpdateNoteCommandHandler};
-use crate::queries::list_notes::{ListNotes, ListNotesHandler, ListNotesService};
+use crate::ports::QueryHandler;
+use crate::queries::list_notes::{ListNotesQuery, ListNotesQueryHandler};
 use crate::test_support::{user_a, user_b, FixedClock, TestDeps};
 use crate::ApplicationError;
 
@@ -39,9 +40,9 @@ async fn notes_are_author_scoped_and_newest_first() {
     .await
     .expect("second note");
 
-    let list = ListNotesService::new(deps.meditations.clone(), deps.notes.clone());
+    let list = ListNotesQueryHandler::new(deps.meditations.clone(), deps.notes.clone());
     let listed = list
-        .handle(ListNotes {
+        .handle(ListNotesQuery {
             user_id: user_a(),
             meditation_id: meditation.id(),
         })
@@ -51,7 +52,7 @@ async fn notes_are_author_scoped_and_newest_first() {
     assert_eq!(listed[0].text, "newer");
 
     let b_listed = list
-        .handle(ListNotes {
+        .handle(ListNotesQuery {
             user_id: user_b(),
             meditation_id: meditation.id(),
         })
