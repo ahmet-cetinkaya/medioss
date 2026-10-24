@@ -4,6 +4,8 @@ use axum::{
     body::Body,
     http::{header, Request, StatusCode},
 };
+use http_range::ByteRange;
+use http_range::Unsatisfiable;
 use soundscape_application::ports::media::ImageNormalizationError;
 use soundscape_domain::{SoundIcon, MAX_ICON_BYTES};
 use tower::ServiceExt;
@@ -116,32 +118,35 @@ async fn download_is_an_attachment_named_after_the_sound() {
 #[test]
 fn parses_single_byte_and_suffix_ranges() {
     assert_eq!(
-        crate::support::byte_range::parse_range("bytes=0-0", 10),
-        Some(Ok((0, 0)))
+        http_range::parse_range("bytes=0-0", 10),
+        Ok(Some(ByteRange {
+            start: 0,
+            end_inclusive: 0,
+        }))
     );
     assert_eq!(
-        crate::support::byte_range::parse_range("bytes=-3", 10),
-        Some(Ok((7, 9)))
+        http_range::parse_range("bytes=-3", 10),
+        Ok(Some(ByteRange {
+            start: 7,
+            end_inclusive: 9,
+        }))
     );
     assert_eq!(
-        crate::support::byte_range::parse_range("bytes=4-", 10),
-        Some(Ok((4, 9)))
+        http_range::parse_range("bytes=4-", 10),
+        Ok(Some(ByteRange {
+            start: 4,
+            end_inclusive: 9,
+        }))
     );
 }
 
 #[test]
 fn ignores_malformed_and_rejects_unsatisfiable_ranges() {
+    assert_eq!(http_range::parse_range("items=0-1", 10), Ok(None));
+    assert_eq!(http_range::parse_range("bytes=bogus", 10), Ok(None));
     assert_eq!(
-        crate::support::byte_range::parse_range("items=0-1", 10),
-        None
-    );
-    assert_eq!(
-        crate::support::byte_range::parse_range("bytes=bogus", 10),
-        None
-    );
-    assert_eq!(
-        crate::support::byte_range::parse_range("bytes=99-100", 10),
-        Some(Err(()))
+        http_range::parse_range("bytes=99-100", 10),
+        Err(Unsatisfiable)
     );
 }
 

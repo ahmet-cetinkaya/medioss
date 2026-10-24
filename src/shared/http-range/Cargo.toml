@@ -1,0 +1,6 @@
+[package]
+name = "http-range"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]

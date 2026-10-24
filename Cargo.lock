@@ -982,6 +982,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-range"
+version = "0.0.0"
+
+[[package]]
 name = "http-range-header"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1483,6 +1487,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "http-range",
  "kernel",
  "meditation-application",
  "meditation-domain",
@@ -2623,6 +2628,7 @@ dependencies = [
  "axum",
  "chrono",
  "futures-io",
+ "http-range",
  "kernel",
  "serde",
  "serde_json",

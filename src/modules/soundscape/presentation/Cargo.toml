@@ -6,6 +6,7 @@ license.workspace = true
 [dependencies]
 axum = { workspace = true, features = ["multipart"] }
 async-trait.workspace = true
+http-range = { path = "../../../shared/http-range" }
 kernel = { path = "../../../kernel" }
 serde.workspace = true
 serde_json.workspace = true

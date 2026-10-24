@@ -1,6 +1,7 @@
 //! RFC 7233 single-range parsing for audio streaming (spec FR-009..013).
 
 /// One satisfiable byte range of a blob.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ByteRange {
     pub start: u64,
     pub end_inclusive: u64,
@@ -75,5 +76,5 @@ pub fn parse_range(header: &str, total: u64) -> Result<Option<ByteRange>, Unsati
 }
 
 #[cfg(test)]
-#[path = "byte_range.tests.rs"]
+#[path = "lib.tests.rs"]
 mod tests;
