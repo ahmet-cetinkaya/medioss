@@ -51,6 +51,9 @@ async fn every_route_requires_an_actor() {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{uri}");
     }
+    // Current behaviour, not a contract: the actor extractor runs before the
+    // origin check, so no Origin header still answers 401. An origin-first fix
+    // should only have to change this status to 403.
     let import = Request::builder()
         .method("POST")
         .uri("/portability/import")

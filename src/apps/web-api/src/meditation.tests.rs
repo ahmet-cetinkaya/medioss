@@ -88,6 +88,20 @@ async fn delete_folder_removes_every_blob_in_it_and_tolerates_an_absent_folder()
 }
 
 #[tokio::test]
+async fn delete_folder_refuses_an_empty_or_parent_folder_and_deletes_nothing() {
+    let directory = tempfile::tempdir().unwrap();
+    let blobs = store(directory.path());
+    let kept = blobs.put("folder-a", "one", "bin", b"one").await.unwrap();
+
+    for folder in ["", ".."] {
+        let outcome = blobs.delete_folder(folder).await;
+
+        assert!(outcome.is_err(), "{folder:?} must be refused");
+    }
+    assert!(blobs.read(&kept.storage_key).await.is_ok());
+}
+
+#[tokio::test]
 async fn a_key_that_fails_validation_is_an_err_string() {
     let directory = tempfile::tempdir().unwrap();
     let blobs = store(directory.path());
