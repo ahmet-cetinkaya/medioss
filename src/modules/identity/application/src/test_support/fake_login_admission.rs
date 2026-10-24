@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::ports::LoginAdmission;
@@ -19,9 +20,7 @@ impl FakeLoginAdmission {
 }
 
 impl LoginAdmission for FakeLoginAdmission {
-    type Permit = ();
-
-    fn try_acquire(&self) -> Result<Self::Permit, Duration> {
-        self.retry_after.map_or(Ok(()), Err)
+    fn try_acquire(&self) -> Result<Arc<()>, Duration> {
+        self.retry_after.map_or(Ok(Arc::new(())), Err)
     }
 }

@@ -2,6 +2,9 @@
 
 use std::sync::Arc;
 
+use identity_application::ports::{
+    Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository,
+};
 use identity_presentation::SharedDependencies;
 use tower_sessions_sqlx_store::SqliteStore;
 
@@ -14,13 +17,7 @@ pub struct AppState {
     pub mood_tracker: mood_tracker_presentation::SharedDependencies,
     pub soundscape: soundscape_presentation::SharedDependencies,
     pub portability: portability_presentation::SharedDependencies,
-    pub identity: Arc<IdentityServices>,
-    pub identity_dependencies: SharedDependencies<
-        identity_infrastructure::SeaOrmUserRepository,
-        identity_infrastructure::BoundedArgon2PasswordHasher,
-        SystemClock,
-        TokioSemaphoreAdmission,
-    >,
+    pub identity: SharedDependencies,
 }
 
 impl Clone for AppState {
@@ -32,8 +29,7 @@ impl Clone for AppState {
             mood_tracker: Arc::clone(&self.mood_tracker),
             soundscape: Arc::clone(&self.soundscape),
             portability: self.portability.clone(),
-            identity: Arc::clone(&self.identity),
-            identity_dependencies: Arc::clone(&self.identity_dependencies),
+            identity: self.identity.clone(),
         }
     }
 }
@@ -52,23 +48,7 @@ impl AppState {
         deletion: Arc<dyn identity_presentation::UserDeletionListener>,
         avatar_store: Arc<crate::avatar_store::FileAvatarStore>,
     ) -> Self {
-        let dummy_password_hash = hasher.dummy_password_hash();
-        let identity_dependencies: SharedDependencies<
-            identity_infrastructure::SeaOrmUserRepository,
-            identity_infrastructure::BoundedArgon2PasswordHasher,
-            SystemClock,
-            TokioSemaphoreAdmission,
-        > = Arc::new(identity_presentation::IdentityDependencies {
-            repository: Arc::clone(&repository),
-            hasher: Arc::new(hasher),
-            clock: Arc::new(SystemClock),
-            admission: Arc::new(TokioSemaphoreAdmission::new(MAX_CONCURRENT_LOGINS)),
-            dummy_password_hash,
-            session_secret: Arc::new(config.session_secret.expose().to_owned()),
-            medioss_origin: Arc::new(config.medioss_origin.clone()),
-            deletion,
-            avatar_store,
-        });
+        let identity = identity_dependencies(repository, hasher, &config, deletion, avatar_store);
         Self {
             config,
             meditation,
@@ -76,28 +56,131 @@ impl AppState {
             soundscape,
             portability,
             session_store,
-            identity: Arc::new(IdentityServices { repository }),
-            identity_dependencies,
+            identity,
         }
     }
 }
 
-pub struct IdentityServices {
-    pub repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
-}
+/// Builds the identity use-case services from concrete infrastructure and
+/// injects them into the presentation dependencies (composition root).
+pub fn identity_dependencies(
+    repository: Arc<identity_infrastructure::SeaOrmUserRepository>,
+    hasher: identity_infrastructure::BoundedArgon2PasswordHasher,
+    config: &Config,
+    deletion: Arc<dyn identity_presentation::UserDeletionListener>,
+    avatar_store: Arc<crate::avatar_store::FileAvatarStore>,
+) -> SharedDependencies {
+    let dummy_password_hash = hasher.dummy_password_hash();
+    // One concrete repository, coerced to each port it implements before the
+    // broader binding shadows the concrete name.
+    let repository: Arc<identity_infrastructure::SeaOrmUserRepository> = repository;
+    let throttle: Arc<dyn LoginThrottleRepository> = repository.clone();
+    let repository: Arc<dyn UserRepository> = repository;
+    let hasher: Arc<dyn PasswordHasher> = Arc::new(hasher);
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+    let admission: Arc<dyn LoginAdmission> =
+        Arc::new(TokioSemaphoreAdmission::new(MAX_CONCURRENT_LOGINS));
+    let avatar_store: Arc<dyn identity_application::ports::AvatarStore> = avatar_store;
 
-impl IdentityServices {
-    pub async fn find_user_by_id(
-        &self,
-        id: kernel::UserId,
-    ) -> Result<Option<identity_domain::User>, identity_application::ApplicationError> {
-        identity_application::queries::find_user_by_id(self.repository.as_ref(), id).await
-    }
+    Arc::new(identity_presentation::IdentityDependencies {
+        authenticate: Arc::new(
+            identity_application::commands::authenticate::AuthenticateService::new(
+                repository.clone(),
+                throttle.clone(),
+                hasher.clone(),
+                clock.clone(),
+                admission,
+                dummy_password_hash.clone(),
+            ),
+        ),
+        create_user: Arc::new(
+            identity_application::commands::create_user::CreateUserService::new(
+                repository.clone(),
+                hasher.clone(),
+                clock.clone(),
+            ),
+        ),
+        change_password: Arc::new(
+            identity_application::commands::change_password::ChangePasswordService::new(
+                repository.clone(),
+                hasher.clone(),
+            ),
+        ),
+        delete_own_account: Arc::new(
+            identity_application::commands::delete_own_account::DeleteOwnAccountService::new(
+                repository.clone(),
+            ),
+        ),
+        delete_user_as_admin: Arc::new(
+            identity_application::commands::delete_user_as_admin::DeleteUserAsAdminService::new(
+                repository.clone(),
+            ),
+        ),
+        set_display_name: Arc::new(
+            identity_application::commands::set_display_name::SetDisplayNameService::new(
+                repository.clone(),
+            ),
+        ),
+        set_user_status: Arc::new(
+            identity_application::commands::set_user_status::SetUserStatusService::new(
+                repository.clone(),
+            ),
+        ),
+        setup_admin: Arc::new(
+            identity_application::commands::setup_admin::SetupAdminService::new(
+                repository.clone(),
+                hasher.clone(),
+                clock.clone(),
+            ),
+        ),
+        clear_login_throttle: Arc::new(
+            identity_application::commands::clear_login_throttle::ClearLoginThrottleService::new(
+                throttle,
+            ),
+        ),
+        replace_avatar: Arc::new(
+            identity_application::commands::replace_avatar::ReplaceAvatarService::new(
+                repository.clone(),
+                avatar_store.clone(),
+            ),
+        ),
+        clear_avatar: Arc::new(
+            identity_application::commands::clear_avatar::ClearAvatarService::new(
+                repository.clone(),
+                avatar_store.clone(),
+            ),
+        ),
+        read_avatar: Arc::new(
+            identity_application::commands::read_avatar::ReadAvatarService::new(
+                repository.clone(),
+                avatar_store.clone(),
+            ),
+        ),
+        count_users: Arc::new(
+            identity_application::queries::count_users::CountUsersService::new(repository.clone()),
+        ),
+        find_user_by_id: Arc::new(
+            identity_application::queries::find_user_by_id::FindUserByIdService::new(
+                repository.clone(),
+            ),
+        ),
+        list_users: Arc::new(
+            identity_application::queries::list_users::ListUsersService::new(repository.clone()),
+        ),
+        setup_status: Arc::new(
+            identity_application::queries::setup_status::SetupStatusService::new(repository),
+        ),
+        dummy_password_hash,
+        session_secret: Arc::new(config.session_secret.expose().to_owned()),
+        medioss_origin: Arc::new(config.medioss_origin.clone()),
+        deletion,
+        avatar_store,
+    })
 }
 
 pub struct SystemClock;
 
-impl identity_application::ports::Clock for SystemClock {
+impl Clock for SystemClock {
     fn now(&self) -> chrono::DateTime<chrono::Utc> {
         chrono::Utc::now()
     }
@@ -119,13 +202,11 @@ const MAX_CONCURRENT_LOGINS: usize = 2;
 // Hint returned to a login refused because every admission slot is taken.
 const LOGIN_RETRY_AFTER_MILLIS: u64 = 250;
 
-impl identity_application::ports::LoginAdmission for TokioSemaphoreAdmission {
-    type Permit = tokio::sync::OwnedSemaphorePermit;
-
-    fn try_acquire(&self) -> Result<Self::Permit, std::time::Duration> {
-        let semaphore = Arc::clone(&self.semaphore);
-        semaphore
+impl LoginAdmission for TokioSemaphoreAdmission {
+    fn try_acquire(&self) -> Result<Arc<()>, std::time::Duration> {
+        Arc::clone(&self.semaphore)
             .try_acquire_owned()
+            .map(|_permit| Arc::new(()))
             .map_err(|_| std::time::Duration::from_millis(LOGIN_RETRY_AFTER_MILLIS))
     }
 }

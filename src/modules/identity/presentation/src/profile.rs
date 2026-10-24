@@ -2,8 +2,10 @@ use axum::extract::{Multipart, Path, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use identity_application::commands::{clear_avatar, read_avatar, replace_avatar, set_display_name};
-use identity_application::ports::{LoginThrottleRepository, UserRepository};
+use identity_application::commands::clear_avatar::ClearAvatar;
+use identity_application::commands::read_avatar::ReadAvatar;
+use identity_application::commands::replace_avatar::ReplaceAvatar;
+use identity_application::commands::set_display_name::SetDisplayName;
 use identity_application::ApplicationError;
 use identity_domain::DisplayName;
 use kernel::UserId;
@@ -46,40 +48,34 @@ fn map_multipart_error(error: axum::extract::multipart::MultipartError) -> ApiEr
     ApiError::from(application_error)
 }
 
-pub async fn me_profile<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub async fn me_profile(
+    State(dependencies): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
     Json(request): Json<ProfileRequest>,
-) -> Result<Json<ProfileResponse>, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: identity_application::ports::PasswordHasher + 'static,
-    C: identity_application::ports::Clock + 'static,
-    A: identity_application::ports::LoginAdmission + 'static,
-{
+) -> Result<Json<ProfileResponse>, ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     let display_name = if request.display_name.trim().is_empty() {
         None
     } else {
         Some(DisplayName::parse(&request.display_name)?)
     };
-    let user = set_display_name(dependencies.repository.as_ref(), &actor, display_name).await?;
+    let user = dependencies
+        .set_display_name
+        .handle(SetDisplayName {
+            user_id: actor.user_id(),
+            display_name,
+        })
+        .await?;
     Ok(Json(profile_response(&user)))
 }
 
-pub async fn me_avatar_put<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub async fn me_avatar_put(
+    State(dependencies): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
     mut multipart: Multipart,
-) -> Result<StatusCode, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: identity_application::ports::PasswordHasher + 'static,
-    C: identity_application::ports::Clock + 'static,
-    A: identity_application::ports::LoginAdmission + 'static,
-{
+) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
 
     let mut bytes: Option<Vec<u8>> = None;
@@ -104,55 +100,38 @@ where
             identity_domain::IdentityError::InvalidProfile,
         ))
     })?;
-    replace_avatar(
-        dependencies.repository.as_ref(),
-        dependencies.avatar_store.as_ref(),
-        &actor,
-        bytes,
-    )
-    .await?;
+    dependencies
+        .replace_avatar
+        .handle(ReplaceAvatar { actor, bytes })
+        .await?;
     Ok(StatusCode::CREATED)
 }
 
-pub async fn me_avatar_delete<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub async fn me_avatar_delete(
+    State(dependencies): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
-) -> Result<StatusCode, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: identity_application::ports::PasswordHasher + 'static,
-    C: identity_application::ports::Clock + 'static,
-    A: identity_application::ports::LoginAdmission + 'static,
-{
+) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
-    clear_avatar(
-        dependencies.repository.as_ref(),
-        dependencies.avatar_store.as_ref(),
-        &actor,
-    )
-    .await?;
+    dependencies
+        .clear_avatar
+        .handle(ClearAvatar { actor })
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn avatar_get<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub async fn avatar_get(
+    State(dependencies): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
     Path(id): Path<i64>,
-) -> Result<Response, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: identity_application::ports::PasswordHasher + 'static,
-    C: identity_application::ports::Clock + 'static,
-    A: identity_application::ports::LoginAdmission + 'static,
-{
-    let (bytes, avatar) = read_avatar(
-        dependencies.repository.as_ref(),
-        dependencies.avatar_store.as_ref(),
-        UserId::new(id),
-        &actor,
-    )
-    .await?;
+) -> Result<Response, ApiError> {
+    let (bytes, avatar) = dependencies
+        .read_avatar
+        .handle(ReadAvatar {
+            requested: UserId::new(id),
+            reader: actor,
+        })
+        .await?;
 
     let content_type = match avatar.extension() {
         "webp" => "image/webp",

@@ -34,7 +34,12 @@ pub async fn resolve_actor(
     if let (Some(user_id), Some(auth_version)) = (user_id, auth_version) {
         let user = match state
             .identity
-            .find_user_by_id(kernel::UserId::new(user_id))
+            .find_user_by_id
+            .handle(
+                identity_application::queries::find_user_by_id::FindUserById {
+                    id: kernel::UserId::new(user_id),
+                },
+            )
             .await
         {
             Ok(user) => user,
