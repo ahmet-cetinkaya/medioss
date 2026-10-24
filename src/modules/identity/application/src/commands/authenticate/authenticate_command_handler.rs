@@ -1,15 +1,17 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::authenticate::Authenticate;
-use super::authenticate_handler::AuthenticateHandler;
+use super::authenticate_command::AuthenticateCommand;
+use super::authenticate_command_validator::AuthenticateCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::{
     Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository,
 };
 use crate::ApplicationError;
 use identity_domain::{Email, IdentityError, PasswordHash, User};
 
-pub struct AuthenticateService {
+pub struct AuthenticateCommandHandler {
+    validator: AuthenticateCommandValidator,
     // `dummy_password_hash` must be a fixed, valid production-parameter PHC.
     // It keeps unknown and malformed identifiers on the same single-verify
     // path as known users without generating a fresh expensive hash per
@@ -26,7 +28,7 @@ fn login_throttled(retry_after: Duration) -> ApplicationError {
     IdentityError::LoginThrottled { retry_after }.into()
 }
 
-impl AuthenticateService {
+impl AuthenticateCommandHandler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         repository: Arc<dyn UserRepository>,
@@ -37,6 +39,7 @@ impl AuthenticateService {
         dummy_password_hash: PasswordHash,
     ) -> Self {
         Self {
+            validator: Default::default(),
             repository,
             throttle,
             hasher,
@@ -48,8 +51,11 @@ impl AuthenticateService {
 }
 
 #[async_trait::async_trait]
-impl AuthenticateHandler for AuthenticateService {
-    async fn handle(&self, command: Authenticate) -> Result<User, ApplicationError> {
+impl CommandHandler<AuthenticateCommand> for AuthenticateCommandHandler {
+    type Output = User;
+
+    async fn handle(&self, command: AuthenticateCommand) -> Result<User, ApplicationError> {
+        self.validator.validate(&command)?;
         if command.bypass_throttle {
             return self
                 .verify_credentials(&command.identifier, &command.password)
@@ -60,7 +66,7 @@ impl AuthenticateHandler for AuthenticateService {
     }
 }
 
-impl AuthenticateService {
+impl AuthenticateCommandHandler {
     async fn execute_with_throttle(
         &self,
         email_input: &str,
@@ -137,5 +143,5 @@ impl AuthenticateService {
 }
 
 #[cfg(test)]
-#[path = "authenticate_service.tests.rs"]
+#[path = "authenticate_command_handler.tests.rs"]
 mod tests;

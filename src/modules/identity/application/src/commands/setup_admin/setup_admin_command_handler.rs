@@ -1,24 +1,27 @@
 use std::sync::Arc;
 
-use super::setup_admin::SetupAdmin;
-use super::setup_admin_handler::SetupAdminHandler;
+use super::setup_admin_command::SetupAdminCommand;
+use super::setup_admin_command_validator::SetupAdminCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::{Clock, InitialAdminRegistration, PasswordHasher, UserRepository};
 use crate::ApplicationError;
 use identity_domain::User;
 
-pub struct SetupAdminService {
+pub struct SetupAdminCommandHandler {
+    validator: SetupAdminCommandValidator,
     repository: Arc<dyn UserRepository>,
     hasher: Arc<dyn PasswordHasher>,
     clock: Arc<dyn Clock>,
 }
 
-impl SetupAdminService {
+impl SetupAdminCommandHandler {
     pub fn new(
         repository: Arc<dyn UserRepository>,
         hasher: Arc<dyn PasswordHasher>,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
+            validator: Default::default(),
             repository,
             hasher,
             clock,
@@ -27,8 +30,11 @@ impl SetupAdminService {
 }
 
 #[async_trait::async_trait]
-impl SetupAdminHandler for SetupAdminService {
-    async fn handle(&self, command: SetupAdmin) -> Result<User, ApplicationError> {
+impl CommandHandler<SetupAdminCommand> for SetupAdminCommandHandler {
+    type Output = User;
+
+    async fn handle(&self, command: SetupAdminCommand) -> Result<User, ApplicationError> {
+        self.validator.validate(&command)?;
         let password_hash = self.hasher.hash(&command.password).await?;
         let registration =
             InitialAdminRegistration::new(command.email, password_hash, self.clock.now());
@@ -41,5 +47,5 @@ impl SetupAdminHandler for SetupAdminService {
 }
 
 #[cfg(test)]
-#[path = "setup_admin_service.tests.rs"]
+#[path = "setup_admin_command_handler.tests.rs"]
 mod tests;

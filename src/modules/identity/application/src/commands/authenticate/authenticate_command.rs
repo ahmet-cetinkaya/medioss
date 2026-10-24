@@ -3,7 +3,7 @@
 /// recovery path (`execute_bypassing_throttle` at HEAD) and is not set by
 /// the HTTP surface.
 #[derive(Debug, Clone)]
-pub struct Authenticate {
+pub struct AuthenticateCommand {
     pub identifier: String,
     pub password: String,
     pub bypass_throttle: bool,

@@ -5,7 +5,7 @@ use chrono::TimeDelta;
 use identity_domain::{required_delay, Email, IdentityError, PasswordHash, Role, User};
 use kernel::UserId;
 
-use super::{Authenticate, AuthenticateHandler, AuthenticateService};
+use super::{AuthenticateCommand, AuthenticateCommandHandler, CommandHandler};
 use crate::{
     test_support::{
         block_on, email, password, FakeHasher, FakeLoginAdmission, FakeRepository, FixedClock,
@@ -310,8 +310,8 @@ fn service(
     clock: Arc<FixedClock>,
     admission: Arc<FakeLoginAdmission>,
     dummy_password_hash: PasswordHash,
-) -> AuthenticateService {
-    AuthenticateService::new(
+) -> AuthenticateCommandHandler {
+    AuthenticateCommandHandler::new(
         repository.clone(),
         repository,
         hasher,
@@ -321,8 +321,8 @@ fn service(
     )
 }
 
-fn login(identifier: &str, password: &str) -> Authenticate {
-    Authenticate {
+fn login(identifier: &str, password: &str) -> AuthenticateCommand {
+    AuthenticateCommand {
         identifier: identifier.to_owned(),
         password: password.to_owned(),
         bypass_throttle: false,

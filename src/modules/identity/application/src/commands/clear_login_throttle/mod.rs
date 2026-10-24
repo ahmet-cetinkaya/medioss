@@ -1,7 +1,7 @@
-mod clear_login_throttle;
-mod clear_login_throttle_handler;
-mod clear_login_throttle_service;
+mod clear_login_throttle_command;
+mod clear_login_throttle_command_handler;
+mod clear_login_throttle_command_validator;
 
-pub use clear_login_throttle::ClearLoginThrottle;
-pub use clear_login_throttle_handler::ClearLoginThrottleHandler;
-pub use clear_login_throttle_service::ClearLoginThrottleService;
+pub use clear_login_throttle_command::ClearLoginThrottleCommand;
+pub use clear_login_throttle_command_handler::ClearLoginThrottleCommandHandler;
+pub use clear_login_throttle_command_validator::ClearLoginThrottleCommandValidator;

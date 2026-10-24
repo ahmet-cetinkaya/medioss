@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use identity_domain::{Email, RawPassword, Role};
 
-use super::{SetupAdmin, SetupAdminHandler, SetupAdminService};
+use super::{CommandHandler, SetupAdminCommand, SetupAdminCommandHandler};
 use crate::{
     test_support::{block_on, email, password, FakeHasher, FakeRepository, FixedClock},
     ApplicationError,
@@ -15,10 +15,12 @@ fn setup_creates_a_permanent_admin_through_the_atomic_operation() {
     let clock = Arc::new(FixedClock::new());
 
     let admin = block_on(
-        SetupAdminService::new(repository.clone(), hasher, clock).handle(SetupAdmin {
-            email: email(),
-            password: password(),
-        }),
+        SetupAdminCommandHandler::new(repository.clone(), hasher, clock).handle(
+            SetupAdminCommand {
+                email: email(),
+                password: password(),
+            },
+        ),
     )
     .unwrap();
 
@@ -36,10 +38,12 @@ fn setup_refuses_an_initialized_repository_without_count_then_insert() {
     let clock = Arc::new(FixedClock::new());
 
     let result = block_on(
-        SetupAdminService::new(repository.clone(), hasher, clock).handle(SetupAdmin {
-            email: Email::parse("second-admin@local.invalid").unwrap(),
-            password: RawPassword::parse("another-password").unwrap(),
-        }),
+        SetupAdminCommandHandler::new(repository.clone(), hasher, clock).handle(
+            SetupAdminCommand {
+                email: Email::parse("second-admin@local.invalid").unwrap(),
+                password: RawPassword::parse("another-password").unwrap(),
+            },
+        ),
     );
 
     assert_eq!(result, Err(ApplicationError::SetupAlreadyCompleted));

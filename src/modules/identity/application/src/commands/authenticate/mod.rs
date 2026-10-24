@@ -1,7 +1,7 @@
-mod authenticate;
-mod authenticate_handler;
-mod authenticate_service;
+mod authenticate_command;
+mod authenticate_command_handler;
+mod authenticate_command_validator;
 
-pub use authenticate::Authenticate;
-pub use authenticate_handler::AuthenticateHandler;
-pub use authenticate_service::AuthenticateService;
+pub use authenticate_command::AuthenticateCommand;
+pub use authenticate_command_handler::AuthenticateCommandHandler;
+pub use authenticate_command_validator::AuthenticateCommandValidator;

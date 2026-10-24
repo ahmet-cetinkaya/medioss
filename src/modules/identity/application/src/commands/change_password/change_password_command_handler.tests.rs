@@ -4,7 +4,7 @@ use chrono::TimeDelta;
 use identity_domain::{Email, RawPassword, Role, User};
 use kernel::UserId;
 
-use super::{ChangePassword, ChangePasswordHandler, ChangePasswordService};
+use super::{ChangePasswordCommand, ChangePasswordCommandHandler, CommandHandler};
 use crate::{
     test_support::{block_on, FakeHasher, FakeRepository, FixedClock},
     ApplicationError,
@@ -67,8 +67,8 @@ async fn change_password(
     user_id: UserId,
     new_password: RawPassword,
 ) -> Result<User, ApplicationError> {
-    ChangePasswordService::new(repository, hasher)
-        .handle(ChangePassword {
+    ChangePasswordCommandHandler::new(repository, hasher)
+        .handle(ChangePasswordCommand {
             user_id,
             new_password,
         })
