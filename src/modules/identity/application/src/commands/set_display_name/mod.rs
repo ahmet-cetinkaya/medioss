@@ -1,7 +1,7 @@
-mod set_display_name;
-mod set_display_name_handler;
-mod set_display_name_service;
+mod set_display_name_command;
+mod set_display_name_command_handler;
+mod set_display_name_command_validator;
 
-pub use set_display_name::SetDisplayName;
-pub use set_display_name_handler::SetDisplayNameHandler;
-pub use set_display_name_service::SetDisplayNameService;
+pub use set_display_name_command::SetDisplayNameCommand;
+pub use set_display_name_command_handler::SetDisplayNameCommandHandler;
+pub use set_display_name_command_validator::SetDisplayNameCommandValidator;

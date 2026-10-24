@@ -1,7 +1,7 @@
-mod setup_admin;
-mod setup_admin_handler;
-mod setup_admin_service;
+mod setup_admin_command;
+mod setup_admin_command_handler;
+mod setup_admin_command_validator;
 
-pub use setup_admin::SetupAdmin;
-pub use setup_admin_handler::SetupAdminHandler;
-pub use setup_admin_service::SetupAdminService;
+pub use setup_admin_command::SetupAdminCommand;
+pub use setup_admin_command_handler::SetupAdminCommandHandler;
+pub use setup_admin_command_validator::SetupAdminCommandValidator;

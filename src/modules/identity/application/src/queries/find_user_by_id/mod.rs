@@ -1,7 +1,7 @@
-mod find_user_by_id;
-mod find_user_by_id_handler;
-mod find_user_by_id_service;
+mod find_user_by_id_query;
+mod find_user_by_id_query_handler;
+mod find_user_by_id_query_validator;
 
-pub use find_user_by_id::FindUserById;
-pub use find_user_by_id_handler::FindUserByIdHandler;
-pub use find_user_by_id_service::FindUserByIdService;
+pub use find_user_by_id_query::FindUserByIdQuery;
+pub use find_user_by_id_query_handler::FindUserByIdQueryHandler;
+pub use find_user_by_id_query_validator::FindUserByIdQueryValidator;

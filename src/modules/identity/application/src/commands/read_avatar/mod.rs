@@ -1,7 +1,7 @@
-mod read_avatar;
-mod read_avatar_handler;
-mod read_avatar_service;
+mod read_avatar_command;
+mod read_avatar_command_handler;
+mod read_avatar_command_validator;
 
-pub use read_avatar::ReadAvatar;
-pub use read_avatar_handler::ReadAvatarHandler;
-pub use read_avatar_service::ReadAvatarService;
+pub use read_avatar_command::ReadAvatarCommand;
+pub use read_avatar_command_handler::ReadAvatarCommandHandler;
+pub use read_avatar_command_validator::ReadAvatarCommandValidator;

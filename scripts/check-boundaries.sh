@@ -182,7 +182,7 @@ BIN_ENTRY_MAX_CODE_LINES=80
 # Use-case folders (application/src/{commands,queries}/<name>/) owe a command or
 # query struct, a handler impl and a validator; unmigrated ones sit in a shrink-only
 # baseline with its own count header, capped by USECASE_CEILING.
-USECASE_CEILING=73
+USECASE_CEILING=57
 
 # Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
 # hook or test hidden inside a comment is dead code to every check below.

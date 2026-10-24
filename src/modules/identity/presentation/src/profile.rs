@@ -2,10 +2,10 @@ use axum::extract::{Multipart, Path, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use identity_application::commands::clear_avatar::ClearAvatar;
-use identity_application::commands::read_avatar::ReadAvatar;
-use identity_application::commands::replace_avatar::ReplaceAvatar;
-use identity_application::commands::set_display_name::SetDisplayName;
+use identity_application::commands::clear_avatar::ClearAvatarCommand;
+use identity_application::commands::read_avatar::ReadAvatarCommand;
+use identity_application::commands::replace_avatar::ReplaceAvatarCommand;
+use identity_application::commands::set_display_name::SetDisplayNameCommand;
 use identity_application::ApplicationError;
 use identity_domain::DisplayName;
 use kernel::UserId;
@@ -62,7 +62,7 @@ pub async fn me_profile(
     };
     let user = dependencies
         .set_display_name
-        .handle(SetDisplayName {
+        .handle(SetDisplayNameCommand {
             user_id: actor.user_id(),
             display_name,
         })
@@ -102,7 +102,7 @@ pub async fn me_avatar_put(
     })?;
     dependencies
         .replace_avatar
-        .handle(ReplaceAvatar { actor, bytes })
+        .handle(ReplaceAvatarCommand { actor, bytes })
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -115,7 +115,7 @@ pub async fn me_avatar_delete(
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     dependencies
         .clear_avatar
-        .handle(ClearAvatar { actor })
+        .handle(ClearAvatarCommand { actor })
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -127,7 +127,7 @@ pub async fn avatar_get(
 ) -> Result<Response, ApiError> {
     let (bytes, avatar) = dependencies
         .read_avatar
-        .handle(ReadAvatar {
+        .handle(ReadAvatarCommand {
             requested: UserId::new(id),
             reader: actor,
         })

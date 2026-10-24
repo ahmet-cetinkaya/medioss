@@ -1,7 +1,7 @@
-mod clear_avatar;
-mod clear_avatar_handler;
-mod clear_avatar_service;
+mod clear_avatar_command;
+mod clear_avatar_command_handler;
+mod clear_avatar_command_validator;
 
-pub use clear_avatar::ClearAvatar;
-pub use clear_avatar_handler::ClearAvatarHandler;
-pub use clear_avatar_service::ClearAvatarService;
+pub use clear_avatar_command::ClearAvatarCommand;
+pub use clear_avatar_command_handler::ClearAvatarCommandHandler;
+pub use clear_avatar_command_validator::ClearAvatarCommandValidator;

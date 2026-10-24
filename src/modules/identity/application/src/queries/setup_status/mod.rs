@@ -1,7 +1,7 @@
-mod setup_status;
-mod setup_status_handler;
-mod setup_status_service;
+mod setup_status_query;
+mod setup_status_query_handler;
+mod setup_status_query_validator;
 
-pub use setup_status::IsSetupRequired;
-pub use setup_status_handler::IsSetupRequiredHandler;
-pub use setup_status_service::SetupStatusService;
+pub use setup_status_query::SetupStatusQuery;
+pub use setup_status_query_handler::SetupStatusQueryHandler;
+pub use setup_status_query_validator::SetupStatusQueryValidator;

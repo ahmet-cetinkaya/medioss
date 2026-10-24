@@ -1,7 +1,7 @@
-mod change_password;
-mod change_password_handler;
-mod change_password_service;
+mod change_password_command;
+mod change_password_command_handler;
+mod change_password_command_validator;
 
-pub use change_password::ChangePassword;
-pub use change_password_handler::ChangePasswordHandler;
-pub use change_password_service::ChangePasswordService;
+pub use change_password_command::ChangePasswordCommand;
+pub use change_password_command_handler::ChangePasswordCommandHandler;
+pub use change_password_command_validator::ChangePasswordCommandValidator;

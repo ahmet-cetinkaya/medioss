@@ -1,7 +1,7 @@
-mod delete_own_account;
-mod delete_own_account_handler;
-mod delete_own_account_service;
+mod delete_own_account_command;
+mod delete_own_account_command_handler;
+mod delete_own_account_command_validator;
 
-pub use delete_own_account::DeleteOwnAccount;
-pub use delete_own_account_handler::DeleteOwnAccountHandler;
-pub use delete_own_account_service::DeleteOwnAccountService;
+pub use delete_own_account_command::DeleteOwnAccountCommand;
+pub use delete_own_account_command_handler::DeleteOwnAccountCommandHandler;
+pub use delete_own_account_command_validator::DeleteOwnAccountCommandValidator;
