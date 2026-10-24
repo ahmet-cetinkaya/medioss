@@ -172,17 +172,32 @@ member_count() {
 # lower it together with the list; raising it needs a visible, reviewed edit.
 EXEMPTION_CEILING=20
 
+# Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
+# hook or test hidden inside a comment is dead code to every check below.
+code_without_comments() {
+  perl -0pe 's{/\*.*?\*/}{}gs' "$1" | grep -vE '^[[:space:]]*//'
+}
+
+# Joins lines, then drops asserts that cannot fail: assert!(true),
+# assert!(!false) and assert!/assert_eq! comparing one literal with itself
+# (true, false or a number). Comparisons of variables stay review-enforced.
+strip_tautologies() {
+  perl -0pe 's/\s+/ /g;
+    s/assert!\(\s*(?:true|!\s*false)\s*[,)]//g;
+    s/assert(?:_eq)?!\(\s*(true|false|-?\d+(?:\.\d+)?)\s*(?:,|==)\s*\1\s*[,)]//g'
+}
+
 # True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
 # asserts something, so commented-out, #[ignore]d or empty tests do not count.
 has_asserting_test() {
   local sibling="$1" code
-  code="$(grep -vE '^[[:space:]]*//' "$sibling")"
+  code="$(code_without_comments "$sibling")"
   printf '%s\n' "$code" | awk '
     /^[[:space:]]*#\[(tokio::)?test([^a-zA-Z_]|$)/ { pending = 1 }
     /^[[:space:]]*#\[ignore/ { ignored = 1 }
     /^[[:space:]]*(pub )?(async )?fn / { if (pending && !ignored) found++; pending = 0; ignored = 0 }
     END { exit found ? 0 : 1 }' &&
-    printf '%s\n' "$code" | sed -E 's/assert!\([[:space:]]*true[[:space:]]*[,)]//g' |
+    printf '%s\n' "$code" | strip_tautologies |
     grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
 }
 
@@ -191,7 +206,7 @@ has_asserting_test() {
 # cfg(any(test, ..)) and cfg(not(test)) are different literals and fail.
 has_wired_hook() {
   local file="$1" name="$2"
-  grep -vE '^[[:space:]]*//' "$file" | awk -v name="$name" '
+  code_without_comments "$file" | awk -v name="$name" '
     /^#\[cfg\(test\)\][[:space:]]*$/ { cfg = 1; path = 0; next }
     cfg && $0 == "#[path = \"" name "\"]" { path = 1; next }
     cfg && path && /^mod tests;[[:space:]]*$/ { found = 1 }
@@ -204,7 +219,7 @@ has_wired_hook() {
 # cfg(any(..)) are different literals and do not count.
 declares_under_cfg_test() {
   local parent="$1" module="$2"
-  grep -vE '^[[:space:]]*//' "$parent" | awk -v module="$module" '
+  code_without_comments "$parent" | awk -v module="$module" '
     /^[[:space:]]*#\[/ { if ($0 ~ /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/) gated = 1; next }
     $0 ~ "^[[:space:]]*(pub(\\([a-z]+\\))? )?mod " module ";[[:space:]]*$" { if (gated) found = 1 }
     { gated = 0 }
@@ -242,7 +257,7 @@ is_data_only_entity_file() {
 # cfg(test) code uses it. Other cfg(any(..)), cfg(not(test)) and comments fail.
 test_support_declaration_is_gated() {
   local parent="$1"
-  grep -vE '^[[:space:]]*//' "$parent" | awk '
+  code_without_comments "$parent" | awk '
     /^#\[path/ { redirected = 1 }
     /^#\[cfg\(test\)\][[:space:]]*$/ { gated = 1; next }
     /^#\[cfg\(any\(test, feature = "test-support"\)\)\][[:space:]]*$/ { gated = 1; next }
@@ -287,12 +302,12 @@ is_gated_test_support() {
   done
   [ -n "$parent" ] || return 1
   test_support_declaration_is_gated "$parent" || return 1
-  [ "$(grep -vE '^[[:space:]]*//' "$parent" | grep -c 'test_support')" -eq 1 ] || return 1
+  [ "$(code_without_comments "$parent" | grep -c 'test_support')" -eq 1 ] || return 1
   [ -f "$root" ] && grep -q 'fn main' "$root" && return 1
   while IFS= read -r user; do
     [ "$user" = "$parent" ] && continue
     is_test_only_module "$user" && continue
-    grep -vE '^[[:space:]]*//' "$user" | grep -qE '(crate|self|super)::test_support|mod test_support|use test_support' && return 1
+    code_without_comments "$user" | grep -qE '(crate|self|super)::test_support|mod test_support|use test_support' && return 1
   done < <(find "$dir" -name '*.rs' -not -path '*/test_support/*' -not -name test_support.rs)
   return 0
 }
@@ -312,6 +327,18 @@ check_exemption_budget() {
   fi
 }
 
+# True when $1 sits under a tests/ directory directly beside a Cargo.toml, i.e.
+# a cargo integration test; a tests/ folder inside src/ is production code.
+is_crate_integration_test() {
+  local dir
+  dir="$(dirname "$1")"
+  while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+    [ "$(basename "$dir")" = "tests" ] && [ -f "$(dirname "$dir")/Cargo.toml" ] && return 0
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
 check_file_layout() {
   local root="$1" ceiling="${2:-$EXEMPTION_CEILING}" file sibling name relative
   local exemptions="$root/scripts/layout-test-exemptions.txt"
@@ -329,8 +356,9 @@ check_file_layout() {
         ;;
     esac
     case "$file" in
-      */mod.rs | */lib.rs | *.tests.rs | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
+      */mod.rs | */lib.rs | *.tests.rs | */migrations/* | *_entity.rs | */entities.rs) continue ;;
     esac
+    is_crate_integration_test "$file" && continue
     relative="${file#"$root"/}"
     if grep -q 'mod tests {' "$file"; then
       violations+="  inline test module: $relative"$'\n'
@@ -719,6 +747,38 @@ layout_self_test() {
     '#[cfg(test)]\nmod test_support;\n#[cfg(test)]\nmod test_support;\n' || ok=1
   expect_support "$dir" reject "46. production file uses crate::test_support" \
     '#[cfg(test)]\nmod test_support;\nmod prod;\n' prod.rs 'use crate::test_support::shipped::pick;\npub fn run() -> u8 { pick(true) }\n' || ok=1
+  expect_hook "$dir" reject "47. hook inside a block comment" \
+    '/*\n#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n*/\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "48. cfg(test) only inside a one-line block comment" \
+    ' /* #[cfg(test)] */\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "49. multi-line assert!(true)" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() {\n    assert!(\n        true\n    );\n}\n' || ok=1
+  expect_hook "$dir" reject "50. assert_eq!(1, 1) literal tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(1, 1); }\n' || ok=1
+  expect_hook "$dir" reject "51. assert!(true == true) tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert!(true == true); }\n' || ok=1
+  expect_hook "$dir" reject "52. assert!(!false) tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert!(!false); }\n' || ok=1
+  expect_hook "$dir" accept "53. assert_eq!(1, 2 - 1) is not a literal tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(1, 2 - 1); }\n' || ok=1
+  expect_hook "$dir" accept "54. assert_eq!(v, v) on a variable stays review-enforced" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { let v = super::add(1, 1); assert_eq!(v, v); }\n' || ok=1
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src/tests"
+  printf 'pub fn pick(a: bool) -> u8 { if a { 1 } else { 2 } }\n' >"$dir/src/tests/shipped.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 55. production logic hidden in src/tests/"
+    ok=1
+  else
+    echo "  ok   rejected: 55. production logic hidden in src/tests/"
+  fi
+  : >"$dir/src/Cargo.toml"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  ok   accepted: 56. tests/ directly beside a Cargo.toml"
+  else
+    echo "  FAIL wrongly rejected: 56. tests/ directly beside a Cargo.toml"
+    ok=1
+  fi
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
