@@ -14,3 +14,7 @@ pub(super) fn meditation_index(meditations: &[MeditationRef]) -> MeditationIndex
     }
     index
 }
+
+#[cfg(test)]
+#[path = "meditation_index.tests.rs"]
+mod tests;

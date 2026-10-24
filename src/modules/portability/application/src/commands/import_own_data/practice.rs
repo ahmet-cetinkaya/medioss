@@ -132,3 +132,7 @@ pub(super) async fn apply_practice(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "practice.tests.rs"]
+mod tests;

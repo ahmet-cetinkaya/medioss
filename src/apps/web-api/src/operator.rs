@@ -145,3 +145,7 @@ fn set_umask(mask: u32) {
         libc::umask(mask);
     }
 }
+
+#[cfg(test)]
+#[path = "operator.tests.rs"]
+mod tests;
