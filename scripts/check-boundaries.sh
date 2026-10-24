@@ -170,7 +170,7 @@ member_count() {
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 # Upper bound the exemption list's `# count: N` header may never exceed. Only
 # lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=158
+EXEMPTION_CEILING=134
 
 # True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
 # asserts something, so commented-out, #[ignore]d or empty tests do not count.
@@ -183,6 +183,41 @@ has_asserting_test() {
     /^[[:space:]]*(pub )?(async )?fn / { if (pending && !ignored) found++; pending = 0; ignored = 0 }
     END { exit found ? 0 : 1 }' &&
     printf '%s\n' "$code" | grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
+}
+
+# True when $1 declares `mod $2;` with a literal `#[cfg(test)]` among the
+# attribute lines directly above it. cfg(not(test)), cfg(all(..)) and
+# cfg(any(..)) are different literals and do not count.
+declares_under_cfg_test() {
+  local parent="$1" module="$2"
+  grep -vE '^[[:space:]]*//' "$parent" | awk -v module="$module" '
+    /^[[:space:]]*#\[/ { if ($0 ~ /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/) gated = 1; next }
+    $0 ~ "^[[:space:]]*(pub(\\([a-z]+\\))? )?mod " module ";[[:space:]]*$" { if (gated) found = 1 }
+    { gated = 0 }
+    END { exit found ? 0 : 1 }'
+}
+
+# Kind A: a file inside a router_tests/ directory, declared by name from
+# router_tests/mod.rs, where lib.rs gates router_tests itself by #[cfg(test)].
+is_cfg_test_module_file() {
+  local file="$1" dir stem crate_dir
+  dir="$(dirname "$file")"
+  stem="$(basename "$file" .rs)"
+  [ "$(basename "$dir")" = "router_tests" ] && [ "$stem" != "mod" ] || return 1
+  [ -f "$dir/mod.rs" ] && grep -qE "^[[:space:]]*mod $stem;[[:space:]]*$" "$dir/mod.rs" || return 1
+  crate_dir="$(dirname "$dir")"
+  [ -f "$crate_dir/lib.rs" ] && declares_under_cfg_test "$crate_dir/lib.rs" router_tests
+}
+
+# Kind B: a SeaORM entity file holding data only: no fn, no macro_rules!, and
+# no impl other than the empty ActiveModelBehavior marker.
+is_data_only_entity_file() {
+  local file="$1" code
+  case "$file" in */persistence/entities/*.rs | */entity.rs) ;; *) return 1 ;; esac
+  code="$(grep -vE '^[[:space:]]*//' "$file")"
+  printf '%s\n' "$code" | grep -qE '\bfn\b|macro_rules!' && return 1
+  ! printf '%s\n' "$code" | grep -E '\bimpl\b' |
+    grep -qvE '^[[:space:]]*impl ActiveModelBehavior for ActiveModel \{\}[[:space:]]*$'
 }
 
 # Fails when the exemption list's `# count: N` is missing, below the real
@@ -211,6 +246,12 @@ check_file_layout() {
     relative="${file#"$root"/}"
     if grep -q 'mod tests {' "$file"; then
       violations+="  inline test module: $relative"$'\n'
+      continue
+    fi
+    if is_cfg_test_module_file "$file" || is_data_only_entity_file "$file"; then
+      if [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
+        violations+="  stale exemption (exempt by kind; remove it from layout-test-exemptions.txt): $relative"$'\n'
+      fi
       continue
     fi
     # Trait-only files hold signatures, not logic; data-only files hold neither
@@ -542,6 +583,54 @@ layout_self_test() {
   return "$ok"
 }
 
+# Exempt-by-kind cases: router_tests files (kind A) and data-only SeaORM
+# entities (kind B) pass only while provably logic-free; a listed kind file is stale.
+kind_self_test() {
+  local dir ok=0 gate
+  for gate in '#[cfg(test)]' '#[cfg(not(test))]' '#[cfg(any(test, unix))]' ''; do
+    dir="$(new_fixture_dir)"
+    mkdir -p "$dir/src/router_tests"
+    printf '%s\n#[path = "router_tests/mod.rs"]\nmod router_tests;\n' "$gate" >"$dir/src/lib.rs"
+    printf 'mod auth;\n' >"$dir/src/router_tests/mod.rs"
+    printf 'pub fn helper() {}\n' >"$dir/src/router_tests/auth.rs"
+    if [ "$gate" = '#[cfg(test)]' ]; then
+      kind_expect "$dir" accept "22. router_tests file under #[cfg(test)]" || ok=1
+    else
+      kind_expect "$dir" reject "23. router_tests file under gate '${gate:-none}'" || ok=1
+    fi
+    remove_fixture_dir "$dir"
+  done
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src/persistence/entities"
+  local entity="$dir/src/persistence/entities/users.rs"
+  printf 'pub struct Model;\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
+  kind_expect "$dir" accept "24. data-only entity" || ok=1
+  printf 'impl Model { pub fn f() {} }\n' >>"$entity"
+  kind_expect "$dir" reject "25. entity with a fn" || ok=1
+  printf 'pub struct Model;\nimpl Model {}\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
+  kind_expect "$dir" reject "26. entity with a non-empty impl" || ok=1
+  printf 'pub struct Model;\nmacro_rules! m { () => {}; }\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
+  kind_expect "$dir" reject "27. entity with macro_rules!" || ok=1
+  printf 'pub struct Model;\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
+  mkdir -p "$dir/scripts"
+  printf '# count: 1\nsrc/persistence/entities/users.rs\n' >"$dir/scripts/layout-test-exemptions.txt"
+  kind_expect "$dir" reject "28. stale exemption for a kind file" || ok=1
+  remove_fixture_dir "$dir"
+  return "$ok"
+}
+
+# Verdict of check_file_layout on fixture $1 must equal $2 (accept|reject).
+kind_expect() {
+  local dir="$1" verdict="$2" label="$3" accepted=reject
+  check_file_layout "$dir" >/dev/null && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   ${verdict%e}ed: $label"
+  else
+    echo "  FAIL wrongly ${accepted%e}ed: $label"
+    return 1
+  fi
+}
+
 self_test() {
   local bad_root clean_root output failed=0
   bad_root="$(new_fixture_dir)"
@@ -594,6 +683,7 @@ self_test() {
   fi
 
   layout_self_test || failed=1
+  kind_self_test || failed=1
 
   if [ "$failed" -ne 0 ]; then
     echo "self-test: FAILED"

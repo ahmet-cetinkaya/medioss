@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 158
+# count: 134
 src/apps/web-api/src/config/session_secret.rs
 src/apps/web-api/src/image_normalization/vp8l_preflight.rs
 src/apps/web-api/src/image_normalization/webp_preflight.rs
@@ -21,23 +21,15 @@ src/modules/identity/application/src/models/errors/application_error.rs
 src/modules/identity/application/src/ports/credential_change.rs
 src/modules/identity/application/src/ports/initial_admin_registration.rs
 src/modules/identity/application/src/ports/member_registration.rs
-src/modules/identity/infrastructure/src/persistence/login_attempts/entity.rs
 src/modules/identity/infrastructure/src/persistence/repository/login_throttle_repository.rs
 src/modules/identity/infrastructure/src/persistence/repository/timestamps.rs
 src/modules/identity/infrastructure/src/persistence/repository/user_repository.rs
 src/modules/identity/infrastructure/src/persistence/repository/user_row.rs
-src/modules/identity/infrastructure/src/persistence/users/entity.rs
 src/modules/identity/presentation/src/actors.rs
 src/modules/identity/presentation/src/auth.rs
 src/modules/identity/presentation/src/origin_guard.rs
 src/modules/identity/presentation/src/profile.rs
 src/modules/identity/presentation/src/router.rs
-src/modules/identity/presentation/src/router_tests/auth.rs
-src/modules/identity/presentation/src/router_tests/avatar.rs
-src/modules/identity/presentation/src/router_tests/error_mapping.rs
-src/modules/identity/presentation/src/router_tests/helpers.rs
-src/modules/identity/presentation/src/router_tests/profile.rs
-src/modules/identity/presentation/src/router_tests/users_admin.rs
 src/modules/identity/presentation/src/user_admin.rs
 src/modules/identity/presentation/src/user_response.rs
 src/modules/identity/presentation/src/users_lifecycle.rs
@@ -63,13 +55,6 @@ src/modules/meditation/application/src/services/ensure_meditation_exists.rs
 src/modules/meditation/application/src/services/load_meditation.rs
 src/modules/meditation/infrastructure/src/persistence/category_repository.rs
 src/modules/meditation/infrastructure/src/persistence/clock.rs
-src/modules/meditation/infrastructure/src/persistence/entities/categories.rs
-src/modules/meditation/infrastructure/src/persistence/entities/meditations.rs
-src/modules/meditation/infrastructure/src/persistence/entities/memberships.rs
-src/modules/meditation/infrastructure/src/persistence/entities/notes.rs
-src/modules/meditation/infrastructure/src/persistence/entities/playback_state.rs
-src/modules/meditation/infrastructure/src/persistence/entities/programs.rs
-src/modules/meditation/infrastructure/src/persistence/entities/sessions.rs
 src/modules/meditation/infrastructure/src/persistence/meditation_repository.rs
 src/modules/meditation/infrastructure/src/persistence/membership_repository.rs
 src/modules/meditation/infrastructure/src/persistence/note_repository.rs
@@ -89,15 +74,6 @@ src/modules/meditation/presentation/src/program_activity.rs
 src/modules/meditation/presentation/src/program_cover.rs
 src/modules/meditation/presentation/src/program_members.rs
 src/modules/meditation/presentation/src/programs.rs
-src/modules/meditation/presentation/src/router_tests/access.rs
-src/modules/meditation/presentation/src/router_tests/audio.rs
-src/modules/meditation/presentation/src/router_tests/covers.rs
-src/modules/meditation/presentation/src/router_tests/description.rs
-src/modules/meditation/presentation/src/router_tests/helpers.rs
-src/modules/meditation/presentation/src/router_tests/library.rs
-src/modules/meditation/presentation/src/router_tests/listening.rs
-src/modules/meditation/presentation/src/router_tests/reorder.rs
-src/modules/meditation/presentation/src/router_tests/statistics.rs
 src/modules/mood-tracker/application/src/application_tests.rs
 src/modules/mood-tracker/application/src/commands/create_mood_entry/create_mood_entry_service.rs
 src/modules/mood-tracker/application/src/commands/delete_mood_entry/delete_mood_entry_service.rs
