@@ -84,10 +84,7 @@ async fn listing_is_ordered_by_email_and_finds_by_id() {
         .expect("seeded user must be findable by id");
     assert_eq!(by_id.email().as_str(), "zoe@example.com");
 
-    let missing = repository
-        .find_by_id(UserId::new(9999))
-        .await
-        .unwrap();
+    let missing = repository.find_by_id(UserId::new(9999)).await.unwrap();
     assert_eq!(missing, None);
 }
 
@@ -105,10 +102,7 @@ async fn set_disabled_updates_only_the_target_and_rejects_unknown_ids() {
         .await
         .unwrap();
 
-    repository
-        .set_disabled(disabled.id(), true)
-        .await
-        .unwrap();
+    repository.set_disabled(disabled.id(), true).await.unwrap();
 
     let reloaded = repository
         .find_by_id(disabled.id())
@@ -148,7 +142,10 @@ async fn set_profile_stores_display_name_and_avatar() {
         )
         .await
         .unwrap();
-    assert_eq!(named.display_name().map(|name| name.as_str()), Some("Ahmet"));
+    assert_eq!(
+        named.display_name().map(|name| name.as_str()),
+        Some("Ahmet")
+    );
     assert!(named.avatar().is_some());
 
     let cleared = repository
@@ -159,9 +156,7 @@ async fn set_profile_stores_display_name_and_avatar() {
     assert_eq!(cleared.avatar(), None);
 
     assert_eq!(
-        repository
-            .set_profile(UserId::new(9999), None, None)
-            .await,
+        repository.set_profile(UserId::new(9999), None, None).await,
         Err(RepositoryError::UserNotFound)
     );
 }
@@ -251,7 +246,7 @@ async fn credential_change_bumps_auth_version_and_clears_throttle() {
 
     assert_eq!(changed.auth_version(), 1);
     assert_eq!(changed.password_hash().as_str(), "hash-rotated");
-    assert_eq!(changed.must_change_password(), false);
+    assert!(!changed.must_change_password());
     assert_eq!(
         repository
             .failed_attempts("rotating@example.com")

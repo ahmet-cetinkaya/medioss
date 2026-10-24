@@ -49,7 +49,8 @@ impl TestDatabase {
 }
 
 fn at(minutes: u64) -> chrono::DateTime<Utc> {
-    Utc.with_ymd_and_hms(2026, 10, 24, 12, 0, 0).unwrap() + chrono::TimeDelta::minutes(minutes as i64)
+    Utc.with_ymd_and_hms(2026, 10, 24, 12, 0, 0).unwrap()
+        + chrono::TimeDelta::minutes(minutes as i64)
 }
 
 #[tokio::test]
@@ -58,7 +59,10 @@ async fn unknown_identifier_reports_no_attempts() {
     let repository = database.repository();
 
     assert_eq!(
-        repository.failed_attempts("nobody@example.com").await.unwrap(),
+        repository
+            .failed_attempts("nobody@example.com")
+            .await
+            .unwrap(),
         None
     );
 }
@@ -95,7 +99,10 @@ async fn failures_accumulate_and_clearing_removes_the_row() {
         .await
         .unwrap();
     assert_eq!(
-        repository.failed_attempts("throttled@example.com").await.unwrap(),
+        repository
+            .failed_attempts("throttled@example.com")
+            .await
+            .unwrap(),
         None
     );
 }
@@ -110,7 +117,10 @@ async fn zero_count_row_reads_as_no_attempts_and_clearing_is_idempotent() {
         .await
         .unwrap();
     assert_eq!(
-        repository.failed_attempts("never-seen@example.com").await.unwrap(),
+        repository
+            .failed_attempts("never-seen@example.com")
+            .await
+            .unwrap(),
         None
     );
     let _ = Email::parse("never-seen@example.com").unwrap();
@@ -131,9 +141,15 @@ async fn clear_only_touches_the_target_identifier() {
         .await
         .unwrap();
 
-    repository.clear_failed_attempts("a@example.com").await.unwrap();
+    repository
+        .clear_failed_attempts("a@example.com")
+        .await
+        .unwrap();
 
-    assert_eq!(repository.failed_attempts("a@example.com").await.unwrap(), None);
+    assert_eq!(
+        repository.failed_attempts("a@example.com").await.unwrap(),
+        None
+    );
     assert!(repository
         .failed_attempts("b@example.com")
         .await

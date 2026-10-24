@@ -12,7 +12,13 @@ fn carries_email_hash_and_creation_time() {
         created_at,
     );
 
-    assert_eq!(registration.email(), &Email::parse("member@medioss.test").unwrap());
-    assert_eq!(registration.password_hash(), &PasswordHash::from_stored("hash-2".to_owned()));
+    assert_eq!(
+        registration.email(),
+        &Email::parse("member@medioss.test").unwrap()
+    );
+    assert_eq!(
+        registration.password_hash(),
+        &PasswordHash::from_stored("hash-2".to_owned())
+    );
     assert_eq!(registration.created_at(), created_at);
 }

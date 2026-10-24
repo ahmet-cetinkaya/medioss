@@ -21,7 +21,10 @@ fn roles_round_trip_through_their_storage_strings() {
     assert_eq!(role_to_str(Role::Member), "member");
     assert_eq!(role_from_str("admin"), Ok(Role::Admin));
     assert_eq!(role_from_str("member"), Ok(Role::Member));
-    assert_eq!(role_from_str("superuser"), Err(identity_application::ports::RepositoryError::OperationFailed));
+    assert_eq!(
+        role_from_str("superuser"),
+        Err(identity_application::ports::RepositoryError::OperationFailed)
+    );
 }
 
 #[test]
@@ -52,7 +55,10 @@ fn restore_user_maps_every_column() {
         restored.password_expires_at(),
         Some(Utc.with_ymd_and_hms(2026, 9, 26, 15, 0, 0).unwrap())
     );
-    assert_eq!(restored.display_name().map(|name| name.as_str()), Some("Ahmet"));
+    assert_eq!(
+        restored.display_name().map(|name| name.as_str()),
+        Some("Ahmet")
+    );
     assert_eq!(
         restored.avatar().map(|avatar| avatar.key().to_owned()),
         Some("avatar-0123456789abcdef.webp".to_owned())
@@ -101,7 +107,11 @@ fn insert_model_maps_user_fields_back() {
     assert_eq!(model.password_expires_at.unwrap(), None);
     assert_eq!(model.display_name.unwrap(), Some("Deniz".to_owned()));
     assert_eq!(model.avatar_ext.unwrap(), Some("webp".to_owned()));
-    assert!(model.avatar_key.unwrap().expect("avatar key").ends_with(".webp"));
+    assert!(model
+        .avatar_key
+        .unwrap()
+        .expect("avatar key")
+        .ends_with(".webp"));
     assert_eq!(model.created_at.unwrap(), "2026-09-26T12:00:00+00:00");
 }
 

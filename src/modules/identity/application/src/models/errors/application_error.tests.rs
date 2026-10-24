@@ -7,17 +7,50 @@ use crate::ports::{AvatarStoreError, PasswordHasherError, RepositoryError};
 
 #[test]
 fn display_messages_are_stable() {
-    assert_eq!(ApplicationError::InvalidCredentials.to_string(), "invalid credentials");
-    assert_eq!(ApplicationError::Forbidden.to_string(), "the actor is not allowed to perform this operation");
-    assert_eq!(ApplicationError::SetupAlreadyCompleted.to_string(), "initial setup has already been completed");
-    assert_eq!(ApplicationError::EmailAlreadyExists.to_string(), "email already exists");
-    assert_eq!(ApplicationError::UserNotFound.to_string(), "user was not found");
-    assert_eq!(ApplicationError::PasswordHasher.to_string(), "password hashing operation failed");
-    assert_eq!(ApplicationError::Repository.to_string(), "repository operation failed");
-    assert_eq!(ApplicationError::ProcessingUnavailable.to_string(), "avatar processing is temporarily unavailable");
-    assert_eq!(ApplicationError::LastActiveAdmin.to_string(), "operation would leave the instance without an active admin");
-    assert_eq!(ApplicationError::PayloadTooLarge.to_string(), "request payload is too large");
-    assert_eq!(ApplicationError::UnsupportedMedia.to_string(), "uploaded image is not a supported media type");
+    assert_eq!(
+        ApplicationError::InvalidCredentials.to_string(),
+        "invalid credentials"
+    );
+    assert_eq!(
+        ApplicationError::Forbidden.to_string(),
+        "the actor is not allowed to perform this operation"
+    );
+    assert_eq!(
+        ApplicationError::SetupAlreadyCompleted.to_string(),
+        "initial setup has already been completed"
+    );
+    assert_eq!(
+        ApplicationError::EmailAlreadyExists.to_string(),
+        "email already exists"
+    );
+    assert_eq!(
+        ApplicationError::UserNotFound.to_string(),
+        "user was not found"
+    );
+    assert_eq!(
+        ApplicationError::PasswordHasher.to_string(),
+        "password hashing operation failed"
+    );
+    assert_eq!(
+        ApplicationError::Repository.to_string(),
+        "repository operation failed"
+    );
+    assert_eq!(
+        ApplicationError::ProcessingUnavailable.to_string(),
+        "avatar processing is temporarily unavailable"
+    );
+    assert_eq!(
+        ApplicationError::LastActiveAdmin.to_string(),
+        "operation would leave the instance without an active admin"
+    );
+    assert_eq!(
+        ApplicationError::PayloadTooLarge.to_string(),
+        "request payload is too large"
+    );
+    assert_eq!(
+        ApplicationError::UnsupportedMedia.to_string(),
+        "uploaded image is not a supported media type"
+    );
     assert_eq!(
         ApplicationError::InvalidInput(IdentityError::InvalidEmail).to_string(),
         "application input is invalid: email is invalid"
