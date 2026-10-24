@@ -5,7 +5,7 @@ use crate::models::MoodRange;
 /// Read one user's mood history, newest first, page-limited by a keyset
 /// cursor of `(recorded_at, id)`.
 #[derive(Debug, Clone)]
-pub struct GetMoodHistory {
+pub struct GetMoodHistoryQuery {
     pub user_id: UserId,
     pub range: MoodRange,
     pub tz_offset_minutes: i16,

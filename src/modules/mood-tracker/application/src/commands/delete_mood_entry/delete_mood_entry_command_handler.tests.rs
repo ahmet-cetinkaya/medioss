@@ -4,9 +4,9 @@ use chrono::{TimeZone, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodScore;
 
-use super::DeleteMoodEntryService;
-use crate::commands::delete_mood_entry::{DeleteMoodEntry, DeleteMoodEntryHandler};
-use crate::ports::MoodEntryRepository;
+use super::DeleteMoodEntryCommandHandler;
+use crate::commands::delete_mood_entry::DeleteMoodEntryCommand;
+use crate::ports::{CommandHandler, MoodEntryRepository};
 use crate::test_support::{
     FailingMoodEntryRepository, FakeMoodEntryRepository, REPOSITORY_FAILURE,
 };
@@ -28,8 +28,8 @@ async fn seed(entries: &FakeMoodEntryRepository, user: i64) -> i64 {
         .id()
 }
 
-fn command(user: i64, entry_id: i64) -> DeleteMoodEntry {
-    DeleteMoodEntry {
+fn command(user: i64, entry_id: i64) -> DeleteMoodEntryCommand {
+    DeleteMoodEntryCommand {
         user_id: UserId::new(user),
         entry_id,
     }
@@ -40,7 +40,7 @@ async fn deletes_the_owners_entry() {
     let entries = Arc::new(FakeMoodEntryRepository::default());
     let id = seed(&entries, OWNER).await;
 
-    DeleteMoodEntryService::new(entries.clone())
+    DeleteMoodEntryCommandHandler::new(entries.clone())
         .handle(command(OWNER, id))
         .await
         .unwrap();
@@ -57,7 +57,7 @@ async fn another_users_entry_is_not_found_and_survives() {
     let entries = Arc::new(FakeMoodEntryRepository::default());
     let id = seed(&entries, OWNER).await;
 
-    let result = DeleteMoodEntryService::new(entries.clone())
+    let result = DeleteMoodEntryCommandHandler::new(entries.clone())
         .handle(command(OTHER_USER, id))
         .await;
 
@@ -77,7 +77,7 @@ async fn unknown_entry_is_not_found() {
     let entries = Arc::new(FakeMoodEntryRepository::default());
 
     assert_eq!(
-        DeleteMoodEntryService::new(entries)
+        DeleteMoodEntryCommandHandler::new(entries)
             .handle(command(OWNER, 99))
             .await,
         Err(ApplicationError::NotFound)
@@ -88,7 +88,7 @@ async fn unknown_entry_is_not_found() {
 async fn deleting_twice_reports_not_found_the_second_time() {
     let entries = Arc::new(FakeMoodEntryRepository::default());
     let id = seed(&entries, OWNER).await;
-    let service = DeleteMoodEntryService::new(entries);
+    let service = DeleteMoodEntryCommandHandler::new(entries);
 
     service.handle(command(OWNER, id)).await.unwrap();
 
@@ -100,7 +100,7 @@ async fn deleting_twice_reports_not_found_the_second_time() {
 
 #[tokio::test]
 async fn repository_failure_is_reported_as_a_repository_error() {
-    let service = DeleteMoodEntryService::new(Arc::new(FailingMoodEntryRepository));
+    let service = DeleteMoodEntryCommandHandler::new(Arc::new(FailingMoodEntryRepository));
 
     assert_eq!(
         service.handle(command(OWNER, 1)).await,

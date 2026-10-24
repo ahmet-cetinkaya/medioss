@@ -3,9 +3,9 @@ use std::sync::Arc;
 use chrono::{DateTime, TimeZone, Utc};
 use kernel::UserId;
 
-use super::CreateMoodEntryService;
-use crate::commands::create_mood_entry::{CreateMoodEntry, CreateMoodEntryHandler};
-use crate::ports::MoodEntryRepository;
+use super::CreateMoodEntryCommandHandler;
+use crate::commands::create_mood_entry::CreateMoodEntryCommand;
+use crate::ports::{CommandHandler, MoodEntryRepository};
 use crate::test_support::{
     FailingMoodEntryRepository, FakeMoodEntryRepository, FixedClock, REPOSITORY_FAILURE,
 };
@@ -15,16 +15,16 @@ fn now() -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 9, 29, 12, 0, 0).unwrap()
 }
 
-fn command(score: u8, note: Option<&str>) -> CreateMoodEntry {
-    CreateMoodEntry {
+fn command(score: u8, note: Option<&str>) -> CreateMoodEntryCommand {
+    CreateMoodEntryCommand {
         user_id: UserId::new(1),
         score,
         note: note.map(str::to_owned),
     }
 }
 
-fn service(entries: &Arc<FakeMoodEntryRepository>) -> CreateMoodEntryService {
-    CreateMoodEntryService::new(entries.clone(), Arc::new(FixedClock(now())))
+fn service(entries: &Arc<FakeMoodEntryRepository>) -> CreateMoodEntryCommandHandler {
+    CreateMoodEntryCommandHandler::new(entries.clone(), Arc::new(FixedClock(now())))
 }
 
 #[tokio::test]
@@ -112,7 +112,7 @@ async fn entries_belong_to_the_creating_user() {
 
 #[tokio::test]
 async fn repository_failure_is_reported_as_a_repository_error() {
-    let service = CreateMoodEntryService::new(
+    let service = CreateMoodEntryCommandHandler::new(
         Arc::new(FailingMoodEntryRepository),
         Arc::new(FixedClock(now())),
     );

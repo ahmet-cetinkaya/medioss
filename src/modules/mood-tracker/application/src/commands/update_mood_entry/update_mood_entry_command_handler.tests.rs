@@ -4,9 +4,9 @@ use chrono::{DateTime, TimeZone, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodScore;
 
-use super::UpdateMoodEntryService;
-use crate::commands::update_mood_entry::{UpdateMoodEntry, UpdateMoodEntryHandler};
-use crate::ports::MoodEntryRepository;
+use super::UpdateMoodEntryCommandHandler;
+use crate::commands::update_mood_entry::UpdateMoodEntryCommand;
+use crate::ports::{CommandHandler, MoodEntryRepository};
 use crate::test_support::{
     FailingMoodEntryRepository, FakeMoodEntryRepository, FixedClock, REPOSITORY_FAILURE,
 };
@@ -36,8 +36,8 @@ async fn seed(entries: &FakeMoodEntryRepository) -> i64 {
         .id()
 }
 
-fn command(user: i64, entry_id: i64, score: u8, note: Option<&str>) -> UpdateMoodEntry {
-    UpdateMoodEntry {
+fn command(user: i64, entry_id: i64, score: u8, note: Option<&str>) -> UpdateMoodEntryCommand {
+    UpdateMoodEntryCommand {
         user_id: UserId::new(user),
         entry_id,
         score,
@@ -45,8 +45,8 @@ fn command(user: i64, entry_id: i64, score: u8, note: Option<&str>) -> UpdateMoo
     }
 }
 
-fn service(entries: &Arc<FakeMoodEntryRepository>) -> UpdateMoodEntryService {
-    UpdateMoodEntryService::new(entries.clone(), Arc::new(FixedClock(edited_at())))
+fn service(entries: &Arc<FakeMoodEntryRepository>) -> UpdateMoodEntryCommandHandler {
+    UpdateMoodEntryCommandHandler::new(entries.clone(), Arc::new(FixedClock(edited_at())))
 }
 
 #[tokio::test]
@@ -135,7 +135,7 @@ async fn unknown_entry_is_not_found() {
 
 #[tokio::test]
 async fn repository_failure_is_reported_as_a_repository_error() {
-    let service = UpdateMoodEntryService::new(
+    let service = UpdateMoodEntryCommandHandler::new(
         Arc::new(FailingMoodEntryRepository),
         Arc::new(FixedClock(edited_at())),
     );

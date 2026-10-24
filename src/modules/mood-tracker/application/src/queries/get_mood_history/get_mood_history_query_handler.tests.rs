@@ -4,10 +4,10 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodScore;
 
-use super::GetMoodHistoryService;
+use super::GetMoodHistoryQueryHandler;
 use crate::models::MoodRange;
-use crate::ports::MoodEntryRepository;
-use crate::queries::get_mood_history::{GetMoodHistory, GetMoodHistoryHandler};
+use crate::ports::{MoodEntryRepository, QueryHandler};
+use crate::queries::get_mood_history::GetMoodHistoryQuery;
 use crate::test_support::{
     FailingMoodEntryRepository, FakeMoodEntryRepository, FixedClock, REPOSITORY_FAILURE,
 };
@@ -28,8 +28,8 @@ async fn seed(entries: &FakeMoodEntryRepository, user: i64, at: DateTime<Utc>) -
         .id()
 }
 
-fn query(range: MoodRange, limit: u16) -> GetMoodHistory {
-    GetMoodHistory {
+fn query(range: MoodRange, limit: u16) -> GetMoodHistoryQuery {
+    GetMoodHistoryQuery {
         user_id: UserId::new(USER),
         range,
         tz_offset_minutes: 0,
@@ -38,8 +38,8 @@ fn query(range: MoodRange, limit: u16) -> GetMoodHistory {
     }
 }
 
-fn service(entries: &Arc<FakeMoodEntryRepository>) -> GetMoodHistoryService {
-    GetMoodHistoryService::new(entries.clone(), Arc::new(FixedClock(now())))
+fn service(entries: &Arc<FakeMoodEntryRepository>) -> GetMoodHistoryQueryHandler {
+    GetMoodHistoryQueryHandler::new(entries.clone(), Arc::new(FixedClock(now())))
 }
 
 #[tokio::test]
@@ -191,7 +191,7 @@ async fn impossible_timezone_offset_is_rejected() {
 
 #[tokio::test]
 async fn repository_failure_is_reported_as_a_repository_error() {
-    let service = GetMoodHistoryService::new(
+    let service = GetMoodHistoryQueryHandler::new(
         Arc::new(FailingMoodEntryRepository),
         Arc::new(FixedClock(now())),
     );
