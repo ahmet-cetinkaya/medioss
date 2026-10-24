@@ -28,3 +28,7 @@ impl MemberRegistration {
         self.created_at
     }
 }
+
+#[cfg(test)]
+#[path = "member_registration.tests.rs"]
+mod tests;

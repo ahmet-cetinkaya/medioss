@@ -28,3 +28,7 @@ impl InitialAdminRegistration {
         self.created_at
     }
 }
+
+#[cfg(test)]
+#[path = "initial_admin_registration.tests.rs"]
+mod tests;

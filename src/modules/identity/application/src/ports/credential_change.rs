@@ -40,3 +40,7 @@ impl CredentialChange {
         self.expires_at
     }
 }
+
+#[cfg(test)]
+#[path = "credential_change.tests.rs"]
+mod tests;
