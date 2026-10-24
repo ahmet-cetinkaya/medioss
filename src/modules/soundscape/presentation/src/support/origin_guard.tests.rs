@@ -35,10 +35,20 @@ fn foreign_origin_is_forbidden() {
     );
 }
 
+/// Removes the variable on drop so a failing assertion cannot leak it.
+struct EnvVarGuard(&'static str);
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        std::env::remove_var(self.0);
+    }
+}
+
 // The only test that touches MEDIOSS_DEV_ORIGIN, so it cannot race.
 #[test]
 fn dev_origin_is_accepted_only_while_the_variable_is_set_and_non_empty() {
     let dev = "http://localhost:4321";
+    let _guard = EnvVarGuard("MEDIOSS_DEV_ORIGIN");
     std::env::set_var("MEDIOSS_DEV_ORIGIN", dev);
     let with_dev = origin(headers_with_origin(dev), EXPECTED);
     std::env::set_var("MEDIOSS_DEV_ORIGIN", "  ");
