@@ -8,8 +8,16 @@ use axum::{
 };
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use kernel::{Actor, Role, UserId};
+use std::sync::Arc as StdArc;
+
 use mood_tracker_application::{
-    ports::{MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource},
+    commands::create_mood_entry::CreateMoodEntryService,
+    commands::delete_mood_entry::DeleteMoodEntryService,
+    commands::update_mood_entry::UpdateMoodEntryService,
+    ports::{Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource},
+    queries::get_mood_history::MoodHistoryService,
+    queries::get_mood_statistics::GetMoodStatisticsService,
+    queries::get_timeline::GetTimelineService,
     test_support::{FakeMoodEntryRepository, FixedClock},
 };
 use serde::Deserialize;
@@ -35,20 +43,32 @@ struct TestApp {
 }
 
 fn app(events: Vec<MeditationTimelineEvent>) -> TestApp {
+    let entries: StdArc<dyn mood_tracker_application::ports::MoodEntryRepository> =
+        StdArc::new(FakeMoodEntryRepository::default());
+    let clock: StdArc<dyn Clock> = StdArc::new(FixedClock(
+        Utc.with_ymd_and_hms(2026, 10, 1, 0, 0, 0)
+            .single()
+            .expect("test instant"),
+    ));
+    let timeline_entries = entries.clone();
     let deps = MoodTrackerDependencies {
-        entries: Arc::new(FakeMoodEntryRepository::default()),
-        meditation: Arc::new(FakeMeditationTimelineSource(events)),
-        clock: Arc::new(FixedClock(
-            Utc.with_ymd_and_hms(2026, 10, 1, 0, 0, 0)
-                .single()
-                .expect("test instant"),
+        create: StdArc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
+        update: StdArc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
+        delete: StdArc::new(DeleteMoodEntryService::new(entries.clone())),
+        list_mood_entries: StdArc::new(MoodHistoryService::new(entries.clone())),
+        mood_statistics: StdArc::new(GetMoodStatisticsService::new(entries)),
+        timeline: StdArc::new(GetTimelineService::new(
+            timeline_entries.clone(),
+            StdArc::new(FakeMeditationTimelineSource(events)),
         )),
+        clock_now: clock,
         medioss_origin: Arc::new("http://localhost".to_owned()),
     };
     TestApp {
         router: mood_tracker_router().with_state(Arc::new(deps)),
     }
 }
+
 
 fn member_actor() -> Actor {
     Actor::new(UserId::new(1), Role::Member)
