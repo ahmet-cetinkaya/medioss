@@ -6,3 +6,7 @@ pub fn valid_content_type(content_type: &str) -> bool {
         "audio/ogg" | "audio/mpeg" | "audio/flac" | "audio/wav"
     )
 }
+
+#[cfg(test)]
+#[path = "valid_content_type.tests.rs"]
+mod tests;

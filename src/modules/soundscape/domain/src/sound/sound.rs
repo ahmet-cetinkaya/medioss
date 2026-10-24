@@ -59,3 +59,7 @@ impl Sound {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "sound.tests.rs"]
+mod tests;

@@ -22,3 +22,7 @@ pub(crate) fn attachment(name: &str, content_type: &str, body: Vec<u8>) -> Respo
     );
     response
 }
+
+#[cfg(test)]
+#[path = "responses.tests.rs"]
+mod tests;

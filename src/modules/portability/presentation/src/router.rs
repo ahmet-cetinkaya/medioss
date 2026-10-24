@@ -19,3 +19,7 @@ pub fn router() -> Router<SharedDependencies> {
     let router = crate::handlers::export_csv::register(router);
     crate::handlers::import::register(router)
 }
+
+#[cfg(test)]
+#[path = "router.tests.rs"]
+mod tests;
