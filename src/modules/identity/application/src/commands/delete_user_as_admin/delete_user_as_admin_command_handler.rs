@@ -1,19 +1,23 @@
 use std::sync::Arc;
 
-use super::delete_user_as_admin::DeleteUserAsAdmin;
-use super::delete_user_as_admin_handler::DeleteUserAsAdminHandler;
+use super::delete_user_as_admin_command::DeleteUserAsAdminCommand;
+use super::delete_user_as_admin_command_validator::DeleteUserAsAdminCommandValidator;
 use super::last_active_admin_guard::ensure_not_last_active_admin;
-use crate::ports::UserRepository;
+use crate::ports::{CommandHandler, UserRepository};
 use crate::ApplicationError;
 use kernel::Role;
 
-pub struct DeleteUserAsAdminService {
+pub struct DeleteUserAsAdminCommandHandler {
+    validator: DeleteUserAsAdminCommandValidator,
     repository: Arc<dyn UserRepository>,
 }
 
-impl DeleteUserAsAdminService {
+impl DeleteUserAsAdminCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
-        Self { repository }
+        Self {
+            validator: DeleteUserAsAdminCommandValidator::default(),
+            repository,
+        }
     }
 
     /// Runs every guard for an admin-initiated deletion without mutating
@@ -65,21 +69,16 @@ impl DeleteUserAsAdminService {
 }
 
 #[async_trait::async_trait]
-impl DeleteUserAsAdminHandler for DeleteUserAsAdminService {
-    async fn ensure_admin_can_delete_user(
-        &self,
-        actor: &kernel::Actor,
-        target: kernel::UserId,
-    ) -> Result<(), ApplicationError> {
-        DeleteUserAsAdminService::ensure_admin_can_delete_user(self, actor, target).await
-    }
+impl CommandHandler<DeleteUserAsAdminCommand> for DeleteUserAsAdminCommandHandler {
+    type Output = ();
 
-    async fn handle(&self, command: DeleteUserAsAdmin) -> Result<(), ApplicationError> {
+    async fn handle(&self, command: DeleteUserAsAdminCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         self.delete_user_as_admin(&command.actor, command.target)
             .await
     }
 }
 
 #[cfg(test)]
-#[path = "delete_user_as_admin_service.tests.rs"]
+#[path = "delete_user_as_admin_command_handler.tests.rs"]
 mod tests;

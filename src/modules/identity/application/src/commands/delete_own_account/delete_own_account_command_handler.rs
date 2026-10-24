@@ -1,18 +1,22 @@
 use std::sync::Arc;
 
-use super::delete_own_account::DeleteOwnAccount;
-use super::delete_own_account_handler::DeleteOwnAccountHandler;
+use super::delete_own_account_command::DeleteOwnAccountCommand;
+use super::delete_own_account_command_validator::DeleteOwnAccountCommandValidator;
 use crate::commands::delete_user_as_admin::last_active_admin_guard::ensure_not_last_active_admin;
-use crate::ports::UserRepository;
+use crate::ports::{CommandHandler, UserRepository};
 use crate::ApplicationError;
 
-pub struct DeleteOwnAccountService {
+pub struct DeleteOwnAccountCommandHandler {
+    validator: DeleteOwnAccountCommandValidator,
     repository: Arc<dyn UserRepository>,
 }
 
-impl DeleteOwnAccountService {
+impl DeleteOwnAccountCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
-        Self { repository }
+        Self {
+            validator: DeleteOwnAccountCommandValidator::default(),
+            repository,
+        }
     }
 
     /// Runs every guard for a self-deletion without mutating anything. The
@@ -56,19 +60,15 @@ impl DeleteOwnAccountService {
 }
 
 #[async_trait::async_trait]
-impl DeleteOwnAccountHandler for DeleteOwnAccountService {
-    async fn ensure_can_delete_own_account(
-        &self,
-        actor: &kernel::Actor,
-    ) -> Result<(), ApplicationError> {
-        DeleteOwnAccountService::ensure_can_delete_own_account(self, actor).await
-    }
+impl CommandHandler<DeleteOwnAccountCommand> for DeleteOwnAccountCommandHandler {
+    type Output = ();
 
-    async fn handle(&self, command: DeleteOwnAccount) -> Result<(), ApplicationError> {
+    async fn handle(&self, command: DeleteOwnAccountCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         self.delete_own_account(&command.actor).await
     }
 }
 
 #[cfg(test)]
-#[path = "delete_own_account_service.tests.rs"]
+#[path = "delete_own_account_command_handler.tests.rs"]
 mod tests;

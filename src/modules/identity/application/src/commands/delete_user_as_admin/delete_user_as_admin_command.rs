@@ -4,7 +4,7 @@ use kernel::{Actor, UserId};
 /// Callers must run the guard (and their purge step) before this; the
 /// guards run again here so the command stays safe when called directly.
 #[derive(Debug, Clone)]
-pub struct DeleteUserAsAdmin {
+pub struct DeleteUserAsAdminCommand {
     pub actor: Actor,
     pub target: UserId,
 }

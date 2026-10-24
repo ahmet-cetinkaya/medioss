@@ -4,7 +4,7 @@ use kernel::{Actor, UserId};
 /// always refused; disabling the last active admin is refused to keep the
 /// instance administrable.
 #[derive(Debug, Clone)]
-pub struct SetUserStatus {
+pub struct SetUserStatusCommand {
     pub actor: Actor,
     pub target: UserId,
     pub disabled: bool,

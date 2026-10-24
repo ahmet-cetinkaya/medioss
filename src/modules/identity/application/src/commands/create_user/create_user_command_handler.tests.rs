@@ -4,8 +4,9 @@ use chrono::TimeDelta;
 use identity_domain::Role;
 use kernel::Actor;
 
-use super::{CreateUser, CreateUserHandler, CreateUserService};
+use super::{CreateUserCommand, CreateUserCommandHandler};
 use crate::{
+    ports::CommandHandler as _,
     test_support::{block_on, email, password, FakeHasher, FakeRepository, FixedClock},
     ApplicationError,
 };
@@ -18,11 +19,13 @@ fn member_actor_is_forbidden_before_password_hashing() {
     let member = Actor::new(kernel::UserId::new(7), Role::Member);
 
     let result = block_on(
-        CreateUserService::new(repository.clone(), hasher.clone(), clock).handle(CreateUser {
-            actor: member,
-            email: email(),
-            temporary_password: password(),
-        }),
+        CreateUserCommandHandler::new(repository.clone(), hasher.clone(), clock).handle(
+            CreateUserCommand {
+                actor: member,
+                email: email(),
+                temporary_password: password(),
+            },
+        ),
     );
 
     assert_eq!(result, Err(ApplicationError::Forbidden));
@@ -38,11 +41,13 @@ fn admin_creates_a_member_with_temporary_credentials() {
     let admin = Actor::new(kernel::UserId::new(1), Role::Admin);
 
     let member = block_on(
-        CreateUserService::new(repository.clone(), hasher, clock.clone()).handle(CreateUser {
-            actor: admin,
-            email: email(),
-            temporary_password: password(),
-        }),
+        CreateUserCommandHandler::new(repository.clone(), hasher, clock.clone()).handle(
+            CreateUserCommand {
+                actor: admin,
+                email: email(),
+                temporary_password: password(),
+            },
+        ),
     )
     .unwrap();
 

@@ -1,24 +1,26 @@
 use std::sync::Arc;
 
-use super::create_user::CreateUser;
-use super::create_user_handler::CreateUserHandler;
-use crate::ports::{Clock, MemberRegistration, PasswordHasher, UserRepository};
+use super::create_user_command::CreateUserCommand;
+use super::create_user_command_validator::CreateUserCommandValidator;
+use crate::ports::{Clock, CommandHandler, MemberRegistration, PasswordHasher, UserRepository};
 use crate::ApplicationError;
-use identity_domain::{Role, User};
+use identity_domain::User;
 
-pub struct CreateUserService {
+pub struct CreateUserCommandHandler {
+    validator: CreateUserCommandValidator,
     repository: Arc<dyn UserRepository>,
     hasher: Arc<dyn PasswordHasher>,
     clock: Arc<dyn Clock>,
 }
 
-impl CreateUserService {
+impl CreateUserCommandHandler {
     pub fn new(
         repository: Arc<dyn UserRepository>,
         hasher: Arc<dyn PasswordHasher>,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
+            validator: CreateUserCommandValidator::default(),
             repository,
             hasher,
             clock,
@@ -27,11 +29,11 @@ impl CreateUserService {
 }
 
 #[async_trait::async_trait]
-impl CreateUserHandler for CreateUserService {
-    async fn handle(&self, command: CreateUser) -> Result<User, ApplicationError> {
-        if command.actor.role() != Role::Admin {
-            return Err(ApplicationError::Forbidden);
-        }
+impl CommandHandler<CreateUserCommand> for CreateUserCommandHandler {
+    type Output = User;
+
+    async fn handle(&self, command: CreateUserCommand) -> Result<User, ApplicationError> {
+        self.validator.validate(&command)?;
 
         let password_hash = self.hasher.hash(&command.temporary_password).await?;
         let registration = MemberRegistration::new(command.email, password_hash, self.clock.now());
@@ -44,5 +46,5 @@ impl CreateUserHandler for CreateUserService {
 }
 
 #[cfg(test)]
-#[path = "create_user_service.tests.rs"]
+#[path = "create_user_command_handler.tests.rs"]
 mod tests;

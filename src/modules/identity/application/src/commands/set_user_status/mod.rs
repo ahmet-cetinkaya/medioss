@@ -1,7 +1,7 @@
-mod set_user_status;
-mod set_user_status_handler;
-mod set_user_status_service;
+mod set_user_status_command;
+mod set_user_status_command_handler;
+mod set_user_status_command_validator;
 
-pub use set_user_status::SetUserStatus;
-pub use set_user_status_handler::SetUserStatusHandler;
-pub use set_user_status_service::SetUserStatusService;
+pub use set_user_status_command::SetUserStatusCommand;
+pub use set_user_status_command_handler::SetUserStatusCommandHandler;
+pub use set_user_status_command_validator::SetUserStatusCommandValidator;

@@ -1,30 +1,31 @@
 use std::sync::Arc;
 
-use super::set_user_status::SetUserStatus;
-use super::set_user_status_handler::SetUserStatusHandler;
-use crate::ports::UserRepository;
+use super::set_user_status_command::SetUserStatusCommand;
+use super::set_user_status_command_validator::SetUserStatusCommandValidator;
+use crate::ports::{CommandHandler, UserRepository};
 use crate::ApplicationError;
 use kernel::Role;
 
-pub struct SetUserStatusService {
+pub struct SetUserStatusCommandHandler {
+    validator: SetUserStatusCommandValidator,
     repository: Arc<dyn UserRepository>,
 }
 
-impl SetUserStatusService {
+impl SetUserStatusCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
-        Self { repository }
+        Self {
+            validator: SetUserStatusCommandValidator::default(),
+            repository,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl SetUserStatusHandler for SetUserStatusService {
-    async fn handle(&self, command: SetUserStatus) -> Result<(), ApplicationError> {
-        if command.actor.role() != Role::Admin {
-            return Err(ApplicationError::Forbidden);
-        }
-        if command.actor.user_id() == command.target && command.disabled {
-            return Err(ApplicationError::LastActiveAdmin);
-        }
+impl CommandHandler<SetUserStatusCommand> for SetUserStatusCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: SetUserStatusCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         let user = self
             .repository
             .find_by_id(command.target)
@@ -49,5 +50,5 @@ impl SetUserStatusHandler for SetUserStatusService {
 }
 
 #[cfg(test)]
-#[path = "set_user_status_service.tests.rs"]
+#[path = "set_user_status_command_handler.tests.rs"]
 mod tests;

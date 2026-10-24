@@ -5,6 +5,6 @@ use kernel::Actor;
 /// this; the guard runs again here so the command stays safe when called
 /// directly.
 #[derive(Debug, Clone)]
-pub struct DeleteOwnAccount {
+pub struct DeleteOwnAccountCommand {
     pub actor: Actor,
 }

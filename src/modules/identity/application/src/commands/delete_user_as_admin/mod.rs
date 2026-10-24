@@ -1,8 +1,8 @@
-mod delete_user_as_admin;
-mod delete_user_as_admin_handler;
-mod delete_user_as_admin_service;
+mod delete_user_as_admin_command;
+mod delete_user_as_admin_command_handler;
+mod delete_user_as_admin_command_validator;
 pub(crate) mod last_active_admin_guard;
 
-pub use delete_user_as_admin::DeleteUserAsAdmin;
-pub use delete_user_as_admin_handler::DeleteUserAsAdminHandler;
-pub use delete_user_as_admin_service::DeleteUserAsAdminService;
+pub use delete_user_as_admin_command::DeleteUserAsAdminCommand;
+pub use delete_user_as_admin_command_handler::DeleteUserAsAdminCommandHandler;
+pub use delete_user_as_admin_command_validator::DeleteUserAsAdminCommandValidator;

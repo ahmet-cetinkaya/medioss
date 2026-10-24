@@ -3,7 +3,8 @@ use kernel::{Actor, UserId};
 
 use std::sync::Arc;
 
-use super::{DeleteOwnAccount, DeleteOwnAccountHandler, DeleteOwnAccountService};
+use super::{DeleteOwnAccountCommand, DeleteOwnAccountCommandHandler};
+use crate::ports::CommandHandler as _;
 use crate::{
     ports::Clock as _,
     test_support::{block_on, FakeRepository, FixedClock},
@@ -74,8 +75,8 @@ async fn delete_own_account(
     repository: &Arc<FakeRepository>,
     actor: kernel::Actor,
 ) -> Result<(), ApplicationError> {
-    DeleteOwnAccountService::new(repository.clone())
-        .handle(DeleteOwnAccount { actor })
+    DeleteOwnAccountCommandHandler::new(repository.clone())
+        .handle(DeleteOwnAccountCommand { actor })
         .await
 }
 
@@ -83,7 +84,7 @@ async fn ensure_can_delete_own_account(
     repository: &Arc<FakeRepository>,
     actor: kernel::Actor,
 ) -> Result<(), ApplicationError> {
-    DeleteOwnAccountService::new(repository.clone())
+    DeleteOwnAccountCommandHandler::new(repository.clone())
         .ensure_can_delete_own_account(&actor)
         .await
 }
