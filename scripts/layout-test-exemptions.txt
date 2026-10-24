@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 21
+# count: 20
 src/apps/web-api/src/main.rs
 src/apps/web-api/src/operator.rs
 src/apps/web-api/src/router.rs
@@ -22,5 +22,4 @@ src/modules/portability/application/src/commands/import_own_data/import_own_data
 src/modules/portability/application/src/commands/import_own_data/meditation_index.rs
 src/modules/portability/application/src/commands/import_own_data/mood.rs
 src/modules/portability/application/src/commands/import_own_data/practice.rs
-src/modules/soundscape/presentation/src/test_support.rs
 src/shared/media-store/src/storage/media_stream.rs
