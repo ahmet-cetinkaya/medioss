@@ -8,15 +8,11 @@ use tower::ServiceExt;
 
 use meditation_application::{
     ports::ProgramRepository as _,
-    test_support::{
-        FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeMeditationRepository,
-        FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
-        FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
-    },
+    test_support::{FakeBlobStore, FakeProgramRepository, RepoState},
 };
 
 use super::helpers::*;
-use crate::{meditation_router, MeditationDependencies};
+use crate::meditation_router;
 
 #[tokio::test]
 async fn replacing_a_cover_removes_the_previous_blob() {
@@ -87,21 +83,8 @@ async fn cover_normalization_failures_keep_their_operational_statuses() {
     for (error, expected) in cases {
         let state = RepoState::new();
         let store = FakeBlobStore::new();
-        let deps = MeditationDependencies {
-            meditations: Arc::new(FakeMeditationRepository(state.clone())),
-            programs: Arc::new(FakeProgramRepository(state.clone())),
-            categories: Arc::new(FakeCategoryRepository(state.clone())),
-            memberships: Arc::new(FakeMembershipRepository(state.clone())),
-            notes: Arc::new(FakeNoteRepository(state.clone())),
-            playback: Arc::new(FakePlaybackRepository(state.clone())),
-            sessions: Arc::new(FakeSessionRepository(state.clone())),
-            validator: Arc::new(FakeValidator),
-            cover_validator: Arc::new(FailingCoverValidator(error)),
-            converter: Arc::new(FakeConverter { fail: false }),
-            store: Arc::new(store.clone()),
-            clock: Arc::new(FixedClock(chrono::Utc::now())),
-            medioss_origin: Arc::new("http://localhost".to_owned()),
-        };
+        let mut deps = test_dependencies(state.clone(), &store);
+        deps.cover_validator = Arc::new(FailingCoverValidator(error));
         let router = meditation_router().with_state(Arc::new(deps));
 
         let program_id = FakeProgramRepository(state.clone())

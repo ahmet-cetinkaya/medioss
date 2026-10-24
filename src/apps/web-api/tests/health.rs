@@ -51,7 +51,7 @@ async fn test_state() -> (AppState, TempDir) {
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.expect("session store migrations");
 
-    let meditation = web_api::meditation::meditation_dependencies(
+    let meditation_module = web_api::meditation::meditation_dependencies(
         connection.clone(),
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
@@ -71,9 +71,9 @@ async fn test_state() -> (AppState, TempDir) {
     );
     let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
         Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
-            meditation.notes.clone(),
-            meditation.playback.clone(),
-            meditation.sessions.clone(),
+            meditation_module.notes.clone(),
+            meditation_module.playback.clone(),
+            meditation_module.sessions.clone(),
             soundscape.mixes.clone(),
             mood_tracker_entries.clone(),
             std::path::PathBuf::from(&data_dir).join("media"),
@@ -81,7 +81,7 @@ async fn test_state() -> (AppState, TempDir) {
     let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
-        meditation,
+        meditation_module.shared,
         mood_tracker,
         soundscape,
         portability,

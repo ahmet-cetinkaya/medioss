@@ -159,7 +159,7 @@ async fn build_state(config: Config, database: Database) -> AppState {
     }
     let hasher = identity_infrastructure::BoundedArgon2PasswordHasher::new();
     let origin = || Arc::new(config.medioss_origin.clone());
-    let meditation = web_api::meditation::meditation_dependencies(
+    let meditation_module = web_api::meditation::meditation_dependencies(
         database.connection.clone(),
         &config.data_dir,
         origin(),
@@ -175,9 +175,9 @@ async fn build_state(config: Config, database: Database) -> AppState {
     );
     let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
         Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
-            Arc::clone(&meditation.notes),
-            Arc::clone(&meditation.playback),
-            Arc::clone(&meditation.sessions),
+            Arc::clone(&meditation_module.notes),
+            Arc::clone(&meditation_module.playback),
+            Arc::clone(&meditation_module.sessions),
             Arc::clone(&soundscape.mixes),
             Arc::clone(&mood_tracker_entries),
             config.data_dir.join("media").join("identity"),
@@ -188,7 +188,7 @@ async fn build_state(config: Config, database: Database) -> AppState {
     AppState::new(
         Arc::new(config),
         Arc::new(session_store),
-        meditation,
+        meditation_module.shared,
         mood_tracker,
         soundscape,
         portability,

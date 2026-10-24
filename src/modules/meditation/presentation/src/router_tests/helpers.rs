@@ -10,6 +10,37 @@ use axum::{
 use kernel::{Actor, Role, UserId};
 use tower::ServiceExt;
 
+use meditation_application::commands::add_member::AddMemberService;
+use meditation_application::commands::create_category::CreateCategoryService;
+use meditation_application::commands::create_note::CreateNoteService;
+use meditation_application::commands::create_program::CreateProgramService;
+use meditation_application::commands::delete_category::DeleteCategoryService;
+use meditation_application::commands::delete_meditation::DeleteMeditationService;
+use meditation_application::commands::delete_note::DeleteNoteService;
+use meditation_application::commands::delete_program::DeleteProgramService;
+use meditation_application::commands::record_completion::RecordCompletionService;
+use meditation_application::commands::record_position::RecordPositionService;
+use meditation_application::commands::remove_member::RemoveMemberService;
+use meditation_application::commands::rename_category::RenameCategoryService;
+use meditation_application::commands::set_completed::SetCompletedService;
+use meditation_application::commands::set_program_category::SetProgramCategoryService;
+use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionService;
+use meditation_application::commands::update_note::UpdateNoteService;
+use meditation_application::commands::update_program::UpdateProgramService;
+use meditation_application::commands::update_program_order::UpdateProgramOrderService;
+use meditation_application::commands::upload_meditation::UploadMeditationService;
+use meditation_application::queries::get_continue_program::GetContinueProgramService;
+use meditation_application::queries::get_daily_suggestion::GetDailySuggestionService;
+use meditation_application::queries::get_meditation::GetMeditationService;
+use meditation_application::queries::get_meditation_detail::GetMeditationDetailService;
+use meditation_application::queries::get_playback_state::GetPlaybackStateService;
+use meditation_application::queries::get_user_statistics::GetUserStatisticsService;
+use meditation_application::queries::list_categories::ListCategoriesService;
+use meditation_application::queries::list_library::ListLibraryService;
+use meditation_application::queries::list_notes::ListNotesService;
+use meditation_application::queries::list_program_members::ListProgramMembersService;
+use meditation_application::queries::list_programs::ListProgramsService;
+use meditation_application::queries::list_recent_programs::ListRecentProgramsService;
 use meditation_application::test_support::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
     FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
@@ -32,24 +63,164 @@ pub(super) struct TestApp {
     pub(super) store: FakeBlobStore,
 }
 
+/// Builds every use-case service over one shared fake-repo state, exactly
+/// the way web-api's composition root builds them over the SeaORM adapters.
+pub(super) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> MeditationDependencies {
+    let meditations: Arc<dyn meditation_application::ports::MeditationRepository> =
+        Arc::new(FakeMeditationRepository(state.clone()));
+    let programs: Arc<dyn meditation_application::ports::ProgramRepository> =
+        Arc::new(FakeProgramRepository(state.clone()));
+    let categories: Arc<dyn meditation_application::ports::CategoryRepository> =
+        Arc::new(FakeCategoryRepository(state.clone()));
+    let memberships: Arc<dyn meditation_application::ports::MembershipRepository> =
+        Arc::new(FakeMembershipRepository(state.clone()));
+    let notes: Arc<dyn meditation_application::ports::NoteRepository> =
+        Arc::new(FakeNoteRepository(state.clone()));
+    let playback: Arc<dyn meditation_application::ports::PlaybackStateRepository> =
+        Arc::new(FakePlaybackRepository(state.clone()));
+    let sessions: Arc<dyn meditation_application::ports::SessionRepository> =
+        Arc::new(FakeSessionRepository(state.clone()));
+    let validator: Arc<dyn meditation_application::ports::AudioValidator> = Arc::new(FakeValidator);
+    let cover_validator: Arc<dyn meditation_application::ports::CoverValidator> =
+        Arc::new(FakeCoverValidator);
+    let converter: Arc<dyn meditation_application::ports::OpusConverter> =
+        Arc::new(FakeConverter { fail: false });
+    let store_port: Arc<dyn meditation_application::ports::BlobStore> = Arc::new(store.clone());
+    let clock: Arc<dyn meditation_application::ports::Clock> =
+        Arc::new(FixedClock(chrono::Utc::now()));
+    MeditationDependencies {
+        create_category: Arc::new(CreateCategoryService::new(
+            categories.clone(),
+            clock.clone(),
+        )),
+        rename_category: Arc::new(RenameCategoryService::new(
+            categories.clone(),
+            clock.clone(),
+        )),
+        delete_category: Arc::new(DeleteCategoryService::new(
+            categories.clone(),
+            programs.clone(),
+        )),
+        set_program_category: Arc::new(SetProgramCategoryService::new(
+            programs.clone(),
+            categories.clone(),
+        )),
+        list_categories: Arc::new(ListCategoriesService::new(categories.clone())),
+        create_program: Arc::new(CreateProgramService::new(
+            programs.clone(),
+            cover_validator.clone(),
+            store_port.clone(),
+            clock.clone(),
+        )),
+        update_program: Arc::new(UpdateProgramService::new(programs.clone())),
+        delete_program: Arc::new(DeleteProgramService::new(
+            programs.clone(),
+            memberships.clone(),
+            meditations.clone(),
+            store_port.clone(),
+        )),
+        list_programs: Arc::new(ListProgramsService::new(programs.clone())),
+        list_program_members: Arc::new(ListProgramMembersService::new(memberships.clone())),
+        add_member: Arc::new(AddMemberService::new(
+            meditations.clone(),
+            programs.clone(),
+            memberships.clone(),
+            clock.clone(),
+        )),
+        remove_member: Arc::new(RemoveMemberService::new(
+            programs.clone(),
+            memberships.clone(),
+        )),
+        update_program_order: Arc::new(UpdateProgramOrderService::new(
+            programs.clone(),
+            memberships.clone(),
+        )),
+        upload_meditation: Arc::new(UploadMeditationService::new(
+            meditations.clone(),
+            memberships.clone(),
+            programs.clone(),
+            validator,
+            converter,
+            store_port.clone(),
+            clock.clone(),
+        )),
+        delete_meditation: Arc::new(DeleteMeditationService::new(
+            meditations.clone(),
+            memberships.clone(),
+            notes.clone(),
+            store_port.clone(),
+        )),
+        update_meditation_description: Arc::new(UpdateMeditationDescriptionService::new(
+            meditations.clone(),
+        )),
+        get_meditation: Arc::new(GetMeditationService::new(meditations.clone())),
+        get_meditation_detail: Arc::new(GetMeditationDetailService::new(
+            meditations.clone(),
+            memberships.clone(),
+            programs.clone(),
+        )),
+        get_daily_suggestion: Arc::new(GetDailySuggestionService::new(
+            meditations.clone(),
+            clock.clone(),
+            memberships.clone(),
+            programs.clone(),
+        )),
+        list_library: Arc::new(ListLibraryService::new(
+            meditations.clone(),
+            memberships.clone(),
+            programs.clone(),
+            categories,
+        )),
+        get_playback_state: Arc::new(GetPlaybackStateService::new(
+            meditations.clone(),
+            playback.clone(),
+        )),
+        record_position: Arc::new(RecordPositionService::new(
+            meditations.clone(),
+            playback.clone(),
+        )),
+        record_completion: Arc::new(RecordCompletionService::new(
+            meditations.clone(),
+            playback.clone(),
+            sessions.clone(),
+        )),
+        set_completed: Arc::new(SetCompletedService::new(
+            meditations.clone(),
+            playback.clone(),
+        )),
+        get_user_statistics: Arc::new(GetUserStatisticsService::new(sessions)),
+        create_note: Arc::new(CreateNoteService::new(
+            meditations.clone(),
+            notes.clone(),
+            clock.clone(),
+        )),
+        update_note: Arc::new(UpdateNoteService::new(notes.clone(), clock.clone())),
+        delete_note: Arc::new(DeleteNoteService::new(notes.clone())),
+        list_notes: Arc::new(ListNotesService::new(meditations, notes)),
+        get_continue_program: Arc::new(GetContinueProgramService::new(
+            playback.clone(),
+            memberships.clone(),
+            programs.clone(),
+        )),
+        list_recent_programs: Arc::new(ListRecentProgramsService::new(
+            playback.clone(),
+            memberships.clone(),
+            programs.clone(),
+        )),
+        programs,
+        memberships,
+        playback,
+        cover_validator,
+        store: store_port,
+        clock,
+        medioss_origin: Arc::new("http://localhost".to_owned()),
+    }
+}
+
 pub(super) fn app() -> TestApp {
     let state = RepoState::new();
     let store = FakeBlobStore::new();
-    let deps = MeditationDependencies {
-        meditations: Arc::new(FakeMeditationRepository(state.clone())),
-        programs: Arc::new(FakeProgramRepository(state.clone())),
-        categories: Arc::new(FakeCategoryRepository(state.clone())),
-        memberships: Arc::new(FakeMembershipRepository(state.clone())),
-        notes: Arc::new(FakeNoteRepository(state.clone())),
-        playback: Arc::new(FakePlaybackRepository(state.clone())),
-        sessions: Arc::new(FakeSessionRepository(state.clone())),
-        validator: Arc::new(FakeValidator),
-        cover_validator: Arc::new(FakeCoverValidator),
-        converter: Arc::new(FakeConverter { fail: false }),
-        store: Arc::new(store.clone()),
-        clock: Arc::new(FixedClock(chrono::Utc::now())),
-        medioss_origin: Arc::new("http://localhost".to_owned()),
-    };
+    let deps = test_dependencies(state.clone(), &store);
     TestApp {
         router: meditation_router().with_state(Arc::new(deps)),
         state,

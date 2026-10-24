@@ -2,9 +2,7 @@ use axum::{
     extract::{Query, State},
     Json,
 };
-use meditation_application::queries::get_user_statistics::{
-    GetUserStatistics, GetUserStatisticsHandler, GetUserStatisticsService, StatisticsRange,
-};
+use meditation_application::queries::get_user_statistics::{GetUserStatistics, StatisticsRange};
 use meditation_application::ApplicationError;
 use serde::{Deserialize, Serialize};
 
@@ -49,7 +47,8 @@ pub async fn statistics(
         )));
     }
     let now = deps.clock.now().await;
-    let statistics = GetUserStatisticsService::new(deps.sessions.clone())
+    let statistics = deps
+        .get_user_statistics
         .handle(GetUserStatistics {
             user_id: actor.user_id(),
             range,

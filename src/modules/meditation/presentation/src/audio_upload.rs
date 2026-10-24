@@ -5,9 +5,7 @@ use axum::{
     Json,
 };
 use meditation_application::commands;
-use meditation_application::commands::upload_meditation::{
-    UploadMeditation, UploadMeditationHandler, UploadMeditationService,
-};
+use meditation_application::commands::upload_meditation::UploadMeditation;
 
 use crate::meditation_response::{meditation_response, MeditationResponse};
 use crate::response::read_field_capped;
@@ -107,23 +105,15 @@ async fn persist_upload(
     deps: &SharedDependencies,
     upload: ValidUpload,
 ) -> Result<meditation_domain::Meditation, ApiError> {
-    UploadMeditationService::new(
-        deps.meditations.clone(),
-        deps.memberships.clone(),
-        deps.programs.clone(),
-        deps.validator.clone(),
-        deps.converter.clone(),
-        deps.store.clone(),
-        deps.clock.clone(),
-    )
-    .handle(UploadMeditation {
-        name: upload.name.clone(),
-        program_id: upload.program_id,
-        bytes: upload.bytes,
-        description: upload.description.clone(),
-    })
-    .await
-    .map_err(ApiError::Application)
+    deps.upload_meditation
+        .handle(UploadMeditation {
+            name: upload.name,
+            program_id: upload.program_id,
+            bytes: upload.bytes,
+            description: upload.description,
+        })
+        .await
+        .map_err(ApiError::Application)
 }
 
 /// Test-only seeding: bypasses HTTP and the router to place one stored

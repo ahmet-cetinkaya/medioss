@@ -5,21 +5,11 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::commands::create_category::{
-    CreateCategory, CreateCategoryHandler, CreateCategoryService,
-};
-use meditation_application::commands::delete_category::{
-    DeleteCategory, DeleteCategoryHandler, DeleteCategoryService,
-};
-use meditation_application::commands::rename_category::{
-    RenameCategory, RenameCategoryHandler, RenameCategoryService,
-};
-use meditation_application::commands::set_program_category::{
-    SetProgramCategory, SetProgramCategoryHandler, SetProgramCategoryService,
-};
-use meditation_application::queries::list_categories::{
-    ListCategories, ListCategoriesHandler, ListCategoriesService,
-};
+use meditation_application::commands::create_category::CreateCategory;
+use meditation_application::commands::delete_category::DeleteCategory;
+use meditation_application::commands::rename_category::RenameCategory;
+use meditation_application::commands::set_program_category::SetProgramCategory;
+use meditation_application::queries::list_categories::ListCategories;
 use serde::{Deserialize, Serialize};
 
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
@@ -45,7 +35,8 @@ pub async fn categories(
     CurrentActor(_actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Json<Vec<CategoryResponse>>, ApiError> {
-    let listed = ListCategoriesService::new(deps.categories.clone())
+    let listed = deps
+        .list_categories
         .handle(ListCategories)
         .await
         .map_err(ApiError::Application)?;
@@ -68,10 +59,9 @@ pub async fn create_category(
     Json(request): Json<CreateCategoryRequest>,
 ) -> Result<(StatusCode, Json<CategoryResponse>), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    let category = CreateCategoryService::new(deps.categories.clone(), deps.clock.clone())
-        .handle(CreateCategory {
-            name: request.name.clone(),
-        })
+    let category = deps
+        .create_category
+        .handle(CreateCategory { name: request.name })
         .await
         .map_err(ApiError::Application)?;
     Ok((
@@ -93,10 +83,10 @@ pub async fn rename_category(
     Json(request): Json<RenameCategoryRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    RenameCategoryService::new(deps.categories.clone(), deps.clock.clone())
+    deps.rename_category
         .handle(RenameCategory {
             category_id: id,
-            name: request.name.clone(),
+            name: request.name,
         })
         .await
         .map_err(ApiError::Application)?;
@@ -112,7 +102,7 @@ pub async fn delete_category(
     headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    DeleteCategoryService::new(deps.categories.clone(), deps.programs.clone())
+    deps.delete_category
         .handle(DeleteCategory { category_id: id })
         .await
         .map_err(ApiError::Application)?;
@@ -134,7 +124,7 @@ pub async fn assign_category(
     Json(request): Json<CategoryAssignmentRequest>,
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    SetProgramCategoryService::new(deps.programs.clone(), deps.categories.clone())
+    deps.set_program_category
         .handle(SetProgramCategory {
             program_id: id,
             category_id: request.category_id,
