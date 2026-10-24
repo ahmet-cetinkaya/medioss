@@ -40,3 +40,7 @@ pub fn identity_router() -> Router<SharedDependencies> {
         )
         .route("/identity/avatar/{id}", get(avatar_get))
 }
+
+#[cfg(test)]
+#[path = "router.tests.rs"]
+mod tests;

@@ -116,3 +116,7 @@ pub async fn me_delete(
     session.flush().await?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "users_lifecycle.tests.rs"]
+mod tests;

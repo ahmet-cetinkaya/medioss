@@ -147,3 +147,7 @@ pub async fn avatar_get(
     )
         .into_response())
 }
+
+#[cfg(test)]
+#[path = "profile.tests.rs"]
+mod tests;
