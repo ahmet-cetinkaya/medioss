@@ -10,3 +10,7 @@ pub(super) fn parse_rfc3339(value: &str) -> Result<DateTime<Utc>, RepositoryErro
 pub(super) fn to_rfc3339(value: &DateTime<Utc>) -> String {
     value.to_rfc3339()
 }
+
+#[cfg(test)]
+#[path = "timestamps.tests.rs"]
+mod tests;

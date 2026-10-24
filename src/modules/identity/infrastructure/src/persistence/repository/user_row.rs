@@ -87,3 +87,7 @@ pub(super) fn is_unique_violation(error: &sea_orm::DbErr) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+#[path = "user_row.tests.rs"]
+mod tests;
