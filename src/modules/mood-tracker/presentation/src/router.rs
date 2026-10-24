@@ -4,13 +4,13 @@ use axum::{
     routing::{get, put},
     Json, Router,
 };
-use mood_tracker_application::commands::create_mood_entry::CreateMoodEntry;
-use mood_tracker_application::commands::delete_mood_entry::DeleteMoodEntry;
-use mood_tracker_application::commands::update_mood_entry::UpdateMoodEntry;
+use mood_tracker_application::commands::create_mood_entry::CreateMoodEntryCommand;
+use mood_tracker_application::commands::delete_mood_entry::DeleteMoodEntryCommand;
+use mood_tracker_application::commands::update_mood_entry::UpdateMoodEntryCommand;
 use mood_tracker_application::models::MoodRange;
-use mood_tracker_application::queries::get_mood_history::GetMoodHistory;
-use mood_tracker_application::queries::get_mood_statistics::GetMoodStatistics;
-use mood_tracker_application::queries::get_timeline::{GetTimeline, TimelineKind};
+use mood_tracker_application::queries::get_mood_history::GetMoodHistoryQuery;
+use mood_tracker_application::queries::get_mood_statistics::GetMoodStatisticsQuery;
+use mood_tracker_application::queries::get_timeline::{GetTimelineQuery, TimelineKind};
 use mood_tracker_application::ApplicationError;
 use serde::{Deserialize, Serialize};
 
@@ -177,7 +177,7 @@ async fn create(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     Ok(Json(
         deps.create
-            .handle(CreateMoodEntry {
+            .handle(CreateMoodEntryCommand {
                 user_id: actor.user_id(),
                 score: body.score,
                 note: body.note,
@@ -197,7 +197,7 @@ async fn update(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     Ok(Json(
         deps.update
-            .handle(UpdateMoodEntry {
+            .handle(UpdateMoodEntryCommand {
                 user_id: actor.user_id(),
                 entry_id: id,
                 score: body.score,
@@ -216,7 +216,7 @@ async fn remove(
 ) -> Result<(), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.delete
-        .handle(DeleteMoodEntry {
+        .handle(DeleteMoodEntryCommand {
             user_id: actor.user_id(),
             entry_id: id,
         })
@@ -230,7 +230,7 @@ async fn list(
 ) -> Result<Json<HistoryResponse>, ApiError> {
     let page = deps
         .get_mood_history
-        .handle(GetMoodHistory {
+        .handle(GetMoodHistoryQuery {
             user_id: actor.user_id(),
             range: range(
                 query.range.as_deref(),
@@ -276,7 +276,7 @@ async fn statistics(
 ) -> Result<Json<StatisticsResponse>, ApiError> {
     let stats = deps
         .get_mood_statistics
-        .handle(GetMoodStatistics {
+        .handle(GetMoodStatisticsQuery {
             user_id: actor.user_id(),
             range: range(
                 query.range.as_deref(),
@@ -332,7 +332,7 @@ async fn timeline(
     let cursor = cursor(query.cursor.as_deref())?;
     let mut events = deps
         .get_timeline
-        .handle(GetTimeline {
+        .handle(GetTimelineQuery {
             user_id: actor.user_id(),
             range: range(
                 query.range.as_deref(),

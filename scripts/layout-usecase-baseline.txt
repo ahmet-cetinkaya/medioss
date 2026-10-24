@@ -1,13 +1,7 @@
 # Use-case folders not yet migrated to option D (<name>_command.rs, <name>_command_handler.rs,
 # <name>_command_validator.rs + tests; queries use _query). May only shrink: migrate, then delete the line.
 # Unlisted folders must already comply. Stale entries (folder migrated or gone) fail the check.
-# count: 10
-src/modules/mood-tracker/application/src/commands/create_mood_entry
-src/modules/mood-tracker/application/src/commands/delete_mood_entry
-src/modules/mood-tracker/application/src/commands/update_mood_entry
-src/modules/mood-tracker/application/src/queries/get_mood_history
-src/modules/mood-tracker/application/src/queries/get_mood_statistics
-src/modules/mood-tracker/application/src/queries/get_timeline
+# count: 4
 src/modules/portability/application/src/commands/import_own_data
 src/modules/portability/application/src/queries/export_mood_records
 src/modules/portability/application/src/queries/export_own_data

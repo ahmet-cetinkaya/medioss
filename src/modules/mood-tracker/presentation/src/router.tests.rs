@@ -11,15 +11,15 @@ use kernel::{Actor, Role, UserId};
 use std::sync::Arc as StdArc;
 
 use mood_tracker_application::{
-    commands::create_mood_entry::CreateMoodEntryService,
-    commands::delete_mood_entry::DeleteMoodEntryService,
-    commands::update_mood_entry::UpdateMoodEntryService,
+    commands::create_mood_entry::CreateMoodEntryCommandHandler,
+    commands::delete_mood_entry::DeleteMoodEntryCommandHandler,
+    commands::update_mood_entry::UpdateMoodEntryCommandHandler,
     ports::{
         Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
     },
-    queries::get_mood_history::GetMoodHistoryService,
-    queries::get_mood_statistics::GetMoodStatisticsService,
-    queries::get_timeline::GetTimelineService,
+    queries::get_mood_history::GetMoodHistoryQueryHandler,
+    queries::get_mood_statistics::GetMoodStatisticsQueryHandler,
+    queries::get_timeline::GetTimelineQueryHandler,
     test_support::{FakeMoodEntryRepository, FixedClock},
 };
 use serde::Deserialize;
@@ -55,12 +55,24 @@ fn app(events: Vec<MeditationTimelineEvent>) -> TestApp {
     ));
     let timeline_entries = entries.clone();
     let deps = MoodTrackerDependencies {
-        create: StdArc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
-        update: StdArc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
-        delete: StdArc::new(DeleteMoodEntryService::new(entries.clone())),
-        get_mood_history: StdArc::new(GetMoodHistoryService::new(entries.clone(), clock.clone())),
-        get_mood_statistics: StdArc::new(GetMoodStatisticsService::new(entries, clock.clone())),
-        get_timeline: StdArc::new(GetTimelineService::new(
+        create: StdArc::new(CreateMoodEntryCommandHandler::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        update: StdArc::new(UpdateMoodEntryCommandHandler::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        delete: StdArc::new(DeleteMoodEntryCommandHandler::new(entries.clone())),
+        get_mood_history: StdArc::new(GetMoodHistoryQueryHandler::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        get_mood_statistics: StdArc::new(GetMoodStatisticsQueryHandler::new(
+            entries,
+            clock.clone(),
+        )),
+        get_timeline: StdArc::new(GetTimelineQueryHandler::new(
             timeline_entries,
             StdArc::new(FakeMeditationTimelineSource(events)),
             clock,

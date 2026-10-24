@@ -7,16 +7,16 @@ use meditation_application::ports::{MeditationRepository, NoteRepository, Sessio
 use meditation_infrastructure::persistence::{
     SeaOrmMeditationRepository, SeaOrmNoteRepository, SeaOrmSessionRepository,
 };
-use mood_tracker_application::commands::create_mood_entry::CreateMoodEntryService;
-use mood_tracker_application::commands::delete_mood_entry::DeleteMoodEntryService;
-use mood_tracker_application::commands::update_mood_entry::UpdateMoodEntryService;
+use mood_tracker_application::commands::create_mood_entry::CreateMoodEntryCommandHandler;
+use mood_tracker_application::commands::delete_mood_entry::DeleteMoodEntryCommandHandler;
+use mood_tracker_application::commands::update_mood_entry::UpdateMoodEntryCommandHandler;
 use mood_tracker_application::ports::{
     Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
     MoodEntryRepository,
 };
-use mood_tracker_application::queries::get_mood_history::GetMoodHistoryService;
-use mood_tracker_application::queries::get_mood_statistics::GetMoodStatisticsService;
-use mood_tracker_application::queries::get_timeline::GetTimelineService;
+use mood_tracker_application::queries::get_mood_history::GetMoodHistoryQueryHandler;
+use mood_tracker_application::queries::get_mood_statistics::GetMoodStatisticsQueryHandler;
+use mood_tracker_application::queries::get_timeline::GetTimelineQueryHandler;
 use mood_tracker_infrastructure::persistence::SeaOrmMoodEntryRepository;
 use mood_tracker_presentation::{MoodTrackerDependencies, SharedDependencies};
 use sea_orm::DatabaseConnection;
@@ -97,15 +97,28 @@ pub fn mood_tracker_dependencies(
     let entries: Arc<dyn MoodEntryRepository> =
         Arc::new(SeaOrmMoodEntryRepository::new(db.clone()));
     let deps = Arc::new(MoodTrackerDependencies {
-        create: Arc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
-        update: Arc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
-        delete: Arc::new(DeleteMoodEntryService::new(entries.clone())),
-        get_mood_history: Arc::new(GetMoodHistoryService::new(entries.clone(), clock.clone())),
-        get_mood_statistics: Arc::new(GetMoodStatisticsService::new(
+        create: Arc::new(CreateMoodEntryCommandHandler::new(
             entries.clone(),
             clock.clone(),
         )),
-        get_timeline: Arc::new(GetTimelineService::new(entries.clone(), meditation, clock)),
+        update: Arc::new(UpdateMoodEntryCommandHandler::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        delete: Arc::new(DeleteMoodEntryCommandHandler::new(entries.clone())),
+        get_mood_history: Arc::new(GetMoodHistoryQueryHandler::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        get_mood_statistics: Arc::new(GetMoodStatisticsQueryHandler::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        get_timeline: Arc::new(GetTimelineQueryHandler::new(
+            entries.clone(),
+            meditation,
+            clock,
+        )),
         medioss_origin,
     });
     (deps, entries)
