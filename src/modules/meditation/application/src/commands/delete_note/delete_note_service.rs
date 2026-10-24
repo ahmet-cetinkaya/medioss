@@ -35,3 +35,7 @@ impl DeleteNoteHandler for DeleteNoteService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "delete_note_service.tests.rs"]
+mod tests;

@@ -42,3 +42,7 @@ impl RemoveMemberHandler for RemoveMemberService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "remove_member_service.tests.rs"]
+mod tests;

@@ -12,3 +12,7 @@ pub(crate) async fn load_meditation(
         .map_err(ApplicationError::Repository)?
         .ok_or(ApplicationError::NotFound)
 }
+
+#[cfg(test)]
+#[path = "load_meditation.tests.rs"]
+mod tests;

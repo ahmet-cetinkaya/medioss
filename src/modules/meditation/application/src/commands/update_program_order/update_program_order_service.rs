@@ -56,3 +56,7 @@ impl UpdateProgramOrderHandler for UpdateProgramOrderService {
             .map_err(ApplicationError::Repository)
     }
 }
+
+#[cfg(test)]
+#[path = "update_program_order_service.tests.rs"]
+mod tests;

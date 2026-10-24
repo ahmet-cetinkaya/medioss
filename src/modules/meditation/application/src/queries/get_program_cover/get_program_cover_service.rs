@@ -52,3 +52,7 @@ impl GetProgramCoverHandler for GetProgramCoverService {
         }))
     }
 }
+
+#[cfg(test)]
+#[path = "get_program_cover_service.tests.rs"]
+mod tests;

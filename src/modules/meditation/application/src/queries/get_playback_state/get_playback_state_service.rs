@@ -44,3 +44,7 @@ impl GetPlaybackStateHandler for GetPlaybackStateService {
             }))
     }
 }
+
+#[cfg(test)]
+#[path = "get_playback_state_service.tests.rs"]
+mod tests;

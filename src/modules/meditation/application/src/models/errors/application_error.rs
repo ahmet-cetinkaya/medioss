@@ -40,3 +40,7 @@ impl From<CoverNormalizationError> for ApplicationError {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "application_error.tests.rs"]
+mod tests;

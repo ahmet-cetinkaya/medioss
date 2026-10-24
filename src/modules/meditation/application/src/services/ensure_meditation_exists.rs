@@ -15,3 +15,7 @@ pub(crate) async fn ensure_meditation_exists(
         Err(ApplicationError::NotFound)
     }
 }
+
+#[cfg(test)]
+#[path = "ensure_meditation_exists.tests.rs"]
+mod tests;

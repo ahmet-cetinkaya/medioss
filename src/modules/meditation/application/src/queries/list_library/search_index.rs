@@ -86,3 +86,7 @@ impl SearchIndex {
         haystack
     }
 }
+
+#[cfg(test)]
+#[path = "search_index.tests.rs"]
+mod tests;

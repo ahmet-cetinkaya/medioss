@@ -24,3 +24,7 @@ impl GetMeditationHandler for GetMeditationService {
         load_meditation(self.meditations.as_ref(), query.meditation_id).await
     }
 }
+
+#[cfg(test)]
+#[path = "get_meditation_service.tests.rs"]
+mod tests;
