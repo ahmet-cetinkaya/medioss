@@ -47,7 +47,7 @@ impl LoginAdmission for NullAdmission {
     }
 }
 
-pub(crate) struct RecordingAvatarStore {
+pub(super) struct RecordingAvatarStore {
     pub(super) normalize_result: std::sync::Mutex<
         Result<(Vec<u8>, &'static str), identity_application::ports::AvatarStoreError>,
     >,

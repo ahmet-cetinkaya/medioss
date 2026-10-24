@@ -5,7 +5,7 @@ use axum::{
 use kernel::Role;
 use tower::ServiceExt;
 
-use crate::router_tests::helpers::*;
+use crate::router_tests::*;
 use crate::users_lifecycle::UserDeletionListener;
 
 fn actor_request(method: &str, path: &str, role: Role, disabled: bool) -> Request<Body> {
@@ -16,7 +16,9 @@ fn actor_request(method: &str, path: &str, role: Role, disabled: bool) -> Reques
         .header("content-type", "application/json")
         .body(Body::from(format!(r#"{{"disabled":{disabled}}}"#)))
         .unwrap();
-    request.extensions_mut().insert(kernel::Actor::new(kernel::UserId::new(1), role));
+    request
+        .extensions_mut()
+        .insert(kernel::Actor::new(kernel::UserId::new(1), role));
     request
 }
 
@@ -29,13 +31,23 @@ async fn status_changes_require_an_admin_actor() {
 
     let member_response = router
         .clone()
-        .oneshot(actor_request("PATCH", "/identity/users/2/status", Role::Member, true))
+        .oneshot(actor_request(
+            "PATCH",
+            "/identity/users/2/status",
+            Role::Member,
+            true,
+        ))
         .await
         .unwrap();
     assert_eq!(member_response.status(), StatusCode::FORBIDDEN);
 
     let admin_response = router
-        .oneshot(actor_request("PATCH", "/identity/users/2/status", Role::Admin, true))
+        .oneshot(actor_request(
+            "PATCH",
+            "/identity/users/2/status",
+            Role::Admin,
+            true,
+        ))
         .await
         .unwrap();
     assert_eq!(admin_response.status(), StatusCode::NO_CONTENT);
@@ -91,7 +103,10 @@ async fn admin_delete_of_the_last_active_admin_is_rejected() {
 async fn noop_deletion_listener_confirms_nothing_to_do() {
     let listener = crate::users_lifecycle::NoUserDeletion;
 
-    assert_eq!(listener.on_user_deleted(kernel::UserId::new(3)).await, Ok(()));
+    assert_eq!(
+        listener.on_user_deleted(kernel::UserId::new(3)).await,
+        Ok(())
+    );
 }
 
 #[tokio::test]

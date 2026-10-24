@@ -1,6 +1,15 @@
+use std::sync::{Mutex, MutexGuard, OnceLock};
+
 use axum::http::HeaderMap;
 
 use super::{constant_time_eq, ensure_browser_origin, ensure_setup_secret};
+
+/// MEDIOSS_DEV_ORIGIN is process-global; parallel tests that set it race,
+/// so every test touching it holds this lock for its whole body.
+fn dev_origin_lock() -> MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+}
 
 fn headers_with_origin(origin: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -33,6 +42,7 @@ fn missing_or_mismatched_origin_is_rejected() {
 
 #[test]
 fn dev_origin_env_extends_the_allowed_set() {
+    let _env = dev_origin_lock();
     let headers = headers_with_origin("http://localhost:4321");
     std::env::set_var("MEDIOSS_DEV_ORIGIN", "http://localhost:4321");
 
@@ -44,6 +54,7 @@ fn dev_origin_env_extends_the_allowed_set() {
 
 #[test]
 fn empty_dev_origin_env_stays_single_origin() {
+    let _env = dev_origin_lock();
     let headers = headers_with_origin("http://localhost:4321");
     std::env::set_var("MEDIOSS_DEV_ORIGIN", "   ");
 

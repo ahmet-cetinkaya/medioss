@@ -5,7 +5,7 @@ use axum::{
 use kernel::Role;
 use tower::ServiceExt;
 
-use crate::router_tests::helpers::*;
+use crate::router_tests::*;
 use crate::Principal;
 
 fn json_request(method: &str, path: &str, body: &str) -> Request<Body> {
@@ -25,7 +25,9 @@ async fn setup_status_is_public_and_answers_the_flag() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let status: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(status["setup_required"], true);
 
@@ -34,7 +36,9 @@ async fn setup_status_is_public_and_answers_the_flag() {
         .oneshot(json_request("GET", "/identity/setup-status", ""))
         .await
         .unwrap();
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let status: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(status["setup_required"], false);
 }
@@ -46,10 +50,9 @@ async fn setup_rejects_wrong_setup_secret_even_with_a_matching_origin() {
         "/identity/setup",
         r#"{"email":"root@example.com","password":"long-enough"}"#,
     );
-    request.headers_mut().insert(
-        "x-setup-secret",
-        "wrong-secret".parse().unwrap(),
-    );
+    request
+        .headers_mut()
+        .insert("x-setup-secret", "wrong-secret".parse().unwrap());
 
     let response = app().oneshot(request).await.unwrap();
 
@@ -60,7 +63,9 @@ async fn setup_rejects_wrong_setup_secret_even_with_a_matching_origin() {
 async fn setup_without_origin_is_forbidden() {
     let request = Request::post("/identity/setup")
         .header("content-type", "application/json")
-        .body(Body::from(r#"{"email":"root@example.com","password":"long-enough"}"#))
+        .body(Body::from(
+            r#"{"email":"root@example.com","password":"long-enough"}"#,
+        ))
         .unwrap();
 
     let response = app().oneshot(request).await.unwrap();
@@ -84,7 +89,9 @@ async fn me_reports_the_principal_snapshot_without_a_repository_hit() {
     let response = app().oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let me: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(me["id"], 9);
     assert_eq!(me["email"], "snapshot@medioss.test");
@@ -139,7 +146,11 @@ async fn login_rejects_unparsable_credentials() {
     let router = seeded_app(vec![]);
 
     let response = router
-        .oneshot(json_request("POST", "/identity/login", r#"{"email":"not-an-email","password":"x"}"#))
+        .oneshot(json_request(
+            "POST",
+            "/identity/login",
+            r#"{"email":"not-an-email","password":"x"}"#,
+        ))
         .await
         .unwrap();
 

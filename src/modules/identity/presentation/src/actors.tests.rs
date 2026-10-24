@@ -6,9 +6,7 @@ use kernel::{Actor, Role};
 use super::{AdminActor, CurrentActor, CurrentPrincipal, Principal};
 
 fn parts_with(value: Option<Actor>, principal: Option<Principal>) -> Parts {
-    let mut request = axum::http::Request::builder()
-        .body(())
-        .unwrap();
+    let mut request = axum::http::Request::builder().body(()).unwrap();
     if let Some(actor) = value {
         request.extensions_mut().insert(actor);
     }

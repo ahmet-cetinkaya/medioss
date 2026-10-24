@@ -6,7 +6,7 @@ use kernel::Role;
 use tower::ServiceExt;
 
 use super::MAX_AVATAR_BYTES;
-use crate::router_tests::helpers::*;
+use crate::router_tests::*;
 
 fn request_with_actor(method: axum::http::Method, path: &str) -> axum::http::Request<Body> {
     let mut request = Request::builder()
@@ -41,11 +41,8 @@ async fn profile_patch_without_origin_is_forbidden_before_any_write() {
 #[tokio::test]
 async fn profile_patch_for_an_unknown_actor_fails_unauthorized() {
     let router = seeded_app(vec![]);
-    let mut request = Request::patch("/identity/me/profile")
-        .header("origin", "https://medioss.example")
-        .header("content-type", "application/json")
-        .body(Body::from(r#"{"display_name":"Ada"}"#))
-        .unwrap();
+    let mut request = request_with_actor(axum::http::Method::PATCH, "/identity/me/profile");
+    *request.body_mut() = Body::from(r#"{"display_name":"Ada"}"#);
     request
         .extensions_mut()
         .insert(kernel::Actor::new(kernel::UserId::new(77), Role::Member));
@@ -74,7 +71,9 @@ async fn avatar_put_without_origin_is_forbidden_before_reading_the_body() {
 #[tokio::test]
 async fn avatar_delete_without_origin_is_forbidden() {
     let router = seeded_app(vec![user(1, "member@example.com", Role::Member)]);
-    let mut request = Request::delete("/identity/me/avatar").body(Body::empty()).unwrap();
+    let mut request = Request::delete("/identity/me/avatar")
+        .body(Body::empty())
+        .unwrap();
     request
         .extensions_mut()
         .insert(kernel::Actor::new(kernel::UserId::new(1), Role::Member));

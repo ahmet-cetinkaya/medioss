@@ -22,9 +22,10 @@ fn role_names_are_the_wire_values() {
 
 #[test]
 fn user_response_never_exposes_the_password_hash() {
-    let response = user_response(&user(Role::Admin).with_display_name(
-        Some(identity_domain::DisplayName::parse("Ahmet").unwrap()),
-    ));
+    let response = user_response(
+        &user(Role::Admin)
+            .with_display_name(Some(identity_domain::DisplayName::parse("Ahmet").unwrap())),
+    );
 
     assert_eq!(response.id, 11);
     assert_eq!(response.email, "shown@medioss.test");
@@ -32,7 +33,9 @@ fn user_response_never_exposes_the_password_hash() {
     assert_eq!(response.display_name, Some("Ahmet".to_owned()));
     assert!(!response.must_change_password);
     assert!(!response.has_avatar);
-    assert!(!serde_json::to_string(&response).unwrap().contains("hash-11"));
+    assert!(!serde_json::to_string(&response)
+        .unwrap()
+        .contains("hash-11"));
 }
 
 #[test]

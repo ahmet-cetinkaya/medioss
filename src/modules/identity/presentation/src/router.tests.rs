@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use tower::ServiceExt;
 
 use crate::identity_router;
-use crate::router_tests::helpers::{
+use crate::router_tests::{
     dependencies, NullAdmission, NullAvatarStore, NullClock, NullHasher, SeededRepository,
 };
 
@@ -69,7 +69,10 @@ async fn all_documented_routes_resolve() {
 
 #[tokio::test]
 async fn unknown_routes_are_not_found() {
-    assert_eq!(status_of("GET", "/identity/nope").await, StatusCode::NOT_FOUND);
+    assert_eq!(
+        status_of("GET", "/identity/nope").await,
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
