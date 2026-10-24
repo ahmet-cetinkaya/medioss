@@ -166,19 +166,28 @@ async fn missing_audio_file_is_an_io_error() {
     assert!(matches!(error, super::SeedError::Io(_)));
 }
 
+/// Removes the variable on drop so a failing assertion cannot leak it.
+struct EnvVarGuard(&'static str);
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        std::env::remove_var(self.0);
+    }
+}
+
 // The only test that touches MEDIOSS_BUILTIN_SOUNDS_DIR, so it cannot race.
 #[tokio::test]
 async fn seed_if_present_uses_the_env_dir_and_reports_whether_it_seeded() {
     let db = TestDatabase::open().await;
     let media = tempfile::tempdir().unwrap();
     let empty = tempfile::tempdir().unwrap();
+    let _guard = EnvVarGuard("MEDIOSS_BUILTIN_SOUNDS_DIR");
     std::env::set_var("MEDIOSS_BUILTIN_SOUNDS_DIR", empty.path());
     assert!(!seed_if_present(&db.connection, media.path()).await.unwrap());
 
     let dir = builtin_dir();
     std::env::set_var("MEDIOSS_BUILTIN_SOUNDS_DIR", dir.path());
     let seeded = seed_if_present(&db.connection, media.path()).await.unwrap();
-    std::env::remove_var("MEDIOSS_BUILTIN_SOUNDS_DIR");
 
     assert!(seeded);
     assert_eq!(db.scalar("SELECT COUNT(*) FROM soundscape_sounds").await, 2);

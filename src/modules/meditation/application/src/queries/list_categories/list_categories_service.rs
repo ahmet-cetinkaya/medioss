@@ -26,3 +26,7 @@ impl ListCategoriesHandler for ListCategoriesService {
             .map_err(ApplicationError::Repository)
     }
 }
+
+#[cfg(test)]
+#[path = "list_categories_service.tests.rs"]
+mod tests;

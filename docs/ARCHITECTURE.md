@@ -498,3 +498,5 @@ Exempt means not covered by name, not necessarily untested. The exemption file a
 Residual gaps are review-enforced, not machine-enforced: an assertion token inside a string literal or comment-free dead code still satisfies the floor, the assertion check is file-wide rather than per test, and `# count` and `EXEMPTION_CEILING` can be edited together in one diff. Reviewers reject any diff that raises either number.
 
 Two kinds are exempt by kind instead of by listing, because they are provably logic-free. (A) Files in a `router_tests/` directory declared by name from its `mod.rs`, when `lib.rs` gates `router_tests` with a literal `#[cfg(test)]`. (B) SeaORM entity files under `persistence/entities/` or named `entity.rs` with no `fn`, no `macro_rules!` and no `impl` other than `impl ActiveModelBehavior for ActiveModel {}`. A listed file that matches a kind fails as a stale exemption.
+
+Environment variables read by code under test are set by exactly one test each, through a drop guard that removes the variable even when an assertion fails; tests that share a variable race because the test harness runs them in parallel.

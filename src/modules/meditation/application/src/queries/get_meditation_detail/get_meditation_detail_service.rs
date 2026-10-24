@@ -59,3 +59,7 @@ impl GetMeditationDetailHandler for GetMeditationDetailService {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "get_meditation_detail_service.tests.rs"]
+mod tests;

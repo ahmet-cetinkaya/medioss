@@ -49,3 +49,7 @@ impl AddMemberHandler for AddMemberService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "add_member_service.tests.rs"]
+mod tests;

@@ -46,3 +46,7 @@ impl UpdateProgramHandler for UpdateProgramService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "update_program_service.tests.rs"]
+mod tests;

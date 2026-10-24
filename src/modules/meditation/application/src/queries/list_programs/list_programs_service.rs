@@ -26,3 +26,7 @@ impl ListProgramsHandler for ListProgramsService {
             .map_err(ApplicationError::Repository)
     }
 }
+
+#[cfg(test)]
+#[path = "list_programs_service.tests.rs"]
+mod tests;

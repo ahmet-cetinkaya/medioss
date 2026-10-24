@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 97
+# count: 77
 src/apps/web-api/src/config/session_secret.rs
 src/apps/web-api/src/image_normalization/vp8l_preflight.rs
 src/apps/web-api/src/image_normalization/webp_preflight.rs
@@ -33,26 +33,6 @@ src/modules/identity/presentation/src/router.rs
 src/modules/identity/presentation/src/user_admin.rs
 src/modules/identity/presentation/src/user_response.rs
 src/modules/identity/presentation/src/users_lifecycle.rs
-src/modules/meditation/application/src/commands/add_member/add_member_service.rs
-src/modules/meditation/application/src/commands/delete_note/delete_note_service.rs
-src/modules/meditation/application/src/commands/remove_member/remove_member_service.rs
-src/modules/meditation/application/src/commands/replace_program_cover/replace_program_cover_service.rs
-src/modules/meditation/application/src/commands/set_program_category/set_program_category_service.rs
-src/modules/meditation/application/src/commands/update_note/update_note_service.rs
-src/modules/meditation/application/src/commands/update_program_order/update_program_order_service.rs
-src/modules/meditation/application/src/commands/update_program/update_program_service.rs
-src/modules/meditation/application/src/models/errors/application_error.rs
-src/modules/meditation/application/src/queries/get_meditation_detail/get_meditation_detail_service.rs
-src/modules/meditation/application/src/queries/get_meditation/get_meditation_service.rs
-src/modules/meditation/application/src/queries/get_playback_state/get_playback_state_service.rs
-src/modules/meditation/application/src/queries/get_program_cover/get_program_cover_service.rs
-src/modules/meditation/application/src/queries/list_categories/list_categories_service.rs
-src/modules/meditation/application/src/queries/list_library/search_index.rs
-src/modules/meditation/application/src/queries/list_notes/list_notes_service.rs
-src/modules/meditation/application/src/queries/list_program_members/list_program_members_service.rs
-src/modules/meditation/application/src/queries/list_programs/list_programs_service.rs
-src/modules/meditation/application/src/services/ensure_meditation_exists.rs
-src/modules/meditation/application/src/services/load_meditation.rs
 src/modules/meditation/infrastructure/src/persistence/category_repository.rs
 src/modules/meditation/infrastructure/src/persistence/clock.rs
 src/modules/meditation/infrastructure/src/persistence/meditation_repository.rs

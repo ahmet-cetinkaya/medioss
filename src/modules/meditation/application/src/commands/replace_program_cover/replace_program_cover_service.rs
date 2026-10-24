@@ -43,3 +43,7 @@ impl ReplaceProgramCoverHandler for ReplaceProgramCoverService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "replace_program_cover_service.tests.rs"]
+mod tests;

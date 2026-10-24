@@ -51,3 +51,7 @@ impl UpdateNoteHandler for UpdateNoteService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "update_note_service.tests.rs"]
+mod tests;

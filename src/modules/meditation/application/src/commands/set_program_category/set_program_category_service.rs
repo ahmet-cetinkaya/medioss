@@ -49,3 +49,7 @@ impl SetProgramCategoryHandler for SetProgramCategoryService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "set_program_category_service.tests.rs"]
+mod tests;
