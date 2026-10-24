@@ -1,10 +1,17 @@
 use chrono::{TimeZone, Utc};
 use kernel::UserId;
 
-use crate::commands::create_mood_entry::{CreateMoodEntry, CreateMoodEntryHandler, CreateMoodEntryService};
-use crate::commands::update_mood_entry::{UpdateMoodEntry, UpdateMoodEntryHandler, UpdateMoodEntryService};
+use crate::commands::create_mood_entry::{
+    CreateMoodEntry, CreateMoodEntryHandler, CreateMoodEntryService,
+};
+use crate::commands::update_mood_entry::{
+    UpdateMoodEntry, UpdateMoodEntryHandler, UpdateMoodEntryService,
+};
+use crate::models::{MoodRange, MAX_CUSTOM_RANGE_DAYS};
 use crate::ports::MoodEntryRepository;
-use crate::queries::get_mood_statistics::{GetMoodStatistics, GetMoodStatisticsHandler, GetMoodStatisticsService, MoodRange, MAX_CUSTOM_RANGE_DAYS};
+use crate::queries::get_mood_statistics::{
+    GetMoodStatistics, GetMoodStatisticsHandler, GetMoodStatisticsService,
+};
 use crate::test_support::{FakeMoodEntryRepository, FixedClock};
 use std::sync::Arc;
 
@@ -46,12 +53,11 @@ async fn entries_are_normalized_and_analytics_use_daily_means() {
         .unwrap();
 
     assert_eq!(updated.recorded_at(), first.recorded_at());
-    let statistics = GetMoodStatisticsService::new(entries.clone())
+    let statistics = GetMoodStatisticsService::new(entries.clone(), Arc::new(FixedClock(now)))
         .handle(GetMoodStatistics {
             user_id: user(),
             range: MoodRange::AllTime,
             tz_offset_minutes: 0,
-            now,
         })
         .await
         .unwrap();
@@ -127,12 +133,11 @@ async fn custom_range_includes_both_end_dates_and_nothing_outside() {
     }
     let range = MoodRange::custom(day(2026, 9, 10), day(2026, 9, 20)).unwrap();
 
-    let statistics = GetMoodStatisticsService::new(entries.clone())
+    let statistics = GetMoodStatisticsService::new(entries.clone(), Arc::new(FixedClock(now)))
         .handle(GetMoodStatistics {
             user_id: user(),
             range,
             tz_offset_minutes: 0,
-            now,
         })
         .await
         .unwrap();
@@ -156,12 +161,11 @@ async fn custom_range_never_reaches_past_today() {
         .unwrap();
     let range = MoodRange::custom(day(2026, 9, 28), day(2026, 10, 15)).unwrap();
 
-    let statistics = GetMoodStatisticsService::new(entries.clone())
+    let statistics = GetMoodStatisticsService::new(entries.clone(), Arc::new(FixedClock(now)))
         .handle(GetMoodStatistics {
             user_id: user(),
             range,
             tz_offset_minutes: 0,
-            now,
         })
         .await
         .unwrap();

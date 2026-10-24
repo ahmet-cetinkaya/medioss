@@ -14,7 +14,9 @@ use mood_tracker_application::{
     commands::create_mood_entry::CreateMoodEntryService,
     commands::delete_mood_entry::DeleteMoodEntryService,
     commands::update_mood_entry::UpdateMoodEntryService,
-    ports::{Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource},
+    ports::{
+        Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
+    },
     queries::get_mood_history::MoodHistoryService,
     queries::get_mood_statistics::GetMoodStatisticsService,
     queries::get_timeline::GetTimelineService,
@@ -55,20 +57,19 @@ fn app(events: Vec<MeditationTimelineEvent>) -> TestApp {
         create: StdArc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
         update: StdArc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
         delete: StdArc::new(DeleteMoodEntryService::new(entries.clone())),
-        list_mood_entries: StdArc::new(MoodHistoryService::new(entries.clone())),
-        mood_statistics: StdArc::new(GetMoodStatisticsService::new(entries)),
-        timeline: StdArc::new(GetTimelineService::new(
-            timeline_entries.clone(),
+        get_mood_history: StdArc::new(MoodHistoryService::new(entries.clone(), clock.clone())),
+        get_mood_statistics: StdArc::new(GetMoodStatisticsService::new(entries, clock.clone())),
+        get_timeline: StdArc::new(GetTimelineService::new(
+            timeline_entries,
             StdArc::new(FakeMeditationTimelineSource(events)),
+            clock,
         )),
-        clock_now: clock,
         medioss_origin: Arc::new("http://localhost".to_owned()),
     };
     TestApp {
         router: mood_tracker_router().with_state(Arc::new(deps)),
     }
 }
-
 
 fn member_actor() -> Actor {
     Actor::new(UserId::new(1), Role::Member)

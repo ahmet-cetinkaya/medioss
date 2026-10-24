@@ -61,13 +61,7 @@ async fn test_state() -> (AppState, TempDir) {
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
     );
-    let mood_tracker_entries: Arc<
-        dyn mood_tracker_application::ports::MoodEntryRepository,
-    > = Arc::new(mood_tracker_infrastructure::persistence::SeaOrmMoodEntryRepository::new(
-        connection.clone(),
-    ));
-    let mood_tracker = web_api::mood_tracker::mood_tracker_dependencies_with_entries(
-        mood_tracker_entries.clone(),
+    let (mood_tracker, mood_tracker_entries) = web_api::mood_tracker::mood_tracker_dependencies(
         connection.clone(),
         Arc::new("http://localhost".to_owned()),
     );

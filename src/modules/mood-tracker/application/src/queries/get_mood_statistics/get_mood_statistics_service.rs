@@ -6,18 +6,19 @@ use kernel::UserId;
 
 use super::get_mood_statistics::GetMoodStatistics;
 use super::get_mood_statistics_handler::GetMoodStatisticsHandler;
-use super::mood_range::MoodRange;
 use super::mood_statistics::{MoodStatistics, MoodTrendPoint};
-use crate::ports::MoodEntryRepository;
+use crate::models::MoodRange;
+use crate::ports::{Clock, MoodEntryRepository};
 use crate::ApplicationError;
 
 pub struct GetMoodStatisticsService {
     entries: Arc<dyn MoodEntryRepository>,
+    clock: Arc<dyn Clock>,
 }
 
 impl GetMoodStatisticsService {
-    pub fn new(entries: Arc<dyn MoodEntryRepository>) -> Self {
-        Self { entries }
+    pub fn new(entries: Arc<dyn MoodEntryRepository>, clock: Arc<dyn Clock>) -> Self {
+        Self { entries, clock }
     }
 }
 
@@ -29,7 +30,7 @@ impl GetMoodStatisticsHandler for GetMoodStatisticsService {
             query.user_id,
             query.range,
             query.tz_offset_minutes,
-            query.now,
+            self.clock.now().await,
         )
         .await
     }

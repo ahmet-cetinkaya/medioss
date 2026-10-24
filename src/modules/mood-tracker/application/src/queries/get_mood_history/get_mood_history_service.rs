@@ -2,19 +2,20 @@ use std::sync::Arc;
 
 use super::get_mood_history::MoodHistory;
 use super::get_mood_history_handler::MoodHistoryHandler;
-use crate::ports::{MoodEntryRepository, Page};
-use crate::queries::get_mood_statistics::MoodRange;
+use crate::models::MoodRange;
+use crate::ports::{Clock, MoodEntryRepository, Page};
 use crate::ApplicationError;
 use chrono::{DateTime, FixedOffset, Utc};
 use mood_tracker_domain::MoodEntry;
 
 pub struct MoodHistoryService {
     entries: Arc<dyn MoodEntryRepository>,
+    clock: Arc<dyn Clock>,
 }
 
 impl MoodHistoryService {
-    pub fn new(entries: Arc<dyn MoodEntryRepository>) -> Self {
-        Self { entries }
+    pub fn new(entries: Arc<dyn MoodEntryRepository>, clock: Arc<dyn Clock>) -> Self {
+        Self { entries, clock }
     }
 }
 
@@ -26,7 +27,7 @@ impl MoodHistoryHandler for MoodHistoryService {
             query.user_id,
             query.range,
             query.tz_offset_minutes,
-            query.now,
+            self.clock.now().await,
             query.limit,
             query.cursor,
         )

@@ -7,8 +7,9 @@ use axum::{
 use mood_tracker_application::commands::create_mood_entry::CreateMoodEntry;
 use mood_tracker_application::commands::delete_mood_entry::DeleteMoodEntry;
 use mood_tracker_application::commands::update_mood_entry::UpdateMoodEntry;
+use mood_tracker_application::models::MoodRange;
 use mood_tracker_application::queries::get_mood_history::MoodHistory;
-use mood_tracker_application::queries::get_mood_statistics::{GetMoodStatistics, MoodRange};
+use mood_tracker_application::queries::get_mood_statistics::GetMoodStatistics;
 use mood_tracker_application::queries::get_timeline::{GetTimeline, TimelineKind};
 use mood_tracker_application::ApplicationError;
 use serde::{Deserialize, Serialize};
@@ -182,8 +183,8 @@ async fn create(
                 note: body.note,
             })
             .await
-        .map_err(ApiError::Application)?
-        .into(),
+            .map_err(ApiError::Application)?
+            .into(),
     ))
 }
 async fn update(
@@ -203,8 +204,8 @@ async fn update(
                 note: body.note,
             })
             .await
-        .map_err(ApiError::Application)?
-        .into(),
+            .map_err(ApiError::Application)?
+            .into(),
     ))
 }
 async fn remove(
@@ -228,7 +229,7 @@ async fn list(
     Query(query): Query<RangeQuery>,
 ) -> Result<Json<HistoryResponse>, ApiError> {
     let page = deps
-        .list_mood_entries
+        .get_mood_history
         .handle(MoodHistory {
             user_id: actor.user_id(),
             range: range(
@@ -237,12 +238,11 @@ async fn list(
                 query.to.as_deref(),
             )?,
             tz_offset_minutes: offset(query.tz_offset_minutes)?,
-            now: deps.clock_now.now().await,
             limit: query.limit.unwrap_or(50),
             cursor: history_cursor(query.cursor.as_deref())?,
         })
         .await
-    .map_err(ApiError::Application)?;
+        .map_err(ApiError::Application)?;
     Ok(Json(HistoryResponse {
         items: page.items.into_iter().map(Into::into).collect(),
         next_cursor: page
@@ -275,7 +275,7 @@ async fn statistics(
     Query(query): Query<StatisticsQuery>,
 ) -> Result<Json<StatisticsResponse>, ApiError> {
     let stats = deps
-        .mood_statistics
+        .get_mood_statistics
         .handle(GetMoodStatistics {
             user_id: actor.user_id(),
             range: range(
@@ -284,10 +284,9 @@ async fn statistics(
                 query.to.as_deref(),
             )?,
             tz_offset_minutes: offset(query.tz_offset_minutes)?,
-            now: deps.clock_now.now().await,
         })
         .await
-    .map_err(ApiError::Application)?;
+        .map_err(ApiError::Application)?;
     Ok(Json(StatisticsResponse {
         entry_count: stats.entry_count,
         average_score: stats.average_score,
@@ -332,7 +331,7 @@ async fn timeline(
     let limit = query.limit.unwrap_or(50);
     let cursor = cursor(query.cursor.as_deref())?;
     let mut events = deps
-        .timeline
+        .get_timeline
         .handle(GetTimeline {
             user_id: actor.user_id(),
             range: range(
@@ -341,12 +340,11 @@ async fn timeline(
                 query.to.as_deref(),
             )?,
             tz_offset_minutes: offset(query.tz_offset_minutes)?,
-            now: deps.clock_now.now().await,
             limit,
             notes_only: query.notes_only.unwrap_or(false),
         })
         .await
-    .map_err(ApiError::Application)?;
+        .map_err(ApiError::Application)?;
     if let Some((at, kind, id)) = cursor {
         // Keyset continuation over the query's descending order
         // (recorded_at DESC, kind ASC, id DESC): keep only events strictly

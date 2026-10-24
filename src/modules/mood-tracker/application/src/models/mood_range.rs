@@ -6,19 +6,19 @@ use crate::ApplicationError;
 pub const MAX_CUSTOM_RANGE_DAYS: i64 = 366;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StatisticsRange {
+pub enum MoodRange {
     Today,
     Last7Days,
     Last30Days,
     AllTime,
-    /// Inclusive local dates; build it with [`StatisticsRange::custom`].
+    /// Inclusive local dates; build it with [`MoodRange::custom`].
     Custom {
         from: NaiveDate,
         to: NaiveDate,
     },
 }
 
-impl StatisticsRange {
+impl MoodRange {
     /// A custom range of inclusive local dates: `from` must not be after
     /// `to`, and the span may not exceed [`MAX_CUSTOM_RANGE_DAYS`].
     pub fn custom(from: NaiveDate, to: NaiveDate) -> Result<Self, ApplicationError> {

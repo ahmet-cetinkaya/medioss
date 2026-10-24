@@ -1,6 +1,6 @@
 use kernel::UserId;
 
-use crate::queries::get_mood_statistics::MoodRange;
+use crate::models::MoodRange;
 
 /// Read one user's mood history, newest first, page-limited by a keyset
 /// cursor of `(recorded_at, id)`.
@@ -9,7 +9,6 @@ pub struct MoodHistory {
     pub user_id: UserId,
     pub range: MoodRange,
     pub tz_offset_minutes: i16,
-    pub now: chrono::DateTime<chrono::Utc>,
     pub limit: u16,
     pub cursor: Option<(chrono::DateTime<chrono::Utc>, i64)>,
 }

@@ -6,8 +6,10 @@
 #![allow(clippy::module_inception)]
 
 pub mod commands;
+pub mod models;
 pub mod ports;
 pub mod queries;
+pub mod services;
 
 mod errors;
 

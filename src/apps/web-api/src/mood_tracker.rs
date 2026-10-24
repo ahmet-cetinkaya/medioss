@@ -82,36 +82,31 @@ impl MeditationTimelineSource for MeditationTimelineAdapter {
     }
 }
 
+/// Builds the mood-tracker module's services and returns them together with
+/// the entries port, which user deletion needs directly.
 pub fn mood_tracker_dependencies(
     db: DatabaseConnection,
     medioss_origin: Arc<String>,
-) -> SharedDependencies {
-    mood_tracker_dependencies_with_entries(
-        Arc::new(SeaOrmMoodEntryRepository::new(db.clone())),
-        db,
-        medioss_origin,
-    )
-}
-
-pub fn mood_tracker_dependencies_with_entries(
-    entries: Arc<dyn MoodEntryRepository>,
-    db: DatabaseConnection,
-    medioss_origin: Arc<String>,
-) -> SharedDependencies {
+) -> (SharedDependencies, Arc<dyn MoodEntryRepository>) {
     let meditation: Arc<dyn MeditationTimelineSource> = Arc::new(MeditationTimelineAdapter {
         meditations: SeaOrmMeditationRepository::new(db.clone()),
         notes: SeaOrmNoteRepository::new(db.clone()),
-        sessions: SeaOrmSessionRepository::new(db),
+        sessions: SeaOrmSessionRepository::new(db.clone()),
     });
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-    Arc::new(MoodTrackerDependencies {
+    let entries: Arc<dyn MoodEntryRepository> =
+        Arc::new(SeaOrmMoodEntryRepository::new(db.clone()));
+    let deps = Arc::new(MoodTrackerDependencies {
         create: Arc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
         update: Arc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
         delete: Arc::new(DeleteMoodEntryService::new(entries.clone())),
-        list_mood_entries: Arc::new(MoodHistoryService::new(entries.clone())),
-        mood_statistics: Arc::new(GetMoodStatisticsService::new(entries.clone())),
-        timeline: Arc::new(GetTimelineService::new(entries, meditation)),
-        clock_now: clock,
+        get_mood_history: Arc::new(MoodHistoryService::new(entries.clone(), clock.clone())),
+        get_mood_statistics: Arc::new(GetMoodStatisticsService::new(
+            entries.clone(),
+            clock.clone(),
+        )),
+        get_timeline: Arc::new(GetTimelineService::new(entries.clone(), meditation, clock)),
         medioss_origin,
-    })
+    });
+    (deps, entries)
 }
