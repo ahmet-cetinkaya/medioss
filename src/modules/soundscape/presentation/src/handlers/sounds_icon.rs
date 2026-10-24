@@ -6,10 +6,10 @@ use axum::{
     routing::{delete, get, put},
     Json, Router,
 };
-use soundscape_application::commands::clear_sound_icon::ClearSoundIcon;
-use soundscape_application::commands::set_sound_icon::SetSoundIcon;
+use soundscape_application::commands::clear_sound_icon::ClearSoundIconCommand;
+use soundscape_application::commands::set_sound_icon::SetSoundIconCommand;
 use soundscape_application::ports::media::BlobReader;
-use soundscape_application::queries::find_sound_icon::FindSoundIcon;
+use soundscape_application::queries::find_sound_icon::FindSoundIconQuery;
 
 use crate::extractors::{admin, AdminActor, CurrentActor};
 use crate::handlers::sounds::SoundDto;
@@ -38,7 +38,7 @@ async fn upload_icon(
         }
     }
     deps.set_sound_icon
-        .handle(SetSoundIcon {
+        .handle(SetSoundIconCommand {
             id,
             bytes: icon.ok_or(StatusCode::BAD_REQUEST)?,
         })
@@ -56,7 +56,7 @@ async fn clear_icon(
     admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
     deps.clear_sound_icon
-        .handle(ClearSoundIcon { id })
+        .handle(ClearSoundIconCommand { id })
         .await
         .map(|sound| Json(sound.into()))
         .map_err(status_for)
@@ -72,7 +72,7 @@ async fn get_icon(
 ) -> Result<Response, StatusCode> {
     let icon = deps
         .find_sound_icon
-        .handle(FindSoundIcon { id })
+        .handle(FindSoundIconQuery { id })
         .await
         .map_err(status_for)?;
     let (BlobReader(reader), _, total) = deps

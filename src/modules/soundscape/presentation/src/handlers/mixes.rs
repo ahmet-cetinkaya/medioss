@@ -5,9 +5,9 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use soundscape_application::commands::create_mix::CreateMix;
-use soundscape_application::commands::delete_mix::DeleteMix;
-use soundscape_application::commands::update_mix::UpdateMix;
+use soundscape_application::commands::create_mix::CreateMixCommand;
+use soundscape_application::commands::delete_mix::DeleteMixCommand;
+use soundscape_application::commands::update_mix::UpdateMixCommand;
 
 use crate::extractors::CurrentActor;
 use crate::router::SharedDependencies;
@@ -71,7 +71,7 @@ async fn create_mix(
 ) -> Result<(StatusCode, Json<MixDto>), StatusCode> {
     origin(headers, &deps.medioss_origin)?;
     deps.create_mix
-        .handle(CreateMix {
+        .handle(CreateMixCommand {
             user_id: actor.user_id(),
             name: input.name,
             items: input.items,
@@ -90,7 +90,7 @@ async fn update_mix(
 ) -> Result<Json<MixDto>, StatusCode> {
     origin(headers, &deps.medioss_origin)?;
     deps.update_mix
-        .handle(UpdateMix {
+        .handle(UpdateMixCommand {
             id,
             user_id: actor.user_id(),
             name: input.name,
@@ -109,7 +109,7 @@ async fn delete_mix(
 ) -> Result<StatusCode, StatusCode> {
     origin(headers, &deps.medioss_origin)?;
     deps.delete_mix
-        .handle(DeleteMix {
+        .handle(DeleteMixCommand {
             id,
             user_id: actor.user_id(),
         })
