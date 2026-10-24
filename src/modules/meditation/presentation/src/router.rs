@@ -24,6 +24,7 @@ use meditation_application::commands::record_completion::RecordCompletionHandler
 use meditation_application::commands::record_position::RecordPositionHandler;
 use meditation_application::commands::remove_member::RemoveMemberHandler;
 use meditation_application::commands::rename_category::RenameCategoryHandler;
+use meditation_application::commands::replace_program_cover::ReplaceProgramCoverHandler;
 use meditation_application::commands::set_completed::SetCompletedHandler;
 use meditation_application::commands::set_program_category::SetProgramCategoryHandler;
 use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionHandler;
@@ -41,6 +42,7 @@ use meditation_application::queries::get_daily_suggestion::GetDailySuggestionHan
 use meditation_application::queries::get_meditation::GetMeditationHandler;
 use meditation_application::queries::get_meditation_detail::GetMeditationDetailHandler;
 use meditation_application::queries::get_playback_state::GetPlaybackStateHandler;
+use meditation_application::queries::get_program_cover::GetProgramCoverHandler;
 use meditation_application::queries::get_user_statistics::GetUserStatisticsHandler;
 use meditation_application::queries::list_categories::ListCategoriesHandler;
 use meditation_application::queries::list_library::ListLibraryHandler;
@@ -94,6 +96,8 @@ pub struct MeditationDependencies {
     pub get_daily_suggestion: Arc<dyn GetDailySuggestionHandler>,
     pub list_library: Arc<dyn ListLibraryHandler>,
     pub get_playback_state: Arc<dyn GetPlaybackStateHandler>,
+    pub get_program_cover: Arc<dyn GetProgramCoverHandler>,
+    pub replace_program_cover: Arc<dyn ReplaceProgramCoverHandler>,
     pub record_position: Arc<dyn RecordPositionHandler>,
     pub record_completion: Arc<dyn RecordCompletionHandler>,
     pub set_completed: Arc<dyn SetCompletedHandler>,

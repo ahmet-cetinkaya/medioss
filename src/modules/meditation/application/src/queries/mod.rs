@@ -3,6 +3,7 @@ pub mod get_daily_suggestion;
 pub mod get_meditation;
 pub mod get_meditation_detail;
 pub mod get_playback_state;
+pub mod get_program_cover;
 pub mod get_user_statistics;
 pub mod list_categories;
 pub mod list_library;

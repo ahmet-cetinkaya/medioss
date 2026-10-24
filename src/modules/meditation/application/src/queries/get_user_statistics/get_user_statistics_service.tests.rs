@@ -8,7 +8,7 @@ use crate::queries::get_user_statistics::{
     GetUserStatistics, GetUserStatisticsHandler, GetUserStatisticsService, StatisticsDay,
     StatisticsRange,
 };
-use crate::test_support::{user_a, FakeSessionRepository, RepoState};
+use crate::test_support::{user_a, FakeSessionRepository, FixedClock, RepoState};
 
 fn at(day: u32, hour: u32, minute: u32) -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 9, day, hour, minute, 0)
@@ -45,12 +45,11 @@ async fn statistics(
     tz_offset_minutes: i16,
     now: DateTime<Utc>,
 ) -> crate::queries::get_user_statistics::UserStatistics {
-    GetUserStatisticsService::new(sessions.clone())
+    GetUserStatisticsService::new(sessions.clone(), Arc::new(FixedClock(now)))
         .handle(GetUserStatistics {
             user_id,
             range,
             tz_offset_minutes,
-            now,
         })
         .await
         .expect("statistics")

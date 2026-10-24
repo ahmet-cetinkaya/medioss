@@ -46,14 +46,12 @@ pub async fn statistics(
             "invalid timezone offset",
         )));
     }
-    let now = deps.clock.now().await;
     let statistics = deps
         .get_user_statistics
         .handle(GetUserStatistics {
             user_id: actor.user_id(),
             range,
             tz_offset_minutes: query.tz_offset_minutes,
-            now,
         })
         .await
         .map_err(ApiError::Application)?;
