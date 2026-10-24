@@ -1,5 +1,11 @@
 pub mod media;
 
+mod command_handler;
+mod query_handler;
+
+pub use command_handler::CommandHandler;
+pub use query_handler::QueryHandler;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use kernel::UserId;
