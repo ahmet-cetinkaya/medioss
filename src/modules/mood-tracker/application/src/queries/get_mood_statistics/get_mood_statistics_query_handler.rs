@@ -4,32 +4,44 @@ use std::sync::Arc;
 use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
 use kernel::UserId;
 
-use super::get_mood_statistics::GetMoodStatistics;
-use super::get_mood_statistics_handler::GetMoodStatisticsHandler;
+use super::get_mood_statistics_query::GetMoodStatisticsQuery;
+use super::get_mood_statistics_query_validator::GetMoodStatisticsQueryValidator;
 use super::mood_statistics::{MoodStatistics, MoodTrendPoint};
 use crate::models::MoodRange;
-use crate::ports::{Clock, MoodEntryRepository};
+use crate::ports::{Clock, MoodEntryRepository, QueryHandler};
 use crate::ApplicationError;
 
-pub struct GetMoodStatisticsService {
+pub struct GetMoodStatisticsQueryHandler {
     entries: Arc<dyn MoodEntryRepository>,
     clock: Arc<dyn Clock>,
+    validator: GetMoodStatisticsQueryValidator,
 }
 
-impl GetMoodStatisticsService {
+impl GetMoodStatisticsQueryHandler {
     pub fn new(entries: Arc<dyn MoodEntryRepository>, clock: Arc<dyn Clock>) -> Self {
-        Self { entries, clock }
+        Self {
+            entries,
+            clock,
+            validator: GetMoodStatisticsQueryValidator,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl GetMoodStatisticsHandler for GetMoodStatisticsService {
-    async fn handle(&self, query: GetMoodStatistics) -> Result<MoodStatistics, ApplicationError> {
+impl QueryHandler<GetMoodStatisticsQuery> for GetMoodStatisticsQueryHandler {
+    type Output = MoodStatistics;
+
+    async fn handle(
+        &self,
+        query: GetMoodStatisticsQuery,
+    ) -> Result<MoodStatistics, ApplicationError> {
+        self.validator.validate(&query)?;
+        let offset = self.validator.local_offset(&query)?;
         get_mood_statistics(
             self.entries.as_ref(),
             query.user_id,
             query.range,
-            query.tz_offset_minutes,
+            offset,
             self.clock.now().await,
         )
         .await
@@ -40,14 +52,12 @@ pub(crate) async fn get_mood_statistics<R>(
     entries: &R,
     user_id: UserId,
     range: MoodRange,
-    tz_offset_minutes: i16,
+    offset: FixedOffset,
     now: DateTime<Utc>,
 ) -> Result<MoodStatistics, ApplicationError>
 where
     R: MoodEntryRepository + ?Sized,
 {
-    let offset = FixedOffset::east_opt(i32::from(tz_offset_minutes) * 60)
-        .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
     let today = now.with_timezone(&offset).date_naive();
     let start = range.start(today);
     let end = range.end(today);
@@ -86,5 +96,5 @@ where
 }
 
 #[cfg(test)]
-#[path = "get_mood_statistics_service.tests.rs"]
+#[path = "get_mood_statistics_query_handler.tests.rs"]
 mod tests;

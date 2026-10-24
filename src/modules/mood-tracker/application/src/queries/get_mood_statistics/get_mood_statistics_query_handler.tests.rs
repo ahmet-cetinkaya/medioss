@@ -4,10 +4,10 @@ use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodScore;
 
-use super::GetMoodStatisticsService;
+use super::GetMoodStatisticsQueryHandler;
 use crate::models::MoodRange;
-use crate::ports::MoodEntryRepository;
-use crate::queries::get_mood_statistics::{GetMoodStatistics, GetMoodStatisticsHandler};
+use crate::ports::{MoodEntryRepository, QueryHandler};
+use crate::queries::get_mood_statistics::GetMoodStatisticsQuery;
 use crate::test_support::{
     FailingMoodEntryRepository, FakeMoodEntryRepository, FixedClock, REPOSITORY_FAILURE,
 };
@@ -45,8 +45,8 @@ async fn statistics(
     entries: &Arc<FakeMoodEntryRepository>,
     range: MoodRange,
 ) -> Result<crate::queries::get_mood_statistics::MoodStatistics, ApplicationError> {
-    GetMoodStatisticsService::new(entries.clone(), Arc::new(FixedClock(now())))
-        .handle(GetMoodStatistics {
+    GetMoodStatisticsQueryHandler::new(entries.clone(), Arc::new(FixedClock(now())))
+        .handle(GetMoodStatisticsQuery {
             user_id: UserId::new(USER),
             range,
             tz_offset_minutes: 0,
@@ -146,10 +146,10 @@ async fn custom_range_never_reaches_past_today() {
 async fn timezone_offset_decides_which_local_day_an_entry_falls_on() {
     let entries = Arc::new(FakeMoodEntryRepository::default());
     seed(&entries, USER, 4, at(9, 28, 23, 30)).await;
-    let service = GetMoodStatisticsService::new(entries.clone(), Arc::new(FixedClock(now())));
+    let service = GetMoodStatisticsQueryHandler::new(entries.clone(), Arc::new(FixedClock(now())));
 
     let shifted = service
-        .handle(GetMoodStatistics {
+        .handle(GetMoodStatisticsQuery {
             user_id: UserId::new(USER),
             range: MoodRange::AllTime,
             tz_offset_minutes: 120,
@@ -163,10 +163,10 @@ async fn timezone_offset_decides_which_local_day_an_entry_falls_on() {
 #[tokio::test]
 async fn impossible_timezone_offset_is_rejected() {
     let entries = Arc::new(FakeMoodEntryRepository::default());
-    let service = GetMoodStatisticsService::new(entries, Arc::new(FixedClock(now())));
+    let service = GetMoodStatisticsQueryHandler::new(entries, Arc::new(FixedClock(now())));
 
     let result = service
-        .handle(GetMoodStatistics {
+        .handle(GetMoodStatisticsQuery {
             user_id: UserId::new(USER),
             range: MoodRange::AllTime,
             tz_offset_minutes: -1440,
@@ -181,13 +181,13 @@ async fn impossible_timezone_offset_is_rejected() {
 
 #[tokio::test]
 async fn repository_failure_is_reported_as_a_repository_error() {
-    let service = GetMoodStatisticsService::new(
+    let service = GetMoodStatisticsQueryHandler::new(
         Arc::new(FailingMoodEntryRepository),
         Arc::new(FixedClock(now())),
     );
 
     let result = service
-        .handle(GetMoodStatistics {
+        .handle(GetMoodStatisticsQuery {
             user_id: UserId::new(USER),
             range: MoodRange::AllTime,
             tz_offset_minutes: 0,

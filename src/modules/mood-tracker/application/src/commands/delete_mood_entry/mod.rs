@@ -1,7 +1,7 @@
-mod delete_mood_entry;
-mod delete_mood_entry_handler;
-mod delete_mood_entry_service;
+mod delete_mood_entry_command;
+mod delete_mood_entry_command_handler;
+mod delete_mood_entry_command_validator;
 
-pub use delete_mood_entry::DeleteMoodEntry;
-pub use delete_mood_entry_handler::DeleteMoodEntryHandler;
-pub use delete_mood_entry_service::DeleteMoodEntryService;
+pub use delete_mood_entry_command::DeleteMoodEntryCommand;
+pub use delete_mood_entry_command_handler::DeleteMoodEntryCommandHandler;
+pub use delete_mood_entry_command_validator::DeleteMoodEntryCommandValidator;

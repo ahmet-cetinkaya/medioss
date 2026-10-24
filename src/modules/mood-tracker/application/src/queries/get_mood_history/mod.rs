@@ -1,7 +1,7 @@
-mod get_mood_history;
-mod get_mood_history_handler;
-mod get_mood_history_service;
+mod get_mood_history_query;
+mod get_mood_history_query_handler;
+mod get_mood_history_query_validator;
 
-pub use get_mood_history::GetMoodHistory;
-pub use get_mood_history_handler::GetMoodHistoryHandler;
-pub use get_mood_history_service::GetMoodHistoryService;
+pub use get_mood_history_query::GetMoodHistoryQuery;
+pub use get_mood_history_query_handler::GetMoodHistoryQueryHandler;
+pub use get_mood_history_query_validator::GetMoodHistoryQueryValidator;

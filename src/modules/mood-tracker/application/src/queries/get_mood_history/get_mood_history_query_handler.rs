@@ -1,32 +1,44 @@
 use std::sync::Arc;
 
-use super::get_mood_history::GetMoodHistory;
-use super::get_mood_history_handler::GetMoodHistoryHandler;
+use super::get_mood_history_query::GetMoodHistoryQuery;
+use super::get_mood_history_query_validator::GetMoodHistoryQueryValidator;
 use crate::models::MoodRange;
-use crate::ports::{Clock, MoodEntryRepository, Page};
+use crate::ports::{Clock, MoodEntryRepository, Page, QueryHandler};
 use crate::ApplicationError;
 use chrono::{DateTime, FixedOffset, Utc};
 use mood_tracker_domain::MoodEntry;
 
-pub struct GetMoodHistoryService {
+pub struct GetMoodHistoryQueryHandler {
     entries: Arc<dyn MoodEntryRepository>,
     clock: Arc<dyn Clock>,
+    validator: GetMoodHistoryQueryValidator,
 }
 
-impl GetMoodHistoryService {
+impl GetMoodHistoryQueryHandler {
     pub fn new(entries: Arc<dyn MoodEntryRepository>, clock: Arc<dyn Clock>) -> Self {
-        Self { entries, clock }
+        Self {
+            entries,
+            clock,
+            validator: GetMoodHistoryQueryValidator,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl GetMoodHistoryHandler for GetMoodHistoryService {
-    async fn handle(&self, query: GetMoodHistory) -> Result<Page<MoodEntry>, ApplicationError> {
+impl QueryHandler<GetMoodHistoryQuery> for GetMoodHistoryQueryHandler {
+    type Output = Page<MoodEntry>;
+
+    async fn handle(
+        &self,
+        query: GetMoodHistoryQuery,
+    ) -> Result<Page<MoodEntry>, ApplicationError> {
+        self.validator.validate(&query)?;
+        let offset = self.validator.local_offset(&query)?;
         get_mood_history(
             self.entries.as_ref(),
             query.user_id,
             query.range,
-            query.tz_offset_minutes,
+            offset,
             self.clock.now().await,
             query.limit,
             query.cursor,
@@ -39,7 +51,7 @@ pub(crate) async fn get_mood_history<R>(
     entries: &R,
     user_id: kernel::UserId,
     range: MoodRange,
-    tz_offset_minutes: i16,
+    offset: FixedOffset,
     now: DateTime<Utc>,
     limit: u16,
     cursor: Option<(DateTime<Utc>, i64)>,
@@ -47,13 +59,6 @@ pub(crate) async fn get_mood_history<R>(
 where
     R: MoodEntryRepository + ?Sized,
 {
-    if !(1..=100).contains(&limit) {
-        return Err(ApplicationError::InvalidInput(
-            "page size must be between 1 and 100",
-        ));
-    }
-    let offset = FixedOffset::east_opt(i32::from(tz_offset_minutes) * 60)
-        .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
     let today = now.with_timezone(&offset).date_naive();
     let start = range.start(today);
     let end = range.end(today);
@@ -80,5 +85,5 @@ where
 }
 
 #[cfg(test)]
-#[path = "get_mood_history_service.tests.rs"]
+#[path = "get_mood_history_query_handler.tests.rs"]
 mod tests;

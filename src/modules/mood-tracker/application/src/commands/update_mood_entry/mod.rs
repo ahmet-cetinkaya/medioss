@@ -1,7 +1,7 @@
-mod update_mood_entry;
-mod update_mood_entry_handler;
-mod update_mood_entry_service;
+mod update_mood_entry_command;
+mod update_mood_entry_command_handler;
+mod update_mood_entry_command_validator;
 
-pub use update_mood_entry::UpdateMoodEntry;
-pub use update_mood_entry_handler::UpdateMoodEntryHandler;
-pub use update_mood_entry_service::UpdateMoodEntryService;
+pub use update_mood_entry_command::UpdateMoodEntryCommand;
+pub use update_mood_entry_command_handler::UpdateMoodEntryCommandHandler;
+pub use update_mood_entry_command_validator::UpdateMoodEntryCommandValidator;

@@ -5,13 +5,13 @@ use chrono::{DateTime, TimeZone, Utc};
 use kernel::UserId;
 use mood_tracker_domain::MoodScore;
 
-use super::GetTimelineService;
+use super::GetTimelineQueryHandler;
 use crate::models::MoodRange;
 use crate::ports::{
     MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
-    MoodEntryRepository,
+    MoodEntryRepository, QueryHandler,
 };
-use crate::queries::get_timeline::{GetTimeline, GetTimelineHandler, TimelineKind};
+use crate::queries::get_timeline::{GetTimelineQuery, TimelineKind};
 use crate::test_support::{
     FailingMoodEntryRepository, FakeMoodEntryRepository, FixedClock, REPOSITORY_FAILURE,
 };
@@ -72,8 +72,8 @@ async fn seed(
         .unwrap();
 }
 
-fn query(notes_only: bool) -> GetTimeline {
-    GetTimeline {
+fn query(notes_only: bool) -> GetTimelineQuery {
+    GetTimelineQuery {
         user_id: UserId::new(USER),
         range: MoodRange::AllTime,
         tz_offset_minutes: 0,
@@ -85,8 +85,8 @@ fn query(notes_only: bool) -> GetTimeline {
 fn service(
     entries: &Arc<FakeMoodEntryRepository>,
     events: Vec<MeditationTimelineEvent>,
-) -> GetTimelineService {
-    GetTimelineService::new(
+) -> GetTimelineQueryHandler {
+    GetTimelineQueryHandler::new(
         entries.clone(),
         Arc::new(FakeMeditation(Ok(events))),
         Arc::new(FixedClock(now())),
@@ -263,7 +263,7 @@ async fn impossible_timezone_offset_is_rejected() {
 
 #[tokio::test]
 async fn mood_repository_failure_is_reported_as_a_repository_error() {
-    let service = GetTimelineService::new(
+    let service = GetTimelineQueryHandler::new(
         Arc::new(FailingMoodEntryRepository),
         Arc::new(FakeMeditation(Ok(Vec::new()))),
         Arc::new(FixedClock(now())),
@@ -277,7 +277,7 @@ async fn mood_repository_failure_is_reported_as_a_repository_error() {
 
 #[tokio::test]
 async fn meditation_source_failure_is_reported_as_a_repository_error() {
-    let service = GetTimelineService::new(
+    let service = GetTimelineQueryHandler::new(
         Arc::new(FakeMoodEntryRepository::default()),
         Arc::new(FakeMeditation(Err("meditation offline".to_owned()))),
         Arc::new(FixedClock(now())),

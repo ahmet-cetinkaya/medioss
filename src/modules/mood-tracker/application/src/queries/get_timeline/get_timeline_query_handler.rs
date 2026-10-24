@@ -1,23 +1,24 @@
 use std::sync::Arc;
 
-use super::get_timeline::GetTimeline;
-use super::get_timeline_handler::GetTimelineHandler;
+use super::get_timeline_query::GetTimelineQuery;
+use super::get_timeline_query_validator::GetTimelineQueryValidator;
 use super::timeline_event::{TimelineEvent, TimelineKind};
 use crate::ports::{
     Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
-    MoodEntryRepository,
+    MoodEntryRepository, QueryHandler,
 };
 use crate::ApplicationError;
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::{DateTime, Utc};
 use mood_tracker_domain::MoodEntry;
 
-pub struct GetTimelineService {
+pub struct GetTimelineQueryHandler {
     entries: Arc<dyn MoodEntryRepository>,
     meditation: Arc<dyn MeditationTimelineSource>,
     clock: Arc<dyn Clock>,
+    validator: GetTimelineQueryValidator,
 }
 
-impl GetTimelineService {
+impl GetTimelineQueryHandler {
     pub fn new(
         entries: Arc<dyn MoodEntryRepository>,
         meditation: Arc<dyn MeditationTimelineSource>,
@@ -27,21 +28,22 @@ impl GetTimelineService {
             entries,
             meditation,
             clock,
+            validator: GetTimelineQueryValidator,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl GetTimelineHandler for GetTimelineService {
-    async fn handle(&self, query: GetTimeline) -> Result<Vec<TimelineEvent>, ApplicationError> {
+impl QueryHandler<GetTimelineQuery> for GetTimelineQueryHandler {
+    type Output = Vec<TimelineEvent>;
+
+    async fn handle(
+        &self,
+        query: GetTimelineQuery,
+    ) -> Result<Vec<TimelineEvent>, ApplicationError> {
+        self.validator.validate(&query)?;
         let now = self.clock.now().await;
-        if !(1..=100).contains(&query.limit) {
-            return Err(ApplicationError::InvalidInput(
-                "page size must be between 1 and 100",
-            ));
-        }
-        let offset = FixedOffset::east_opt(i32::from(query.tz_offset_minutes) * 60)
-            .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
+        let offset = self.validator.local_offset(&query)?;
         let today = now.with_timezone(&offset).date_naive();
         let start = query.range.start(today);
         let end = query.range.end(today);
@@ -108,5 +110,5 @@ fn meditation_event(entry: MeditationTimelineEvent) -> TimelineEvent {
 }
 
 #[cfg(test)]
-#[path = "get_timeline_service.tests.rs"]
+#[path = "get_timeline_query_handler.tests.rs"]
 mod tests;
