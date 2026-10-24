@@ -203,10 +203,18 @@ const MAX_CONCURRENT_LOGINS: usize = 2;
 const LOGIN_RETRY_AFTER_MILLIS: u64 = 250;
 
 impl LoginAdmission for TokioSemaphoreAdmission {
-    fn try_acquire(&self) -> Result<Arc<()>, std::time::Duration> {
-        Arc::clone(&self.semaphore)
+    fn try_acquire(&self) -> Result<Box<dyn Send>, std::time::Duration> {
+        // The owned permit IS the guard: holding it keeps the slot taken,
+        // dropping it releases the slot, so MAX_CONCURRENT_LOGINS bounds
+        // concurrent verifications.
+        self.semaphore
+            .clone()
             .try_acquire_owned()
-            .map(|_permit| Arc::new(()))
+            .map(|permit| Box::new(permit) as Box<dyn Send>)
             .map_err(|_| std::time::Duration::from_millis(LOGIN_RETRY_AFTER_MILLIS))
     }
 }
+
+#[cfg(test)]
+#[path = "state.tests.rs"]
+mod tests;

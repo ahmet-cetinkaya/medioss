@@ -42,8 +42,8 @@ impl Clock for NullClock {
 pub(super) struct NullAdmission;
 
 impl LoginAdmission for NullAdmission {
-    fn try_acquire(&self) -> Result<std::sync::Arc<()>, std::time::Duration> {
-        Ok(std::sync::Arc::new(()))
+    fn try_acquire(&self) -> Result<Box<dyn Send>, std::time::Duration> {
+        Ok(Box::new(()))
     }
 }
 

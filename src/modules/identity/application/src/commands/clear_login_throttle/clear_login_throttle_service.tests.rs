@@ -36,7 +36,7 @@ fn cli_recovery_can_bypass_throttle_before_clearing_it() {
     let command = AuthenticateService::new(
         repository.clone(),
         repository.clone(),
-        hasher,
+        hasher.clone(),
         clock,
         admission,
         FakeHasher::hash_for(&password()),
@@ -51,5 +51,7 @@ fn cli_recovery_can_bypass_throttle_before_clearing_it() {
     .unwrap();
 
     assert_eq!(user.email(), &email());
+    // The bypass verifies the real credential exactly once.
+    assert_eq!(hasher.verify_calls(), 1);
     assert_eq!(repository.failed_attempts(email().as_str()), 0);
 }
