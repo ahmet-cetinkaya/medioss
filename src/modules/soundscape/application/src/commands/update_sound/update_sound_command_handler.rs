@@ -1,27 +1,34 @@
 use std::sync::Arc;
 
-use super::update_sound::UpdateSound;
-use super::update_sound_handler::UpdateSoundHandler;
-use crate::ports::{CategoryRepository, SoundRepository};
+use super::update_sound_command::UpdateSoundCommand;
+use super::update_sound_command_validator::UpdateSoundCommandValidator;
+use crate::ports::{CategoryRepository, CommandHandler, SoundRepository};
 use crate::services::{ensure_category_exists, parse_icon_key};
 use crate::ApplicationError;
-use soundscape_domain::{valid_name, Sound};
+use soundscape_domain::Sound;
 
-pub struct UpdateSoundService {
+pub struct UpdateSoundCommandHandler {
     categories: Arc<dyn CategoryRepository>,
     sounds: Arc<dyn SoundRepository>,
+    validator: UpdateSoundCommandValidator,
 }
 
-impl UpdateSoundService {
+impl UpdateSoundCommandHandler {
     pub fn new(categories: Arc<dyn CategoryRepository>, sounds: Arc<dyn SoundRepository>) -> Self {
-        Self { categories, sounds }
+        Self {
+            categories,
+            sounds,
+            validator: Default::default(),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl UpdateSoundHandler for UpdateSoundService {
-    async fn handle(&self, command: UpdateSound) -> Result<Sound, ApplicationError> {
-        valid_name(&command.name).map_err(|_| ApplicationError::InvalidInput("sound name"))?;
+impl CommandHandler<UpdateSoundCommand> for UpdateSoundCommandHandler {
+    type Output = Sound;
+
+    async fn handle(&self, command: UpdateSoundCommand) -> Result<Sound, ApplicationError> {
+        self.validator.validate(&command)?;
         let icon_key = parse_icon_key(command.icon_key.as_deref())?;
         ensure_category_exists(self.categories.as_ref(), command.category_id).await?;
         self.sounds
@@ -38,5 +45,5 @@ impl UpdateSoundHandler for UpdateSoundService {
 }
 
 #[cfg(test)]
-#[path = "update_sound_service.tests.rs"]
+#[path = "update_sound_command_handler.tests.rs"]
 mod tests;

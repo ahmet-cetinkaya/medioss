@@ -1,7 +1,7 @@
-mod clear_sound_icon;
-mod clear_sound_icon_handler;
-mod clear_sound_icon_service;
+mod clear_sound_icon_command;
+mod clear_sound_icon_command_handler;
+mod clear_sound_icon_command_validator;
 
-pub use clear_sound_icon::ClearSoundIcon;
-pub use clear_sound_icon_handler::ClearSoundIconHandler;
-pub use clear_sound_icon_service::ClearSoundIconService;
+pub use clear_sound_icon_command::ClearSoundIconCommand;
+pub use clear_sound_icon_command_handler::ClearSoundIconCommandHandler;
+pub use clear_sound_icon_command_validator::ClearSoundIconCommandValidator;

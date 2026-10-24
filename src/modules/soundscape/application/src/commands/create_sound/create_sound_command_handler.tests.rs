@@ -1,4 +1,5 @@
 use super::*;
+use crate::commands::create_sound::MAX_UPLOAD_BYTES;
 use crate::ports::media::{AudioFormat, StoredAudio};
 use crate::test_support::{
     FakeAudioValidator, FakeImageNormalizer, FakeOpusConverter, InMemoryCategories, InMemorySounds,
@@ -33,10 +34,10 @@ impl Fixture {
         }
     }
 
-    fn service(&self) -> CreateSoundService {
+    fn service(&self) -> CreateSoundCommandHandler {
         let categories =
             InMemoryCategories::with(vec![SoundCategory::new(1, "Nature", "nature").unwrap()]);
-        CreateSoundService::new(
+        CreateSoundCommandHandler::new(
             Arc::new(categories),
             self.sounds.clone(),
             Arc::new(FakeAudioValidator(self.validator)),
@@ -47,8 +48,8 @@ impl Fixture {
     }
 }
 
-fn command(name: &str) -> CreateSound {
-    CreateSound {
+fn command(name: &str) -> CreateSoundCommand {
+    CreateSoundCommand {
         name: name.into(),
         category_id: 1,
         bytes: vec![0; 16],
@@ -86,7 +87,7 @@ async fn keeps_a_valid_icon_key() {
     let fixture = Fixture::new();
     let sound = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             icon_key: Some("cloud-rain".into()),
             ..command("Rain")
         })
@@ -100,7 +101,7 @@ async fn invalid_icon_key_and_name_are_rejected() {
     let fixture = Fixture::new();
     let bad_key = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             icon_key: Some("Bad Key!".into()),
             ..command("Rain")
         })
@@ -117,7 +118,7 @@ async fn oversized_upload_is_rejected_before_any_write() {
     let fixture = Fixture::new();
     let result = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             bytes: vec![0; MAX_UPLOAD_BYTES + 1],
             ..command("Rain")
         })
@@ -131,7 +132,7 @@ async fn unknown_category_is_not_found() {
     let fixture = Fixture::new();
     let result = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             category_id: 99,
             ..command("Rain")
         })
@@ -205,7 +206,7 @@ async fn attaches_an_uploaded_icon() {
     let fixture = Fixture::new();
     let sound = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             icon: Some(PNG_MAGIC.to_vec()),
             ..command("Rain")
         })
@@ -220,7 +221,7 @@ async fn unsupported_icon_is_rejected_before_audio_is_stored() {
     let fixture = Fixture::new();
     let result = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             icon: Some(b"not an image".to_vec()),
             ..command("Rain")
         })
@@ -238,7 +239,7 @@ async fn failed_icon_attach_rolls_back_the_sound() {
     });
     let result = fixture
         .service()
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             icon: Some(PNG_MAGIC.to_vec()),
             ..command("Rain")
         })

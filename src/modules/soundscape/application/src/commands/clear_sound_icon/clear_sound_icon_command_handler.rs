@@ -1,25 +1,33 @@
 use std::sync::Arc;
 
-use super::clear_sound_icon::ClearSoundIcon;
-use super::clear_sound_icon_handler::ClearSoundIconHandler;
-use crate::ports::{media::BlobStore, SoundRepository};
+use super::clear_sound_icon_command::ClearSoundIconCommand;
+use super::clear_sound_icon_command_validator::ClearSoundIconCommandValidator;
+use crate::ports::{media::BlobStore, CommandHandler, SoundRepository};
 use crate::ApplicationError;
 use soundscape_domain::Sound;
 
-pub struct ClearSoundIconService {
+pub struct ClearSoundIconCommandHandler {
     sounds: Arc<dyn SoundRepository>,
     store: Arc<dyn BlobStore>,
+    validator: ClearSoundIconCommandValidator,
 }
 
-impl ClearSoundIconService {
+impl ClearSoundIconCommandHandler {
     pub fn new(sounds: Arc<dyn SoundRepository>, store: Arc<dyn BlobStore>) -> Self {
-        Self { sounds, store }
+        Self {
+            sounds,
+            store,
+            validator: Default::default(),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl ClearSoundIconHandler for ClearSoundIconService {
-    async fn handle(&self, command: ClearSoundIcon) -> Result<Sound, ApplicationError> {
+impl CommandHandler<ClearSoundIconCommand> for ClearSoundIconCommandHandler {
+    type Output = Sound;
+
+    async fn handle(&self, command: ClearSoundIconCommand) -> Result<Sound, ApplicationError> {
+        self.validator.validate(&command)?;
         let previous = self
             .sounds
             .find(command.id)
@@ -41,5 +49,5 @@ impl ClearSoundIconHandler for ClearSoundIconService {
 }
 
 #[cfg(test)]
-#[path = "clear_sound_icon_service.tests.rs"]
+#[path = "clear_sound_icon_command_handler.tests.rs"]
 mod tests;

@@ -1,28 +1,29 @@
 use std::sync::Arc;
 
-use super::create_sound::{CreateSound, MAX_UPLOAD_BYTES};
-use super::create_sound_handler::CreateSoundHandler;
+use super::create_sound_command::CreateSoundCommand;
+use super::create_sound_command_validator::CreateSoundCommandValidator;
 use crate::ports::{
     media::{AudioValidator, BlobStore, ImageNormalizer, OpusConverter},
-    CategoryRepository, NewSound, SoundRepository,
+    CategoryRepository, CommandHandler, NewSound, SoundRepository,
 };
 use crate::services::{
     ensure_category_exists, normalize_icon, parse_icon_key, remove_sound, store_sound_icon,
 };
 use crate::ApplicationError;
 use chrono::Utc;
-use soundscape_domain::{valid_name, Sound};
+use soundscape_domain::Sound;
 
-pub struct CreateSoundService {
+pub struct CreateSoundCommandHandler {
     categories: Arc<dyn CategoryRepository>,
     sounds: Arc<dyn SoundRepository>,
     validator: Arc<dyn AudioValidator>,
     converter: Arc<dyn OpusConverter>,
     store: Arc<dyn BlobStore>,
     image_normalizer: Arc<dyn ImageNormalizer>,
+    command_validator: CreateSoundCommandValidator,
 }
 
-impl CreateSoundService {
+impl CreateSoundCommandHandler {
     pub fn new(
         categories: Arc<dyn CategoryRepository>,
         sounds: Arc<dyn SoundRepository>,
@@ -38,6 +39,7 @@ impl CreateSoundService {
             converter,
             store,
             image_normalizer,
+            command_validator: Default::default(),
         }
     }
 
@@ -58,20 +60,19 @@ impl CreateSoundService {
 }
 
 #[async_trait::async_trait]
-impl CreateSoundHandler for CreateSoundService {
-    async fn handle(&self, command: CreateSound) -> Result<Sound, ApplicationError> {
-        let CreateSound {
+impl CommandHandler<CreateSoundCommand> for CreateSoundCommandHandler {
+    type Output = Sound;
+
+    async fn handle(&self, command: CreateSoundCommand) -> Result<Sound, ApplicationError> {
+        self.command_validator.validate(&command)?;
+        let CreateSoundCommand {
             name,
             category_id,
             bytes,
             icon_key,
             icon,
         } = command;
-        valid_name(&name).map_err(|_| ApplicationError::InvalidInput("sound name"))?;
         let icon_key = parse_icon_key(icon_key.as_deref())?;
-        if bytes.len() > MAX_UPLOAD_BYTES {
-            return Err(ApplicationError::PayloadTooLarge);
-        }
         ensure_category_exists(self.categories.as_ref(), category_id).await?;
         let icon = match icon {
             Some(bytes) => Some(normalize_icon(self.image_normalizer.as_ref(), bytes).await?),
@@ -120,5 +121,5 @@ impl CreateSoundHandler for CreateSoundService {
 }
 
 #[cfg(test)]
-#[path = "create_sound_service.tests.rs"]
+#[path = "create_sound_command_handler.tests.rs"]
 mod tests;

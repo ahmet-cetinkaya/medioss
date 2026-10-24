@@ -1,7 +1,7 @@
-mod update_sound;
-mod update_sound_handler;
-mod update_sound_service;
+mod update_sound_command;
+mod update_sound_command_handler;
+mod update_sound_command_validator;
 
-pub use update_sound::UpdateSound;
-pub use update_sound_handler::UpdateSoundHandler;
-pub use update_sound_service::UpdateSoundService;
+pub use update_sound_command::UpdateSoundCommand;
+pub use update_sound_command_handler::UpdateSoundCommandHandler;
+pub use update_sound_command_validator::UpdateSoundCommandValidator;

@@ -6,8 +6,8 @@ async fn deletes_the_sound_row_and_its_blob() {
     let sounds = Arc::new(InMemorySounds::with(vec![sample_sound(1)]));
     let store = Arc::new(RecordingBlobStore::default());
 
-    DeleteSoundService::new(sounds.clone(), store.clone())
-        .handle(DeleteSound { id: 1 })
+    DeleteSoundCommandHandler::new(sounds.clone(), store.clone())
+        .handle(DeleteSoundCommand { id: 1 })
         .await
         .unwrap();
 
@@ -20,11 +20,11 @@ async fn deletes_the_sound_row_and_its_blob() {
 
 #[tokio::test]
 async fn unknown_sound_is_not_found() {
-    let result = DeleteSoundService::new(
+    let result = DeleteSoundCommandHandler::new(
         Arc::new(InMemorySounds::default()),
         Arc::new(RecordingBlobStore::default()),
     )
-    .handle(DeleteSound { id: 1 })
+    .handle(DeleteSoundCommand { id: 1 })
     .await;
     assert_eq!(result, Err(ApplicationError::NotFound));
 }

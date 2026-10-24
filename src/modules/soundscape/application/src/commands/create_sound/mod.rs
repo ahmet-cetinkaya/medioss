@@ -1,8 +1,8 @@
-mod create_sound;
-mod create_sound_handler;
-mod create_sound_service;
+mod create_sound_command;
+mod create_sound_command_handler;
+mod create_sound_command_validator;
 
-pub use create_sound::CreateSound;
-pub use create_sound::MAX_UPLOAD_BYTES;
-pub use create_sound_handler::CreateSoundHandler;
-pub use create_sound_service::CreateSoundService;
+pub use create_sound_command::CreateSoundCommand;
+pub use create_sound_command::MAX_UPLOAD_BYTES;
+pub use create_sound_command_handler::CreateSoundCommandHandler;
+pub use create_sound_command_validator::CreateSoundCommandValidator;

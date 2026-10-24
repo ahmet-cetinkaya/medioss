@@ -1,4 +1,4 @@
 #[derive(Debug, Clone)]
-pub struct DeleteSound {
+pub struct DeleteSoundCommand {
     pub id: i64,
 }

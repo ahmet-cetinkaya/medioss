@@ -2,16 +2,16 @@ use super::*;
 use crate::test_support::{sample_sound, InMemoryCategories, InMemorySounds};
 use soundscape_domain::SoundCategory;
 
-fn service(sounds: InMemorySounds) -> UpdateSoundService {
+fn service(sounds: InMemorySounds) -> UpdateSoundCommandHandler {
     let categories = InMemoryCategories::with(vec![
         SoundCategory::new(1, "Nature", "nature").unwrap(),
         SoundCategory::new(2, "Urban", "urban").unwrap(),
     ]);
-    UpdateSoundService::new(Arc::new(categories), Arc::new(sounds))
+    UpdateSoundCommandHandler::new(Arc::new(categories), Arc::new(sounds))
 }
 
-fn command(name: &str, category_id: i64, icon_key: Option<&str>) -> UpdateSound {
-    UpdateSound {
+fn command(name: &str, category_id: i64, icon_key: Option<&str>) -> UpdateSoundCommand {
+    UpdateSoundCommand {
         id: 1,
         name: name.into(),
         category_id,

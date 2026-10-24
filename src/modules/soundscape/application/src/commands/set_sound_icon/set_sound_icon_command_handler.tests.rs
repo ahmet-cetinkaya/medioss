@@ -9,8 +9,8 @@ fn service(
     sounds: Arc<InMemorySounds>,
     store: Arc<RecordingBlobStore>,
     normalized: Result<Vec<u8>, ImageNormalizationError>,
-) -> SetSoundIconService {
-    SetSoundIconService::new(sounds, store, Arc::new(FakeImageNormalizer(normalized)))
+) -> SetSoundIconCommandHandler {
+    SetSoundIconCommandHandler::new(sounds, store, Arc::new(FakeImageNormalizer(normalized)))
 }
 
 #[tokio::test]
@@ -19,7 +19,7 @@ async fn stores_the_normalized_icon_on_the_sound() {
     let store = Arc::new(RecordingBlobStore::default());
 
     let sound = service(sounds, store.clone(), Ok(vec![1, 2, 3]))
-        .handle(SetSoundIcon {
+        .handle(SetSoundIconCommand {
             id: 1,
             bytes: PNG_MAGIC.to_vec(),
         })
@@ -45,7 +45,7 @@ async fn replacing_an_icon_deletes_the_previous_blob() {
         store.clone(),
         Ok(vec![1]),
     )
-    .handle(SetSoundIcon {
+    .handle(SetSoundIconCommand {
         id: 1,
         bytes: PNG_MAGIC.to_vec(),
     })
@@ -63,7 +63,7 @@ async fn oversized_icon_is_rejected_before_any_write() {
         store.clone(),
         Ok(vec![1]),
     )
-    .handle(SetSoundIcon {
+    .handle(SetSoundIconCommand {
         id: 1,
         bytes: vec![0; MAX_ICON_BYTES + 1],
     })
@@ -79,7 +79,7 @@ async fn non_image_bytes_are_unsupported_media() {
         Arc::new(RecordingBlobStore::default()),
         Ok(vec![1]),
     )
-    .handle(SetSoundIcon {
+    .handle(SetSoundIconCommand {
         id: 1,
         bytes: b"<svg></svg>".to_vec(),
     })
@@ -94,7 +94,7 @@ async fn unknown_sound_is_not_found() {
         Arc::new(RecordingBlobStore::default()),
         Ok(vec![1]),
     )
-    .handle(SetSoundIcon {
+    .handle(SetSoundIconCommand {
         id: 1,
         bytes: PNG_MAGIC.to_vec(),
     })
@@ -109,7 +109,7 @@ async fn normalizer_failure_is_mapped() {
         Arc::new(RecordingBlobStore::default()),
         Err(ImageNormalizationError::Busy),
     )
-    .handle(SetSoundIcon {
+    .handle(SetSoundIconCommand {
         id: 1,
         bytes: PNG_MAGIC.to_vec(),
     })
