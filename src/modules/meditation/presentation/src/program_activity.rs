@@ -5,12 +5,8 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use meditation_application::queries::get_continue_program::{
-    GetContinueProgram, GetContinueProgramHandler, GetContinueProgramService,
-};
-use meditation_application::queries::list_recent_programs::{
-    ListRecentPrograms, ListRecentProgramsHandler, ListRecentProgramsService,
-};
+use meditation_application::queries::get_continue_program::GetContinueProgram;
+use meditation_application::queries::list_recent_programs::ListRecentPrograms;
 use serde::{Deserialize, Serialize};
 
 use crate::programs::{program_response, progress_for, ProgramResponse};
@@ -28,16 +24,13 @@ pub async fn continue_program(
     CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
 ) -> Result<Response, ApiError> {
-    let found = GetContinueProgramService::new(
-        deps.playback.clone(),
-        deps.memberships.clone(),
-        deps.programs.clone(),
-    )
-    .handle(GetContinueProgram {
-        user_id: actor.user_id(),
-    })
-    .await
-    .map_err(ApiError::Application)?;
+    let found = deps
+        .get_continue_program
+        .handle(GetContinueProgram {
+            user_id: actor.user_id(),
+        })
+        .await
+        .map_err(ApiError::Application)?;
     let Some(found) = found else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
@@ -68,17 +61,14 @@ pub async fn recent_programs(
     State(deps): State<SharedDependencies>,
     axum::extract::Query(query): axum::extract::Query<RecentProgramsQuery>,
 ) -> Result<Json<Vec<RecentProgramResponse>>, ApiError> {
-    let listed = ListRecentProgramsService::new(
-        deps.playback.clone(),
-        deps.memberships.clone(),
-        deps.programs.clone(),
-    )
-    .handle(ListRecentPrograms {
-        user_id: actor.user_id(),
-        limit: query.limit,
-    })
-    .await
-    .map_err(ApiError::Application)?;
+    let listed = deps
+        .list_recent_programs
+        .handle(ListRecentPrograms {
+            user_id: actor.user_id(),
+            limit: query.limit,
+        })
+        .await
+        .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
     for entry in &listed {
         let progress = progress_for(&deps, actor.user_id(), entry.program.id).await;
