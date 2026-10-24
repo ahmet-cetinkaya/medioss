@@ -110,3 +110,7 @@ pub fn mood_tracker_dependencies(
     });
     (deps, entries)
 }
+
+#[cfg(test)]
+#[path = "mood_tracker.tests.rs"]
+mod tests;

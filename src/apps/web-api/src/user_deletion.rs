@@ -89,3 +89,7 @@ impl identity_presentation::UserDeletionListener for CrossModuleUserDeletion {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "user_deletion.tests.rs"]
+mod tests;
