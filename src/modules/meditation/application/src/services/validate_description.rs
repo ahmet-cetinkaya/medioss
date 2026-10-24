@@ -11,3 +11,7 @@ pub(crate) fn validate_description(
     }
     Ok(text.map(str::to_owned))
 }
+
+#[cfg(test)]
+#[path = "validate_description.tests.rs"]
+mod tests;

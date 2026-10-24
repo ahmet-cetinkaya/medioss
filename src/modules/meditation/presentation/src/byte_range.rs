@@ -73,3 +73,7 @@ pub fn parse_range(header: &str, total: u64) -> Result<Option<ByteRange>, Unsati
         }
     }
 }
+
+#[cfg(test)]
+#[path = "byte_range.tests.rs"]
+mod tests;

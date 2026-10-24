@@ -52,3 +52,7 @@ impl MoodRange {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "mood_range.tests.rs"]
+mod tests;

@@ -15,3 +15,7 @@ pub(crate) fn normalize_note(note: Option<&str>) -> Result<Option<String>, Appli
     }
     Ok(Some(note.to_owned()))
 }
+
+#[cfg(test)]
+#[path = "normalize_note.tests.rs"]
+mod tests;
