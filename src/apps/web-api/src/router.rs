@@ -168,3 +168,7 @@ async fn serve_static_file(
         Err(_) => (StatusCode::NOT_FOUND, "not found").into_response(),
     }
 }
+
+#[cfg(test)]
+#[path = "router.tests.rs"]
+mod tests;

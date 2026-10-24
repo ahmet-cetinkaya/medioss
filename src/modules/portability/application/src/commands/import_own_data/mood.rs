@@ -39,3 +39,7 @@ pub(super) async fn apply_mood_entries(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "mood.tests.rs"]
+mod tests;

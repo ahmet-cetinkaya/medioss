@@ -27,3 +27,7 @@ impl std::fmt::Display for ImportFailure {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "import_own_data.tests.rs"]
+mod tests;

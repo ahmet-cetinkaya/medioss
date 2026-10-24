@@ -11,3 +11,6 @@ pub mod session;
 pub mod soundscape;
 pub mod state;
 pub mod user_deletion;
+
+#[cfg(test)]
+mod test_support;

@@ -170,7 +170,7 @@ member_count() {
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 # Upper bound the exemption list's `# count: N` header may never exceed. Only
 # lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=7
+EXEMPTION_CEILING=1
 
 # Ratchet for logic in mod.rs/lib.rs (kept apart from the exemption list). A
 # listed file may keep its fn/impl/static/macro_rules!; an unlisted one may not
