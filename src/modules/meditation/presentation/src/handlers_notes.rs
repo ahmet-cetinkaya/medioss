@@ -114,3 +114,7 @@ pub async fn delete_note(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "handlers_notes.tests.rs"]
+mod tests;

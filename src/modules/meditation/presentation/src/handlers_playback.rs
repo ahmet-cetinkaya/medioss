@@ -135,3 +135,7 @@ pub async fn set_completed(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "handlers_playback.tests.rs"]
+mod tests;

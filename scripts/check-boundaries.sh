@@ -170,7 +170,7 @@ member_count() {
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 # Upper bound the exemption list's `# count: N` header may never exceed. Only
 # lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=69
+EXEMPTION_CEILING=56
 
 # True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
 # asserts something, so commented-out, #[ignore]d or empty tests do not count.

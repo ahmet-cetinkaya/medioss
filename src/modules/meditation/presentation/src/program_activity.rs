@@ -79,3 +79,7 @@ pub async fn recent_programs(
     }
     Ok(Json(responses))
 }
+
+#[cfg(test)]
+#[path = "program_activity.tests.rs"]
+mod tests;

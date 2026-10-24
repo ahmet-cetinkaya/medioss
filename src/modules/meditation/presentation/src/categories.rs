@@ -133,3 +133,7 @@ pub async fn assign_category(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "categories.tests.rs"]
+mod tests;

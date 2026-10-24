@@ -148,3 +148,7 @@ trait Tap: Sized {
 }
 #[cfg(test)]
 impl<T> Tap for T {}
+
+#[cfg(test)]
+#[path = "audio_upload.tests.rs"]
+mod tests;

@@ -211,3 +211,7 @@ pub async fn delete_program(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "programs.tests.rs"]
+mod tests;

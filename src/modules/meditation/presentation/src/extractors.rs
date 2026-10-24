@@ -48,3 +48,7 @@ where
         Ok(AdminActor(actor))
     }
 }
+
+#[cfg(test)]
+#[path = "extractors.tests.rs"]
+mod tests;

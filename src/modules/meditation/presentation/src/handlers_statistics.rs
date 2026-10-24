@@ -100,3 +100,7 @@ fn local_date(value: &str) -> Result<chrono::NaiveDate, ApiError> {
 fn invalid(message: &'static str) -> ApiError {
     ApiError::Application(ApplicationError::InvalidInput(message))
 }
+
+#[cfg(test)]
+#[path = "handlers_statistics.tests.rs"]
+mod tests;

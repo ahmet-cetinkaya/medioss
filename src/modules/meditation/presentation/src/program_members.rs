@@ -122,3 +122,7 @@ pub async fn remove_member(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "program_members.tests.rs"]
+mod tests;
