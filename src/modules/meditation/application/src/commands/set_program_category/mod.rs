@@ -1,7 +1,7 @@
-mod set_program_category;
-mod set_program_category_handler;
-mod set_program_category_service;
+mod set_program_category_command;
+mod set_program_category_command_handler;
+mod set_program_category_command_validator;
 
-pub use set_program_category::SetProgramCategory;
-pub use set_program_category_handler::SetProgramCategoryHandler;
-pub use set_program_category_service::SetProgramCategoryService;
+pub use set_program_category_command::SetProgramCategoryCommand;
+pub use set_program_category_command_handler::SetProgramCategoryCommandHandler;
+pub use set_program_category_command_validator::SetProgramCategoryCommandValidator;

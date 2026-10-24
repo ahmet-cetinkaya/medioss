@@ -1,12 +1,13 @@
 use crate::commands::set_program_category::{
-    SetProgramCategory, SetProgramCategoryHandler, SetProgramCategoryService,
+    SetProgramCategoryCommand, SetProgramCategoryCommandHandler,
 };
+use crate::ports::CommandHandler;
 use crate::ports::{CategoryRepository, ProgramRepository};
 use crate::test_support::TestDeps;
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> SetProgramCategoryService {
-    SetProgramCategoryService::new(deps.programs.clone(), deps.categories.clone())
+fn service(deps: &TestDeps) -> SetProgramCategoryCommandHandler {
+    SetProgramCategoryCommandHandler::new(deps.programs.clone(), deps.categories.clone())
 }
 
 async fn category_of(deps: &TestDeps, program_id: i64) -> Option<i64> {
@@ -29,7 +30,7 @@ async fn assigns_an_existing_category() {
         .unwrap();
 
     service(&deps)
-        .handle(SetProgramCategory {
+        .handle(SetProgramCategoryCommand {
             program_id: program,
             category_id: Some(category.id),
         })
@@ -54,7 +55,7 @@ async fn none_clears_the_category() {
         .unwrap();
 
     service(&deps)
-        .handle(SetProgramCategory {
+        .handle(SetProgramCategoryCommand {
             program_id: program,
             category_id: None,
         })
@@ -70,7 +71,7 @@ async fn unknown_category_is_not_found_and_changes_nothing() {
     let program = deps.seed_program("Program").await;
 
     let result = service(&deps)
-        .handle(SetProgramCategory {
+        .handle(SetProgramCategoryCommand {
             program_id: program,
             category_id: Some(9999),
         })
@@ -85,7 +86,7 @@ async fn unknown_program_is_not_found() {
     let deps = TestDeps::new();
 
     let result = service(&deps)
-        .handle(SetProgramCategory {
+        .handle(SetProgramCategoryCommand {
             program_id: 9999,
             category_id: None,
         })

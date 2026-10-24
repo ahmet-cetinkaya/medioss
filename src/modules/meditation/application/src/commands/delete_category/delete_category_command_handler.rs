@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
-use super::delete_category::DeleteCategory;
-use super::delete_category_handler::DeleteCategoryHandler;
-use crate::ports::{CategoryRepository, ProgramRepository};
+use super::delete_category_command::DeleteCategoryCommand;
+use super::delete_category_command_validator::DeleteCategoryCommandValidator;
+use crate::ports::{CategoryRepository, CommandHandler, ProgramRepository};
 use crate::ApplicationError;
 
-pub struct DeleteCategoryService {
+pub struct DeleteCategoryCommandHandler {
     categories: Arc<dyn CategoryRepository>,
     programs: Arc<dyn ProgramRepository>,
+    validator: DeleteCategoryCommandValidator,
 }
 
-impl DeleteCategoryService {
+impl DeleteCategoryCommandHandler {
     pub fn new(
         categories: Arc<dyn CategoryRepository>,
         programs: Arc<dyn ProgramRepository>,
@@ -18,13 +19,17 @@ impl DeleteCategoryService {
         Self {
             categories,
             programs,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl DeleteCategoryHandler for DeleteCategoryService {
-    async fn handle(&self, command: DeleteCategory) -> Result<(), ApplicationError> {
+impl CommandHandler<DeleteCategoryCommand> for DeleteCategoryCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: DeleteCategoryCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         let category_id = command.category_id;
         // Sweep references before removing the row: if the sweep failed after
         // the delete already committed, programs would keep a `category_id`
@@ -47,5 +52,5 @@ impl DeleteCategoryHandler for DeleteCategoryService {
 }
 
 #[cfg(test)]
-#[path = "delete_category_service.tests.rs"]
+#[path = "delete_category_command_handler.tests.rs"]
 mod tests;

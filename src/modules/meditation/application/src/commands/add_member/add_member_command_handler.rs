@@ -1,19 +1,22 @@
 use std::sync::Arc;
 
-use super::add_member::AddMember;
-use super::add_member_handler::AddMemberHandler;
-use crate::ports::{Clock, MeditationRepository, MembershipRepository, ProgramRepository};
+use super::add_member_command::AddMemberCommand;
+use super::add_member_command_validator::AddMemberCommandValidator;
+use crate::ports::{
+    Clock, CommandHandler, MeditationRepository, MembershipRepository, ProgramRepository,
+};
 use crate::services::ensure_meditation_exists;
 use crate::ApplicationError;
 
-pub struct AddMemberService {
+pub struct AddMemberCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
     programs: Arc<dyn ProgramRepository>,
     memberships: Arc<dyn MembershipRepository>,
     clock: Arc<dyn Clock>,
+    validator: AddMemberCommandValidator,
 }
 
-impl AddMemberService {
+impl AddMemberCommandHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         programs: Arc<dyn ProgramRepository>,
@@ -25,14 +28,18 @@ impl AddMemberService {
             programs,
             memberships,
             clock,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl AddMemberHandler for AddMemberService {
-    async fn handle(&self, command: AddMember) -> Result<(), ApplicationError> {
-        let AddMember {
+impl CommandHandler<AddMemberCommand> for AddMemberCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: AddMemberCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
+        let AddMemberCommand {
             program_id,
             meditation_id,
         } = command;
@@ -51,5 +58,5 @@ impl AddMemberHandler for AddMemberService {
 }
 
 #[cfg(test)]
-#[path = "add_member_service.tests.rs"]
+#[path = "add_member_command_handler.tests.rs"]
 mod tests;

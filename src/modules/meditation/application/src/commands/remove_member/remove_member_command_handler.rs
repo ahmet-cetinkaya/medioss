@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
-use super::remove_member::RemoveMember;
-use super::remove_member_handler::RemoveMemberHandler;
-use crate::ports::{MembershipRepository, ProgramRepository};
+use super::remove_member_command::RemoveMemberCommand;
+use super::remove_member_command_validator::RemoveMemberCommandValidator;
+use crate::ports::{CommandHandler, MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 
-pub struct RemoveMemberService {
+pub struct RemoveMemberCommandHandler {
     programs: Arc<dyn ProgramRepository>,
     memberships: Arc<dyn MembershipRepository>,
+    validator: RemoveMemberCommandValidator,
 }
 
-impl RemoveMemberService {
+impl RemoveMemberCommandHandler {
     pub fn new(
         programs: Arc<dyn ProgramRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -18,15 +19,19 @@ impl RemoveMemberService {
         Self {
             programs,
             memberships,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl RemoveMemberHandler for RemoveMemberService {
-    async fn handle(&self, command: RemoveMember) -> Result<(), ApplicationError> {
+impl CommandHandler<RemoveMemberCommand> for RemoveMemberCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: RemoveMemberCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         // Unknown pairs succeed idempotently (spec FR-027).
-        let RemoveMember {
+        let RemoveMemberCommand {
             program_id,
             meditation_id,
         } = command;
@@ -44,5 +49,5 @@ impl RemoveMemberHandler for RemoveMemberService {
 }
 
 #[cfg(test)]
-#[path = "remove_member_service.tests.rs"]
+#[path = "remove_member_command_handler.tests.rs"]
 mod tests;

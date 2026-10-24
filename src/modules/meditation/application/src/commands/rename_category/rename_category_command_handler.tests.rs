@@ -1,31 +1,28 @@
-use crate::commands::create_category::{
-    CreateCategory, CreateCategoryHandler, CreateCategoryService,
-};
-use crate::commands::rename_category::{
-    RenameCategory, RenameCategoryHandler, RenameCategoryService,
-};
+use crate::commands::create_category::{CreateCategoryCommand, CreateCategoryCommandHandler};
+use crate::commands::rename_category::{RenameCategoryCommand, RenameCategoryCommandHandler};
+use crate::ports::CommandHandler;
 use crate::test_support::TestDeps;
 use crate::ApplicationError;
 
 #[tokio::test]
 async fn renaming_to_a_name_inserted_after_the_duplicate_check_is_a_duplicate() {
     let deps = TestDeps::new();
-    let create = CreateCategoryService::new(deps.categories.clone(), deps.clock.clone());
+    let create = CreateCategoryCommandHandler::new(deps.categories.clone(), deps.clock.clone());
     let renamed = create
-        .handle(CreateCategory {
+        .handle(CreateCategoryCommand {
             name: "Morning".into(),
         })
         .await
         .expect("renamed category");
     create
-        .handle(CreateCategory {
+        .handle(CreateCategoryCommand {
             name: "Evening".into(),
         })
         .await
         .expect("existing category");
 
-    let error = RenameCategoryService::new(deps.categories.clone(), deps.clock.clone())
-        .handle(RenameCategory {
+    let error = RenameCategoryCommandHandler::new(deps.categories.clone(), deps.clock.clone())
+        .handle(RenameCategoryCommand {
             category_id: renamed.id,
             name: "Evening".into(),
         })

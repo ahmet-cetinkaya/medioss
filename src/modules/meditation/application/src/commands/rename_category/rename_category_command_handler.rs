@@ -1,30 +1,35 @@
 use std::sync::Arc;
 
-use super::rename_category::RenameCategory;
-use super::rename_category_handler::RenameCategoryHandler;
+use super::rename_category_command::RenameCategoryCommand;
+use super::rename_category_command_validator::RenameCategoryCommandValidator;
 use crate::ports::RenameCategoryError;
-use crate::ports::{CategoryRepository, Clock};
+use crate::ports::{CategoryRepository, Clock, CommandHandler};
 use crate::ApplicationError;
 
-pub struct RenameCategoryService {
+pub struct RenameCategoryCommandHandler {
     categories: Arc<dyn CategoryRepository>,
     clock: Arc<dyn Clock>,
+    validator: RenameCategoryCommandValidator,
 }
 
-impl RenameCategoryService {
+impl RenameCategoryCommandHandler {
     pub fn new(categories: Arc<dyn CategoryRepository>, clock: Arc<dyn Clock>) -> Self {
-        Self { categories, clock }
+        Self {
+            categories,
+            clock,
+            validator: Default::default(),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl RenameCategoryHandler for RenameCategoryService {
-    async fn handle(&self, command: RenameCategory) -> Result<(), ApplicationError> {
-        let RenameCategory { category_id, name } = command;
-        let name = name.trim();
-        if name.is_empty() {
-            return Err(ApplicationError::InvalidInput("name must not be empty"));
-        }
+impl CommandHandler<RenameCategoryCommand> for RenameCategoryCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: RenameCategoryCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
+        let name = self.validator.normalized_name(&command);
+        let category_id = command.category_id;
         // A duplicate check against every other category, so renaming to the
         // same name (a no-op) stays allowed.
         let existing = self
@@ -51,5 +56,5 @@ impl RenameCategoryHandler for RenameCategoryService {
 }
 
 #[cfg(test)]
-#[path = "rename_category_service.tests.rs"]
+#[path = "rename_category_command_handler.tests.rs"]
 mod tests;

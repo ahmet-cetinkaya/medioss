@@ -1,35 +1,31 @@
-use crate::commands::create_category::{
-    CreateCategory, CreateCategoryHandler, CreateCategoryService,
-};
-use crate::commands::delete_category::{
-    DeleteCategory, DeleteCategoryHandler, DeleteCategoryService,
-};
+use crate::commands::create_category::{CreateCategoryCommand, CreateCategoryCommandHandler};
+use crate::commands::delete_category::{DeleteCategoryCommand, DeleteCategoryCommandHandler};
 use crate::commands::set_program_category::{
-    SetProgramCategory, SetProgramCategoryHandler, SetProgramCategoryService,
+    SetProgramCategoryCommand, SetProgramCategoryCommandHandler,
 };
-use crate::ports::ProgramRepository;
+use crate::ports::{CommandHandler, ProgramRepository};
 use crate::test_support::TestDeps;
 
 #[tokio::test]
 async fn deleting_a_category_leaves_its_programs_uncategorized() {
     let deps = TestDeps::new();
-    let category = CreateCategoryService::new(deps.categories.clone(), deps.clock.clone())
-        .handle(CreateCategory {
+    let category = CreateCategoryCommandHandler::new(deps.categories.clone(), deps.clock.clone())
+        .handle(CreateCategoryCommand {
             name: "Evening".into(),
         })
         .await
         .expect("category");
     let program_id = deps.seed_program("Wind-down").await;
-    SetProgramCategoryService::new(deps.programs.clone(), deps.categories.clone())
-        .handle(SetProgramCategory {
+    SetProgramCategoryCommandHandler::new(deps.programs.clone(), deps.categories.clone())
+        .handle(SetProgramCategoryCommand {
             program_id,
             category_id: Some(category.id),
         })
         .await
         .expect("assign");
 
-    DeleteCategoryService::new(deps.categories.clone(), deps.programs.clone())
-        .handle(DeleteCategory {
+    DeleteCategoryCommandHandler::new(deps.categories.clone(), deps.programs.clone())
+        .handle(DeleteCategoryCommand {
             category_id: category.id,
         })
         .await

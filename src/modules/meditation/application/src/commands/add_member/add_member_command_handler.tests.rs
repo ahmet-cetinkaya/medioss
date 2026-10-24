@@ -1,12 +1,13 @@
-use crate::commands::add_member::{AddMember, AddMemberHandler, AddMemberService};
+use crate::commands::add_member::{AddMemberCommand, AddMemberCommandHandler};
+use crate::ports::CommandHandler;
 use crate::ports::MembershipRepository;
 use crate::test_support::TestDeps;
 use crate::ApplicationError;
 
 const UNKNOWN_ID: i64 = 9999;
 
-fn service(deps: &TestDeps) -> AddMemberService {
-    AddMemberService::new(
+fn service(deps: &TestDeps) -> AddMemberCommandHandler {
+    AddMemberCommandHandler::new(
         deps.meditations.clone(),
         deps.programs.clone(),
         deps.memberships.clone(),
@@ -21,7 +22,7 @@ async fn adds_the_meditation_to_a_second_program() {
     let other_program = deps.seed_program("Other").await;
 
     service(&deps)
-        .handle(AddMember {
+        .handle(AddMemberCommand {
             program_id: other_program,
             meditation_id: meditation.id(),
         })
@@ -42,7 +43,7 @@ async fn adding_twice_keeps_a_single_membership() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
     let other_program = deps.seed_program("Other").await;
-    let command = || AddMember {
+    let command = || AddMemberCommand {
         program_id: other_program,
         meditation_id: meditation.id(),
     };
@@ -64,7 +65,7 @@ async fn unknown_meditation_is_not_found() {
     let program = deps.seed_program("Program").await;
 
     let result = service(&deps)
-        .handle(AddMember {
+        .handle(AddMemberCommand {
             program_id: program,
             meditation_id: UNKNOWN_ID,
         })
@@ -79,7 +80,7 @@ async fn unknown_program_is_not_found() {
     let meditation = deps.seeded_meditation().await;
 
     let result = service(&deps)
-        .handle(AddMember {
+        .handle(AddMemberCommand {
             program_id: UNKNOWN_ID,
             meditation_id: meditation.id(),
         })

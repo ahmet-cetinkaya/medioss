@@ -1,4 +1,4 @@
 #[derive(Debug, Clone)]
-pub struct DeleteCategory {
+pub struct DeleteCategoryCommand {
     pub category_id: i64,
 }

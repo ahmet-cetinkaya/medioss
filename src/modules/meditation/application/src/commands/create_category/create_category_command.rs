@@ -1,4 +1,4 @@
 #[derive(Debug, Clone)]
-pub struct CreateCategory {
+pub struct CreateCategoryCommand {
     pub name: String,
 }

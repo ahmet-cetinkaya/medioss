@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
-use super::set_program_category::SetProgramCategory;
-use super::set_program_category_handler::SetProgramCategoryHandler;
-use crate::ports::{CategoryRepository, ProgramRepository};
+use super::set_program_category_command::SetProgramCategoryCommand;
+use super::set_program_category_command_validator::SetProgramCategoryCommandValidator;
+use crate::ports::{CategoryRepository, CommandHandler, ProgramRepository};
 use crate::ApplicationError;
 
-pub struct SetProgramCategoryService {
+pub struct SetProgramCategoryCommandHandler {
     programs: Arc<dyn ProgramRepository>,
     categories: Arc<dyn CategoryRepository>,
+    validator: SetProgramCategoryCommandValidator,
 }
 
-impl SetProgramCategoryService {
+impl SetProgramCategoryCommandHandler {
     pub fn new(
         programs: Arc<dyn ProgramRepository>,
         categories: Arc<dyn CategoryRepository>,
@@ -18,15 +19,19 @@ impl SetProgramCategoryService {
         Self {
             programs,
             categories,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl SetProgramCategoryHandler for SetProgramCategoryService {
-    async fn handle(&self, command: SetProgramCategory) -> Result<(), ApplicationError> {
+impl CommandHandler<SetProgramCategoryCommand> for SetProgramCategoryCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: SetProgramCategoryCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         // Assigns a category, or clears it with `None` (spec FR-031).
-        let SetProgramCategory {
+        let SetProgramCategoryCommand {
             program_id,
             category_id,
         } = command;
@@ -51,5 +56,5 @@ impl SetProgramCategoryHandler for SetProgramCategoryService {
 }
 
 #[cfg(test)]
-#[path = "set_program_category_service.tests.rs"]
+#[path = "set_program_category_command_handler.tests.rs"]
 mod tests;
