@@ -5,9 +5,15 @@
 
 use std::path::Path;
 
+pub mod app_state;
+pub mod builtin_sounds;
 pub mod database;
 pub mod error;
+pub mod listener;
+pub mod logging;
 pub mod media_layout;
+pub mod migrations;
+pub mod report;
 
 pub use error::BootstrapError;
 

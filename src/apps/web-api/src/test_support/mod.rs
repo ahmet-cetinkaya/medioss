@@ -35,17 +35,7 @@ pub(crate) async fn test_state_with_cookie_secure(
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.unwrap();
 
-    let config = crate::config::Config {
-        data_dir: directory.path().to_path_buf(),
-        port: 0,
-        static_dir: directory.path().to_path_buf(),
-        bind_host: "127.0.0.1".parse().unwrap(),
-        session_secret: crate::config::SessionSecret::new_for_tests("test-secret"),
-        session_timeout: std::time::Duration::from_secs(3600),
-        medioss_origin: "https://medioss.example".to_owned(),
-        dev_origin: None,
-        session_cookie_secure,
-    };
+    let config = test_config(directory.path(), session_cookie_secure);
 
     let origin = Arc::new(config.medioss_origin.clone());
     let meditation_module = crate::meditation::meditation_dependencies(
@@ -88,4 +78,21 @@ pub(crate) async fn test_state_with_cookie_secure(
         )),
     );
     (state, directory)
+}
+
+pub(crate) fn test_config(
+    data_dir: &std::path::Path,
+    session_cookie_secure: bool,
+) -> crate::config::Config {
+    crate::config::Config {
+        data_dir: data_dir.to_path_buf(),
+        port: 0,
+        static_dir: data_dir.to_path_buf(),
+        bind_host: "127.0.0.1".parse().unwrap(),
+        session_secret: crate::config::SessionSecret::new_for_tests("test-secret"),
+        session_timeout: std::time::Duration::from_secs(3600),
+        medioss_origin: "https://medioss.example".to_owned(),
+        dev_origin: None,
+        session_cookie_secure,
+    }
 }

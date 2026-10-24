@@ -1,28 +1,19 @@
-use std::{fmt::Display, sync::Arc};
-
-use tracing_subscriber::EnvFilter;
 use web_api::{
-    bootstrap::{database::Database, ensure_data_dir, media_layout::migrate_media_layout},
+    bootstrap::{
+        app_state::build_state,
+        builtin_sounds::seed_builtin_soundscapes,
+        ensure_data_dir,
+        listener::bind_listener,
+        logging::init_tracing,
+        media_layout::migrate_media_layout,
+        migrations::migrate_all,
+        report::{fail, with_causes},
+    },
     config::{self, Config},
     router::router,
-    state::AppState,
 };
 
 mod operator;
-
-fn fail(err: impl Display) -> ! {
-    tracing::error!("{err}");
-    std::process::exit(1)
-}
-
-// Each `Display` renders only its own message, so the `#[source]` chain has to
-// be appended here to keep the underlying cause visible exactly once.
-fn with_causes(err: &dyn std::error::Error) -> String {
-    std::iter::successors(err.source(), |cause| cause.source())
-        .fold(err.to_string(), |message, cause| {
-            format!("{message}: {cause}")
-        })
-}
 
 #[derive(clap::Parser)]
 #[command(name = "medioss", about = "MediOSS server and operator CLI")]
@@ -97,106 +88,4 @@ async fn run(cli: Cli, server_config: Option<Config>) {
     if let Err(err) = axum::serve(listener, router(state)).await {
         fail(format!("server error: {err}"));
     }
-}
-
-fn init_tracing() {
-    let filter = match std::env::var(EnvFilter::DEFAULT_ENV) {
-        // The subscriber does not exist yet, so this one report cannot use tracing.
-        Ok(directives) => EnvFilter::try_new(directives).unwrap_or_else(|err| {
-            eprintln!("ignoring malformed RUST_LOG, defaulting to `info`: {err}");
-            EnvFilter::new("info")
-        }),
-        Err(_) => EnvFilter::new("info"),
-    };
-    tracing_subscriber::fmt().with_env_filter(filter).init();
-}
-
-async fn bind_listener(host: std::net::IpAddr, port: u16) -> tokio::net::TcpListener {
-    let addr = std::net::SocketAddr::new(host, port);
-    let listener = tokio::net::TcpListener::bind(&addr)
-        .await
-        .unwrap_or_else(|err| fail(format!("could not bind {addr}: {err}")));
-    // Port 0 binds an ephemeral port, so only the bound address is informative.
-    match listener.local_addr() {
-        Ok(bound) => tracing::info!("medioss listening on {bound}"),
-        Err(err) => tracing::warn!("medioss listening on {addr}, bound address unavailable: {err}"),
-    }
-    listener
-}
-
-async fn migrate_all(database: &Database) {
-    if let Err(err) = identity_infrastructure::migrate(&database.connection).await {
-        fail(format!("identity migration failed: {err}"));
-    }
-    if let Err(err) = meditation_infrastructure::migrations::migrate(&database.connection).await {
-        fail(format!("meditation migration failed: {err}"));
-    }
-    if let Err(err) = soundscape_infrastructure::migrations::migrate(&database.connection).await {
-        fail(format!("soundscape migration failed: {err}"));
-    }
-    if let Err(err) = mood_tracker_infrastructure::migrations::migrate(&database.connection).await {
-        fail(format!("mood tracker migration failed: {err}"));
-    }
-}
-
-async fn seed_builtin_soundscapes(database: &Database, config: &Config) {
-    match soundscape_infrastructure::builtin::seed_if_present(
-        &database.connection,
-        &config.data_dir.join("media"),
-    )
-    .await
-    {
-        Ok(true) => tracing::info!("built-in soundscape set seeded"),
-        Ok(false) => tracing::debug!("no built-in soundscape set found; skipping seed"),
-        Err(err) => tracing::warn!("built-in soundscape seed failed: {err}"),
-    }
-}
-
-async fn build_state(config: Config, database: Database) -> AppState {
-    let session_store = tower_sessions_sqlx_store::SqliteStore::new(database.pool.clone());
-    if let Err(err) = session_store.migrate().await {
-        fail(format!("session store migration failed: {err}"));
-    }
-    let hasher = identity_infrastructure::BoundedArgon2PasswordHasher::new();
-    let origin = || Arc::new(config.medioss_origin.clone());
-    let meditation_module = web_api::meditation::meditation_dependencies(
-        database.connection.clone(),
-        &config.data_dir,
-        origin(),
-    );
-    let portability =
-        web_api::portability::portability_dependencies(database.connection.clone(), origin());
-    let (mood_tracker, mood_tracker_entries) =
-        web_api::mood_tracker::mood_tracker_dependencies(database.connection.clone(), origin());
-    let soundscape = web_api::soundscape::soundscape_dependencies(
-        database.connection.clone(),
-        &config.data_dir,
-        origin(),
-    );
-    let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
-        Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
-            Arc::clone(&meditation_module.notes),
-            Arc::clone(&meditation_module.playback),
-            Arc::clone(&meditation_module.sessions),
-            Arc::clone(&soundscape.mixes),
-            Arc::clone(&mood_tracker_entries),
-            config.data_dir.join("media").join("identity"),
-        ));
-    let avatar_store = Arc::new(web_api::avatar_store::FileAvatarStore::new(
-        config.data_dir.join("media").join("identity"),
-    ));
-    AppState::new(
-        Arc::new(config),
-        Arc::new(session_store),
-        meditation_module.shared,
-        mood_tracker,
-        soundscape,
-        portability,
-        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
-            database.connection,
-        )),
-        hasher,
-        deletion,
-        avatar_store,
-    )
 }

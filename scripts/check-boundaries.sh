@@ -170,7 +170,7 @@ member_count() {
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 # Upper bound the exemption list's `# count: N` header may never exceed. Only
 # lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=1
+EXEMPTION_CEILING=0
 
 # Ratchet for logic in mod.rs/lib.rs (kept apart from the exemption list). A
 # listed file may keep its fn/impl/static/macro_rules!; an unlisted one may not
@@ -346,6 +346,22 @@ is_gated_test_support() {
   return 0
 }
 
+# Kind D: a binary entry point (src/main.rs of a crate) that is only process
+# glue: `fn main` plus `fn run`, declarations and data. Any other fn, an impl,
+# a static, macro_rules! or an inline `mod x { }` means logic lives there and it
+# needs a sibling test like any other file.
+is_bin_entry_file() {
+  local file="$1" code names
+  [ "$(basename "$file")" = "main.rs" ] || return 1
+  [ "$(basename "$(dirname "$file")")" = "src" ] || return 1
+  [ -f "$(dirname "$(dirname "$file")")/Cargo.toml" ] || return 1
+  code="$(code_without_comments "$file")"
+  grep -qE '\bfn +main\b' <<<"$code" || return 1
+  grep -qE '\bimpl\b|\bstatic\b|macro_rules!|\bmod +[A-Za-z0-9_]+ *\{' <<<"$code" && return 1
+  names="$(grep -oE '\bfn +[A-Za-z0-9_]+' <<<"$code" | awk '{print $2}' | grep -vxE 'main|run' || true)"
+  [ -z "$names" ]
+}
+
 # Fails when the exemption list's `# count: N` is missing, below the real
 # entry count, or above the ceiling.
 check_exemption_budget() {
@@ -454,7 +470,7 @@ check_file_layout() {
       violations+="  inline test module: $relative"$'\n'
       continue
     fi
-    if is_cfg_test_module_file "$file" || is_data_only_entity_file "$file"; then
+    if is_cfg_test_module_file "$file" || is_data_only_entity_file "$file" || is_bin_entry_file "$file"; then
       if [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
         violations+="  stale exemption (exempt by kind; remove it from layout-test-exemptions.txt): $relative"$'\n'
       fi
@@ -774,6 +790,23 @@ expect_modrs() {
   fi
 }
 
+# Checks check_file_layout on a fixture crate whose src/main.rs is $4 yields
+# verdict $2.
+expect_bin_entry() {
+  local verdict="$2" label="$3" body="$4" dir accepted=reject
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src"
+  : >"$dir/Cargo.toml"
+  printf "$body" >"$dir/src/main.rs"
+  check_file_layout "$dir" >/dev/null && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   ${verdict%e}ed: $label"
+  else
+    echo "  FAIL wrongly ${accepted%e}ed: $label"
+    return 1
+  fi
+}
+
 # Checks check_exemption_budget on file $1 with ceiling $2 yields verdict $3.
 expect_budget() {
   local verdict="$3" label="$4" accepted=reject
@@ -927,6 +960,14 @@ layout_self_test() {
     'const X: &str = r#"\n#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n"#;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
   expect_hook "$dir" reject "74. typed literal tautology assert_eq!(1u8, 1u8)" \
     '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(1u8, 1u8); }\n' || ok=1
+  expect_bin_entry "$dir" accept "75. main.rs holding only main and run" 'fn main() { run(); }\nasync fn run() {}\n' || ok=1
+  expect_bin_entry "$dir" reject "76. main.rs with an extra fn" 'fn main() { run(); }\nasync fn run() {}\nfn helper() -> u8 { 1 }\n' || ok=1
+  expect_bin_entry "$dir" reject "77. main.rs with an impl" 'fn main() { run(); }\nasync fn run() {}\nstruct A;\nimpl A {}\n' || ok=1
+  expect_bin_entry "$dir" reject "78. main.rs with a static" 'fn main() { run(); }\nasync fn run() {}\nstatic X: u8 = 1;\n' || ok=1
+  expect_bin_entry "$dir" reject "79. main.rs with macro_rules!" 'fn main() { run(); }\nasync fn run() {}\nmacro_rules! m { () => {} }\n' || ok=1
+  expect_bin_entry "$dir" reject "80. main.rs with an inline module" 'fn main() { run(); }\nasync fn run() {}\nmod logic { pub const A: u8 = 1; }\n' || ok=1
+  expect_bin_entry "$dir" reject "81. main.rs without fn main" 'fn run() {}\n' || ok=1
+  expect_bin_entry "$dir" accept "82. main.rs declaring an out-of-line module" 'fn main() { run(); }\nasync fn run() {}\nmod operator;\n' || ok=1
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
