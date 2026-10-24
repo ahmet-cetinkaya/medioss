@@ -1,7 +1,7 @@
-mod find_sound_icon;
-mod find_sound_icon_handler;
-mod find_sound_icon_service;
+mod find_sound_icon_query;
+mod find_sound_icon_query_handler;
+mod find_sound_icon_query_validator;
 
-pub use find_sound_icon::FindSoundIcon;
-pub use find_sound_icon_handler::FindSoundIconHandler;
-pub use find_sound_icon_service::FindSoundIconService;
+pub use find_sound_icon_query::FindSoundIconQuery;
+pub use find_sound_icon_query_handler::FindSoundIconQueryHandler;
+pub use find_sound_icon_query_validator::FindSoundIconQueryValidator;

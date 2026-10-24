@@ -7,8 +7,8 @@ async fn lists_every_category() {
         SoundCategory::new(1, "Nature", "nature").unwrap(),
         SoundCategory::new(2, "Urban", "urban").unwrap(),
     ]);
-    let listed = ListCategoriesService::new(Arc::new(categories))
-        .handle(ListCategories)
+    let listed = ListCategoriesQueryHandler::new(Arc::new(categories))
+        .handle(ListCategoriesQuery)
         .await
         .unwrap();
     let names: Vec<_> = listed
@@ -20,8 +20,8 @@ async fn lists_every_category() {
 
 #[tokio::test]
 async fn repository_failure_is_reported() {
-    let result = ListCategoriesService::new(Arc::new(InMemoryCategories::failing("boom")))
-        .handle(ListCategories)
+    let result = ListCategoriesQueryHandler::new(Arc::new(InMemoryCategories::failing("boom")))
+        .handle(ListCategoriesQuery)
         .await;
     assert_eq!(result, Err(ApplicationError::Repository("boom".into())));
 }

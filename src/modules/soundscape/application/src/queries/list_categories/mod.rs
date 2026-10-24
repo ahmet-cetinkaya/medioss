@@ -1,7 +1,7 @@
-mod list_categories;
-mod list_categories_handler;
-mod list_categories_service;
+mod list_categories_query;
+mod list_categories_query_handler;
+mod list_categories_query_validator;
 
-pub use list_categories::ListCategories;
-pub use list_categories_handler::ListCategoriesHandler;
-pub use list_categories_service::ListCategoriesService;
+pub use list_categories_query::ListCategoriesQuery;
+pub use list_categories_query_handler::ListCategoriesQueryHandler;
+pub use list_categories_query_validator::ListCategoriesQueryValidator;

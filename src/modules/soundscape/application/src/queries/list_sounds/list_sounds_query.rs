@@ -1,2 +1,2 @@
 #[derive(Debug, Clone, Copy)]
-pub struct ListSounds;
+pub struct ListSoundsQuery;
