@@ -154,3 +154,7 @@ fn sanitize_filename(name: &str) -> String {
     }
     out.trim_matches('-').to_owned()
 }
+
+#[cfg(test)]
+#[path = "audio_stream.tests.rs"]
+mod tests;

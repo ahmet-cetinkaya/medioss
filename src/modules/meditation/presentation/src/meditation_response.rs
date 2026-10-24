@@ -85,3 +85,7 @@ pub(crate) async fn with_playback(
     }
     response
 }
+
+#[cfg(test)]
+#[path = "meditation_response.tests.rs"]
+mod tests;

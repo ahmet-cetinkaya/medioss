@@ -89,3 +89,7 @@ pub async fn replace_cover(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "program_cover.tests.rs"]
+mod tests;

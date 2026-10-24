@@ -152,3 +152,7 @@ pub async fn delete_meditation(
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+#[path = "meditations.tests.rs"]
+mod tests;

@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 69
+# count: 56
 src/apps/web-api/src/config/session_secret.rs
 src/apps/web-api/src/image_normalization/vp8l_preflight.rs
 src/apps/web-api/src/image_normalization/webp_preflight.rs
@@ -33,19 +33,6 @@ src/modules/identity/presentation/src/router.rs
 src/modules/identity/presentation/src/user_admin.rs
 src/modules/identity/presentation/src/user_response.rs
 src/modules/identity/presentation/src/users_lifecycle.rs
-src/modules/meditation/presentation/src/audio_stream.rs
-src/modules/meditation/presentation/src/audio_upload.rs
-src/modules/meditation/presentation/src/categories.rs
-src/modules/meditation/presentation/src/extractors.rs
-src/modules/meditation/presentation/src/handlers_notes.rs
-src/modules/meditation/presentation/src/handlers_playback.rs
-src/modules/meditation/presentation/src/handlers_statistics.rs
-src/modules/meditation/presentation/src/meditation_response.rs
-src/modules/meditation/presentation/src/meditations.rs
-src/modules/meditation/presentation/src/program_activity.rs
-src/modules/meditation/presentation/src/program_cover.rs
-src/modules/meditation/presentation/src/program_members.rs
-src/modules/meditation/presentation/src/programs.rs
 src/modules/mood-tracker/application/src/application_tests.rs
 src/modules/mood-tracker/application/src/commands/create_mood_entry/create_mood_entry_service.rs
 src/modules/mood-tracker/application/src/commands/delete_mood_entry/delete_mood_entry_service.rs

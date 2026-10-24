@@ -51,23 +51,23 @@ use meditation_application::test_support::{
 
 use crate::{meditation_router, MeditationDependencies};
 
-pub(super) fn admin_actor() -> Actor {
+pub(crate) fn admin_actor() -> Actor {
     Actor::new(UserId::new(1), Role::Admin)
 }
 
-pub(super) fn member_actor() -> Actor {
+pub(crate) fn member_actor() -> Actor {
     Actor::new(UserId::new(2), Role::Member)
 }
 
-pub(super) struct TestApp {
-    pub(super) router: Router,
-    pub(super) state: RepoState,
-    pub(super) store: FakeBlobStore,
+pub(crate) struct TestApp {
+    pub(crate) router: Router,
+    pub(crate) state: RepoState,
+    pub(crate) store: FakeBlobStore,
 }
 
 /// Builds every use-case service over one shared fake-repo state, exactly
 /// the way web-api's composition root builds them over the SeaORM adapters.
-pub(super) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> MeditationDependencies {
+pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> MeditationDependencies {
     let meditations: Arc<dyn meditation_application::ports::MeditationRepository> =
         Arc::new(FakeMeditationRepository(state.clone()));
     let programs: Arc<dyn meditation_application::ports::ProgramRepository> =
@@ -228,7 +228,7 @@ pub(super) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
     }
 }
 
-pub(super) fn app() -> TestApp {
+pub(crate) fn app() -> TestApp {
     let state = RepoState::new();
     let store = FakeBlobStore::new();
     let deps = test_dependencies(state.clone(), &store);
@@ -239,7 +239,7 @@ pub(super) fn app() -> TestApp {
     }
 }
 
-pub(super) async fn call(
+pub(crate) async fn call(
     app: &TestApp,
     actor: Option<Actor>,
     method: &str,
@@ -270,7 +270,7 @@ pub(super) async fn call(
     (status, headers, body)
 }
 
-pub(super) async fn json_body(
+pub(crate) async fn json_body(
     app: &TestApp,
     actor: Option<Actor>,
     method: &str,
@@ -288,7 +288,7 @@ pub(super) async fn json_body(
     .await
 }
 
-pub(super) async fn seed_search_library(app: &TestApp) {
+pub(crate) async fn seed_search_library(app: &TestApp) {
     use meditation_application::ports::{
         CategoryRepository, MeditationRepository, MembershipRepository, ProgramRepository,
     };
@@ -336,7 +336,7 @@ pub(super) async fn seed_search_library(app: &TestApp) {
     memberships.add(home, 5, now).await.unwrap();
 }
 
-pub(super) async fn library_q(app: &TestApp, query: &str) -> Vec<serde_json::Value> {
+pub(crate) async fn library_q(app: &TestApp, query: &str) -> Vec<serde_json::Value> {
     let (status, _, body) = call(
         app,
         Some(member_actor()),
@@ -350,7 +350,7 @@ pub(super) async fn library_q(app: &TestApp, query: &str) -> Vec<serde_json::Val
     serde_json::from_slice(&body).unwrap()
 }
 
-pub(super) async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditation {
+pub(crate) async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditation {
     // A ready Ogg-Opus-shaped blob the fakes accept.
     let mut bytes = b"OggS".to_vec();
     bytes.extend_from_slice(b"....OpusHead-payload-for-tests");
@@ -359,7 +359,7 @@ pub(super) async fn seed_meditation(app: &TestApp) -> meditation_domain::Meditat
 
 /// Builds a multipart body from `(field name, filename, bytes)` triples; an
 /// empty filename means a plain text field.
-pub(super) fn multipart_body(fields: &[(&str, &str, &[u8])]) -> (String, Vec<u8>) {
+pub(crate) fn multipart_body(fields: &[(&str, &str, &[u8])]) -> (String, Vec<u8>) {
     let boundary = "router-tests-boundary-4471";
     let mut body = Vec::new();
     for (name, filename, bytes) in fields {
@@ -384,14 +384,14 @@ pub(super) fn multipart_body(fields: &[(&str, &str, &[u8])]) -> (String, Vec<u8>
     (format!("multipart/form-data; boundary={boundary}"), body)
 }
 
-pub(super) async fn expected_len(_app: &TestApp, _id: i64) -> usize {
+pub(crate) async fn expected_len(_app: &TestApp, _id: i64) -> usize {
     // The fake converter turns non-Opus input into a fixed payload; the
     // seeded upload used an Opus-shaped prefix, so the stored length is the
     // input length. Derive from the store instead of duplicating the magic:
     4 + "....OpusHead-payload-for-tests".len()
 }
 
-pub(super) async fn put_description(
+pub(crate) async fn put_description(
     app: &TestApp,
     actor: Option<Actor>,
     id: i64,
@@ -408,7 +408,7 @@ pub(super) async fn put_description(
     (status, serde_json::from_slice(&body).unwrap_or_default())
 }
 
-pub(super) async fn seed_ordered_program(app: &TestApp) -> i64 {
+pub(crate) async fn seed_ordered_program(app: &TestApp) -> i64 {
     use meditation_application::ports::{
         MeditationRepository, MembershipRepository, ProgramRepository,
     };
@@ -440,7 +440,7 @@ pub(super) async fn seed_ordered_program(app: &TestApp) -> i64 {
     program
 }
 
-pub(super) async fn put_order(
+pub(crate) async fn put_order(
     app: &TestApp,
     actor: Actor,
     program: i64,
@@ -458,7 +458,7 @@ pub(super) async fn put_order(
     (status, serde_json::from_slice(&body).unwrap_or_default())
 }
 
-pub(super) async fn member_ids(app: &TestApp, program: i64) -> Vec<i64> {
+pub(crate) async fn member_ids(app: &TestApp, program: i64) -> Vec<i64> {
     let (status, _, body) = call(
         app,
         Some(member_actor()),
@@ -471,4 +471,12 @@ pub(super) async fn member_ids(app: &TestApp, program: i64) -> Vec<i64> {
     assert_eq!(status, StatusCode::OK);
     let rows: Vec<serde_json::Value> = serde_json::from_slice(&body).unwrap();
     rows.iter().map(|row| row["id"].as_i64().unwrap()).collect()
+}
+
+/// Case-insensitive lookup of a response header value.
+pub(crate) fn header_value<'a>(headers: &'a [(HeaderName, String)], name: &str) -> Option<&'a str> {
+    headers
+        .iter()
+        .find(|(candidate, _)| candidate.as_str().eq_ignore_ascii_case(name))
+        .map(|(_, value)| value.as_str())
 }
