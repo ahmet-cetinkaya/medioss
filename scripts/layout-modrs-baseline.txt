@@ -1,7 +1,7 @@
 # mod.rs/lib.rs files that may still hold fn/impl/static/macro_rules!, as of 2026-10-24.
 # This list may only shrink: extract the logic into a named file with a sibling
 # .tests.rs, then delete the line. New logic in an unlisted mod.rs/lib.rs fails
-# check-boundaries.sh. Separate from layout-test-exemptions.txt on purpose.
+# check-boundaries.sh. The sibling-test rule has no exemption list.
 # count: 14
 src/apps/web-api/src/bootstrap/database/mod.rs
 src/apps/web-api/src/bootstrap/mod.rs
