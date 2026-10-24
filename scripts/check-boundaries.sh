@@ -524,7 +524,9 @@ use_case_gaps() {
     has_asserting_test "$tests" && has_wired_hook "$validator" "${base}_validator.tests.rs" || gaps+=" a wired asserting test in ${base}_validator.tests.rs"
   fi
   if [ -s "$dir/${base}_handler.rs" ]; then
-    grep -qE "\b${pascal}${suffix^}Validator\b" "$dir/${base}_handler.rs" || gaps+=" ${base}_handler.rs to use ${pascal}${suffix^}Validator"
+    local handler_code
+    handler_code="$(code_without_comments "$dir/${base}_handler.rs" | perl -0pe 's/"(?:[^"\\]|\\.)*"//g')"
+    grep -qE "\b${pascal}${suffix^}Validator\b" <<<"$handler_code" || gaps+=" ${base}_handler.rs to use ${pascal}${suffix^}Validator"
   fi
   printf '%s' "$gaps"
 }
@@ -1104,6 +1106,12 @@ usecase_self_test() {
   printf 'pub struct DoItCommandHandler;\n' >"$uc/do_it_command_handler.rs"
   out="$(check_use_case_layout "$dir" "$base" 0)"
   expect_reported "$out" "to use DoItCommandValidator" "U14. handler ignores the validator" || failed=1
+  printf '// DoItCommandValidator\npub struct DoItCommandHandler;\n' >"$uc/do_it_command_handler.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "to use DoItCommandValidator" "U14b. validator named only in a comment" || failed=1
+  printf 'pub struct DoItCommandHandler(&'"'"'static str);\nconst NAME: &str = "DoItCommandValidator";\n' >"$uc/do_it_command_handler.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "to use DoItCommandValidator" "U14c. validator named only in a string literal" || failed=1
   rm -r "$uc"
   mkdir -p "$uc"
   : >"$uc/do_it_command.rs"; : >"$uc/do_it_command_handler.rs"; : >"$uc/do_it_command_validator.rs"; : >"$uc/do_it_command_validator.tests.rs"
