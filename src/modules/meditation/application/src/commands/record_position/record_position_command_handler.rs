@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
-use super::record_position::RecordPosition;
-use super::record_position::MAX_POSITION_MS;
-use super::record_position_handler::RecordPositionHandler;
-use crate::ports::{MeditationRepository, PlaybackStateRepository};
+use super::record_position_command::RecordPositionCommand;
+use super::record_position_command_validator::RecordPositionCommandValidator;
+use crate::ports::{CommandHandler, MeditationRepository, PlaybackStateRepository};
 use crate::services::ensure_meditation_exists;
 use crate::ApplicationError;
 
-pub struct RecordPositionService {
+pub struct RecordPositionCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
     playback: Arc<dyn PlaybackStateRepository>,
+    validator: RecordPositionCommandValidator,
 }
 
-impl RecordPositionService {
+impl RecordPositionCommandHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         playback: Arc<dyn PlaybackStateRepository>,
@@ -20,25 +20,25 @@ impl RecordPositionService {
         Self {
             meditations,
             playback,
+            validator: RecordPositionCommandValidator,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl RecordPositionHandler for RecordPositionService {
-    async fn handle(&self, command: RecordPosition) -> Result<(), ApplicationError> {
+impl CommandHandler<RecordPositionCommand> for RecordPositionCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: RecordPositionCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
+
         // Records the caller's position in media time (spec FR-015).
-        let RecordPosition {
+        let RecordPositionCommand {
             user_id,
             meditation_id,
             position_ms,
         } = command;
         ensure_meditation_exists(self.meditations.as_ref(), meditation_id).await?;
-        if !(0..=MAX_POSITION_MS).contains(&position_ms) {
-            return Err(ApplicationError::InvalidInput(
-                "position must be between 0 and 30 days in milliseconds",
-            ));
-        }
         self.playback
             .upsert_position(user_id, meditation_id, position_ms)
             .await
@@ -47,5 +47,5 @@ impl RecordPositionHandler for RecordPositionService {
 }
 
 #[cfg(test)]
-#[path = "record_position_service.tests.rs"]
+#[path = "record_position_command_handler.tests.rs"]
 mod tests;

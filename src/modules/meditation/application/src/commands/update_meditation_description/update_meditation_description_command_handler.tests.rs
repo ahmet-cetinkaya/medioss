@@ -1,18 +1,16 @@
+use crate::ports::CommandHandler;
 use std::sync::Arc;
 
 use crate::commands::update_meditation_description::{
-    UpdateMeditationDescription, UpdateMeditationDescriptionHandler,
-    UpdateMeditationDescriptionService,
+    UpdateMeditationDescriptionCommand, UpdateMeditationDescriptionCommandHandler,
 };
-use crate::commands::upload_meditation::{
-    UploadMeditation, UploadMeditationHandler, UploadMeditationService,
-};
+use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
 use crate::ports::MeditationRepository;
 use crate::test_support::{FakeConverter, FakeValidator, TestDeps};
 use crate::ApplicationError;
 
-fn update(meditation_id: i64, description: Option<&str>) -> UpdateMeditationDescription {
-    UpdateMeditationDescription {
+fn update(meditation_id: i64, description: Option<&str>) -> UpdateMeditationDescriptionCommand {
+    UpdateMeditationDescriptionCommand {
         meditation_id,
         description: description.map(str::to_owned),
     }
@@ -22,7 +20,7 @@ fn update(meditation_id: i64, description: Option<&str>) -> UpdateMeditationDesc
 async fn description_is_stored_on_upload_and_updatable() {
     let deps = TestDeps::new();
     let program_id = deps.seed_program("Holder Program").await;
-    let uploaded = UploadMeditationService::new(
+    let uploaded = UploadMeditationCommandHandler::new(
         deps.meditations.clone(),
         deps.memberships.clone(),
         deps.programs.clone(),
@@ -31,7 +29,7 @@ async fn description_is_stored_on_upload_and_updatable() {
         deps.store.clone(),
         deps.clock.clone(),
     )
-    .handle(UploadMeditation {
+    .handle(UploadMeditationCommand {
         name: "Described".into(),
         program_id,
         bytes: b"OggS....OpusHead".to_vec(),
@@ -41,7 +39,7 @@ async fn description_is_stored_on_upload_and_updatable() {
     .unwrap();
     assert_eq!(uploaded.description(), Some("hello"));
 
-    let service = UpdateMeditationDescriptionService::new(deps.meditations.clone());
+    let service = UpdateMeditationDescriptionCommandHandler::new(deps.meditations.clone());
     let updated = service
         .handle(update(uploaded.id(), Some("new")))
         .await
@@ -65,7 +63,7 @@ async fn description_is_stored_on_upload_and_updatable() {
 async fn description_update_rejects_overlong_text_and_unknown_ids() {
     let deps = TestDeps::new();
     let seeded = deps.seeded_meditation().await;
-    let service = UpdateMeditationDescriptionService::new(deps.meditations.clone());
+    let service = UpdateMeditationDescriptionCommandHandler::new(deps.meditations.clone());
     let long = "a".repeat(2001);
     assert_eq!(
         service.handle(update(seeded.id(), Some(&long))).await,

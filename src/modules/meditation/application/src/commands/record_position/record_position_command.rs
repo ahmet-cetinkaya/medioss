@@ -1,6 +1,6 @@
 use kernel::UserId;
 #[derive(Debug, Clone)]
-pub struct RecordPosition {
+pub struct RecordPositionCommand {
     pub user_id: UserId,
     pub meditation_id: i64,
     pub position_ms: i64,

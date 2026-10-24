@@ -1,14 +1,15 @@
+use crate::ports::CommandHandler;
 use std::sync::Arc;
 
 use crate::commands::upload_meditation::{
-    UploadMeditation, UploadMeditationHandler, UploadMeditationService, MAX_UPLOAD_BYTES,
+    UploadMeditationCommand, UploadMeditationCommandHandler, MAX_UPLOAD_BYTES,
 };
 use crate::commands::MAX_NAME_LENGTH;
 use crate::test_support::{FakeConverter, FakeValidator, TestDeps};
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> UploadMeditationService {
-    UploadMeditationService::new(
+fn service(deps: &TestDeps) -> UploadMeditationCommandHandler {
+    UploadMeditationCommandHandler::new(
         deps.meditations.clone(),
         deps.memberships.clone(),
         deps.programs.clone(),
@@ -19,8 +20,8 @@ fn service(deps: &TestDeps) -> UploadMeditationService {
     )
 }
 
-fn upload(name: &str, program_id: i64, bytes: Vec<u8>) -> UploadMeditation {
-    UploadMeditation {
+fn upload(name: &str, program_id: i64, bytes: Vec<u8>) -> UploadMeditationCommand {
+    UploadMeditationCommand {
         name: name.to_owned(),
         program_id,
         bytes,

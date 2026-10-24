@@ -1,6 +1,5 @@
-use crate::commands::record_position::{
-    RecordPosition, RecordPositionHandler, RecordPositionService,
-};
+use crate::commands::record_position::{RecordPositionCommand, RecordPositionCommandHandler};
+use crate::ports::CommandHandler;
 use crate::queries::get_playback_state::{
     GetPlaybackState, GetPlaybackStateHandler, GetPlaybackStateService,
 };
@@ -11,9 +10,10 @@ use crate::ApplicationError;
 async fn position_reports_are_validated_and_default_to_zero() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
-    let service = RecordPositionService::new(deps.meditations.clone(), deps.playback.clone());
+    let service =
+        RecordPositionCommandHandler::new(deps.meditations.clone(), deps.playback.clone());
     let unknown = service
-        .handle(RecordPosition {
+        .handle(RecordPositionCommand {
             user_id: user_a(),
             meditation_id: 999,
             position_ms: 1_000,
@@ -22,7 +22,7 @@ async fn position_reports_are_validated_and_default_to_zero() {
     assert_eq!(unknown.unwrap_err(), ApplicationError::NotFound);
 
     let negative = service
-        .handle(RecordPosition {
+        .handle(RecordPositionCommand {
             user_id: user_a(),
             meditation_id: meditation.id(),
             position_ms: -1,

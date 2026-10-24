@@ -1,18 +1,16 @@
 use std::sync::Arc;
 
-use super::upload_meditation::UploadMeditation;
-use super::upload_meditation::MAX_UPLOAD_BYTES;
-use super::upload_meditation_handler::UploadMeditationHandler;
+use super::upload_meditation_command::UploadMeditationCommand;
+use super::upload_meditation_command_validator::UploadMeditationCommandValidator;
 use crate::ports::{
-    AudioValidator, BlobStore, Clock, MeditationRepository, MembershipRepository, OpusConverter,
-    ProgramRepository,
+    AudioValidator, BlobStore, Clock, CommandHandler, MeditationRepository, MembershipRepository,
+    OpusConverter, ProgramRepository,
 };
 use crate::ports::{ConvertError, StoredAudio};
-use crate::services::{validate_description, validate_name};
 use crate::ApplicationError;
 use meditation_domain::Meditation;
 
-pub struct UploadMeditationService {
+pub struct UploadMeditationCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
     memberships: Arc<dyn MembershipRepository>,
     programs: Arc<dyn ProgramRepository>,
@@ -20,9 +18,10 @@ pub struct UploadMeditationService {
     converter: Arc<dyn OpusConverter>,
     store: Arc<dyn BlobStore>,
     clock: Arc<dyn Clock>,
+    input_validator: UploadMeditationCommandValidator,
 }
 
-impl UploadMeditationService {
+impl UploadMeditationCommandHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -40,26 +39,31 @@ impl UploadMeditationService {
             converter,
             store,
             clock,
+            input_validator: UploadMeditationCommandValidator,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl UploadMeditationHandler for UploadMeditationService {
-    async fn handle(&self, command: UploadMeditation) -> Result<Meditation, ApplicationError> {
+impl CommandHandler<UploadMeditationCommand> for UploadMeditationCommandHandler {
+    type Output = Meditation;
+
+    async fn handle(
+        &self,
+        command: UploadMeditationCommand,
+    ) -> Result<Meditation, ApplicationError> {
+        self.input_validator.validate(&command)?;
+
         // Garbage bytes, oversized payloads, and conversion failures leave
         // nothing stored (spec FR-001..004).
-        let UploadMeditation {
-            name,
+        let name = self.input_validator.normalized_name(&command);
+        let description = self.input_validator.normalized_description(&command)?;
+        let UploadMeditationCommand {
+            name: raw_name,
             program_id,
             bytes,
-            description,
+            ..
         } = command;
-        validate_name(&name)?;
-        let description = validate_description(description.as_deref())?;
-        if bytes.len() > MAX_UPLOAD_BYTES {
-            return Err(ApplicationError::PayloadTooLarge);
-        }
         let program = self
             .programs
             .find_by_id(program_id)
@@ -69,13 +73,13 @@ impl UploadMeditationHandler for UploadMeditationService {
         let (stored_bytes, duration_ms, stored) = self.sniff_and_convert(bytes).await?;
         let blob = self
             .store
-            .put(&program.folder, &name, stored.extension, &stored_bytes)
+            .put(&program.folder, &raw_name, stored.extension, &stored_bytes)
             .await
             .map_err(ApplicationError::Storage)?;
         let meditation = match self
             .meditations
             .insert(
-                name.trim().to_owned(),
+                name,
                 stored.content_type,
                 blob.size_bytes,
                 blob.storage_key.clone(),
@@ -99,7 +103,7 @@ impl UploadMeditationHandler for UploadMeditationService {
     }
 }
 
-impl UploadMeditationService {
+impl UploadMeditationCommandHandler {
     async fn sniff_and_convert(
         &self,
         bytes: Vec<u8>,
@@ -148,5 +152,5 @@ fn map_convert_error(error: ConvertError) -> ApplicationError {
 }
 
 #[cfg(test)]
-#[path = "upload_meditation_service.tests.rs"]
+#[path = "upload_meditation_command_handler.tests.rs"]
 mod tests;

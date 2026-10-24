@@ -1,16 +1,13 @@
+use crate::ports::CommandHandler;
 use chrono::Duration;
 
-use crate::commands::record_completion::{
-    RecordCompletion, RecordCompletionHandler, RecordCompletionService,
-};
-use crate::commands::record_position::{
-    RecordPosition, RecordPositionHandler, RecordPositionService,
-};
+use crate::commands::record_completion::{RecordCompletionCommand, RecordCompletionCommandHandler};
+use crate::commands::record_position::{RecordPositionCommand, RecordPositionCommandHandler};
 use crate::ports::{PlaybackStateRepository, SessionRepository};
 use crate::test_support::{user_a, user_b, TestDeps};
 
-fn service(deps: &TestDeps) -> RecordCompletionService {
-    RecordCompletionService::new(
+fn service(deps: &TestDeps) -> RecordCompletionCommandHandler {
+    RecordCompletionCommandHandler::new(
         deps.meditations.clone(),
         deps.playback.clone(),
         deps.sessions.clone(),
@@ -24,8 +21,8 @@ async fn completion_is_idempotent_sets_completed_and_resets_position() {
     let started = deps.clock.0;
     let finished = started + Duration::seconds(60);
 
-    RecordPositionService::new(deps.meditations.clone(), deps.playback.clone())
-        .handle(RecordPosition {
+    RecordPositionCommandHandler::new(deps.meditations.clone(), deps.playback.clone())
+        .handle(RecordPositionCommand {
             user_id: user_a(),
             meditation_id: meditation.id(),
             position_ms: 30_000,
@@ -33,7 +30,7 @@ async fn completion_is_idempotent_sets_completed_and_resets_position() {
         .await
         .expect("position");
 
-    let completion = RecordCompletion {
+    let completion = RecordCompletionCommand {
         user_id: user_a(),
         meditation_id: meditation.id(),
         started_at: started,
@@ -69,7 +66,7 @@ async fn completion_state_is_per_user() {
     let meditation = deps.seeded_meditation().await;
     let started = deps.clock.0;
     service(&deps)
-        .handle(RecordCompletion {
+        .handle(RecordCompletionCommand {
             user_id: user_a(),
             meditation_id: meditation.id(),
             started_at: started,

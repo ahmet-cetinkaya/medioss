@@ -1,34 +1,40 @@
 use std::sync::Arc;
 
-use super::update_meditation_description::UpdateMeditationDescription;
-use super::update_meditation_description_handler::UpdateMeditationDescriptionHandler;
-use crate::ports::MeditationRepository;
-use crate::services::validate_description;
+use super::update_meditation_description_command::UpdateMeditationDescriptionCommand;
+use super::update_meditation_description_command_validator::UpdateMeditationDescriptionCommandValidator;
+use crate::ports::{CommandHandler, MeditationRepository};
 use crate::ApplicationError;
 use meditation_domain::Meditation;
 
-pub struct UpdateMeditationDescriptionService {
+pub struct UpdateMeditationDescriptionCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
+    validator: UpdateMeditationDescriptionCommandValidator,
 }
 
-impl UpdateMeditationDescriptionService {
+impl UpdateMeditationDescriptionCommandHandler {
     pub fn new(meditations: Arc<dyn MeditationRepository>) -> Self {
-        Self { meditations }
+        Self {
+            meditations,
+            validator: UpdateMeditationDescriptionCommandValidator,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl UpdateMeditationDescriptionHandler for UpdateMeditationDescriptionService {
+impl CommandHandler<UpdateMeditationDescriptionCommand>
+    for UpdateMeditationDescriptionCommandHandler
+{
+    type Output = Meditation;
+
     async fn handle(
         &self,
-        command: UpdateMeditationDescription,
+        command: UpdateMeditationDescriptionCommand,
     ) -> Result<Meditation, ApplicationError> {
+        self.validator.validate(&command)?;
+
         // Replaces the description; blank or `None` clears it.
-        let UpdateMeditationDescription {
-            meditation_id,
-            description,
-        } = command;
-        let description = validate_description(description.as_deref())?;
+        let description = self.validator.normalized_description(&command)?;
+        let meditation_id = command.meditation_id;
         let meditation = self
             .meditations
             .find_by_id(meditation_id)
@@ -51,5 +57,5 @@ impl UpdateMeditationDescriptionHandler for UpdateMeditationDescriptionService {
 }
 
 #[cfg(test)]
-#[path = "update_meditation_description_service.tests.rs"]
+#[path = "update_meditation_description_command_handler.tests.rs"]
 mod tests;

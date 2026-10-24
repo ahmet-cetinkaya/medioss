@@ -1,14 +1,12 @@
 use crate::commands::add_member::{AddMember, AddMemberHandler, AddMemberService};
-use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
-use crate::commands::delete_meditation::{
-    DeleteMeditation, DeleteMeditationHandler, DeleteMeditationService,
-};
-use crate::ports::CommandHandler as _;
+use crate::commands::create_note::{CreateNote, CreateNoteHandler, CreateNoteService};
+use crate::commands::delete_meditation::{DeleteMeditationCommand, DeleteMeditationCommandHandler};
+use crate::ports::CommandHandler;
 use crate::test_support::{user_a, TestDeps};
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> DeleteMeditationService {
-    DeleteMeditationService::new(
+fn service(deps: &TestDeps) -> DeleteMeditationCommandHandler {
+    DeleteMeditationCommandHandler::new(
         deps.meditations.clone(),
         deps.memberships.clone(),
         deps.notes.clone(),
@@ -33,12 +31,12 @@ async fn delete_removes_row_bytes_memberships_and_notes() {
     })
     .await
     .expect("member");
-    CreateNoteCommandHandler::new(
+    CreateNoteService::new(
         deps.meditations.clone(),
         deps.notes.clone(),
         deps.clock.clone(),
     )
-    .handle(CreateNoteCommand {
+    .handle(CreateNote {
         user_id: user_a(),
         meditation_id: meditation.id(),
         text: "felt calm".into(),
@@ -47,7 +45,7 @@ async fn delete_removes_row_bytes_memberships_and_notes() {
     .expect("note");
 
     service(&deps)
-        .handle(DeleteMeditation {
+        .handle(DeleteMeditationCommand {
             meditation_id: meditation.id(),
         })
         .await
@@ -63,7 +61,7 @@ async fn delete_removes_row_bytes_memberships_and_notes() {
 async fn delete_unknown_meditation_is_not_found() {
     let deps = TestDeps::new();
     let result = service(&deps)
-        .handle(DeleteMeditation { meditation_id: 999 })
+        .handle(DeleteMeditationCommand { meditation_id: 999 })
         .await;
     assert_eq!(result.unwrap_err(), ApplicationError::NotFound);
 }

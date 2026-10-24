@@ -1,24 +1,22 @@
-use crate::ports::CommandHandler as _;
+use crate::ports::CommandHandler;
 use std::sync::Arc;
 
-use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
-use crate::commands::delete_program::{DeleteProgramCommand, DeleteProgramCommandHandler};
-use crate::commands::upload_meditation::{
-    UploadMeditation, UploadMeditationHandler, UploadMeditationService,
-};
+use crate::commands::create_program::{CreateProgram, CreateProgramHandler, CreateProgramService};
+use crate::commands::delete_program::{DeleteProgram, DeleteProgramHandler, DeleteProgramService};
+use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
 use crate::test_support::{FakeConverter, FakeCoverValidator, FakeValidator, TestDeps};
 
 #[tokio::test]
 async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     let deps = TestDeps::new();
     let png = vec![0x89, b'P', b'N', b'G', 0, 0, 0, 0, 0, 0, 0, 0];
-    let program = CreateProgramCommandHandler::new(
+    let program = CreateProgramService::new(
         deps.programs.clone(),
         Arc::new(FakeCoverValidator),
         deps.store.clone(),
         deps.clock.clone(),
     )
-    .handle(CreateProgramCommand {
+    .handle(CreateProgram {
         title: "Covered".into(),
         description: Some("desc".into()),
         cover_bytes: Some(png),
@@ -28,7 +26,7 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     // Uploaded directly into the program being deleted, so its file actually
     // lives in that program's folder — exercising the relocation branch,
     // not the "stayed in a different program's folder" no-op path.
-    let meditation = UploadMeditationService::new(
+    let meditation = UploadMeditationCommandHandler::new(
         deps.meditations.clone(),
         deps.memberships.clone(),
         deps.programs.clone(),
@@ -37,7 +35,7 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
         deps.store.clone(),
         deps.clock.clone(),
     )
-    .handle(UploadMeditation {
+    .handle(UploadMeditationCommand {
         name: "Home".into(),
         program_id: program.id,
         bytes: b"OggS....OpusHead".to_vec(),
@@ -48,13 +46,13 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
     let original_key = meditation.storage_key().to_owned();
     assert!(original_key.starts_with(&format!("{}/", program.folder)));
 
-    DeleteProgramCommandHandler::new(
+    DeleteProgramService::new(
         deps.programs.clone(),
         deps.memberships.clone(),
         deps.meditations.clone(),
         deps.store.clone(),
     )
-    .handle(DeleteProgramCommand {
+    .handle(DeleteProgram {
         program_id: program.id,
     })
     .await

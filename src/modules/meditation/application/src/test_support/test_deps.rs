@@ -1,4 +1,4 @@
-use crate::ports::CommandHandler as _;
+use crate::ports::CommandHandler;
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -8,10 +8,8 @@ use super::{
     FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
     FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
 };
-use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
-use crate::commands::upload_meditation::{
-    UploadMeditation, UploadMeditationHandler, UploadMeditationService,
-};
+use crate::commands::create_program::{CreateProgram, CreateProgramHandler, CreateProgramService};
+use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
 
 /// Every fake port behind an `Arc`, so a service under test and the test's
 /// own assertions share one state.
@@ -44,13 +42,13 @@ impl TestDeps {
 
     /// A ready program whose folder receives uploads in tests.
     pub async fn seed_program(&self, title: &str) -> i64 {
-        CreateProgramCommandHandler::new(
+        CreateProgramService::new(
             self.programs.clone(),
             Arc::new(FakeCoverValidator),
             self.store.clone(),
             self.clock.clone(),
         )
-        .handle(CreateProgramCommand {
+        .handle(CreateProgram {
             title: title.to_owned(),
             description: None,
             cover_bytes: None,
@@ -66,7 +64,7 @@ impl TestDeps {
         program_id: i64,
         name: &str,
     ) -> meditation_domain::Meditation {
-        UploadMeditationService::new(
+        UploadMeditationCommandHandler::new(
             self.meditations.clone(),
             self.memberships.clone(),
             self.programs.clone(),
@@ -75,7 +73,7 @@ impl TestDeps {
             self.store.clone(),
             self.clock.clone(),
         )
-        .handle(UploadMeditation {
+        .handle(UploadMeditationCommand {
             name: name.to_owned(),
             program_id,
             bytes: b"OggS....OpusHead".to_vec(),

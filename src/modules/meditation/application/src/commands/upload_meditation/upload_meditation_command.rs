@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct UploadMeditation {
+pub struct UploadMeditationCommand {
     pub name: String,
     pub program_id: i64,
     pub bytes: Vec<u8>,

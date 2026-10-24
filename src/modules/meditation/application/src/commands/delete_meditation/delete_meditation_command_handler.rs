@@ -1,18 +1,21 @@
 use std::sync::Arc;
 
-use super::delete_meditation::DeleteMeditation;
-use super::delete_meditation_handler::DeleteMeditationHandler;
-use crate::ports::{BlobStore, MeditationRepository, MembershipRepository, NoteRepository};
+use super::delete_meditation_command::DeleteMeditationCommand;
+use super::delete_meditation_command_validator::DeleteMeditationCommandValidator;
+use crate::ports::{
+    BlobStore, CommandHandler, MeditationRepository, MembershipRepository, NoteRepository,
+};
 use crate::ApplicationError;
 
-pub struct DeleteMeditationService {
+pub struct DeleteMeditationCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
     memberships: Arc<dyn MembershipRepository>,
     notes: Arc<dyn NoteRepository>,
     store: Arc<dyn BlobStore>,
+    validator: DeleteMeditationCommandValidator,
 }
 
-impl DeleteMeditationService {
+impl DeleteMeditationCommandHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -24,13 +27,18 @@ impl DeleteMeditationService {
             memberships,
             notes,
             store,
+            validator: DeleteMeditationCommandValidator,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl DeleteMeditationHandler for DeleteMeditationService {
-    async fn handle(&self, command: DeleteMeditation) -> Result<(), ApplicationError> {
+impl CommandHandler<DeleteMeditationCommand> for DeleteMeditationCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: DeleteMeditationCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
+
         // Row removal is the source of truth: stored bytes are removed after
         // the row is gone, and a store failure surfaces without resurrecting
         // the row (spec FR-014).
@@ -64,5 +72,5 @@ impl DeleteMeditationHandler for DeleteMeditationService {
 }
 
 #[cfg(test)]
-#[path = "delete_meditation_service.tests.rs"]
+#[path = "delete_meditation_command_handler.tests.rs"]
 mod tests;

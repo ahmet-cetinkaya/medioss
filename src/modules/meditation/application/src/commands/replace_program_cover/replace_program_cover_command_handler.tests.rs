@@ -1,16 +1,17 @@
 use crate::commands::replace_program_cover::{
-    ReplaceProgramCover, ReplaceProgramCoverHandler, ReplaceProgramCoverService,
+    ReplaceProgramCoverCommand, ReplaceProgramCoverCommandHandler,
 };
+use crate::ports::CommandHandler;
 use crate::ports::ProgramRepository;
 use crate::test_support::{user_a, TestDeps};
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> ReplaceProgramCoverService {
-    ReplaceProgramCoverService::new(deps.programs.clone(), deps.store.clone())
+fn service(deps: &TestDeps) -> ReplaceProgramCoverCommandHandler {
+    ReplaceProgramCoverCommandHandler::new(deps.programs.clone(), deps.store.clone())
 }
 
-fn command(program_id: i64, bytes: &[u8]) -> ReplaceProgramCover {
-    ReplaceProgramCover {
+fn command(program_id: i64, bytes: &[u8]) -> ReplaceProgramCoverCommand {
+    ReplaceProgramCoverCommand {
         requester_id: user_a(),
         program_id,
         bytes: bytes.to_vec(),

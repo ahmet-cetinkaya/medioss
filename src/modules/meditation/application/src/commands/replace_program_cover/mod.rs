@@ -1,7 +1,7 @@
-mod replace_program_cover;
-mod replace_program_cover_handler;
-mod replace_program_cover_service;
+mod replace_program_cover_command;
+mod replace_program_cover_command_handler;
+mod replace_program_cover_command_validator;
 
-pub use replace_program_cover::ReplaceProgramCover;
-pub use replace_program_cover_handler::ReplaceProgramCoverHandler;
-pub use replace_program_cover_service::ReplaceProgramCoverService;
+pub use replace_program_cover_command::ReplaceProgramCoverCommand;
+pub use replace_program_cover_command_handler::ReplaceProgramCoverCommandHandler;
+pub use replace_program_cover_command_validator::ReplaceProgramCoverCommandValidator;

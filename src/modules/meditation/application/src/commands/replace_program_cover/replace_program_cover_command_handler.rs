@@ -1,24 +1,33 @@
 use std::sync::Arc;
 
-use super::replace_program_cover::ReplaceProgramCover;
-use super::replace_program_cover_handler::ReplaceProgramCoverHandler;
-use crate::ports::{BlobStore, ProgramRepository};
+use super::replace_program_cover_command::ReplaceProgramCoverCommand;
+use super::replace_program_cover_command_validator::ReplaceProgramCoverCommandValidator;
+use crate::ports::{BlobStore, CommandHandler, ProgramRepository};
 use crate::ApplicationError;
 
-pub struct ReplaceProgramCoverService {
+pub struct ReplaceProgramCoverCommandHandler {
     programs: Arc<dyn ProgramRepository>,
     store: Arc<dyn BlobStore>,
+    validator: ReplaceProgramCoverCommandValidator,
 }
 
-impl ReplaceProgramCoverService {
+impl ReplaceProgramCoverCommandHandler {
     pub fn new(programs: Arc<dyn ProgramRepository>, store: Arc<dyn BlobStore>) -> Self {
-        Self { programs, store }
+        Self {
+            programs,
+            store,
+            validator: ReplaceProgramCoverCommandValidator,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl ReplaceProgramCoverHandler for ReplaceProgramCoverService {
-    async fn handle(&self, command: ReplaceProgramCover) -> Result<(), ApplicationError> {
+impl CommandHandler<ReplaceProgramCoverCommand> for ReplaceProgramCoverCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: ReplaceProgramCoverCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
+
         let program = self
             .programs
             .find_by_id(command.program_id)
@@ -45,5 +54,5 @@ impl ReplaceProgramCoverHandler for ReplaceProgramCoverService {
 }
 
 #[cfg(test)]
-#[path = "replace_program_cover_service.tests.rs"]
+#[path = "replace_program_cover_command_handler.tests.rs"]
 mod tests;

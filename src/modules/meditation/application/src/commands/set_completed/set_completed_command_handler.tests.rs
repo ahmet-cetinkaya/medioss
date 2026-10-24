@@ -1,9 +1,8 @@
+use crate::ports::CommandHandler;
 use chrono::Duration;
 
-use crate::commands::record_completion::{
-    RecordCompletion, RecordCompletionHandler, RecordCompletionService,
-};
-use crate::commands::set_completed::{SetCompleted, SetCompletedHandler, SetCompletedService};
+use crate::commands::record_completion::{RecordCompletionCommand, RecordCompletionCommandHandler};
+use crate::commands::set_completed::{SetCompletedCommand, SetCompletedCommandHandler};
 use crate::ports::{PlaybackStateRepository, SessionRepository};
 use crate::test_support::{user_a, TestDeps};
 
@@ -12,12 +11,12 @@ async fn toggle_completed_never_touches_sessions_or_position() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
     let started = deps.clock.0;
-    RecordCompletionService::new(
+    RecordCompletionCommandHandler::new(
         deps.meditations.clone(),
         deps.playback.clone(),
         deps.sessions.clone(),
     )
-    .handle(RecordCompletion {
+    .handle(RecordCompletionCommand {
         user_id: user_a(),
         meditation_id: meditation.id(),
         started_at: started,
@@ -26,8 +25,8 @@ async fn toggle_completed_never_touches_sessions_or_position() {
     .await
     .expect("completion");
 
-    SetCompletedService::new(deps.meditations.clone(), deps.playback.clone())
-        .handle(SetCompleted {
+    SetCompletedCommandHandler::new(deps.meditations.clone(), deps.playback.clone())
+        .handle(SetCompletedCommand {
             user_id: user_a(),
             meditation_id: meditation.id(),
             completed: false,
