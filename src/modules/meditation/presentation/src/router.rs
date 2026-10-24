@@ -34,8 +34,7 @@ use meditation_application::commands::update_program_order::UpdateProgramOrderHa
 use meditation_application::commands::upload_meditation::UploadMeditationHandler;
 use meditation_application::commands::{MAX_COVER_BYTES, MAX_UPLOAD_BYTES};
 use meditation_application::ports::{
-    BlobStore, Clock, CoverValidator, MembershipRepository, PlaybackStateRepository,
-    ProgramRepository,
+    BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository,
 };
 use meditation_application::queries::get_continue_program::GetContinueProgramHandler;
 use meditation_application::queries::get_daily_suggestion::GetDailySuggestionHandler;
@@ -111,7 +110,6 @@ pub struct MeditationDependencies {
     /// Program rows for the existence gates and the cover surfaces.
     pub programs: Arc<dyn ProgramRepository>,
     /// Home-program map decorating the library rows.
-    pub memberships: Arc<dyn MembershipRepository>,
     /// Per-user progress read on every meditation surface.
     pub playback: Arc<dyn PlaybackStateRepository>,
     /// Cover normalization, run while streaming a replacement cover.
@@ -119,7 +117,6 @@ pub struct MeditationDependencies {
     /// Blob reads and writes behind covers and audio streaming.
     pub store: Arc<dyn BlobStore>,
     /// The "now" feeding the statistics window.
-    pub clock: Arc<dyn Clock>,
     pub medioss_origin: Arc<String>,
 }
 

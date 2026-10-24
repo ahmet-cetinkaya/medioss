@@ -221,11 +221,9 @@ pub(super) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             programs.clone(),
         )),
         programs,
-        memberships,
         playback,
         cover_validator,
         store: store_port,
-        clock,
         medioss_origin: Arc::new("http://localhost".to_owned()),
     }
 }

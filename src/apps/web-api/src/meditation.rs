@@ -347,11 +347,9 @@ fn meditation_dependencies_with_ports(
             programs.clone(),
         )),
         programs,
-        memberships,
         playback,
         cover_validator,
         store,
-        clock,
         medioss_origin,
     })
 }
