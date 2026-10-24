@@ -1,7 +1,7 @@
 # Use-case folders not yet migrated to option D (<name>_command.rs, <name>_command_handler.rs,
 # <name>_command_validator.rs + tests; queries use _query). May only shrink: migrate, then delete the line.
 # Unlisted folders must already comply. Stale entries (folder migrated or gone) fail the check.
-# count: 24
+# count: 10
 src/modules/mood-tracker/application/src/commands/create_mood_entry
 src/modules/mood-tracker/application/src/commands/delete_mood_entry
 src/modules/mood-tracker/application/src/commands/update_mood_entry
@@ -12,17 +12,3 @@ src/modules/portability/application/src/commands/import_own_data
 src/modules/portability/application/src/queries/export_mood_records
 src/modules/portability/application/src/queries/export_own_data
 src/modules/portability/application/src/queries/validate_import
-src/modules/soundscape/application/src/commands/clear_sound_icon
-src/modules/soundscape/application/src/commands/create_category
-src/modules/soundscape/application/src/commands/create_mix
-src/modules/soundscape/application/src/commands/create_sound
-src/modules/soundscape/application/src/commands/delete_category
-src/modules/soundscape/application/src/commands/delete_mix
-src/modules/soundscape/application/src/commands/delete_sound
-src/modules/soundscape/application/src/commands/rename_category
-src/modules/soundscape/application/src/commands/set_sound_icon
-src/modules/soundscape/application/src/commands/update_mix
-src/modules/soundscape/application/src/commands/update_sound
-src/modules/soundscape/application/src/queries/find_sound_icon
-src/modules/soundscape/application/src/queries/list_categories
-src/modules/soundscape/application/src/queries/list_sounds

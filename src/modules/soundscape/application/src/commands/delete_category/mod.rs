@@ -1,7 +1,7 @@
-mod delete_category;
-mod delete_category_handler;
-mod delete_category_service;
+mod delete_category_command;
+mod delete_category_command_handler;
+mod delete_category_command_validator;
 
-pub use delete_category::DeleteCategory;
-pub use delete_category_handler::DeleteCategoryHandler;
-pub use delete_category_service::DeleteCategoryService;
+pub use delete_category_command::DeleteCategoryCommand;
+pub use delete_category_command_handler::DeleteCategoryCommandHandler;
+pub use delete_category_command_validator::DeleteCategoryCommandValidator;

@@ -392,35 +392,37 @@ pub(super) fn app() -> TestApp {
     let store: Arc<dyn BlobStore> = Arc::new(FakeStore(state.clone()));
     let deps = SoundscapeDependencies {
         list_categories: Arc::new(
-            soundscape_application::queries::list_categories::ListCategoriesService::new(
+            soundscape_application::queries::list_categories::ListCategoriesQueryHandler::new(
                 categories.clone(),
             ),
         ),
         list_sounds: Arc::new(
-            soundscape_application::queries::list_sounds::ListSoundsService::new(sounds.clone()),
+            soundscape_application::queries::list_sounds::ListSoundsQueryHandler::new(
+                sounds.clone(),
+            ),
         ),
         find_sound_icon: Arc::new(
-            soundscape_application::queries::find_sound_icon::FindSoundIconService::new(
+            soundscape_application::queries::find_sound_icon::FindSoundIconQueryHandler::new(
                 sounds.clone(),
             ),
         ),
         create_category: Arc::new(
-            soundscape_application::commands::create_category::CreateCategoryService::new(
+            soundscape_application::commands::create_category::CreateCategoryCommandHandler::new(
                 categories.clone(),
             ),
         ),
         rename_category: Arc::new(
-            soundscape_application::commands::rename_category::RenameCategoryService::new(
+            soundscape_application::commands::rename_category::RenameCategoryCommandHandler::new(
                 categories.clone(),
             ),
         ),
         delete_category: Arc::new(
-            soundscape_application::commands::delete_category::DeleteCategoryService::new(
+            soundscape_application::commands::delete_category::DeleteCategoryCommandHandler::new(
                 categories.clone(),
             ),
         ),
         create_sound: Arc::new(
-            soundscape_application::commands::create_sound::CreateSoundService::new(
+            soundscape_application::commands::create_sound::CreateSoundCommandHandler::new(
                 categories.clone(),
                 sounds.clone(),
                 Arc::new(FakeValidator),
@@ -430,46 +432,48 @@ pub(super) fn app() -> TestApp {
             ),
         ),
         update_sound: Arc::new(
-            soundscape_application::commands::update_sound::UpdateSoundService::new(
+            soundscape_application::commands::update_sound::UpdateSoundCommandHandler::new(
                 categories.clone(),
                 sounds.clone(),
             ),
         ),
         delete_sound: Arc::new(
-            soundscape_application::commands::delete_sound::DeleteSoundService::new(
+            soundscape_application::commands::delete_sound::DeleteSoundCommandHandler::new(
                 sounds.clone(),
                 store.clone(),
             ),
         ),
         set_sound_icon: Arc::new(
-            soundscape_application::commands::set_sound_icon::SetSoundIconService::new(
+            soundscape_application::commands::set_sound_icon::SetSoundIconCommandHandler::new(
                 sounds.clone(),
                 store.clone(),
                 Arc::new(FakeImageNormalizer(state.clone())),
             ),
         ),
         clear_sound_icon: Arc::new(
-            soundscape_application::commands::clear_sound_icon::ClearSoundIconService::new(
+            soundscape_application::commands::clear_sound_icon::ClearSoundIconCommandHandler::new(
                 sounds.clone(),
                 store.clone(),
             ),
         ),
         create_mix: Arc::new(
-            soundscape_application::commands::create_mix::CreateMixService::new(
+            soundscape_application::commands::create_mix::CreateMixCommandHandler::new(
                 mixes.clone(),
                 sounds.clone(),
                 Arc::new(FixedClock),
             ),
         ),
         update_mix: Arc::new(
-            soundscape_application::commands::update_mix::UpdateMixService::new(
+            soundscape_application::commands::update_mix::UpdateMixCommandHandler::new(
                 mixes.clone(),
                 sounds.clone(),
                 Arc::new(FixedClock),
             ),
         ),
         delete_mix: Arc::new(
-            soundscape_application::commands::delete_mix::DeleteMixService::new(mixes.clone()),
+            soundscape_application::commands::delete_mix::DeleteMixCommandHandler::new(
+                mixes.clone(),
+            ),
         ),
         store,
         sounds,

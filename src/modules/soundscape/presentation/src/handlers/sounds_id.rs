@@ -5,8 +5,8 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
-use soundscape_application::commands::delete_sound::DeleteSound;
-use soundscape_application::commands::update_sound::UpdateSound;
+use soundscape_application::commands::delete_sound::DeleteSoundCommand;
+use soundscape_application::commands::update_sound::UpdateSoundCommand;
 
 use crate::extractors::{admin, AdminActor};
 use crate::handlers::sounds::SoundDto;
@@ -33,7 +33,7 @@ async fn update_sound(
     admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
     deps.update_sound
-        .handle(UpdateSound {
+        .handle(UpdateSoundCommand {
             id,
             name: input.name,
             category_id: input.category_id,
@@ -53,7 +53,7 @@ async fn delete_sound(
     admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
     deps.delete_sound
-        .handle(DeleteSound { id })
+        .handle(DeleteSoundCommand { id })
         .await
         .map(|_| StatusCode::NO_CONTENT)
         .map_err(status_for)

@@ -1,7 +1,7 @@
-mod delete_sound;
-mod delete_sound_handler;
-mod delete_sound_service;
+mod delete_sound_command;
+mod delete_sound_command_handler;
+mod delete_sound_command_validator;
 
-pub use delete_sound::DeleteSound;
-pub use delete_sound_handler::DeleteSoundHandler;
-pub use delete_sound_service::DeleteSoundService;
+pub use delete_sound_command::DeleteSoundCommand;
+pub use delete_sound_command_handler::DeleteSoundCommandHandler;
+pub use delete_sound_command_validator::DeleteSoundCommandValidator;

@@ -5,8 +5,8 @@ use axum::{
     Json, Router,
 };
 use serde::Serialize;
-use soundscape_application::commands::create_sound::CreateSound;
-use soundscape_application::queries::list_sounds::ListSounds;
+use soundscape_application::commands::create_sound::CreateSoundCommand;
+use soundscape_application::queries::list_sounds::ListSoundsQuery;
 
 use crate::extractors::{admin, AdminActor, CurrentActor};
 use crate::router::SharedDependencies;
@@ -49,7 +49,7 @@ async fn list_sounds(
     State(deps): State<SharedDependencies>,
 ) -> Result<Json<Vec<SoundDto>>, StatusCode> {
     deps.list_sounds
-        .handle(ListSounds {})
+        .handle(ListSoundsQuery {})
         .await
         .map(|items| Json(items.into_iter().map(Into::into).collect()))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
@@ -112,7 +112,7 @@ async fn upload_sound(
     }
     let sound = deps
         .create_sound
-        .handle(CreateSound {
+        .handle(CreateSoundCommand {
             name: name.ok_or(StatusCode::BAD_REQUEST)?,
             category_id: category_id.ok_or(StatusCode::BAD_REQUEST)?,
             bytes: bytes.ok_or(StatusCode::BAD_REQUEST)?,

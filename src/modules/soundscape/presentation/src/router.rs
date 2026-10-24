@@ -1,22 +1,24 @@
+use soundscape_application::commands::clear_sound_icon::ClearSoundIconCommand;
+use soundscape_application::commands::create_category::CreateCategoryCommand;
+use soundscape_application::commands::create_mix::CreateMixCommand;
+use soundscape_application::commands::create_sound::CreateSoundCommand;
+use soundscape_application::commands::delete_category::DeleteCategoryCommand;
+use soundscape_application::commands::delete_mix::DeleteMixCommand;
+use soundscape_application::commands::delete_sound::DeleteSoundCommand;
+use soundscape_application::commands::rename_category::RenameCategoryCommand;
+use soundscape_application::commands::set_sound_icon::SetSoundIconCommand;
+use soundscape_application::commands::update_mix::UpdateMixCommand;
+use soundscape_application::commands::update_sound::UpdateSoundCommand;
+use soundscape_application::ports::{CommandHandler, QueryHandler};
+use soundscape_application::queries::find_sound_icon::FindSoundIconQuery;
+use soundscape_application::queries::list_categories::ListCategoriesQuery;
+use soundscape_application::queries::list_sounds::ListSoundsQuery;
+use soundscape_domain::{Mix, Sound, SoundCategory, SoundIcon};
 use std::sync::Arc;
 
 use axum::Router;
-use soundscape_application::commands::clear_sound_icon::ClearSoundIconHandler;
-use soundscape_application::commands::create_category::CreateCategoryHandler;
-use soundscape_application::commands::create_mix::CreateMixHandler;
-use soundscape_application::commands::create_sound::CreateSoundHandler;
-use soundscape_application::commands::delete_category::DeleteCategoryHandler;
-use soundscape_application::commands::delete_mix::DeleteMixHandler;
-use soundscape_application::commands::delete_sound::DeleteSoundHandler;
-use soundscape_application::commands::rename_category::RenameCategoryHandler;
-use soundscape_application::commands::set_sound_icon::SetSoundIconHandler;
-use soundscape_application::commands::update_mix::UpdateMixHandler;
-use soundscape_application::commands::update_sound::UpdateSoundHandler;
 use soundscape_application::ports::media::BlobStore;
 use soundscape_application::ports::{MixRepository, SoundRepository};
-use soundscape_application::queries::find_sound_icon::FindSoundIconHandler;
-use soundscape_application::queries::list_categories::ListCategoriesHandler;
-use soundscape_application::queries::list_sounds::ListSoundsHandler;
 
 /// Everything the soundscape routes need, resolved at the composition root.
 /// Use-case handlers arrive as traits; the repository and blob-store ports
@@ -24,20 +26,20 @@ use soundscape_application::queries::list_sounds::ListSoundsHandler;
 /// reads no use case wraps.
 #[derive(Clone)]
 pub struct SoundscapeDependencies {
-    pub list_categories: Arc<dyn ListCategoriesHandler>,
-    pub list_sounds: Arc<dyn ListSoundsHandler>,
-    pub find_sound_icon: Arc<dyn FindSoundIconHandler>,
-    pub create_category: Arc<dyn CreateCategoryHandler>,
-    pub rename_category: Arc<dyn RenameCategoryHandler>,
-    pub delete_category: Arc<dyn DeleteCategoryHandler>,
-    pub create_sound: Arc<dyn CreateSoundHandler>,
-    pub update_sound: Arc<dyn UpdateSoundHandler>,
-    pub delete_sound: Arc<dyn DeleteSoundHandler>,
-    pub set_sound_icon: Arc<dyn SetSoundIconHandler>,
-    pub clear_sound_icon: Arc<dyn ClearSoundIconHandler>,
-    pub create_mix: Arc<dyn CreateMixHandler>,
-    pub update_mix: Arc<dyn UpdateMixHandler>,
-    pub delete_mix: Arc<dyn DeleteMixHandler>,
+    pub list_categories: Arc<dyn QueryHandler<ListCategoriesQuery, Output = Vec<SoundCategory>>>,
+    pub list_sounds: Arc<dyn QueryHandler<ListSoundsQuery, Output = Vec<Sound>>>,
+    pub find_sound_icon: Arc<dyn QueryHandler<FindSoundIconQuery, Output = SoundIcon>>,
+    pub create_category: Arc<dyn CommandHandler<CreateCategoryCommand, Output = SoundCategory>>,
+    pub rename_category: Arc<dyn CommandHandler<RenameCategoryCommand, Output = SoundCategory>>,
+    pub delete_category: Arc<dyn CommandHandler<DeleteCategoryCommand, Output = ()>>,
+    pub create_sound: Arc<dyn CommandHandler<CreateSoundCommand, Output = Sound>>,
+    pub update_sound: Arc<dyn CommandHandler<UpdateSoundCommand, Output = Sound>>,
+    pub delete_sound: Arc<dyn CommandHandler<DeleteSoundCommand, Output = ()>>,
+    pub set_sound_icon: Arc<dyn CommandHandler<SetSoundIconCommand, Output = Sound>>,
+    pub clear_sound_icon: Arc<dyn CommandHandler<ClearSoundIconCommand, Output = Sound>>,
+    pub create_mix: Arc<dyn CommandHandler<CreateMixCommand, Output = Mix>>,
+    pub update_mix: Arc<dyn CommandHandler<UpdateMixCommand, Output = Mix>>,
+    pub delete_mix: Arc<dyn CommandHandler<DeleteMixCommand, Output = ()>>,
     pub store: Arc<dyn BlobStore>,
     pub sounds: Arc<dyn SoundRepository>,
     pub mixes: Arc<dyn MixRepository>,

@@ -5,10 +5,10 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use soundscape_application::commands::create_category::CreateCategory;
-use soundscape_application::commands::delete_category::DeleteCategory;
-use soundscape_application::commands::rename_category::RenameCategory;
-use soundscape_application::queries::list_categories::ListCategories;
+use soundscape_application::commands::create_category::CreateCategoryCommand;
+use soundscape_application::commands::delete_category::DeleteCategoryCommand;
+use soundscape_application::commands::rename_category::RenameCategoryCommand;
+use soundscape_application::queries::list_categories::ListCategoriesQuery;
 
 use crate::extractors::{AdminActor, CurrentActor};
 use crate::router::SharedDependencies;
@@ -40,7 +40,7 @@ async fn list_categories(
     State(deps): State<SharedDependencies>,
 ) -> Result<Json<Vec<CategoryDto>>, StatusCode> {
     deps.list_categories
-        .handle(ListCategories {})
+        .handle(ListCategoriesQuery {})
         .await
         .map(|items| Json(items.into_iter().map(Into::into).collect()))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
@@ -55,7 +55,7 @@ async fn create_category(
     crate::extractors::admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
     deps.create_category
-        .handle(CreateCategory { name: input.name })
+        .handle(CreateCategoryCommand { name: input.name })
         .await
         .map(|value| (StatusCode::CREATED, Json(value.into())))
         .map_err(status_for)
@@ -71,7 +71,7 @@ async fn rename_category(
     crate::extractors::admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
     deps.rename_category
-        .handle(RenameCategory {
+        .handle(RenameCategoryCommand {
             id,
             name: input.name,
         })
@@ -89,7 +89,7 @@ async fn delete_category(
     crate::extractors::admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
     deps.delete_category
-        .handle(DeleteCategory { id })
+        .handle(DeleteCategoryCommand { id })
         .await
         .map(|_| StatusCode::NO_CONTENT)
         .map_err(status_for)

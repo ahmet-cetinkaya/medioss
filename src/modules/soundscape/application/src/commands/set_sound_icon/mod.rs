@@ -1,7 +1,7 @@
-mod set_sound_icon;
-mod set_sound_icon_handler;
-mod set_sound_icon_service;
+mod set_sound_icon_command;
+mod set_sound_icon_command_handler;
+mod set_sound_icon_command_validator;
 
-pub use set_sound_icon::SetSoundIcon;
-pub use set_sound_icon_handler::SetSoundIconHandler;
-pub use set_sound_icon_service::SetSoundIconService;
+pub use set_sound_icon_command::SetSoundIconCommand;
+pub use set_sound_icon_command_handler::SetSoundIconCommandHandler;
+pub use set_sound_icon_command_validator::SetSoundIconCommandValidator;
