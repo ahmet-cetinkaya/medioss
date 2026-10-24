@@ -12,3 +12,7 @@ pub(crate) fn validate_name(name: &str) -> Result<(), ApplicationError> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "validate_name.tests.rs"]
+mod tests;
