@@ -150,3 +150,7 @@ impl NoteRepository for SeaOrmNoteRepository {
         Ok(rows)
     }
 }
+
+#[cfg(test)]
+#[path = "note_repository.tests.rs"]
+mod tests;

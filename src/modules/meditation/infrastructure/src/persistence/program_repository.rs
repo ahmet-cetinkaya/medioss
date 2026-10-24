@@ -152,3 +152,7 @@ impl ProgramRepository for SeaOrmProgramRepository {
         Ok(result.rows_affected)
     }
 }
+
+#[cfg(test)]
+#[path = "program_repository.tests.rs"]
+mod tests;

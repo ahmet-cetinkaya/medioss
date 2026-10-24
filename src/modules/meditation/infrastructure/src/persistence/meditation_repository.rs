@@ -143,3 +143,7 @@ impl MeditationRepository for SeaOrmMeditationRepository {
         Ok(rows > 0)
     }
 }
+
+#[cfg(test)]
+#[path = "meditation_repository.tests.rs"]
+mod tests;
