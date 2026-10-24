@@ -26,3 +26,7 @@ impl fmt::Debug for SessionSecret {
         formatter.write_str("SessionSecret([REDACTED])")
     }
 }
+
+#[cfg(test)]
+#[path = "session_secret.tests.rs"]
+mod tests;

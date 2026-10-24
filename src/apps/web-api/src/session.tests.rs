@@ -8,12 +8,9 @@ use axum::{
 };
 use tower::ServiceExt;
 
-use crate::{
-    router::router,
-    state::{AppState, SystemClock, TokioSemaphoreAdmission},
-};
+use crate::{router::router, state::AppState};
 
-async fn test_state() -> AppState {
+async fn test_state() -> (AppState, tempfile::TempDir) {
     let directory = tempfile::tempdir().unwrap();
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(2)
@@ -26,8 +23,15 @@ async fn test_state() -> AppState {
         .unwrap();
     let connection = sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone());
     identity_infrastructure::migrate(&connection).await.unwrap();
-    meditation_infrastructure::migrations::migrate(&connection).await.unwrap();
-    soundscape_infrastructure::migrations::migrate(&connection).await.unwrap();
+    meditation_infrastructure::migrations::migrate(&connection)
+        .await
+        .unwrap();
+    soundscape_infrastructure::migrations::migrate(&connection)
+        .await
+        .unwrap();
+    mood_tracker_infrastructure::migrations::migrate(&connection)
+        .await
+        .unwrap();
     let store = tower_sessions_sqlx_store::SqliteStore::new(pool);
     store.migrate().await.unwrap();
 
@@ -35,6 +39,7 @@ async fn test_state() -> AppState {
         data_dir: directory.path().to_path_buf(),
         port: 0,
         static_dir: directory.path().to_path_buf(),
+        bind_host: "127.0.0.1".parse().unwrap(),
         session_secret: crate::config::SessionSecret::new_for_tests("test-secret"),
         session_timeout: std::time::Duration::from_secs(3600),
         medioss_origin: "https://medioss.example".to_owned(),
@@ -43,7 +48,7 @@ async fn test_state() -> AppState {
     };
 
     let origin = Arc::new(config.medioss_origin.clone());
-    let meditation = crate::meditation::meditation_dependencies(
+    let meditation_module = crate::meditation::meditation_dependencies(
         connection.clone(),
         directory.path(),
         Arc::clone(&origin),
@@ -51,16 +56,38 @@ async fn test_state() -> AppState {
     let soundscape = crate::soundscape::soundscape_dependencies(
         connection.clone(),
         directory.path(),
-        origin,
+        Arc::clone(&origin),
     );
-    AppState::new(
+    let (mood_tracker, mood_tracker_entries) =
+        crate::mood_tracker::mood_tracker_dependencies(connection.clone(), Arc::clone(&origin));
+    let portability =
+        crate::portability::portability_dependencies(connection.clone(), Arc::clone(&origin));
+    let deletion: std::sync::Arc<dyn identity_presentation::UserDeletionListener> =
+        std::sync::Arc::new(crate::user_deletion::CrossModuleUserDeletion::new(
+            meditation_module.notes.clone(),
+            meditation_module.playback.clone(),
+            meditation_module.sessions.clone(),
+            soundscape.mixes.clone(),
+            mood_tracker_entries.clone(),
+            directory.path().join("media"),
+        ));
+    let state = AppState::new(
         Arc::new(config),
         Arc::new(store),
-        meditation,
+        meditation_module.shared,
+        mood_tracker,
         soundscape,
-        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(connection)),
+        portability,
+        Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
+            connection,
+        )),
         identity_infrastructure::BoundedArgon2PasswordHasher::new(),
-    )
+        deletion,
+        Arc::new(crate::avatar_store::FileAvatarStore::new(
+            directory.path().join("media"),
+        )),
+    );
+    (state, directory)
 }
 
 const ORIGIN: &str = "https://medioss.example";
@@ -80,7 +107,11 @@ async fn setup_admin_via_api(app: &axum::Router) {
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::CREATED, "admin setup must succeed");
+    assert_eq!(
+        response.status(),
+        StatusCode::CREATED,
+        "admin setup must succeed"
+    );
 }
 
 async fn login_and_capture_cookie(app: &axum::Router) -> Option<String> {
@@ -107,7 +138,7 @@ async fn login_and_capture_cookie(app: &axum::Router) -> Option<String> {
 
 #[tokio::test]
 async fn admin_fallback_matches_only_the_first_path_segment() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     tokio::fs::create_dir_all(state.config.static_dir.join("admin/meditations"))
         .await
         .unwrap();
@@ -135,32 +166,40 @@ async fn admin_fallback_matches_only_the_first_path_segment() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), 4096).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), 4096)
+        .await
+        .unwrap();
     assert_eq!(body.as_ref(), b"admin shell");
 }
 
 #[tokio::test]
 async fn health_responds_without_a_session() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     let app = router(state);
     let response = app
         .oneshot(Request::get("/api/health").body(Body::empty()).unwrap())
         .await
         .unwrap();
     if response.status() != StatusCode::OK {
-        let body = axum::body::to_bytes(response.into_body(), 8192).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), 8192)
+            .await
+            .unwrap();
         panic!("health body: {}", String::from_utf8_lossy(&body));
     }
 }
 
 #[tokio::test]
 async fn me_without_a_session_returns_401_while_health_returns_200() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     let app = router(state);
 
     let me = app
         .clone()
-        .oneshot(Request::get("/api/identity/me").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::get("/api/identity/me")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(me.status(), StatusCode::UNAUTHORIZED);
@@ -174,10 +213,12 @@ async fn me_without_a_session_returns_401_while_health_returns_200() {
 
 #[tokio::test]
 async fn middleware_inserts_actor_for_valid_session() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     let app = router(state);
     setup_admin_via_api(&app).await;
-    let cookie = login_and_capture_cookie(&app).await.expect("login sets a cookie");
+    let cookie = login_and_capture_cookie(&app)
+        .await
+        .expect("login sets a cookie");
 
     let me = app
         .oneshot(
@@ -197,10 +238,12 @@ async fn middleware_inserts_actor_for_valid_session() {
 
 #[tokio::test]
 async fn stale_auth_version_session_inserts_no_actor() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     let app = router(state);
     setup_admin_via_api(&app).await;
-    let cookie = login_and_capture_cookie(&app).await.expect("login sets a cookie");
+    let cookie = login_and_capture_cookie(&app)
+        .await
+        .expect("login sets a cookie");
 
     // Password change increments auth_version; the old session must stop working.
     let response = app
@@ -217,7 +260,11 @@ async fn stale_auth_version_session_inserts_no_actor() {
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK, "password change must succeed");
+    assert_eq!(
+        response.status(),
+        StatusCode::OK,
+        "password change must succeed"
+    );
 
     // The OLD cookie (pre-change session) must no longer authenticate.
     let me = app
@@ -234,7 +281,7 @@ async fn stale_auth_version_session_inserts_no_actor() {
 
 #[tokio::test]
 async fn setup_endpoint_is_possession_gated() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     let app = router(state);
 
     let no_secret = app
@@ -270,23 +317,33 @@ async fn setup_endpoint_is_possession_gated() {
 
 #[tokio::test]
 async fn setup_status_reports_required_then_completed() {
-    let state = test_state().await;
+    let (state, _guard) = test_state().await;
     let app = router(state);
 
     let before = app
         .clone()
-        .oneshot(Request::get("/api/identity/setup-status").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::get("/api/identity/setup-status")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(before.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(before.into_body(), 4096).await.unwrap();
+    let body = axum::body::to_bytes(before.into_body(), 4096)
+        .await
+        .unwrap();
     let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(parsed["setup_required"], true);
 
     setup_admin_via_api(&app).await;
 
     let after = app
-        .oneshot(Request::get("/api/identity/setup-status").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::get("/api/identity/setup-status")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     let body = axum::body::to_bytes(after.into_body(), 4096).await.unwrap();

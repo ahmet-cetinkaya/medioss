@@ -74,3 +74,7 @@ pub async fn resolve_actor(
 
     next.run(Request::from_parts(parts, body)).await
 }
+
+#[cfg(test)]
+#[path = "session.tests.rs"]
+mod tests;
