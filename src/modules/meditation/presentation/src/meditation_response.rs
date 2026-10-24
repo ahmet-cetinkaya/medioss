@@ -58,16 +58,19 @@ pub(crate) fn meditation_response(
 /// caller's own playback state; every meditation surface must show progress,
 /// so this is not optional decoration.
 pub(crate) async fn with_playback(
-    get_playback_state: &dyn meditation_application::queries::get_playback_state::GetPlaybackStateHandler,
+    get_playback_state: &dyn meditation_application::ports::QueryHandler<
+        meditation_application::queries::get_playback_state::GetPlaybackStateQuery,
+        Output = meditation_application::ports::PlaybackState,
+    >,
     user_id: kernel::UserId,
     meditation: &meditation_domain::Meditation,
 ) -> MeditationResponse {
-    use meditation_application::queries::get_playback_state::GetPlaybackState;
+    use meditation_application::queries::get_playback_state::GetPlaybackStateQuery;
     let mut response = meditation_response(meditation);
     // The query zeroes never-played state itself (spec FR-016), so one call
     // always yields the fields to render.
     if let Ok(state) = get_playback_state
-        .handle(GetPlaybackState {
+        .handle(GetPlaybackStateQuery {
             user_id,
             meditation_id: meditation.id(),
         })

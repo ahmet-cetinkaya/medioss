@@ -1,5 +1,7 @@
 mod delete_program_command;
 mod delete_program_command_handler;
+mod delete_program_command_validator;
 
 pub use delete_program_command::DeleteProgramCommand;
 pub use delete_program_command_handler::DeleteProgramCommandHandler;
+pub use delete_program_command_validator::DeleteProgramCommandValidator;

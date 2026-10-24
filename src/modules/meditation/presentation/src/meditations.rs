@@ -6,11 +6,11 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use meditation_application::commands::delete_meditation::DeleteMeditation;
-use meditation_application::commands::update_meditation_description::UpdateMeditationDescription;
-use meditation_application::queries::get_daily_suggestion::GetDailySuggestion;
-use meditation_application::queries::get_meditation_detail::GetMeditationDetail;
-use meditation_application::queries::list_library::ListLibrary;
+use meditation_application::commands::delete_meditation::DeleteMeditationCommand;
+use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommand;
+use meditation_application::queries::get_daily_suggestion::GetDailySuggestionQuery;
+use meditation_application::queries::get_meditation_detail::GetMeditationDetailQuery;
+use meditation_application::queries::list_library::ListLibraryQuery;
 
 use crate::meditation_response::{
     meditation_response, with_playback, MeditationResponse, ProgramSummary,
@@ -25,7 +25,7 @@ pub async fn daily_suggestion(
 ) -> Result<Response, ApiError> {
     let found = deps
         .get_daily_suggestion
-        .handle(GetDailySuggestion)
+        .handle(GetDailySuggestionQuery)
         .await
         .map_err(ApiError::Application)?;
     let Some(found) = found else {
@@ -60,7 +60,7 @@ pub async fn update_description(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     let updated = deps
         .update_meditation_description
-        .handle(UpdateMeditationDescription {
+        .handle(UpdateMeditationDescriptionCommand {
             meditation_id: id,
             description: request.description,
         })
@@ -88,7 +88,7 @@ pub async fn library(
     }
     let listed = deps
         .list_library
-        .handle(ListLibrary {
+        .handle(ListLibraryQuery {
             query: q.map(str::to_owned),
         })
         .await
@@ -117,7 +117,7 @@ pub async fn meditation(
 ) -> Result<Json<MeditationResponse>, ApiError> {
     let found = deps
         .get_meditation_detail
-        .handle(GetMeditationDetail { meditation_id: id })
+        .handle(GetMeditationDetailQuery { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
     let mut response = with_playback(
@@ -147,7 +147,7 @@ pub async fn delete_meditation(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.delete_meditation
-        .handle(DeleteMeditation { meditation_id: id })
+        .handle(DeleteMeditationCommand { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

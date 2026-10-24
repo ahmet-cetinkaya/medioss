@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
 use super::update_program_order_command::UpdateProgramOrderCommand;
+use super::update_program_order_command_validator::UpdateProgramOrderCommandValidator;
 use crate::ports::CommandHandler;
 use crate::ports::{MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 
 pub struct UpdateProgramOrderCommandHandler {
+    validator: UpdateProgramOrderCommandValidator,
     programs: Arc<dyn ProgramRepository>,
     memberships: Arc<dyn MembershipRepository>,
 }
@@ -16,6 +18,7 @@ impl UpdateProgramOrderCommandHandler {
         memberships: Arc<dyn MembershipRepository>,
     ) -> Self {
         Self {
+            validator: UpdateProgramOrderCommandValidator,
             programs,
             memberships,
         }
@@ -27,6 +30,7 @@ impl CommandHandler<UpdateProgramOrderCommand> for UpdateProgramOrderCommandHand
     type Output = ();
 
     async fn handle(&self, command: UpdateProgramOrderCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         // `meditation_ids` must be exactly the program's current meditations,
         // each once; anything else is rejected.
         let UpdateProgramOrderCommand {

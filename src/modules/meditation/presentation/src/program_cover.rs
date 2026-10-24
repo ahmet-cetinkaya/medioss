@@ -6,8 +6,8 @@ use axum::{
 };
 use meditation_application::commands;
 
-use meditation_application::commands::replace_program_cover::ReplaceProgramCover;
-use meditation_application::queries::get_program_cover::{GetProgramCover, ProgramCover};
+use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommand;
+use meditation_application::queries::get_program_cover::{GetProgramCoverQuery, ProgramCover};
 
 use crate::response::read_field_capped;
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
@@ -24,7 +24,7 @@ pub async fn cover(
         content_type,
     } = deps
         .get_program_cover
-        .handle(GetProgramCover {
+        .handle(GetProgramCoverQuery {
             requester_id: actor.user_id(),
             program_id: id,
         })
@@ -80,7 +80,7 @@ pub async fn replace_cover(
     };
 
     deps.replace_program_cover
-        .handle(ReplaceProgramCover {
+        .handle(ReplaceProgramCoverCommand {
             requester_id: _actor.user_id(),
             program_id: id,
             bytes,

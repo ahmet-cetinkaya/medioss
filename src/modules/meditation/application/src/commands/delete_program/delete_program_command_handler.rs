@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use super::delete_program_command::DeleteProgramCommand;
 use super::delete_program_command::UNFILED;
+use super::delete_program_command_validator::DeleteProgramCommandValidator;
 use crate::ports::CommandHandler;
 use crate::ports::{BlobStore, MeditationRepository, MembershipRepository, ProgramRepository};
 use crate::ApplicationError;
 
 pub struct DeleteProgramCommandHandler {
+    validator: DeleteProgramCommandValidator,
     programs: Arc<dyn ProgramRepository>,
     memberships: Arc<dyn MembershipRepository>,
     meditations: Arc<dyn MeditationRepository>,
@@ -21,6 +23,7 @@ impl DeleteProgramCommandHandler {
         store: Arc<dyn BlobStore>,
     ) -> Self {
         Self {
+            validator: DeleteProgramCommandValidator,
             programs,
             memberships,
             meditations,
@@ -34,6 +37,7 @@ impl CommandHandler<DeleteProgramCommand> for DeleteProgramCommandHandler {
     type Output = ();
 
     async fn handle(&self, command: DeleteProgramCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
         // Every meditation whose file actually lives in the program's folder is
         // relocated to `_unfiled/` first (decided by `storage_key` prefix, not
         // by the membership snapshot, so a concurrent upload or a missing

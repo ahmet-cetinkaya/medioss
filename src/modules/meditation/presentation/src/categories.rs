@@ -5,11 +5,11 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use meditation_application::commands::create_category::CreateCategory;
-use meditation_application::commands::delete_category::DeleteCategory;
-use meditation_application::commands::rename_category::RenameCategory;
-use meditation_application::commands::set_program_category::SetProgramCategory;
-use meditation_application::queries::list_categories::ListCategories;
+use meditation_application::commands::create_category::CreateCategoryCommand;
+use meditation_application::commands::delete_category::DeleteCategoryCommand;
+use meditation_application::commands::rename_category::RenameCategoryCommand;
+use meditation_application::commands::set_program_category::SetProgramCategoryCommand;
+use meditation_application::queries::list_categories::ListCategoriesQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
@@ -37,7 +37,7 @@ pub async fn categories(
 ) -> Result<Json<Vec<CategoryResponse>>, ApiError> {
     let listed = deps
         .list_categories
-        .handle(ListCategories)
+        .handle(ListCategoriesQuery)
         .await
         .map_err(ApiError::Application)?;
     Ok(Json(
@@ -61,7 +61,7 @@ pub async fn create_category(
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     let category = deps
         .create_category
-        .handle(CreateCategory { name: request.name })
+        .handle(CreateCategoryCommand { name: request.name })
         .await
         .map_err(ApiError::Application)?;
     Ok((
@@ -84,7 +84,7 @@ pub async fn rename_category(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.rename_category
-        .handle(RenameCategory {
+        .handle(RenameCategoryCommand {
             category_id: id,
             name: request.name,
         })
@@ -103,7 +103,7 @@ pub async fn delete_category(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.delete_category
-        .handle(DeleteCategory { category_id: id })
+        .handle(DeleteCategoryCommand { category_id: id })
         .await
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)
@@ -125,7 +125,7 @@ pub async fn assign_category(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
     deps.set_program_category
-        .handle(SetProgramCategory {
+        .handle(SetProgramCategoryCommand {
             program_id: id,
             category_id: request.category_id,
         })

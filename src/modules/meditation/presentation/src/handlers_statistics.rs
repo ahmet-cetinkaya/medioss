@@ -2,7 +2,9 @@ use axum::{
     extract::{Query, State},
     Json,
 };
-use meditation_application::queries::get_user_statistics::{GetUserStatistics, StatisticsRange};
+use meditation_application::queries::get_user_statistics::{
+    GetUserStatisticsQuery, StatisticsRange,
+};
 use meditation_application::ApplicationError;
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +50,7 @@ pub async fn statistics(
     }
     let statistics = deps
         .get_user_statistics
-        .handle(GetUserStatistics {
+        .handle(GetUserStatisticsQuery {
             user_id: actor.user_id(),
             range,
             tz_offset_minutes: query.tz_offset_minutes,
