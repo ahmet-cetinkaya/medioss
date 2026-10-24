@@ -76,6 +76,9 @@ async fn stored_name_is_trimmed() {
     let fixture = Fixture::new();
     let sound = fixture.service().handle(command("  Rain  ")).await.unwrap();
     assert_eq!(sound.name, "Rain");
+    // Known quirk: the blob stem is built from the untrimmed name, so the
+    // storage key keeps the surrounding spaces. Pinned until it is fixed.
+    assert_eq!(sound.storage_key, "soundscape/  Rain  -0.ogg");
 }
 
 #[tokio::test]

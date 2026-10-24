@@ -30,3 +30,7 @@ pub(crate) async fn read_field(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "multipart_field.tests.rs"]
+mod tests;

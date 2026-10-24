@@ -57,3 +57,7 @@ impl BlobStore for MediaStoreBlobs {
         self.0.delete(&key).await.map_err(|e| e.to_string())
     }
 }
+
+#[cfg(test)]
+#[path = "media_store_blobs.tests.rs"]
+mod tests;

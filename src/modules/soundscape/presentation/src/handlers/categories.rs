@@ -106,3 +106,7 @@ pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDepen
             put(rename_category).delete(delete_category),
         )
 }
+
+#[cfg(test)]
+#[path = "categories.tests.rs"]
+mod tests;

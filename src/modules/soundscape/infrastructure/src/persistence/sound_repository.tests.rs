@@ -10,8 +10,9 @@ use sqlx::{
     SqlitePool,
 };
 
-use super::{SeaOrmMixRepository, SeaOrmSoundRepository};
+use super::SeaOrmSoundRepository;
 use crate::migrations::migrate;
+use crate::persistence::SeaOrmMixRepository;
 use kernel::UserId;
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);

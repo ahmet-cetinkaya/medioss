@@ -26,3 +26,7 @@ impl AudioValidator for FfmpegAudioValidator {
         Err(())
     }
 }
+
+#[cfg(test)]
+#[path = "ffmpeg_audio_validator.tests.rs"]
+mod tests;

@@ -54,3 +54,7 @@ pub fn soundscape_router() -> Router<SharedDependencies> {
     let router = crate::handlers::sounds_audio::register(router);
     crate::handlers::mixes::register(router)
 }
+
+#[cfg(test)]
+#[path = "router.tests.rs"]
+mod tests;

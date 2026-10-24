@@ -204,3 +204,7 @@ impl SoundRepository for SeaOrmSoundRepository {
         Ok(sound)
     }
 }
+
+#[cfg(test)]
+#[path = "sound_repository.tests.rs"]
+mod tests;

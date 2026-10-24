@@ -59,14 +59,46 @@ impl CategoryRepository for FakeCategories {
             .find(|c| c.id == id)
             .cloned())
     }
-    async fn create(&self, _name: &str) -> Result<SoundCategory, String> {
-        Err("not needed".into())
+    async fn create(&self, name: &str) -> Result<SoundCategory, String> {
+        let mut categories = self.0.categories.lock().unwrap();
+        if categories.iter().any(|c| c.name.eq_ignore_ascii_case(name)) {
+            return Err("UNIQUE constraint failed: soundscape_categories.name".into());
+        }
+        let category = SoundCategory {
+            id: categories.iter().map(|c| c.id).max().unwrap_or(0) + 1,
+            name: name.trim().into(),
+            slug: name.trim().to_lowercase(),
+        };
+        categories.push(category.clone());
+        Ok(category)
     }
-    async fn rename(&self, _id: i64, _name: &str) -> Result<Option<SoundCategory>, String> {
-        Err("not needed".into())
+    async fn rename(&self, id: i64, name: &str) -> Result<Option<SoundCategory>, String> {
+        let mut categories = self.0.categories.lock().unwrap();
+        Ok(categories.iter_mut().find(|c| c.id == id).map(|category| {
+            category.name = name.trim().into();
+            category.slug = name.trim().to_lowercase();
+            category.clone()
+        }))
     }
-    async fn delete_empty(&self, _id: i64) -> Result<CategoryDelete, String> {
-        Err("not needed".into())
+    async fn delete_empty(&self, id: i64) -> Result<CategoryDelete, String> {
+        if self
+            .0
+            .sounds
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|s| s.category_id == id)
+        {
+            return Ok(CategoryDelete::InUse);
+        }
+        let mut categories = self.0.categories.lock().unwrap();
+        let before = categories.len();
+        categories.retain(|c| c.id != id);
+        Ok(if categories.len() == before {
+            CategoryDelete::NotFound
+        } else {
+            CategoryDelete::Deleted
+        })
     }
 }
 
@@ -127,8 +159,12 @@ impl SoundRepository for FakeSounds {
             sound.clone()
         }))
     }
-    async fn delete_with_mix_items(&self, _id: i64) -> Result<Option<Sound>, String> {
-        Err("not needed".into())
+    async fn delete_with_mix_items(&self, id: i64) -> Result<Option<Sound>, String> {
+        let mut sounds = self.0.sounds.lock().unwrap();
+        Ok(sounds
+            .iter()
+            .position(|s| s.id == id)
+            .map(|index| sounds.remove(index)))
     }
 }
 
@@ -533,4 +569,11 @@ pub(super) async fn post_sound(app: &TestApp, icon: &[u8]) -> (StatusCode, Vec<u
     )
     .await;
     (status, body)
+}
+
+pub(super) fn header_value(headers: &[(HeaderName, String)], name: &str) -> Option<String> {
+    headers
+        .iter()
+        .find(|(header_name, _)| header_name.as_str() == name)
+        .map(|(_, value)| value.clone())
 }

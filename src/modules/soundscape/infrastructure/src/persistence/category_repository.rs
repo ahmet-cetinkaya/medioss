@@ -112,3 +112,7 @@ impl CategoryRepository for SeaOrmCategoryRepository {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "category_repository.tests.rs"]
+mod tests;

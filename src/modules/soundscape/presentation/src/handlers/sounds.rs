@@ -132,3 +132,7 @@ pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDepen
         )),
     )
 }
+
+#[cfg(test)]
+#[path = "sounds.tests.rs"]
+mod tests;

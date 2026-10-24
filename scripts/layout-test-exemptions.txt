@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 113
+# count: 97
 src/apps/web-api/src/config/session_secret.rs
 src/apps/web-api/src/image_normalization/vp8l_preflight.rs
 src/apps/web-api/src/image_normalization/webp_preflight.rs
@@ -98,21 +98,5 @@ src/modules/soundscape/domain/src/name/valid_name.rs
 src/modules/soundscape/domain/src/sound_category/sound_category.rs
 src/modules/soundscape/domain/src/sound/sound.rs
 src/modules/soundscape/domain/src/sound/valid_content_type.rs
-src/modules/soundscape/infrastructure/src/builtin/seeder.rs
-src/modules/soundscape/infrastructure/src/media/ffmpeg_audio_validator.rs
-src/modules/soundscape/infrastructure/src/media/media_store_blobs.rs
-src/modules/soundscape/infrastructure/src/persistence/category_repository.rs
-src/modules/soundscape/infrastructure/src/persistence/mix_repository.rs
-src/modules/soundscape/infrastructure/src/persistence/sound_repository.rs
-src/modules/soundscape/presentation/src/extractors.rs
-src/modules/soundscape/presentation/src/handlers/categories.rs
-src/modules/soundscape/presentation/src/handlers/mixes.rs
-src/modules/soundscape/presentation/src/handlers/sounds_audio.rs
-src/modules/soundscape/presentation/src/handlers/sounds_icon.rs
-src/modules/soundscape/presentation/src/handlers/sounds_id.rs
-src/modules/soundscape/presentation/src/handlers/sounds.rs
-src/modules/soundscape/presentation/src/router.rs
-src/modules/soundscape/presentation/src/support/multipart_field.rs
-src/modules/soundscape/presentation/src/support/origin_guard.rs
 src/modules/soundscape/presentation/src/test_support.rs
 src/shared/media-store/src/storage/media_stream.rs

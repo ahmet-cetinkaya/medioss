@@ -1,9 +1,6 @@
 pub mod category_repository;
 pub mod mix_repository;
 pub mod sound_repository;
-#[cfg(test)]
-#[path = "sound_repository.tests.rs"]
-mod sound_repository_tests;
 pub use category_repository::SeaOrmCategoryRepository;
 pub use mix_repository::SeaOrmMixRepository;
 pub use sound_repository::SeaOrmSoundRepository;
