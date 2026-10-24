@@ -182,7 +182,21 @@ has_asserting_test() {
     /^[[:space:]]*#\[ignore/ { ignored = 1 }
     /^[[:space:]]*(pub )?(async )?fn / { if (pending && !ignored) found++; pending = 0; ignored = 0 }
     END { exit found ? 0 : 1 }' &&
-    printf '%s\n' "$code" | grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
+    printf '%s\n' "$code" | sed -E 's/assert!\([[:space:]]*true[[:space:]]*[,)]//g' |
+    grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
+}
+
+# True when $1 hooks its sibling $2 as `#[cfg(test)]` at line start, then
+# `#[path = "$2"]`, then `mod tests;`, as consecutive non-comment lines.
+# cfg(any(test, ..)) and cfg(not(test)) are different literals and fail.
+has_wired_hook() {
+  local file="$1" name="$2"
+  grep -vE '^[[:space:]]*//' "$file" | awk -v name="$name" '
+    /^#\[cfg\(test\)\][[:space:]]*$/ { cfg = 1; path = 0; next }
+    cfg && $0 == "#[path = \"" name "\"]" { path = 1; next }
+    cfg && path && /^mod tests;[[:space:]]*$/ { found = 1 }
+    { cfg = 0; path = 0 }
+    END { exit found ? 0 : 1 }'
 }
 
 # True when $1 declares `mod $2;` with a literal `#[cfg(test)]` among the
@@ -269,8 +283,7 @@ check_file_layout() {
     fi
     if [ -f "$sibling" ] &&
       has_asserting_test "$sibling" &&
-      grep -qE "^[[:space:]]*#\[path = \"$name\"\]" "$file" &&
-      grep -qE '^[[:space:]]*mod tests;' "$file"; then
+      has_wired_hook "$file" "$name"; then
       if [ "$exempt_listed" -eq 1 ]; then
         violations+="  stale exemption (it has real tests now; remove it from layout-test-exemptions.txt): $relative"$'\n'
       fi
@@ -514,6 +527,22 @@ expect_layout() {
   fi
 }
 
+# Checks check_file_layout on a fixture whose add.rs ends in hook text $4
+# and whose sibling body is $5 yields verdict $2.
+expect_hook() {
+  local dir="$1" verdict="$2" label="$3" hook="$4" body="$5" accepted=reject
+  printf 'pub fn add(a: u8, b: u8) -> u8 { a + b }\n' >"$dir/src/add.rs"
+  printf "$hook" >>"$dir/src/add.rs"
+  printf "$body" >"$dir/src/add.tests.rs"
+  check_file_layout "$dir" >/dev/null && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   ${verdict%e}ed: $label"
+  else
+    echo "  FAIL wrongly ${accepted%e}ed: $label"
+    return 1
+  fi
+}
+
 # Checks check_exemption_budget on file $1 with ceiling $2 yields verdict $3.
 expect_budget() {
   local verdict="$3" label="$4" accepted=reject
@@ -566,6 +595,18 @@ layout_self_test() {
   else
     echo "  ok   rejected: 18. commented-out #[path] hook"
   fi
+  expect_hook "$dir" reject "31. hook without #[cfg(test)]" \
+    '#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "32. hook gated by cfg(any(test, debug_assertions))" \
+    '#[cfg(any(test, debug_assertions))]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "33. hook gated by cfg(not(test))" \
+    '#[cfg(not(test))]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "34. indented cfg(test) hook" \
+    '    #[cfg(test)]\n    #[path = "add.tests.rs"]\n    mod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "35. tests file of only assert!(true)" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert!(true); }\n' || ok=1
+  expect_hook "$dir" accept "36. literal cfg(test) hook, real assertion" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
