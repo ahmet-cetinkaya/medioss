@@ -266,3 +266,7 @@ pub fn portability_dependencies(
         medioss_origin,
     }
 }
+
+#[cfg(test)]
+#[path = "portability.tests.rs"]
+mod tests;

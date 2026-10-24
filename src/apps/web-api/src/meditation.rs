@@ -377,3 +377,7 @@ impl meditation_application::ports::CoverValidator for CoverNormalizer {
         .map_err(meditation_application::ports::CoverNormalizationError::from)
     }
 }
+
+#[cfg(test)]
+#[path = "meditation.tests.rs"]
+mod tests;
