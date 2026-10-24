@@ -179,6 +179,11 @@ MODRS_CEILING=14
 # still count as a bin entry; the real one is 76, so this is a backstop, not a target.
 BIN_ENTRY_MAX_CODE_LINES=80
 
+# Use-case folders (application/src/{commands,queries}/<name>/) owe a command or
+# query struct, a handler impl and a validator; unmigrated ones sit in a shrink-only
+# baseline with its own count header, capped by USECASE_CEILING.
+USECASE_CEILING=73
+
 # Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
 # hook or test hidden inside a comment is dead code to every check below.
 code_without_comments() {
@@ -497,6 +502,64 @@ write_crate() {
     cat
   } >"$dir/Cargo.toml"
   : >"$dir/src/lib.rs"
+}
+
+# Prints what a use-case folder $1 (named $2, suffix command|query $3) still lacks.
+use_case_gaps() {
+  local dir="$1" name="$2" suffix="$3" base pascal validator tests file gaps=""
+  base="${name}_${suffix}"
+  pascal="$(perl -pe 's/(?:^|_)(.)/\U$1/g' <<<"$name")"
+  pascal="${pascal//$'\n'/}"
+  validator="$dir/${base}_validator.rs"
+  tests="$dir/${base}_validator.tests.rs"
+  for file in "$base" "${base}_handler" "${base}_validator" "${base}_validator.tests"; do
+    [ -s "$dir/$file.rs" ] || gaps+=" $file.rs"
+  done
+  if [ -s "$validator" ]; then
+    local kind="${suffix^}" code
+    code="$(code_without_comments "$validator")"
+    grep -qE "\b(struct|impl)\b[^{;]*\b${pascal}${kind}Validator\b" <<<"$code" || gaps+=" a ${pascal}${kind}Validator struct/impl in ${base}_validator.rs"
+  fi
+  if [ -s "$tests" ]; then
+    has_asserting_test "$tests" && has_wired_hook "$validator" "${base}_validator.tests.rs" || gaps+=" a wired asserting test in ${base}_validator.tests.rs"
+  fi
+  if [ -s "$dir/${base}_handler.rs" ]; then
+    grep -qE "\b${pascal}${suffix^}Validator\b" "$dir/${base}_handler.rs" || gaps+=" ${base}_handler.rs to use ${pascal}${suffix^}Validator"
+  fi
+  printf '%s' "$gaps"
+}
+
+# Prints violations for use-case folders under $1 using baseline $2 (ceiling $3).
+check_use_case_layout() {
+  local root="$1" baseline="$2" ceiling="${3:-$USECASE_CEILING}" dir relative kind name suffix missing declared actual listed
+  while IFS= read -r dir; do
+    relative="${dir#"$root"/}"
+    kind="$(basename "$(dirname "$dir")")"
+    name="$(basename "$dir")"
+    suffix="command"
+    [ "$kind" = "queries" ] && suffix="query"
+    missing="$(use_case_gaps "$dir" "$name" "$suffix")"
+    listed=false
+    [ -f "$baseline" ] && grep -qxF "$relative" "$baseline" && listed=true
+    if [ -z "$missing" ] && [ "$listed" = true ]; then
+      echo "  use case is migrated, delete it from the baseline: $relative"
+    elif [ -n "$missing" ] && [ "$listed" = false ]; then
+      echo "  use case needs$missing (or a reviewed baseline entry): $relative"
+    fi
+  done < <(find "$root/src/modules" -mindepth 5 -maxdepth 5 -type d -not -name '.*' \( -path '*/application/src/commands/*' -o -path '*/application/src/queries/*' \) 2>/dev/null)
+  [ -f "$baseline" ] || return 0
+  while IFS= read -r listed; do
+    [ -d "$root/$listed" ] || echo "  baseline names a missing use case folder: $listed"
+  done < <(grep -vE '^(#|$)' "$baseline")
+  declared="$(sed -n 's/^# count: \([0-9][0-9]*\)$/\1/p' "$baseline")"
+  actual="$(grep -cvE '^(#|$)' "$baseline")"
+  if [ -z "$declared" ]; then
+    echo "  use-case baseline lacks a '# count: N' header"
+  elif [ "$actual" -gt "$declared" ]; then
+    echo "  use-case baseline grew: $actual entries > declared count $declared"
+  elif [ "$declared" -gt "$ceiling" ]; then
+    echo "  use-case baseline count $declared exceeds ceiling $ceiling"
+  fi
 }
 
 # Local stand-ins for third-party crates, so the self-test never needs network.
@@ -988,6 +1051,85 @@ kind_expect() {
   fi
 }
 
+# A complete, compliant do_it command folder.
+write_valid_use_case() {
+  local uc="$1"
+  printf 'pub struct DoItCommand;\n' >"$uc/do_it_command.rs"
+  printf 'use crate::DoItCommandValidator;\npub struct DoItCommandHandler(DoItCommandValidator);\n' >"$uc/do_it_command_handler.rs"
+  printf 'pub struct DoItCommandValidator;\n#[cfg(test)]\n#[path = "do_it_command_validator.tests.rs"]\nmod tests;\n' >"$uc/do_it_command_validator.rs"
+  printf '#[test]\nfn accepts() {\n    assert_eq!(1 + 1, 2);\n}\n' >"$uc/do_it_command_validator.tests.rs"
+}
+
+usecase_self_test() {
+  local dir out failed=0 uc base
+  dir="$(new_fixture_dir)"
+  uc="$dir/src/modules/m/application/src/commands/do_it"
+  base="$dir/base.txt"
+  mkdir -p "$uc"
+  printf '# count: 0\n' >"$base"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "needs do_it_command.rs" "U1. unmigrated, unlisted use case" || failed=1
+  printf '# count: 1\nsrc/modules/m/application/src/commands/do_it\n' >"$base"
+  out="$(check_use_case_layout "$dir" "$base" 1)"
+  expect_absent "$out" "do_it" "U2. unmigrated but listed" || failed=1
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "exceeds ceiling" "U3. count above ceiling" || failed=1
+  printf '# count: 0\nsrc/modules/m/application/src/commands/do_it\n' >"$base"
+  out="$(check_use_case_layout "$dir" "$base" 1)"
+  expect_reported "$out" "baseline grew" "U4. entries above declared count" || failed=1
+  write_valid_use_case "$uc"
+  printf '# count: 1\nsrc/modules/m/application/src/commands/do_it\n' >"$base"
+  out="$(check_use_case_layout "$dir" "$base" 1)"
+  expect_reported "$out" "is migrated" "U5. migrated but still listed" || failed=1
+  printf '# count: 0\n' >"$base"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_absent "$out" "do_it" "U6. fully migrated and unlisted" || failed=1
+  write_valid_use_case "$uc"
+  : >"$uc/do_it_command_handler.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "do_it_command_handler.rs" "U10. empty handler file" || failed=1
+  write_valid_use_case "$uc"
+  printf 'pub struct Other;\n#[cfg(test)]\n#[path = "do_it_command_validator.tests.rs"]\nmod tests;\n' >"$uc/do_it_command_validator.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "DoItCommandValidator struct/impl" "U11. validator without the named type" || failed=1
+  write_valid_use_case "$uc"
+  printf '#[test]\nfn empty() {}\n' >"$uc/do_it_command_validator.tests.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "wired asserting test" "U12. validator test without an assertion" || failed=1
+  write_valid_use_case "$uc"
+  printf 'pub struct DoItCommandValidator;\n' >"$uc/do_it_command_validator.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "wired asserting test" "U13. validator test not wired" || failed=1
+  write_valid_use_case "$uc"
+  printf 'pub struct DoItCommandHandler;\n' >"$uc/do_it_command_handler.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "to use DoItCommandValidator" "U14. handler ignores the validator" || failed=1
+  rm -r "$uc"
+  mkdir -p "$uc"
+  : >"$uc/do_it_command.rs"; : >"$uc/do_it_command_handler.rs"; : >"$uc/do_it_command_validator.rs"; : >"$uc/do_it_command_validator.tests.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "needs" "U15. four empty files" || failed=1
+  rm -r "$uc"
+  mkdir -p "$dir/src/modules/m/application/src/commands/.hid"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_absent "$out" ".hid" "U16. dot-directory is not a use case" || failed=1
+  rm -r "$dir/src/modules/m/application/src/commands/.hid"
+  mkdir -p "$uc"
+  write_valid_use_case "$uc"
+  rm "$uc/do_it_command_validator.tests.rs"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "do_it_command_validator.tests.rs" "U7. validator without tests sibling" || failed=1
+  rm -r "$uc"
+  mkdir -p "$dir/src/modules/m/application/src/queries/get_it"
+  out="$(check_use_case_layout "$dir" "$base" 0)"
+  expect_reported "$out" "get_it_query.rs" "U8. query needs the _query suffix" || failed=1
+  printf '# count: 1\nsrc/modules/m/gone\n' >"$base"
+  out="$(check_use_case_layout "$dir" "$base" 1)"
+  expect_reported "$out" "missing use case folder" "U9. stale baseline entry" || failed=1
+  remove_fixture_dir "$dir"
+  return "$failed"
+}
+
 self_test() {
   local bad_root clean_root output failed=0
   bad_root="$(new_fixture_dir)"
@@ -1041,6 +1183,7 @@ self_test() {
 
   layout_self_test || failed=1
   kind_self_test || failed=1
+  usecase_self_test || failed=1
 
   if [ "$failed" -ne 0 ]; then
     echo "self-test: FAILED"
@@ -1060,6 +1203,13 @@ main() {
   check_workspace "$root/Cargo.toml"
   echo "boundary check: OK ($(member_count "$root/Cargo.toml") workspace members)"
   check_file_layout "$root" || return 1
+  local usecase_violations
+  usecase_violations="$(check_use_case_layout "$root" "$root/scripts/layout-usecase-baseline.txt")"
+  if [ -n "$usecase_violations" ]; then
+    echo "use-case layout violations:"
+    echo "$usecase_violations"
+    return 1
+  fi
 }
 
 main "$@"

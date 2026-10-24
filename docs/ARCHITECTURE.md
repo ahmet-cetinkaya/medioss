@@ -89,8 +89,8 @@ medioss/
     │   │   │   └── src/
     │   │   │       ├── lib.rs
     │   │   │       ├── ports/              # one trait per file: MeditationRepository, ...
-    │   │   │       ├── commands/           # <use-case>/ folders: struct + handler trait + service + tests
-    │   │   │       ├── queries/            # <use-case>/ folders: same shape, read-only
+    │   │   │       ├── commands/           # <use-case>/ folders: command + handler + validator, each with tests
+    │   │   │       ├── queries/            # <use-case>/ folders: same shape with Query, read-only
     │   │   │       ├── services/           # implementations shared by several use cases (when they exist)
     │   │   │       └── models/             # shared data contracts + models/errors/
     │   │   ├── infrastructure/
@@ -156,18 +156,19 @@ Layer boundaries are enforced by the Cargo graph; these rules govern the files _
 
 **One type per file**, named after the type in snake_case. A type and its error are separate files in the same topic folder.
 
-**One use case is one folder** in `application/src/commands/` or `application/src/queries/`. The folder holds one file per role — the command/query struct, the handler trait, the service implementing it, the service's tests — plus any private helper files the service needs:
+**One use case is one folder** in `application/src/commands/` or `application/src/queries/`. Two generic traits in `application/src/ports/` describe every use case: `CommandHandler<C>` (`async fn handle(&self, command: C) -> Result<..>`) and `QueryHandler<Q>`. A use case adds no trait of its own. The folder holds one file per role, each with a sibling `.tests.rs`:
 
 ```text
 commands/record_completion/
-├── mod.rs                                # re-exports only
-├── record_completion.rs                  # the command struct (data only)
-├── record_completion_handler.rs          # trait: async fn handle(&self, cmd) -> Result<..>
-├── record_completion_service.rs          # struct with its dependencies, impl of the trait
-└── record_completion_service.tests.rs    # tests of the service, fakes from test_support
+├── mod.rs                                          # re-exports only
+├── record_completion_command.rs                    # RecordCompletionCommand (data only)
+├── record_completion_command_handler.rs            # RecordCompletionCommandHandler: its dependencies + impl CommandHandler<RecordCompletionCommand>
+├── record_completion_command_handler.tests.rs      # handler tests, fakes from test_support
+├── record_completion_command_validator.rs          # RecordCompletionCommandValidator: every input rule
+└── record_completion_command_validator.tests.rs    # validator tests
 ```
 
-Queries follow the same shape (`get_mood_history/`, `GetMoodHistory` + `Handler` + `Service`); result types tuned for display get their own files in the same folder, and use-case helper files (`mood.rs`, `meditation_index.rs` in the portability pilot) live inside the use-case folder next to the service that owns them. When a use case validates its input beyond a one-line check, that logic lives in a sibling `<name>_validator.rs` in the same folder, not inside the service body: the service reads as orchestration, the validator reads as the rules, and the validator's tests go in `<name>_validator.tests.rs` (`validate_import` in the portability pilot is the example). A one-line guard such as a non-empty name check stays inline; extracting it would be ceremony. `application/src/services/` is reserved for service implementations **shared by several use cases**; a module with no such shared implementation has no `services/` folder at all. The presentation layer depends only on the handler traits (generic or `Arc<dyn …>`), never on repositories; `web-api` constructs services from infrastructure adapters and injects them at the composition root — plain constructor injection, no mediator, no registry, no runtime dispatch by message type.
+Queries use the same shape with the `Query` suffix (`get_mood_history/`: `GetMoodHistoryQuery`, `GetMoodHistoryQueryHandler`, `GetMoodHistoryQueryValidator`). **A validator is mandatory for every command and query**, even when it checks one field: all input validation lives in `<name>_command_validator.rs` / `<name>_query_validator.rs`, never inside the handler body, so the handler reads as orchestration and the validator as the rules. There is no one-line-guard exception. Result types tuned for display and use-case helper files live in the same folder. The word "service" is reserved for `application/src/services/`, which holds implementations **shared by several use cases**; a module with none has no `services/` folder. The presentation layer depends only on the generic handler traits (generic or `Arc<dyn CommandHandler<C>>`), never on repositories or handler impls; `web-api` constructs handlers from infrastructure adapters and injects them at the composition root. That is plain constructor injection: no mediator, no registry, no runtime dispatch by message type, and no CQRS crate. `scripts/check-boundaries.sh` enforces the folder shape; folders not yet migrated are listed in `scripts/layout-usecase-baseline.txt`, a shrink-only list with its own count and ceiling.
 
 **Tests live beside the code they cover, in their own `<name>.tests.rs` file**, attached with `#[cfg(test)] #[path = "..."] mod tests;`. Inline `#[cfg(test)] mod tests { ... }` blocks are not used: a file shows implementation, not implementation plus fixtures. Tests that exercise a crate from the outside still belong in its `tests/` directory. Every logic-bearing file has a sibling `.tests.rs`; files holding no logic are exempt — `mod.rs`/`lib.rs` re-export files, trait-only declarations, command/query/DTO data structs, and SeaORM entity/migration declarations. `scripts/check-boundaries.sh` enforces this rule (inline test blocks fail; missing siblings warn until the layout migration completes).
 
@@ -491,7 +492,7 @@ Run them with `cargo test --workspace`; `default-members` would otherwise limit 
 
 ### Sibling-test rule
 
-`scripts/check-boundaries.sh` fails when a logic-bearing source file has no sibling `<name>.tests.rs` containing at least one real assertion and wired by `#[cfg(test)]`, `#[path = "<name>.tests.rs"]`, `mod tests;` as three consecutive lines at line start. There is no exemption list: a file either has tests or is exempt by one of the proven kinds below. An empty `.tests.rs`, a hook inside a comment or raw string, and tests made only of literal tautologies (`assert!(true)`, `assert_eq!(1, 1)`) do not satisfy it.
+`scripts/check-boundaries.sh` fails when a logic-bearing source file has no sibling `<name>.tests.rs` containing at least one real assertion and wired by the three consecutive line-start lines `#[cfg(test)]`, `#[path = "<name>.tests.rs"]`, `mod tests;`. There is no exemption list: a file either has tests or is exempt by one of the proven kinds below. An empty `.tests.rs`, a hook inside a comment or raw string, and tests made only of literal tautologies (`assert!(true)`, `assert_eq!(1, 1)`) do not satisfy it.
 
 Exempt by kind, each proven mechanically because it is provably logic-free or test-only:
 
