@@ -164,18 +164,20 @@ member_count() {
 # Reports file-layout drift against docs/ARCHITECTURE.md "File Organization
 # Inside a Crate": no inline test modules, and a sibling <name>.tests.rs beside
 # every logic-bearing file. Hard-failing: every logic-bearing file needs a sibling
-# .tests.rs with a #[test], wired by #[path], unless it is listed in
-# scripts/layout-test-exemptions.txt (a list that may only shrink). Files holding no logic are exempt:
-# re-export mod.rs/lib.rs, trait-only declarations, data-only structs, and
-# generated/fixture trees (migrations, entities, test support, crate tests/).
-# Upper bound the exemption list's `# count: N` header may never exceed. Only
-# lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=0
+# .tests.rs with a #[test], wired by #[path]. There is no exemption list.
+# Files holding no logic are exempt: re-export mod.rs/lib.rs (see the ratchet
+# below), trait-only declarations, data-only structs, and generated/fixture
+# trees (migrations, entities, crate tests/), plus four proven kinds: A
+# router_tests files, B data-only entities, C gated test_support, D bin entry.
 
-# Ratchet for logic in mod.rs/lib.rs (kept apart from the exemption list). A
+# Ratchet for logic in mod.rs/lib.rs. A
 # listed file may keep its fn/impl/static/macro_rules!; an unlisted one may not
 # gain any. Same shrink-only discipline: `# count: N` <= MODRS_CEILING.
 MODRS_CEILING=14
+
+# Most code lines (no blanks or comments) a crate's src/main.rs may hold and
+# still count as a bin entry; the real one is 76, so this is a backstop, not a target.
+BIN_ENTRY_MAX_CODE_LINES=80
 
 # Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
 # hook or test hidden inside a comment is dead code to every check below.
@@ -351,30 +353,22 @@ is_gated_test_support() {
 # a static, macro_rules! or an inline `mod x { }` means logic lives there and it
 # needs a sibling test like any other file.
 is_bin_entry_file() {
-  local file="$1" code names
+  local file="$1" code names lines
   [ "$(basename "$file")" = "main.rs" ] || return 1
   [ "$(basename "$(dirname "$file")")" = "src" ] || return 1
   [ -f "$(dirname "$(dirname "$file")")/Cargo.toml" ] || return 1
   code="$(code_without_comments "$file")"
+  # Backstop: process glue stays small. Counted before whitespace collapse.
+  lines="$(grep -cv '^[[:space:]]*$' <<<"$code" || true)"
+  [ "$lines" -le "$BIN_ENTRY_MAX_CODE_LINES" ] || return 1
+  # Collapsed so `fn\nname()` and `mod a\n{` read like their one-line forms.
+  code="$(perl -0pe 's/\s+/ /g' <<<"$code")"
   grep -qE '\bfn +main\b' <<<"$code" || return 1
   grep -qE '\bimpl\b|\bstatic\b|macro_rules!|\bmod +[A-Za-z0-9_]+ *\{' <<<"$code" && return 1
+  # Item-level blocks run code at compile time without a fn: const X = { loop {} };
+  grep -qE '\b(const|static)\b[^;]*= *\{|\b(loop|while)\b' <<<"$code" && return 1
   names="$(grep -oE '\bfn +[A-Za-z0-9_]+' <<<"$code" | awk '{print $2}' | grep -vxE 'main|run' || true)"
   [ -z "$names" ]
-}
-
-# Fails when the exemption list's `# count: N` is missing, below the real
-# entry count, or above the ceiling.
-check_exemption_budget() {
-  local exemptions="$1" ceiling="$2" declared actual
-  declared="$(sed -n 's/^# count: \([0-9][0-9]*\)$/\1/p' "$exemptions")"
-  actual="$(grep -cvE '^(#|$)' "$exemptions")"
-  if [ -z "$declared" ]; then
-    echo "  exemption list lacks a '# count: N' header"
-  elif [ "$actual" -gt "$declared" ]; then
-    echo "  exemption list grew: $actual entries > declared count $declared"
-  elif [ "$declared" -gt "$ceiling" ]; then
-    echo "  exemption count $declared exceeds the ceiling $ceiling; the list may only shrink"
-  fi
 }
 
 # True when directory $1 is matched by a `members` entry (globs allowed) of
@@ -445,9 +439,8 @@ check_modrs_ratchet() {
 # */mod.rs and */lib.rs are skipped below for the sibling-test rule; the
 # check_modrs_ratchet baseline stops new logic from landing in them.
 check_file_layout() {
-  local root="$1" ceiling="${2:-$EXEMPTION_CEILING}" file sibling name relative
-  local exemptions="$root/scripts/layout-test-exemptions.txt"
-  local violations="" exempt_listed
+  local root="$1" file sibling name relative
+  local violations=""
   LAYOUT_ROOT="$root"
   while IFS= read -r file; do
     relative="${file#"$root"/}"
@@ -455,8 +448,6 @@ check_file_layout() {
       */test_support/* | */test_support.rs)
         if ! is_gated_test_support "$file"; then
           violations+="  test_support not gated by a single literal #[cfg(test)] declaration: $relative"$'\n'
-        elif [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
-          violations+="  stale exemption (exempt by kind; remove it from layout-test-exemptions.txt): $relative"$'\n'
         fi
         continue
         ;;
@@ -471,9 +462,6 @@ check_file_layout() {
       continue
     fi
     if is_cfg_test_module_file "$file" || is_data_only_entity_file "$file" || is_bin_entry_file "$file"; then
-      if [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
-        violations+="  stale exemption (exempt by kind; remove it from layout-test-exemptions.txt): $relative"$'\n'
-      fi
       continue
     fi
     # Trait-only files hold signatures, not logic; data-only files hold neither
@@ -484,29 +472,10 @@ check_file_layout() {
     fi
     sibling="${file%.rs}.tests.rs"
     name="$(basename "$sibling")"
-    exempt_listed=0
-    if [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
-      exempt_listed=1
-    fi
-    if [ -f "$sibling" ] &&
-      has_asserting_test "$sibling" &&
-      has_wired_hook "$file" "$name"; then
-      if [ "$exempt_listed" -eq 1 ]; then
-        violations+="  stale exemption (it has real tests now; remove it from layout-test-exemptions.txt): $relative"$'\n'
-      fi
-    elif [ "$exempt_listed" -eq 0 ]; then
+    if ! { [ -f "$sibling" ] && has_asserting_test "$sibling" && has_wired_hook "$file" "$name"; }; then
       violations+="  needs a wired sibling $name with at least one #[test]: $relative"$'\n'
     fi
   done < <(find "$root/src" -name '*.rs')
-  if [ -f "$exemptions" ]; then
-    local budget_problem
-    budget_problem="$(check_exemption_budget "$exemptions" "$ceiling")"
-    [ -z "$budget_problem" ] || violations+="$budget_problem"$'\n'
-    while IFS= read -r relative; do
-      case "$relative" in '' | '#'*) continue ;; esac
-      [ -f "$root/$relative" ] || violations+="  exemption names a missing file: $relative"$'\n'
-    done <"$exemptions"
-  fi
   local ratchet
   ratchet="$(check_modrs_ratchet "$root" "$root/scripts/layout-modrs-baseline.txt")"
   [ -z "$ratchet" ] || violations+="$ratchet"$'\n'
@@ -807,18 +776,6 @@ expect_bin_entry() {
   fi
 }
 
-# Checks check_exemption_budget on file $1 with ceiling $2 yields verdict $3.
-expect_budget() {
-  local verdict="$3" label="$4" accepted=reject
-  [ -z "$(check_exemption_budget "$1" "$2")" ] && accepted=accept
-  if [ "$accepted" = "$verdict" ]; then
-    echo "  ok   $verdict: $label"
-  else
-    echo "  FAIL wrongly $accepted: $label"
-    return 1
-  fi
-}
-
 # Proves check_file_layout hard-fails on a logic file with no real test, and
 # passes once a wired sibling with a #[test] exists. Uses a throwaway root.
 layout_self_test() {
@@ -968,26 +925,17 @@ layout_self_test() {
   expect_bin_entry "$dir" reject "80. main.rs with an inline module" 'fn main() { run(); }\nasync fn run() {}\nmod logic { pub const A: u8 = 1; }\n' || ok=1
   expect_bin_entry "$dir" reject "81. main.rs without fn main" 'fn run() {}\n' || ok=1
   expect_bin_entry "$dir" accept "82. main.rs declaring an out-of-line module" 'fn main() { run(); }\nasync fn run() {}\nmod operator;\n' || ok=1
-  printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
-  expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
-  printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
-  expect_budget "$dir/budget.txt" 5 reject "20. count raised above the ceiling" || ok=1
-  printf '# count: 4\nsrc/a.rs\n' >"$dir/budget.txt"
-  expect_budget "$dir/budget.txt" 5 accept "21. count lowered and entry removed" || ok=1
-  mkdir -p "$dir/scripts"
-  printf 'src/add.rs\n' >"$dir/scripts/layout-test-exemptions.txt"
-  if check_file_layout "$dir" >/dev/null; then
-    echo "  FAIL wrongly accepted: 14. stale exemption for a tested file"
-    ok=1
-  else
-    echo "  ok   rejected: 14. stale exemption for a tested file"
-  fi
+  expect_bin_entry "$dir" reject "83. main.rs with a fn name on its own line" 'fn main() { run(); }\nasync fn run() {}\nfn\nhelper() -> u8 { 1 }\n' || ok=1
+  expect_bin_entry "$dir" reject "84. main.rs with an inline module brace on the next line" 'fn main() { run(); }\nasync fn run() {}\nmod logic\n{ pub const A: u8 = 1; }\n' || ok=1
+  expect_bin_entry "$dir" reject "85. main.rs with a const block initialiser" 'fn main() { run(); }\nasync fn run() {}\nconst X: u8 = { let mut i = 0; while i < 3 { i += 1; } i };\n' || ok=1
+  expect_bin_entry "$dir" reject "86. main.rs with a loop in an item-level block" 'fn main() { run(); }\nasync fn run() {}\nconst Y: u8 = { loop { break 1; } };\n' || ok=1
+  expect_bin_entry "$dir" reject "87. main.rs over the code-line cap" "$(printf 'fn main() {}\\n'; for i in $(seq 1 85); do printf 'use a%s;\\n' "$i"; done)" || ok=1
   remove_fixture_dir "$dir"
   return "$ok"
 }
 
 # Exempt-by-kind cases: router_tests files (kind A) and data-only SeaORM
-# entities (kind B) pass only while provably logic-free; a listed kind file is stale.
+# entities (kind B) pass only while provably logic-free.
 kind_self_test() {
   local dir ok=0 gate
   for gate in '#[cfg(test)]' '#[cfg(not(test))]' '#[cfg(any(test, unix))]' ''; do
@@ -1016,10 +964,6 @@ kind_self_test() {
   kind_expect "$dir" reject "27. entity with macro_rules!" || ok=1
   printf 'pub static F: LazyLock<u8> = LazyLock::new(|| 1);\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
   kind_expect "$dir" reject "29. entity with a static closure initialiser" || ok=1
-  printf 'pub struct Model;\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
-  mkdir -p "$dir/scripts"
-  printf '# count: 1\nsrc/persistence/entities/users.rs\n' >"$dir/scripts/layout-test-exemptions.txt"
-  kind_expect "$dir" reject "28. stale exemption for a kind file" || ok=1
   remove_fixture_dir "$dir"
   dir="$(new_fixture_dir)"
   mkdir -p "$dir/src/router_tests"

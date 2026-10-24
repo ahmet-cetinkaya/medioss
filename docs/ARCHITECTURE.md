@@ -489,14 +489,19 @@ Run them with `cargo test --workspace`; `default-members` would otherwise limit 
 3. No module crate lists another module's crate.
 4. `media-store` and `kernel` list no crate under `src/modules/`.
 
-### Sibling-test rule and its exemption list
+### Sibling-test rule
 
-`scripts/check-boundaries.sh` fails when a logic-bearing source file has no sibling `<name>.tests.rs` containing at least one `#[test]` and wired by `#[path = "<name>.tests.rs"]`. Files that predate the rule are listed in `scripts/layout-test-exemptions.txt`. That list may only shrink: a listed file that gains real tests, or a listed path that no longer exists, fails the check. Adding a line to make the check pass defeats the rule and is rejected in review. An empty `.tests.rs` does not satisfy it.
+`scripts/check-boundaries.sh` fails when a logic-bearing source file has no sibling `<name>.tests.rs` containing at least one real assertion and wired by `#[cfg(test)]`, `#[path = "<name>.tests.rs"]`, `mod tests;` as three consecutive lines at line start. There is no exemption list: a file either has tests or is exempt by one of the proven kinds below. An empty `.tests.rs`, a hook inside a comment or raw string, and tests made only of literal tautologies (`assert!(true)`, `assert_eq!(1, 1)`) do not satisfy it.
 
-Exempt means not covered by name, not necessarily untested. The exemption file also carries a `# count: N` header; the entry count may not exceed N, and N may not exceed the ceiling in `scripts/check-boundaries.sh`, so the list can only shrink.
+Exempt by kind, each proven mechanically because it is provably logic-free or test-only:
 
-Residual gaps are review-enforced, not machine-enforced: an assertion token inside a string literal or comment-free dead code still satisfies the floor, the assertion check is file-wide rather than per test, and `# count` and `EXEMPTION_CEILING` can be edited together in one diff. Reviewers reject any diff that raises either number.
+- **A** Files in a `router_tests/` directory declared by name from its `mod.rs`, when `lib.rs` gates `router_tests` with a literal `#[cfg(test)]`.
+- **B** SeaORM entity files under `persistence/entities/` or named `entity.rs` with no `fn`, no `macro_rules!` and no `impl` other than `impl ActiveModelBehavior for ActiveModel {}`.
+- **C** `test_support.rs` / `test_support/` declared exactly once as `mod test_support;` directly under `#[cfg(test)]` (or the cross-crate fakes gate `#[cfg(any(test, feature = "test-support"))]`, which also requires the feature to be dev-only), with no `#[path]` or stacked `#[cfg*]` attribute, no mention elsewhere in the crate root, and no production file using it.
+- **D** A crate's `src/main.rs` that holds only `fn main` and `fn run` plus declarations and data: no other fn, no `impl`, `static`, `macro_rules!` or inline `mod x { }`. Startup logic lives in `web_api::bootstrap`, with tests.
 
-Two kinds are exempt by kind instead of by listing, because they are provably logic-free. (A) Files in a `router_tests/` directory declared by name from its `mod.rs`, when `lib.rs` gates `router_tests` with a literal `#[cfg(test)]`. (B) SeaORM entity files under `persistence/entities/` or named `entity.rs` with no `fn`, no `macro_rules!` and no `impl` other than `impl ActiveModelBehavior for ActiveModel {}`. A listed file that matches a kind fails as a stale exemption.
+`mod.rs` and `lib.rs` are skipped by the sibling rule but ratcheted by `scripts/layout-modrs-baseline.txt`: a `mod.rs`/`lib.rs` holding `fn`, `impl`, `static` or `macro_rules!` that is not in the baseline fails, and the baseline (with its own `# count` and `MODRS_CEILING`) may only shrink.
+
+Residual gaps are review-enforced, not machine-enforced: an assertion token inside a string literal or tautologies on variables (`assert_eq!(v, v)`) still satisfy the floor, the assertion check is file-wide rather than per test, and the baseline `# count` and `MODRS_CEILING` can be edited together in one diff. Reviewers reject any diff that raises either number.
 
 Environment variables read by code under test are set by exactly one test each, through a drop guard that removes the variable even when an assertion fails; tests that share a variable race because the test harness runs them in parallel.
