@@ -186,3 +186,7 @@ impl<'a> Vp8lBitReader<'a> {
         Ok(value)
     }
 }
+
+#[cfg(test)]
+#[path = "vp8l_preflight.tests.rs"]
+mod tests;

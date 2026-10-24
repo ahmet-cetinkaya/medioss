@@ -37,3 +37,7 @@ impl From<ImageNormalizationError>
         }
     }
 }
+
+#[cfg(test)]
+#[path = "normalization_adapters.tests.rs"]
+mod tests;

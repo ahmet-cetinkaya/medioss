@@ -120,3 +120,7 @@ fn validate_webp_image_dimensions(
     *image_dimensions = Some(dimensions);
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "webp_preflight.tests.rs"]
+mod tests;
