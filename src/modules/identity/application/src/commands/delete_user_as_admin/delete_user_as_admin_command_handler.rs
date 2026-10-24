@@ -3,6 +3,7 @@ use std::sync::Arc;
 use super::delete_user_as_admin_command::DeleteUserAsAdminCommand;
 use super::delete_user_as_admin_command_validator::DeleteUserAsAdminCommandValidator;
 use super::last_active_admin_guard::ensure_not_last_active_admin;
+use crate::models::normalize_login_identifier;
 use crate::ports::{CommandHandler, UserDeletionGuard, UserRepository};
 use crate::ApplicationError;
 use kernel::Role;
@@ -33,7 +34,7 @@ impl DeleteUserAsAdminCommandHandler {
             .map_err(ApplicationError::from)?
             .ok_or(ApplicationError::UserNotFound)?;
         self.repository
-            .delete_login_attempts(&user.email().as_str().trim().to_lowercase())
+            .delete_login_attempts(&normalize_login_identifier(user.email().as_str()))
             .await
             .map_err(ApplicationError::from)?;
         let deleted = self

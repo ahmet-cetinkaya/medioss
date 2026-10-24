@@ -27,7 +27,7 @@ impl CommandHandler<ClearLoginThrottleCommand> for ClearLoginThrottleCommandHand
     async fn handle(&self, command: ClearLoginThrottleCommand) -> Result<(), ApplicationError> {
         self.validator.validate(&command)?;
         self.throttle
-            .clear_failed_attempts(&command.identifier.trim().to_lowercase())
+            .clear_failed_attempts(&self.validator.normalized_identifier(&command))
             .await
             .map_err(ApplicationError::from)
     }

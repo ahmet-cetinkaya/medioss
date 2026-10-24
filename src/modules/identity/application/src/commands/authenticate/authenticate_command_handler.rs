@@ -56,12 +56,13 @@ impl CommandHandler<AuthenticateCommand> for AuthenticateCommandHandler {
 
     async fn handle(&self, command: AuthenticateCommand) -> Result<User, ApplicationError> {
         self.validator.validate(&command)?;
+        let identifier = self.validator.normalized_identifier(&command);
         if command.bypass_throttle {
             return self
-                .verify_credentials(&command.identifier, &command.password)
+                .verify_credentials(&identifier, &command.password)
                 .await;
         }
-        self.execute_with_throttle(&command.identifier, &command.password)
+        self.execute_with_throttle(&identifier, &command.password)
             .await
     }
 }
@@ -69,27 +70,25 @@ impl CommandHandler<AuthenticateCommand> for AuthenticateCommandHandler {
 impl AuthenticateCommandHandler {
     async fn execute_with_throttle(
         &self,
-        email_input: &str,
+        identifier: &str,
         password: &str,
     ) -> Result<User, ApplicationError> {
-        let normalized_identifier = email_input.trim().to_lowercase();
         let attempted_at = self.clock.now();
-        self.ensure_identifier_is_ready(&normalized_identifier, attempted_at)
+        self.ensure_identifier_is_ready(identifier, attempted_at)
             .await?;
         let permit = self.admission.try_acquire().map_err(login_throttled)?;
-        let result = self.verify_credentials(email_input, password).await;
+        let result = self.verify_credentials(identifier, password).await;
         drop(permit);
         result
     }
 
     async fn verify_credentials(
         &self,
-        email_input: &str,
+        identifier: &str,
         password: &str,
     ) -> Result<User, ApplicationError> {
-        let normalized_identifier = email_input.trim().to_lowercase();
         let attempted_at = self.clock.now();
-        let user = match Email::parse(&normalized_identifier) {
+        let user = match Email::parse(identifier) {
             Ok(email) => self.repository.find_by_email(&email).await?,
             Err(_) => None,
         };
@@ -108,18 +107,16 @@ impl AuthenticateCommandHandler {
                 // A disabled account must look exactly like unknown
                 // credentials: no oracle about the account's state.
                 self.throttle
-                    .record_failed_attempt(&normalized_identifier, attempted_at)
+                    .record_failed_attempt(identifier, attempted_at)
                     .await?;
                 return Err(ApplicationError::InvalidCredentials);
             }
-            self.throttle
-                .clear_failed_attempts(&normalized_identifier)
-                .await?;
+            self.throttle.clear_failed_attempts(identifier).await?;
             return user.ok_or(ApplicationError::InvalidCredentials);
         }
 
         self.throttle
-            .record_failed_attempt(&normalized_identifier, attempted_at)
+            .record_failed_attempt(identifier, attempted_at)
             .await?;
         Err(ApplicationError::InvalidCredentials)
     }

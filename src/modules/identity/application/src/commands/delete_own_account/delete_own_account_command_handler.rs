@@ -3,6 +3,7 @@ use std::sync::Arc;
 use super::delete_own_account_command::DeleteOwnAccountCommand;
 use super::delete_own_account_command_validator::DeleteOwnAccountCommandValidator;
 use crate::commands::delete_user_as_admin::last_active_admin_guard::ensure_not_last_active_admin;
+use crate::models::normalize_login_identifier;
 use crate::ports::{CommandHandler, OwnAccountDeletionGuard, UserRepository};
 use crate::ApplicationError;
 
@@ -28,7 +29,7 @@ impl DeleteOwnAccountCommandHandler {
             .map_err(ApplicationError::from)?
             .ok_or(ApplicationError::UserNotFound)?;
         self.repository
-            .delete_login_attempts(&user.email().as_str().trim().to_lowercase())
+            .delete_login_attempts(&normalize_login_identifier(user.email().as_str()))
             .await
             .map_err(ApplicationError::from)?;
         let deleted = self
