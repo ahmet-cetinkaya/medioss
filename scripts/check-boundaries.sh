@@ -253,18 +253,41 @@ is_data_only_entity_file() {
 # Kind C: test_support.rs / test_support/ is exempt only when its crate root
 # declares it exactly once as `mod test_support;`, directly under a literal
 # `#[cfg(test)]` (or the cross-crate fakes gate `#[cfg(any(test, feature =
-# "test-support"))]`) at line start, with no #[path] redirect, and nothing but
-# cfg(test) code uses it. Other cfg(any(..)), cfg(not(test)) and comments fail.
+# "test-support"))]`) at line start, with no #[path] redirect, no other #[cfg*]
+# attribute (stacked cfg(not(test)), cfg_attr), and nothing but cfg(test) code
+# uses it. Other cfg(any(..)), cfg(not(test)) and comments fail. The feature
+# form also needs test_support_feature_is_dev_only.
 test_support_declaration_is_gated() {
   local parent="$1"
   code_without_comments "$parent" | awk '
-    /^#\[path/ { redirected = 1 }
     /^#\[cfg\(test\)\][[:space:]]*$/ { gated = 1; next }
     /^#\[cfg\(any\(test, feature = "test-support"\)\)\][[:space:]]*$/ { gated = 1; next }
+    /^#\[(path|cfg)/ { redirected = 1; next }
     /^#\[/ { next }
     /^(pub(\([a-z]+\))? )?mod test_support;[[:space:]]*$/ { decls++; if (gated && !redirected) ok++ }
     { gated = 0; redirected = 0 }
     END { exit (decls == 1 && ok == 1) ? 0 : 1 }'
+}
+
+# True when the crate manifest $1 defines `test-support = []` in [features]
+# with no other feature (such as `default`) listing it, and no non-dev
+# dependency table anywhere under $LAYOUT_ROOT enables it, so release builds
+# never compile the shared fakes.
+test_support_feature_is_dev_only() {
+  local manifest="$1" other
+  [ -f "$manifest" ] || return 1
+  awk '
+    /^\[/ { in_features = ($0 == "[features]") }
+    in_features && /^test-support[[:space:]]*=[[:space:]]*\[\][[:space:]]*$/ { defined = 1; next }
+    in_features && /test-support/ { leaked = 1 }
+    END { exit (defined && !leaked) ? 0 : 1 }' "$manifest" || return 1
+  while IFS= read -r other; do
+    awk '
+      /^\[/ { prod = ($0 ~ /dependencies/ && $0 !~ /dev-dependencies/) }
+      prod && /"test-support"/ { bad = 1 }
+      END { exit bad ? 0 : 1 }' "$other" && return 1
+  done < <(find "$LAYOUT_ROOT" -name Cargo.toml -not -path '*/node_modules/*' -not -path '*/target/*')
+  return 0
 }
 
 # True when $1 is a test-only module: a .tests.rs, a router_tests/ file, or a
@@ -302,12 +325,16 @@ is_gated_test_support() {
   done
   [ -n "$parent" ] || return 1
   test_support_declaration_is_gated "$parent" || return 1
+  if code_without_comments "$parent" | grep -qF 'feature = "test-support"'; then
+    test_support_feature_is_dev_only "$dir/../Cargo.toml" || return 1
+  fi
   [ "$(code_without_comments "$parent" | grep -c 'test_support')" -eq 1 ] || return 1
   [ -f "$root" ] && grep -q 'fn main' "$root" && return 1
   while IFS= read -r user; do
     [ "$user" = "$parent" ] && continue
     is_test_only_module "$user" && continue
-    code_without_comments "$user" | grep -qE '(crate|self|super)::test_support|mod test_support|use test_support' && return 1
+    code_without_comments "$user" | perl -0pe 's/\s+/ /g; s/\s*::\s*/::/g' |
+      grep -qE '(crate|self|super)::(\{[^;]*)?test_support|mod test_support|(^|[^:A-Za-z_])test_support::' && return 1
   done < <(find "$dir" -name '*.rs' -not -path '*/test_support/*' -not -name test_support.rs)
   return 0
 }
@@ -339,10 +366,14 @@ is_crate_integration_test() {
   return 1
 }
 
+# Review-enforced, not machine-checked: */mod.rs and */lib.rs are skipped below
+# although 17 of them hold fn/impl wiring. A "no fn bodies" rule would need a
+# long new exemption list, so reviewers must watch for logic landing there.
 check_file_layout() {
   local root="$1" ceiling="${2:-$EXEMPTION_CEILING}" file sibling name relative
   local exemptions="$root/scripts/layout-test-exemptions.txt"
   local violations="" exempt_listed
+  LAYOUT_ROOT="$root"
   while IFS= read -r file; do
     relative="${file#"$root"/}"
     case "$file" in
@@ -648,12 +679,13 @@ expect_hook() {
 # test_support/shipped.rs holds branching logic, and whose extra file $5 (path
 # under src/, may be empty) has content $6; yields verdict $2.
 expect_support() {
-  local verdict="$2" label="$3" lib="$4" extra="${5:-}" extra_body="${6:-}" dir accepted=reject
+  local verdict="$2" label="$3" lib="$4" extra="${5:-}" extra_body="${6:-}" manifest="${7:-}" dir accepted=reject
   dir="$(new_fixture_dir)"
   mkdir -p "$dir/src/test_support"
   printf "$lib" >"$dir/src/lib.rs"
   printf 'pub fn pick(a: bool) -> u8 { if a { 1 } else { 2 } }\n' >"$dir/src/test_support/shipped.rs"
-  [ -z "$extra" ] || printf "$extra_body" >"$dir/src/$extra"
+  [ -z "$extra" ] || { mkdir -p "$(dirname "$dir/src/$extra")"; printf "$extra_body" >"$dir/src/$extra"; }
+  [ -z "$manifest" ] || printf "$manifest" >"$dir/Cargo.toml"
   check_file_layout "$dir" >/dev/null && accepted=accept
   if [ "$accepted" = "$verdict" ]; then
     echo "  ok   ${verdict%e}ed: $label"
@@ -730,7 +762,7 @@ layout_self_test() {
   expect_support "$dir" accept "37. test_support under literal cfg(test), declared once" \
     '#[cfg(test)]\nmod test_support;\n' || ok=1
   expect_support "$dir" accept "38. test_support under the cross-crate test-support gate" \
-    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' || ok=1
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' '' '' '[features]\ntest-support = []\n' || ok=1
   expect_support "$dir" reject "39. test_support declared without cfg" \
     'pub mod test_support;\n' || ok=1
   expect_support "$dir" reject "40. cfg(test) only in a comment" \
@@ -779,6 +811,26 @@ layout_self_test() {
     echo "  FAIL wrongly rejected: 56. tests/ directly beside a Cargo.toml"
     ok=1
   fi
+  expect_support "$dir" reject "57. feature gate without a [features] entry" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' '' '' '[package]\nname = "x"\n' || ok=1
+  expect_support "$dir" reject "58. feature gate with test-support in default" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' '' '' '[features]\ndefault = ["test-support"]\ntest-support = []\n' || ok=1
+  expect_support "$dir" reject "59. non-dev dependency enables test-support" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' 'consumer/Cargo.toml' '[dependencies]\nx = { path = "..", features = ["test-support"] }\n' '[features]\ntest-support = []\n' || ok=1
+  expect_support "$dir" accept "60. dev-dependency enables test-support" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' 'consumer/Cargo.toml' '[dev-dependencies]\nx = { path = "..", features = ["test-support"] }\n' '[features]\ntest-support = []\n' || ok=1
+  expect_support "$dir" reject "61. production use crate::{test_support::x}" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' 'prod.rs' 'use crate::{test_support::shipped::pick};\npub fn run() -> u8 { 1 }\n' '' || ok=1
+  expect_support "$dir" reject "62. production use crate :: test_support (spaces)" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' 'prod.rs' 'use crate\n    :: test_support::shipped::pick;\npub fn run() -> u8 { 1 }\n' '' || ok=1
+  expect_support "$dir" reject "63. production glob import then bare test_support::" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' 'prod.rs' 'use crate::*;\npub fn run() -> u8 { test_support::shipped::pick(true) }\n' '' || ok=1
+  expect_support "$dir" reject "64. test_support declared inside an inline module" \
+    'mod inner {\n    #[cfg(test)]\n    mod test_support;\n}\n' '' '' '' || ok=1
+  expect_support "$dir" reject "65. stacked cfg(test) and cfg(not(test))" \
+    '#[cfg(test)]\n#[cfg(not(test))]\nmod test_support;\n' '' '' '' || ok=1
+  expect_support "$dir" reject "66. cfg_attr path redirect" \
+    '#[cfg(test)]\n#[cfg_attr(test, path = "elsewhere.rs")]\nmod test_support;\n' '' '' '' || ok=1
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
