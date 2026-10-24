@@ -10,7 +10,7 @@ use soundscape_application::ports::media::BlobReader;
 
 use crate::extractors::CurrentActor;
 use crate::router::SharedDependencies;
-use crate::support::byte_range::parse_range;
+use http_range::{parse_range, Unsatisfiable};
 
 async fn stream_sound(
     State(deps): State<SharedDependencies>,
@@ -32,20 +32,27 @@ async fn stream_sound(
     let range = headers
         .get(header::RANGE)
         .and_then(|value| value.to_str().ok())
-        .and_then(|value| parse_range(value, total));
+        .map(|value| parse_range(value, total));
     let (status, start, length, content_range) = match range {
-        Some(Ok((start, end))) => (
-            StatusCode::PARTIAL_CONTENT,
-            start,
-            end - start + 1,
-            Some(format!("bytes {start}-{end}/{total}")),
-        ),
-        Some(Err(())) => {
-            return Ok((
-                StatusCode::RANGE_NOT_SATISFIABLE,
-                [(header::CONTENT_RANGE, format!("bytes */{total}"))],
+        Some(Ok(Some(range))) => {
+            let start = range.start;
+            let end = range.end_inclusive;
+            (
+                StatusCode::PARTIAL_CONTENT,
+                start,
+                end - start + 1,
+                Some(format!("bytes {start}-{end}/{total}")),
             )
-                .into_response());
+        }
+        Some(Err(Unsatisfiable)) | Some(Ok(None)) => {
+            if let Some(Err(Unsatisfiable)) = range {
+                return Ok((
+                    StatusCode::RANGE_NOT_SATISFIABLE,
+                    [(header::CONTENT_RANGE, format!("bytes */{total}"))],
+                )
+                    .into_response());
+            }
+            (StatusCode::OK, 0, total, None)
         }
         None => (StatusCode::OK, 0, total, None),
     };

@@ -388,6 +388,8 @@ The `presentation` crate never sees SeaORM, and neither `application` nor `domai
 
 Commands and queries are separated as an **organizational** discipline, nothing more. Commands live in `<module>-application/src/commands/` and mutate state; queries live in `<module>-application/src/queries/`, are read-only, and may return shapes tuned for display rather than domain aggregates. Each use case is one folder exporting a command/query struct, a handler trait, and a service implementing it (see _File Organization Inside a Crate_). Callers depend on the handler trait and invoke it directly; there is no mediator, no handler registry, and no runtime dispatch by message type. Modules have no event bus and no background-job framework today; the one cross-module reaction (user deletion cleanup) is a listener port resolved at the composition root. If a second genuine producer/consumer pair or a recurring job appears, add `application/src/events/` (one integration event + handler per folder, `Requests/`-style) or `application/src/jobs/` as a deliberate decision then — not before.
 
+**Known deviation: raw ports in meditation presentation.** The rule is that presentation depends only on handler traits. Four sites in `meditation-presentation` still read a port directly, because the work they do is streaming or request-shaped rather than a use case: `cover_validator` (normalizing a streamed cover upload before the command runs), `store` (streaming audio bytes in `audio_stream.rs`), and `programs` plus `playback` (both in `programs.rs`, decorating a program with its cover and progress). They are tracked, not endorsed; a later change should give each a handler-shaped use case. Nothing else in presentation reads a repository.
+
 ---
 
 ## Runtime Data and Media Security
@@ -486,3 +488,9 @@ Run them with `cargo test --workspace`; `default-members` would otherwise limit 
 2. No `*-presentation` crate lists `sea-orm` or a filesystem-access crate.
 3. No module crate lists another module's crate.
 4. `media-store` and `kernel` list no crate under `src/modules/`.
+
+### Sibling-test rule and its exemption list
+
+`scripts/check-boundaries.sh` fails when a logic-bearing source file has no sibling `<name>.tests.rs` containing at least one `#[test]` and wired by `#[path = "<name>.tests.rs"]`. Files that predate the rule are listed in `scripts/layout-test-exemptions.txt`. That list may only shrink: a listed file that gains real tests, or a listed path that no longer exists, fails the check. Adding a line to make the check pass defeats the rule and is rejected in review. An empty `.tests.rs` does not satisfy it.
+
+Exempt means not covered by name, not necessarily untested. The exemption file also carries a `# count: N` header; the entry count may not exceed N, and N may not exceed the ceiling in `scripts/check-boundaries.sh`, so the list can only shrink.

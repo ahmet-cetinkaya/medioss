@@ -6,41 +6,33 @@ use axum::{
 };
 use meditation_application::commands;
 
+use meditation_application::commands::replace_program_cover::ReplaceProgramCover;
+use meditation_application::queries::get_program_cover::{GetProgramCover, ProgramCover};
+
 use crate::response::read_field_capped;
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
 
 /// `GET /meditation/programs/{id}/cover` — the cover image, authenticated
 /// (spec FR-026).
 pub async fn cover(
-    CurrentActor(_actor): CurrentActor,
+    CurrentActor(actor): CurrentActor,
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Response, ApiError> {
-    let program = deps
-        .programs
-        .find_by_id(id)
+    let ProgramCover {
+        bytes,
+        content_type,
+    } = deps
+        .get_program_cover
+        .handle(GetProgramCover {
+            requester_id: actor.user_id(),
+            program_id: id,
+        })
         .await
-        .map_err(meditation_application::ApplicationError::Repository)
         .map_err(ApiError::Application)?
         .ok_or(ApiError::Application(
             meditation_application::ApplicationError::NotFound,
         ))?;
-    let key = program.cover_storage_key.ok_or(ApiError::Application(
-        meditation_application::ApplicationError::NotFound,
-    ))?;
-    let bytes = deps
-        .store
-        .read(&key)
-        .await
-        .map_err(meditation_application::ApplicationError::Storage)
-        .map_err(ApiError::Application)?;
-    let content_type = if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
-        "image/png"
-    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
-        "image/jpeg"
-    } else {
-        "image/webp"
-    };
     Ok((
         StatusCode::OK,
         [(
@@ -83,35 +75,17 @@ pub async fn replace_cover(
             let _ = field.bytes().await;
         }
     }
-    let Some((bytes, ext)) = cover else {
+    let Some((bytes, _ext)) = cover else {
         return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST));
     };
 
-    let program = deps
-        .programs
-        .find_by_id(id)
+    deps.replace_program_cover
+        .handle(ReplaceProgramCover {
+            requester_id: _actor.user_id(),
+            program_id: id,
+            bytes,
+        })
         .await
-        .map_err(meditation_application::ApplicationError::Repository)
-        .map_err(ApiError::Application)?
-        .ok_or(ApiError::Application(
-            meditation_application::ApplicationError::NotFound,
-        ))?;
-
-    let blob = deps
-        .store
-        .put(&program.folder, "cover", ext, &bytes)
-        .await
-        .map_err(meditation_application::ApplicationError::Storage)
         .map_err(ApiError::Application)?;
-    deps.programs
-        .set_cover_key(id, &blob.storage_key)
-        .await
-        .map_err(meditation_application::ApplicationError::Repository)
-        .map_err(ApiError::Application)?;
-    if let Some(old_key) = program.cover_storage_key {
-        if old_key != blob.storage_key {
-            let _ = deps.store.delete(&old_key).await;
-        }
-    }
     Ok(StatusCode::NO_CONTENT)
 }

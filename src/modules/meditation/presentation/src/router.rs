@@ -24,6 +24,7 @@ use meditation_application::commands::record_completion::RecordCompletionHandler
 use meditation_application::commands::record_position::RecordPositionHandler;
 use meditation_application::commands::remove_member::RemoveMemberHandler;
 use meditation_application::commands::rename_category::RenameCategoryHandler;
+use meditation_application::commands::replace_program_cover::ReplaceProgramCoverHandler;
 use meditation_application::commands::set_completed::SetCompletedHandler;
 use meditation_application::commands::set_program_category::SetProgramCategoryHandler;
 use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionHandler;
@@ -33,14 +34,14 @@ use meditation_application::commands::update_program_order::UpdateProgramOrderHa
 use meditation_application::commands::upload_meditation::UploadMeditationHandler;
 use meditation_application::commands::{MAX_COVER_BYTES, MAX_UPLOAD_BYTES};
 use meditation_application::ports::{
-    BlobStore, Clock, CoverValidator, MembershipRepository, PlaybackStateRepository,
-    ProgramRepository,
+    BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository,
 };
 use meditation_application::queries::get_continue_program::GetContinueProgramHandler;
 use meditation_application::queries::get_daily_suggestion::GetDailySuggestionHandler;
 use meditation_application::queries::get_meditation::GetMeditationHandler;
 use meditation_application::queries::get_meditation_detail::GetMeditationDetailHandler;
 use meditation_application::queries::get_playback_state::GetPlaybackStateHandler;
+use meditation_application::queries::get_program_cover::GetProgramCoverHandler;
 use meditation_application::queries::get_user_statistics::GetUserStatisticsHandler;
 use meditation_application::queries::list_categories::ListCategoriesHandler;
 use meditation_application::queries::list_library::ListLibraryHandler;
@@ -94,6 +95,8 @@ pub struct MeditationDependencies {
     pub get_daily_suggestion: Arc<dyn GetDailySuggestionHandler>,
     pub list_library: Arc<dyn ListLibraryHandler>,
     pub get_playback_state: Arc<dyn GetPlaybackStateHandler>,
+    pub get_program_cover: Arc<dyn GetProgramCoverHandler>,
+    pub replace_program_cover: Arc<dyn ReplaceProgramCoverHandler>,
     pub record_position: Arc<dyn RecordPositionHandler>,
     pub record_completion: Arc<dyn RecordCompletionHandler>,
     pub set_completed: Arc<dyn SetCompletedHandler>,
@@ -107,7 +110,6 @@ pub struct MeditationDependencies {
     /// Program rows for the existence gates and the cover surfaces.
     pub programs: Arc<dyn ProgramRepository>,
     /// Home-program map decorating the library rows.
-    pub memberships: Arc<dyn MembershipRepository>,
     /// Per-user progress read on every meditation surface.
     pub playback: Arc<dyn PlaybackStateRepository>,
     /// Cover normalization, run while streaming a replacement cover.
@@ -115,7 +117,6 @@ pub struct MeditationDependencies {
     /// Blob reads and writes behind covers and audio streaming.
     pub store: Arc<dyn BlobStore>,
     /// The "now" feeding the statistics window.
-    pub clock: Arc<dyn Clock>,
     pub medioss_origin: Arc<String>,
 }
 

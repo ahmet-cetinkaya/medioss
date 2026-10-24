@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
 use super::list_library::ListLibrary;
-use super::list_library_handler::ListLibraryHandler;
+use super::list_library_handler::{LibraryEntry, ListLibraryHandler};
 use super::matches::matches;
 use super::search_index::SearchIndex;
 use crate::ports::{
     CategoryRepository, MeditationRepository, MembershipRepository, ProgramRepository,
 };
 use crate::ApplicationError;
-use meditation_domain::Meditation;
 
 pub struct ListLibraryService {
     meditations: Arc<dyn MeditationRepository>,
@@ -35,7 +34,7 @@ impl ListLibraryService {
 
 #[async_trait::async_trait]
 impl ListLibraryHandler for ListLibraryService {
-    async fn handle(&self, query: ListLibrary) -> Result<Vec<Meditation>, ApplicationError> {
+    async fn handle(&self, query: ListLibrary) -> Result<Vec<LibraryEntry>, ApplicationError> {
         let library = self
             .meditations
             .list_all()
@@ -43,19 +42,38 @@ impl ListLibraryHandler for ListLibraryService {
             .map_err(ApplicationError::Repository)?;
         let query = query.query.as_deref();
         let is_blank = query.map(str::trim).is_none_or(str::is_empty);
-        if is_blank {
-            return Ok(library);
-        }
-        let query = query.unwrap_or_default();
-        let index = SearchIndex::build(
-            self.memberships.as_ref(),
-            self.programs.as_ref(),
-            self.categories.as_ref(),
-        )
-        .await?;
+        let library = if is_blank {
+            library
+        } else {
+            let query = query.unwrap_or_default();
+            let index = SearchIndex::build(
+                self.memberships.as_ref(),
+                self.programs.as_ref(),
+                self.categories.as_ref(),
+            )
+            .await?;
+            library
+                .into_iter()
+                .filter(|meditation| matches(query, &index.haystack_for(meditation)))
+                .collect()
+        };
+        // Home-program decoration ships with the library list so the client
+        // renders program links without a second request.
+        let homes = self
+            .memberships
+            .home_programs()
+            .await
+            .map_err(ApplicationError::Repository)?;
         Ok(library
             .into_iter()
-            .filter(|meditation| matches(query, &index.haystack_for(meditation)))
+            .map(|meditation| {
+                let home = homes.get(&meditation.id()).copied();
+                LibraryEntry {
+                    program_id: home.map(|(id, _)| id),
+                    program_has_cover: home.map(|(_, has_cover)| has_cover).unwrap_or(false),
+                    meditation,
+                }
+            })
             .collect())
     }
 }

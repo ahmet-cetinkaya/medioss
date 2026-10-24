@@ -163,31 +163,92 @@ member_count() {
 
 # Reports file-layout drift against docs/ARCHITECTURE.md "File Organization
 # Inside a Crate": no inline test modules, and a sibling <name>.tests.rs beside
-# every logic-bearing file. Advisory (WARN, never fails) until the layout
-# migration completes; flip to failing then. Files holding no logic are exempt:
+# every logic-bearing file. Hard-failing: every logic-bearing file needs a sibling
+# .tests.rs with a #[test], wired by #[path], unless it is listed in
+# scripts/layout-test-exemptions.txt (a list that may only shrink). Files holding no logic are exempt:
 # re-export mod.rs/lib.rs, trait-only declarations, data-only structs, and
 # generated/fixture trees (migrations, entities, test support, crate tests/).
+# Upper bound the exemption list's `# count: N` header may never exceed. Only
+# lower it together with the list; raising it needs a visible, reviewed edit.
+EXEMPTION_CEILING=158
+
+# True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
+# asserts something, so commented-out, #[ignore]d or empty tests do not count.
+has_asserting_test() {
+  local sibling="$1" code
+  code="$(grep -vE '^[[:space:]]*//' "$sibling")"
+  printf '%s\n' "$code" | awk '
+    /^[[:space:]]*#\[(tokio::)?test([^a-zA-Z_]|$)/ { pending = 1 }
+    /^[[:space:]]*#\[ignore/ { ignored = 1 }
+    /^[[:space:]]*(pub )?(async )?fn / { if (pending && !ignored) found++; pending = 0; ignored = 0 }
+    END { exit found ? 0 : 1 }' &&
+    printf '%s\n' "$code" | grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
+}
+
+# Fails when the exemption list's `# count: N` is missing, below the real
+# entry count, or above the ceiling.
+check_exemption_budget() {
+  local exemptions="$1" ceiling="$2" declared actual
+  declared="$(sed -n 's/^# count: \([0-9][0-9]*\)$/\1/p' "$exemptions")"
+  actual="$(grep -cvE '^(#|$)' "$exemptions")"
+  if [ -z "$declared" ]; then
+    echo "  exemption list lacks a '# count: N' header"
+  elif [ "$actual" -gt "$declared" ]; then
+    echo "  exemption list grew: $actual entries > declared count $declared"
+  elif [ "$declared" -gt "$ceiling" ]; then
+    echo "  exemption count $declared exceeds the ceiling $ceiling; the list may only shrink"
+  fi
+}
+
 check_file_layout() {
-  local root="$1" file warnings=""
+  local root="$1" ceiling="${2:-$EXEMPTION_CEILING}" file sibling name relative
+  local exemptions="$root/scripts/layout-test-exemptions.txt"
+  local violations="" exempt_listed
   while IFS= read -r file; do
     case "$file" in
       */mod.rs | */lib.rs | *.tests.rs | */test_support/* | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
     esac
+    relative="${file#"$root"/}"
     if grep -q 'mod tests {' "$file"; then
-      warnings+="  inline test module: $file"$'\n'
+      violations+="  inline test module: $relative"$'\n'
       continue
     fi
     # Trait-only files hold signatures, not logic; data-only files hold neither
-    # functions nor impls. Everything else needs a sibling .tests.rs.
-    if grep -qE '\bimpl\b' "$file"; then
-      [ -f "${file%.rs}.tests.rs" ] || warnings+="  missing tests: $file"$'\n'
-    elif grep -qE '\bfn\b' "$file" && ! grep -qE '\btrait\b' "$file"; then
-      [ -f "${file%.rs}.tests.rs" ] || warnings+="  missing tests: $file"$'\n'
+    # functions nor impls. Everything else needs a real sibling .tests.rs.
+    if ! grep -qE '\bimpl\b' "$file" &&
+      ! { grep -qE '\bfn\b' "$file" && ! grep -qE '\btrait\b' "$file"; }; then
+      continue
+    fi
+    sibling="${file%.rs}.tests.rs"
+    name="$(basename "$sibling")"
+    exempt_listed=0
+    if [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
+      exempt_listed=1
+    fi
+    if [ -f "$sibling" ] &&
+      has_asserting_test "$sibling" &&
+      grep -qE "^[[:space:]]*#\[path = \"$name\"\]" "$file" &&
+      grep -qE '^[[:space:]]*mod tests;' "$file"; then
+      if [ "$exempt_listed" -eq 1 ]; then
+        violations+="  stale exemption (it has real tests now; remove it from layout-test-exemptions.txt): $relative"$'\n'
+      fi
+    elif [ "$exempt_listed" -eq 0 ]; then
+      violations+="  needs a wired sibling $name with at least one #[test]: $relative"$'\n'
     fi
   done < <(find "$root/src" -name '*.rs')
-  if [ -n "$warnings" ]; then
-    echo "LAYOUT WARNINGS (advisory until the layout migration completes):"
-    printf '%s' "$warnings"
+  if [ -f "$exemptions" ]; then
+    local budget_problem
+    budget_problem="$(check_exemption_budget "$exemptions" "$ceiling")"
+    [ -z "$budget_problem" ] || violations+="$budget_problem"$'\n'
+    while IFS= read -r relative; do
+      case "$relative" in '' | '#'*) continue ;; esac
+      [ -f "$root/$relative" ] || violations+="  exemption names a missing file: $relative"$'\n'
+    done <"$exemptions"
+  fi
+  if [ -n "$violations" ]; then
+    echo "LAYOUT VIOLATIONS:"
+    printf '%s' "$violations"
+    return 1
   fi
 }
 
@@ -396,6 +457,91 @@ expect_absent() {
   esac
 }
 
+# Writes $4 as the sibling of the fixture's add.rs (with a valid hook) and
+# checks the layout verdict equals $2 (accept|reject); $3 names the case.
+expect_layout() {
+  local dir="$1" verdict="$2" label="$3" sibling_body="$4" accepted=reject
+  printf 'pub fn add(a: u8, b: u8) -> u8 { a + b }\n#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' >"$dir/src/add.rs"
+  printf "$sibling_body" >"$dir/src/add.tests.rs"
+  check_file_layout "$dir" >/dev/null && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   ${verdict%e}ed: $label"
+  else
+    echo "  FAIL wrongly ${accepted%e}ed: $label"
+    return 1
+  fi
+}
+
+# Checks check_exemption_budget on file $1 with ceiling $2 yields verdict $3.
+expect_budget() {
+  local verdict="$3" label="$4" accepted=reject
+  [ -z "$(check_exemption_budget "$1" "$2")" ] && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   $verdict: $label"
+  else
+    echo "  FAIL wrongly $accepted: $label"
+    return 1
+  fi
+}
+
+# Proves check_file_layout hard-fails on a logic file with no real test, and
+# passes once a wired sibling with a #[test] exists. Uses a throwaway root.
+layout_self_test() {
+  local dir ok=0
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src"
+  printf 'pub fn add(a: u8, b: u8) -> u8 { a + b }\n' >"$dir/src/add.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 11. logic file without a sibling test"
+    ok=1
+  else
+    echo "  ok   rejected: 11. logic file without a sibling test"
+  fi
+  : >"$dir/src/add.tests.rs"
+  printf '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' >>"$dir/src/add.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 12. hollow sibling with no #[test]"
+    ok=1
+  else
+    echo "  ok   rejected: 12. hollow sibling with no #[test]"
+  fi
+  expect_layout "$dir" accept "13. wired sibling with an asserting #[test]" \
+    '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_layout "$dir" reject "15. commented-out #[test]" \
+    '// #[test]\nfn adds() { assert!(true); }\n' || ok=1
+  expect_layout "$dir" reject "16. ignored-only test" \
+    '#[test]\n#[ignore]\nfn adds() { assert!(true); }\n' || ok=1
+  expect_layout "$dir" reject "17. empty-body test" \
+    '#[test]\nfn adds() {}\n' || ok=1
+  expect_layout "$dir" accept "13b. restored asserting test" \
+    '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  printf '#[cfg(test)]\n// #[path = "add.tests.rs"]\n// mod tests;\n' >"$dir/src/add.rs"
+  printf 'pub fn add(a: u8, b: u8) -> u8 { a + b }\n' | cat - "$dir/src/add.rs" >"$dir/src/add.rs.new" &&
+    mv "$dir/src/add.rs.new" "$dir/src/add.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 18. commented-out #[path] hook"
+    ok=1
+  else
+    echo "  ok   rejected: 18. commented-out #[path] hook"
+  fi
+  printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
+  expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
+  printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
+  expect_budget "$dir/budget.txt" 5 reject "20. count raised above the ceiling" || ok=1
+  printf '# count: 4\nsrc/a.rs\n' >"$dir/budget.txt"
+  expect_budget "$dir/budget.txt" 5 accept "21. count lowered and entry removed" || ok=1
+  mkdir -p "$dir/scripts"
+  printf 'src/add.rs\n' >"$dir/scripts/layout-test-exemptions.txt"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 14. stale exemption for a tested file"
+    ok=1
+  else
+    echo "  ok   rejected: 14. stale exemption for a tested file"
+  fi
+  remove_fixture_dir "$dir"
+  return "$ok"
+}
+
 self_test() {
   local bad_root clean_root output failed=0
   bad_root="$(new_fixture_dir)"
@@ -447,6 +593,8 @@ self_test() {
     failed=1
   fi
 
+  layout_self_test || failed=1
+
   if [ "$failed" -ne 0 ]; then
     echo "self-test: FAILED"
     return 1
@@ -464,7 +612,7 @@ main() {
   root="$(git rev-parse --show-toplevel)"
   check_workspace "$root/Cargo.toml"
   echo "boundary check: OK ($(member_count "$root/Cargo.toml") workspace members)"
-  check_file_layout "$root"
+  check_file_layout "$root" || return 1
 }
 
 main "$@"

@@ -80,7 +80,7 @@ async fn search_library(seeded: &SeededLibrary, query: Option<&str>) -> Vec<i64>
     .await
     .unwrap()
     .iter()
-    .map(|meditation| meditation.id())
+    .map(|entry| entry.meditation.id())
     .collect()
 }
 

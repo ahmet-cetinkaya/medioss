@@ -7,6 +7,7 @@ members = [
     "src/modules/*/infrastructure",
     "src/modules/*/presentation",
     "src/shared/media-store",
+    "src/shared/http-range",
     "src/apps/web-api",
 ]
 default-members = ["src/apps/web-api"]

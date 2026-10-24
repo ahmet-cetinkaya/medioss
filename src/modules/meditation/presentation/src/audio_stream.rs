@@ -6,8 +6,8 @@ use axum::{
 };
 use meditation_application::queries::get_meditation::GetMeditation;
 
-use crate::byte_range::{parse_range, Unsatisfiable};
 use crate::{ApiError, CurrentActor, SharedDependencies};
+use http_range::{parse_range, Unsatisfiable};
 
 /// `GET /meditation/{id}/audio` — Range-aware streaming.
 pub async fn audio(

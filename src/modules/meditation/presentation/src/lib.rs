@@ -2,7 +2,6 @@
 
 mod audio_stream;
 mod audio_upload;
-mod byte_range;
 mod categories;
 mod handlers_notes;
 mod handlers_playback;

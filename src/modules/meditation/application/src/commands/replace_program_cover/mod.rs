@@ -1,0 +1,7 @@
+mod replace_program_cover;
+mod replace_program_cover_handler;
+mod replace_program_cover_service;
+
+pub use replace_program_cover::ReplaceProgramCover;
+pub use replace_program_cover_handler::ReplaceProgramCoverHandler;
+pub use replace_program_cover_service::ReplaceProgramCoverService;

@@ -16,6 +16,7 @@ use meditation_application::commands::record_completion::RecordCompletionService
 use meditation_application::commands::record_position::RecordPositionService;
 use meditation_application::commands::remove_member::RemoveMemberService;
 use meditation_application::commands::rename_category::RenameCategoryService;
+use meditation_application::commands::replace_program_cover::ReplaceProgramCoverService;
 use meditation_application::commands::set_completed::SetCompletedService;
 use meditation_application::commands::set_program_category::SetProgramCategoryService;
 use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionService;
@@ -29,6 +30,7 @@ use meditation_application::queries::get_daily_suggestion::GetDailySuggestionSer
 use meditation_application::queries::get_meditation::GetMeditationService;
 use meditation_application::queries::get_meditation_detail::GetMeditationDetailService;
 use meditation_application::queries::get_playback_state::GetPlaybackStateService;
+use meditation_application::queries::get_program_cover::GetProgramCoverService;
 use meditation_application::queries::get_user_statistics::GetUserStatisticsService;
 use meditation_application::queries::list_categories::ListCategoriesService;
 use meditation_application::queries::list_library::ListLibraryService;
@@ -246,7 +248,10 @@ fn meditation_dependencies_with_ports(
             store.clone(),
         )),
         list_programs: Arc::new(ListProgramsService::new(programs.clone())),
-        list_program_members: Arc::new(ListProgramMembersService::new(memberships.clone())),
+        list_program_members: Arc::new(ListProgramMembersService::new(
+            programs.clone(),
+            memberships.clone(),
+        )),
         add_member: Arc::new(AddMemberService::new(
             meditations.clone(),
             programs.clone(),
@@ -297,6 +302,11 @@ fn meditation_dependencies_with_ports(
             programs.clone(),
             categories,
         )),
+        get_program_cover: Arc::new(GetProgramCoverService::new(programs.clone(), store.clone())),
+        replace_program_cover: Arc::new(ReplaceProgramCoverService::new(
+            programs.clone(),
+            store.clone(),
+        )),
         get_playback_state: Arc::new(GetPlaybackStateService::new(
             meditations.clone(),
             playback.clone(),
@@ -314,7 +324,10 @@ fn meditation_dependencies_with_ports(
             meditations.clone(),
             playback.clone(),
         )),
-        get_user_statistics: Arc::new(GetUserStatisticsService::new(sessions.clone())),
+        get_user_statistics: Arc::new(GetUserStatisticsService::new(
+            sessions.clone(),
+            clock.clone(),
+        )),
         create_note: Arc::new(CreateNoteService::new(
             meditations.clone(),
             notes.clone(),
@@ -334,11 +347,9 @@ fn meditation_dependencies_with_ports(
             programs.clone(),
         )),
         programs,
-        memberships,
         playback,
         cover_validator,
         store,
-        clock,
         medioss_origin,
     })
 }

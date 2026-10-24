@@ -31,8 +31,12 @@ pub async fn daily_suggestion(
     let Some(found) = found else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
-    let mut response =
-        with_playback(deps.playback.as_ref(), actor.user_id(), &found.meditation).await;
+    let mut response = with_playback(
+        deps.get_playback_state.as_ref(),
+        actor.user_id(),
+        &found.meditation,
+    )
+    .await;
     if let Some(program) = &found.program {
         response.program_id = Some(program.id);
         response.program_has_cover = program.cover_storage_key.is_some();
@@ -90,15 +94,15 @@ pub async fn library(
         .await
         .map_err(ApiError::Application)?;
     let mut responses = Vec::with_capacity(listed.len());
-    let homes = deps.memberships.home_programs().await.map_err(|e| {
-        ApiError::Application(meditation_application::ApplicationError::Repository(e))
-    })?;
-    for meditation in &listed {
-        let mut response = with_playback(deps.playback.as_ref(), actor.user_id(), meditation).await;
-        if let Some((program_id, has_cover)) = homes.get(&meditation.id()) {
-            response.program_id = Some(*program_id);
-            response.program_has_cover = *has_cover;
-        }
+    for entry in &listed {
+        let mut response = with_playback(
+            deps.get_playback_state.as_ref(),
+            actor.user_id(),
+            &entry.meditation,
+        )
+        .await;
+        response.program_id = entry.program_id;
+        response.program_has_cover = entry.program_has_cover;
         responses.push(response);
     }
     Ok(Json(responses))
@@ -116,8 +120,12 @@ pub async fn meditation(
         .handle(GetMeditationDetail { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
-    let mut response =
-        with_playback(deps.playback.as_ref(), actor.user_id(), &found.meditation).await;
+    let mut response = with_playback(
+        deps.get_playback_state.as_ref(),
+        actor.user_id(),
+        &found.meditation,
+    )
+    .await;
     if let Some(program) = found.program {
         let has_cover = program.cover_storage_key.is_some();
         response.program_id = Some(program.id);

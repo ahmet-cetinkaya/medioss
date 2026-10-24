@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::get_user_statistics::GetUserStatistics;
 use super::get_user_statistics_handler::GetUserStatisticsHandler;
-use crate::ports::SessionRepository;
+use crate::ports::{Clock, SessionRepository};
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::statistics_day::StatisticsDay;
@@ -12,11 +12,12 @@ use chrono::{Duration, FixedOffset, NaiveDate};
 
 pub struct GetUserStatisticsService {
     sessions: Arc<dyn SessionRepository>,
+    clock: Arc<dyn Clock>,
 }
 
 impl GetUserStatisticsService {
-    pub fn new(sessions: Arc<dyn SessionRepository>) -> Self {
-        Self { sessions }
+    pub fn new(sessions: Arc<dyn SessionRepository>, clock: Arc<dyn Clock>) -> Self {
+        Self { sessions, clock }
     }
 }
 
@@ -27,11 +28,11 @@ impl GetUserStatisticsHandler for GetUserStatisticsService {
             user_id,
             range,
             tz_offset_minutes,
-            now,
         } = query;
         let offset_seconds = i32::from(tz_offset_minutes) * 60;
         let offset = FixedOffset::east_opt(offset_seconds)
             .ok_or(ApplicationError::InvalidInput("invalid timezone offset"))?;
+        let now = self.clock.now().await;
         let today = now.with_timezone(&offset).date_naive();
         let range_start = range.start(today);
         let range_end = range.end(today);

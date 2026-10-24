@@ -21,14 +21,6 @@ pub async fn program_members(
     State(deps): State<SharedDependencies>,
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<MeditationResponse>>, ApiError> {
-    deps.programs
-        .find_by_id(id)
-        .await
-        .map_err(meditation_application::ApplicationError::Repository)
-        .map_err(ApiError::Application)?
-        .ok_or(ApiError::Application(
-            meditation_application::ApplicationError::NotFound,
-        ))?;
     let members = deps
         .list_program_members
         .handle(ListProgramMembers { program_id: id })
@@ -43,7 +35,14 @@ pub async fn program_members(
             })
             .await
             .map_err(ApiError::Application)?;
-        responses.push(with_playback(deps.playback.as_ref(), actor.user_id(), &meditation).await);
+        responses.push(
+            with_playback(
+                deps.get_playback_state.as_ref(),
+                actor.user_id(),
+                &meditation,
+            )
+            .await,
+        );
     }
     Ok(Json(responses))
 }
