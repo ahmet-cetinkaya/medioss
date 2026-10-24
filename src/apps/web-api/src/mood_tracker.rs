@@ -14,7 +14,7 @@ use mood_tracker_application::ports::{
     Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
     MoodEntryRepository,
 };
-use mood_tracker_application::queries::get_mood_history::MoodHistoryService;
+use mood_tracker_application::queries::get_mood_history::GetMoodHistoryService;
 use mood_tracker_application::queries::get_mood_statistics::GetMoodStatisticsService;
 use mood_tracker_application::queries::get_timeline::GetTimelineService;
 use mood_tracker_infrastructure::persistence::SeaOrmMoodEntryRepository;
@@ -100,7 +100,7 @@ pub fn mood_tracker_dependencies(
         create: Arc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
         update: Arc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
         delete: Arc::new(DeleteMoodEntryService::new(entries.clone())),
-        get_mood_history: Arc::new(MoodHistoryService::new(entries.clone(), clock.clone())),
+        get_mood_history: Arc::new(GetMoodHistoryService::new(entries.clone(), clock.clone())),
         get_mood_statistics: Arc::new(GetMoodStatisticsService::new(
             entries.clone(),
             clock.clone(),
