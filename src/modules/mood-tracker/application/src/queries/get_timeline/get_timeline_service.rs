@@ -106,3 +106,7 @@ fn meditation_event(entry: MeditationTimelineEvent) -> TimelineEvent {
         recorded_at: entry.recorded_at,
     }
 }
+
+#[cfg(test)]
+#[path = "get_timeline_service.tests.rs"]
+mod tests;

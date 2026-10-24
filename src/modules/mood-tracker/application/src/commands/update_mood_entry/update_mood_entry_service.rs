@@ -37,3 +37,7 @@ impl UpdateMoodEntryHandler for UpdateMoodEntryService {
             .ok_or(ApplicationError::NotFound)
     }
 }
+
+#[cfg(test)]
+#[path = "update_mood_entry_service.tests.rs"]
+mod tests;

@@ -2,24 +2,11 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 20
+# count: 7
 src/apps/web-api/src/main.rs
 src/apps/web-api/src/operator.rs
 src/apps/web-api/src/router.rs
-src/kernel/src/actor/actor.rs
-src/kernel/src/actor/user_id.rs
-src/modules/mood-tracker/application/src/application_tests.rs
-src/modules/mood-tracker/application/src/commands/create_mood_entry/create_mood_entry_service.rs
-src/modules/mood-tracker/application/src/commands/delete_mood_entry/delete_mood_entry_service.rs
-src/modules/mood-tracker/application/src/commands/update_mood_entry/update_mood_entry_service.rs
-src/modules/mood-tracker/application/src/queries/get_mood_history/get_mood_history_service.rs
-src/modules/mood-tracker/application/src/queries/get_mood_statistics/get_mood_statistics_service.rs
-src/modules/mood-tracker/application/src/queries/get_timeline/get_timeline_service.rs
-src/modules/mood-tracker/infrastructure/src/persistence/mood_entry_repository.rs
-src/modules/mood-tracker/presentation/src/response.rs
-src/modules/mood-tracker/presentation/src/router.rs
 src/modules/portability/application/src/commands/import_own_data/import_own_data.rs
 src/modules/portability/application/src/commands/import_own_data/meditation_index.rs
 src/modules/portability/application/src/commands/import_own_data/mood.rs
 src/modules/portability/application/src/commands/import_own_data/practice.rs
-src/shared/media-store/src/storage/media_stream.rs

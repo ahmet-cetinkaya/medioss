@@ -122,3 +122,7 @@ impl MoodEntryRepository for SeaOrmMoodEntryRepository {
         Ok(rows)
     }
 }
+
+#[cfg(test)]
+#[path = "mood_entry_repository.tests.rs"]
+mod tests;

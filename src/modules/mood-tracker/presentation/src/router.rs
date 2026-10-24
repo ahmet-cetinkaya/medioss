@@ -382,3 +382,7 @@ async fn timeline(
         next_cursor,
     }))
 }
+
+#[cfg(test)]
+#[path = "router.tests.rs"]
+mod tests;
