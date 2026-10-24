@@ -170,7 +170,7 @@ member_count() {
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 # Upper bound the exemption list's `# count: N` header may never exceed. Only
 # lower it together with the list; raising it needs a visible, reviewed edit.
-EXEMPTION_CEILING=20
+EXEMPTION_CEILING=7
 
 # Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
 # hook or test hidden inside a comment is dead code to every check below.

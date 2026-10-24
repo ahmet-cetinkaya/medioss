@@ -66,3 +66,7 @@ pub fn ensure_browser_origin(headers: &HeaderMap, origin: &str) -> Result<(), Ap
         .ok_or(ApiError::StatusCode(StatusCode::FORBIDDEN))
         .map(|_| ())
 }
+
+#[cfg(test)]
+#[path = "response.tests.rs"]
+mod tests;

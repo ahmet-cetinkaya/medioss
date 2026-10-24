@@ -84,3 +84,7 @@ where
             .collect(),
     })
 }
+
+#[cfg(test)]
+#[path = "get_mood_statistics_service.tests.rs"]
+mod tests;

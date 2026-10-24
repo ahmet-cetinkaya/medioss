@@ -78,3 +78,7 @@ where
     });
     Ok(Page { items, next_cursor })
 }
+
+#[cfg(test)]
+#[path = "get_mood_history_service.tests.rs"]
+mod tests;

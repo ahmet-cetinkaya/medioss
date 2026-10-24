@@ -33,3 +33,7 @@ impl AsyncRead for MediaStream {
         self.0.as_mut().poll_read(cx, buf)
     }
 }
+
+#[cfg(test)]
+#[path = "media_stream.tests.rs"]
+mod tests;

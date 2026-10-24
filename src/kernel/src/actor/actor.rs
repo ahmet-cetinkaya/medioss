@@ -22,3 +22,7 @@ impl Actor {
         self.role
     }
 }
+
+#[cfg(test)]
+#[path = "actor.tests.rs"]
+mod tests;

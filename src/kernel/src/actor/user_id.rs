@@ -12,3 +12,7 @@ impl UserId {
         self.0
     }
 }
+
+#[cfg(test)]
+#[path = "user_id.tests.rs"]
+mod tests;

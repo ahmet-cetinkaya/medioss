@@ -30,3 +30,7 @@ impl DeleteMoodEntryHandler for DeleteMoodEntryService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "delete_mood_entry_service.tests.rs"]
+mod tests;

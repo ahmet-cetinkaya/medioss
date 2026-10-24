@@ -101,3 +101,44 @@ impl MoodEntryRepository for FakeMoodEntryRepository {
         Ok((before - rows.len()) as u64)
     }
 }
+
+/// Repository whose every operation fails, to exercise error mapping.
+pub struct FailingMoodEntryRepository;
+
+pub const REPOSITORY_FAILURE: &str = "storage offline";
+
+#[async_trait]
+impl MoodEntryRepository for FailingMoodEntryRepository {
+    async fn insert(
+        &self,
+        _user_id: UserId,
+        _score: MoodScore,
+        _note: Option<String>,
+        _recorded_at: DateTime<Utc>,
+    ) -> Result<MoodEntry, String> {
+        Err(REPOSITORY_FAILURE.to_owned())
+    }
+
+    async fn update(
+        &self,
+        _user_id: UserId,
+        _entry_id: i64,
+        _score: MoodScore,
+        _note: Option<String>,
+        _updated_at: DateTime<Utc>,
+    ) -> Result<Option<MoodEntry>, String> {
+        Err(REPOSITORY_FAILURE.to_owned())
+    }
+
+    async fn delete(&self, _user_id: UserId, _entry_id: i64) -> Result<bool, String> {
+        Err(REPOSITORY_FAILURE.to_owned())
+    }
+
+    async fn list_all_for_user(&self, _user_id: UserId) -> Result<Vec<MoodEntry>, String> {
+        Err(REPOSITORY_FAILURE.to_owned())
+    }
+
+    async fn delete_all_for_user(&self, _user_id: UserId) -> Result<u64, String> {
+        Err(REPOSITORY_FAILURE.to_owned())
+    }
+}
