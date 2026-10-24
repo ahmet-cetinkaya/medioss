@@ -151,3 +151,7 @@ pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDepen
         .route("/soundscape/sounds/{id}/audio", get(stream_sound))
         .route("/soundscape/sounds/{id}/download", get(download_sound))
 }
+
+#[cfg(test)]
+#[path = "sounds_audio.tests.rs"]
+mod tests;

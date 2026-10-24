@@ -9,10 +9,6 @@ mod router;
 mod support;
 
 #[cfg(test)]
-#[path = "router.tests.rs"]
-mod router_tests;
-
-#[cfg(test)]
 mod test_support;
 
 pub use router::{soundscape_router, SharedDependencies, SoundscapeDependencies};

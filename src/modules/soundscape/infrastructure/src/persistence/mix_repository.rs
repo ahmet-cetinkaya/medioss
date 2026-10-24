@@ -193,3 +193,7 @@ impl MixRepository for SeaOrmMixRepository {
         Ok(r.rows_affected())
     }
 }
+
+#[cfg(test)]
+#[path = "mix_repository.tests.rs"]
+mod tests;

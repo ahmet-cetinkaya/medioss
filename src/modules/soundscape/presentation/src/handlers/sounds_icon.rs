@@ -132,3 +132,7 @@ pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDepen
         )
         .route("/soundscape/sounds/{id}/icon", delete(clear_icon))
 }
+
+#[cfg(test)]
+#[path = "sounds_icon.tests.rs"]
+mod tests;

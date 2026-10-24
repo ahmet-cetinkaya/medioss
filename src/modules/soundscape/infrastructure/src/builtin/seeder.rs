@@ -196,3 +196,7 @@ async fn insert_category(
         .await?
         .ok_or_else(|| SeedError::Db("category row vanished after insert".to_owned()))
 }
+
+#[cfg(test)]
+#[path = "seeder.tests.rs"]
+mod tests;

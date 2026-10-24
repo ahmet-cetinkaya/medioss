@@ -126,3 +126,7 @@ pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDepen
             get(get_mix).put(update_mix).delete(delete_mix),
         )
 }
+
+#[cfg(test)]
+#[path = "mixes.tests.rs"]
+mod tests;

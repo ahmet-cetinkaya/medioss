@@ -17,3 +17,7 @@ pub(crate) fn origin(headers: HeaderMap, expected: &str) -> Result<(), StatusCod
     }
     Err(StatusCode::FORBIDDEN)
 }
+
+#[cfg(test)]
+#[path = "origin_guard.tests.rs"]
+mod tests;

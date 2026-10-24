@@ -44,3 +44,7 @@ pub(crate) fn admin(actor: &Actor) -> Result<(), StatusCode> {
         Err(StatusCode::FORBIDDEN)
     }
 }
+
+#[cfg(test)]
+#[path = "extractors.tests.rs"]
+mod tests;

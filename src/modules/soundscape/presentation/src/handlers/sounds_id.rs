@@ -64,3 +64,7 @@ pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDepen
         .route("/soundscape/sounds/{id}", put(update_sound))
         .route("/soundscape/sounds/{id}", delete(delete_sound))
 }
+
+#[cfg(test)]
+#[path = "sounds_id.tests.rs"]
+mod tests;
