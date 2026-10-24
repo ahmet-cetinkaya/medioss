@@ -172,10 +172,15 @@ member_count() {
 # lower it together with the list; raising it needs a visible, reviewed edit.
 EXEMPTION_CEILING=7
 
+# Ratchet for logic in mod.rs/lib.rs (kept apart from the exemption list). A
+# listed file may keep its fn/impl/static/macro_rules!; an unlisted one may not
+# gain any. Same shrink-only discipline: `# count: N` <= MODRS_CEILING.
+MODRS_CEILING=14
+
 # Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
 # hook or test hidden inside a comment is dead code to every check below.
 code_without_comments() {
-  perl -0pe 's{/\*.*?\*/}{}gs' "$1" | grep -vE '^[[:space:]]*//'
+  perl -0pe 's{(?<![A-Za-z0-9_])r(#*)".*?"\1}{}gs; s{/\*.*?\*/}{}gs' "$1" | grep -vE '^[[:space:]]*//'
 }
 
 # Joins lines, then drops asserts that cannot fail: assert!(true),
@@ -184,21 +189,23 @@ code_without_comments() {
 strip_tautologies() {
   perl -0pe 's/\s+/ /g;
     s/assert!\(\s*(?:true|!\s*false)\s*[,)]//g;
-    s/assert(?:_eq)?!\(\s*(true|false|-?\d+(?:\.\d+)?)\s*(?:,|==)\s*\1\s*[,)]//g'
+    s/assert(?:_eq)?!\(\s*(true|false|-?\d+(?:\.\d+)?(?:_?[a-z]\w*)?)\s*(?:,|==)\s*\1\s*[,)]//g'
 }
 
 # True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
 # asserts something, so commented-out, #[ignore]d or empty tests do not count.
 has_asserting_test() {
-  local sibling="$1" code
+  local sibling="$1" code stripped
   code="$(code_without_comments "$sibling")"
   printf '%s\n' "$code" | awk '
     /^[[:space:]]*#\[(tokio::)?test([^a-zA-Z_]|$)/ { pending = 1 }
     /^[[:space:]]*#\[ignore/ { ignored = 1 }
     /^[[:space:]]*(pub )?(async )?fn / { if (pending && !ignored) found++; pending = 0; ignored = 0 }
-    END { exit found ? 0 : 1 }' &&
-    printf '%s\n' "$code" | strip_tautologies |
-    grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
+    END { exit found ? 0 : 1 }' || return 1
+  # Captured first: `grep -q` closing a pipe early made this flaky under
+  # pipefail when the writer got SIGPIPE.
+  stripped="$(printf '%s\n' "$code" | strip_tautologies)"
+  grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic' <<<"$stripped"
 }
 
 # True when $1 hooks its sibling $2 as `#[cfg(test)]` at line start, then
@@ -305,7 +312,7 @@ is_test_only_module() {
 }
 
 is_gated_test_support() {
-  local file="$1" dir root parent user
+  local file="$1" dir root parent user normalised
   dir="$(dirname "$file")"
   case "$file" in
     */test_support.rs) root="$file" ;;
@@ -333,8 +340,8 @@ is_gated_test_support() {
   while IFS= read -r user; do
     [ "$user" = "$parent" ] && continue
     is_test_only_module "$user" && continue
-    code_without_comments "$user" | perl -0pe 's/\s+/ /g; s/\s*::\s*/::/g' |
-      grep -qE '(crate|self|super)::(\{[^;]*)?test_support|mod test_support|(^|[^:A-Za-z_])test_support::' && return 1
+    normalised="$(code_without_comments "$user" | perl -0pe 's/\s+/ /g; s/\s*::\s*/::/g')"
+    grep -qE '(crate|self|super)::(\{[^;]*)?test_support|mod test_support|(^|[^:A-Za-z_])test_support::' <<<"$normalised" && return 1
   done < <(find "$dir" -name '*.rs' -not -path '*/test_support/*' -not -name test_support.rs)
   return 0
 }
@@ -354,21 +361,73 @@ check_exemption_budget() {
   fi
 }
 
+# True when directory $1 is matched by a `members` entry (globs allowed) of
+# the workspace manifest at $LAYOUT_ROOT/Cargo.toml, so a planted Cargo.toml
+# cannot turn src/x/tests/ into a trusted integration-test directory.
+is_workspace_member_dir() {
+  local member pattern candidate
+  [ -f "$LAYOUT_ROOT/Cargo.toml" ] || return 1
+  while IFS= read -r pattern; do
+    for candidate in "$LAYOUT_ROOT"/$pattern; do
+      [ "$candidate" = "$1" ] && return 0
+    done
+  done < <(sed -n '/^members[[:space:]]*=/,/\]/p' "$LAYOUT_ROOT/Cargo.toml" | grep -o '"[^"]*"' | tr -d '"')
+  return 1
+}
+
 # True when $1 sits under a tests/ directory directly beside a Cargo.toml, i.e.
 # a cargo integration test; a tests/ folder inside src/ is production code.
 is_crate_integration_test() {
   local dir
   dir="$(dirname "$1")"
   while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
-    [ "$(basename "$dir")" = "tests" ] && [ -f "$(dirname "$dir")/Cargo.toml" ] && return 0
+    [ "$(basename "$dir")" = "tests" ] && [ -f "$(dirname "$dir")/Cargo.toml" ] &&
+      is_workspace_member_dir "$(dirname "$dir")" && return 0
     dir="$(dirname "$dir")"
   done
   return 1
 }
 
-# Review-enforced, not machine-checked: */mod.rs and */lib.rs are skipped below
-# although 17 of them hold fn/impl wiring. A "no fn bodies" rule would need a
-# long new exemption list, so reviewers must watch for logic landing there.
+# True when $1 (a mod.rs or lib.rs) holds fn, impl, static or macro_rules!.
+modrs_has_logic() {
+  local code
+  code="$(code_without_comments "$1")"
+  grep -qE '\bfn\b|\bimpl\b|\bstatic\b|macro_rules!' <<<"$code"
+}
+
+# Prints violations for the mod.rs/lib.rs ratchet under $1 using baseline $2.
+check_modrs_ratchet() {
+  local root="$1" baseline="$2" ceiling="${3:-$MODRS_CEILING}" file relative declared actual
+  while IFS= read -r file; do
+    case "$file" in */test_support/* | */router_tests/*) continue ;; esac
+    modrs_has_logic "$file" || continue
+    relative="${file#"$root"/}"
+    if [ ! -f "$baseline" ] || ! grep -qxF "$relative" "$baseline"; then
+      echo "  logic in mod.rs/lib.rs must be extracted to a named file or added to the baseline in a reviewed edit: $relative"
+    fi
+  done < <(find "$root/src" \( -name mod.rs -o -name lib.rs \))
+  [ -f "$baseline" ] || return 0
+  declared="$(sed -n 's/^# count: \([0-9][0-9]*\)$/\1/p' "$baseline")"
+  actual="$(grep -cvE '^(#|$)' "$baseline")"
+  if [ -z "$declared" ]; then
+    echo "  mod.rs baseline lacks a '# count: N' header"
+  elif [ "$actual" -gt "$declared" ]; then
+    echo "  mod.rs baseline grew: $actual entries > declared count $declared"
+  elif [ "$declared" -gt "$ceiling" ]; then
+    echo "  mod.rs baseline count $declared exceeds the ceiling $ceiling; it may only shrink"
+  fi
+  while IFS= read -r relative; do
+    case "$relative" in '' | '#'*) continue ;; esac
+    if [ ! -f "$root/$relative" ]; then
+      echo "  mod.rs baseline names a missing file: $relative"
+    elif ! modrs_has_logic "$root/$relative"; then
+      echo "  stale mod.rs baseline entry (no logic left; remove it): $relative"
+    fi
+  done <"$baseline"
+}
+
+# */mod.rs and */lib.rs are skipped below for the sibling-test rule; the
+# check_modrs_ratchet baseline stops new logic from landing in them.
 check_file_layout() {
   local root="$1" ceiling="${2:-$EXEMPTION_CEILING}" file sibling name relative
   local exemptions="$root/scripts/layout-test-exemptions.txt"
@@ -432,6 +491,9 @@ check_file_layout() {
       [ -f "$root/$relative" ] || violations+="  exemption names a missing file: $relative"$'\n'
     done <"$exemptions"
   fi
+  local ratchet
+  ratchet="$(check_modrs_ratchet "$root" "$root/scripts/layout-modrs-baseline.txt")"
+  [ -z "$ratchet" ] || violations+="$ratchet"$'\n'
   if [ -n "$violations" ]; then
     echo "LAYOUT VIOLATIONS:"
     printf '%s' "$violations"
@@ -695,6 +757,23 @@ expect_support() {
   fi
 }
 
+# Checks check_file_layout on a fixture whose src/<file> is $4 and whose mod.rs
+# baseline is $5 (empty: no baseline file); yields verdict $2.
+expect_modrs() {
+  local verdict="$2" label="$3" file="$4" body="$5" baseline="${6:-}" dir accepted=reject
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src/topic" "$dir/scripts"
+  printf "$body" >"$dir/src/$file"
+  [ -z "$baseline" ] || printf "$baseline" >"$dir/scripts/layout-modrs-baseline.txt"
+  check_file_layout "$dir" >/dev/null && accepted=accept
+  if [ "$accepted" = "$verdict" ]; then
+    echo "  ok   ${verdict%e}ed: $label"
+  else
+    echo "  FAIL wrongly ${accepted%e}ed: $label"
+    return 1
+  fi
+}
+
 # Checks check_exemption_budget on file $1 with ceiling $2 yields verdict $3.
 expect_budget() {
   local verdict="$3" label="$4" accepted=reject
@@ -806,6 +885,13 @@ layout_self_test() {
   fi
   : >"$dir/src/Cargo.toml"
   if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 57a. tests/ beside a Cargo.toml that is not a workspace member"
+    ok=1
+  else
+    echo "  ok   rejected: 57a. tests/ beside a Cargo.toml that is not a workspace member"
+  fi
+  printf '[workspace]\nmembers = ["sr*"]\n' >"$dir/Cargo.toml"
+  if check_file_layout "$dir" >/dev/null; then
     echo "  ok   accepted: 56. tests/ directly beside a Cargo.toml"
   else
     echo "  FAIL wrongly rejected: 56. tests/ directly beside a Cargo.toml"
@@ -831,6 +917,16 @@ layout_self_test() {
     '#[cfg(test)]\n#[cfg(not(test))]\nmod test_support;\n' '' '' '' || ok=1
   expect_support "$dir" reject "66. cfg_attr path redirect" \
     '#[cfg(test)]\n#[cfg_attr(test, path = "elsewhere.rs")]\nmod test_support;\n' '' '' '' || ok=1
+  expect_modrs "$dir" reject "67. new mod.rs with a fn and no baseline" topic/mod.rs 'pub fn pick() -> u8 { 1 }\n' || ok=1
+  expect_modrs "$dir" accept "68. baselined mod.rs keeps its fn" topic/mod.rs 'pub fn pick() -> u8 { 1 }\n' '# count: 1\nsrc/topic/mod.rs\n' || ok=1
+  expect_modrs "$dir" reject "69. baseline entry whose mod.rs has no logic left is stale" topic/mod.rs 'pub mod a;\n' '# count: 1\nsrc/topic/mod.rs\n' || ok=1
+  expect_modrs "$dir" reject "70. baseline grew past its declared count" topic/mod.rs 'pub fn pick() -> u8 { 1 }\n' '# count: 0\nsrc/topic/mod.rs\n' || ok=1
+  expect_modrs "$dir" reject "71. new lib.rs with an impl" lib.rs 'struct A;\nimpl A {}\n' || ok=1
+  expect_modrs "$dir" accept "72. re-export-only mod.rs" topic/mod.rs 'pub mod a;\npub use a::B;\n' || ok=1
+  expect_hook "$dir" reject "73. hook inside a raw string" \
+    'const X: &str = r#"\n#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n"#;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "74. typed literal tautology assert_eq!(1u8, 1u8)" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(1u8, 1u8); }\n' || ok=1
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
