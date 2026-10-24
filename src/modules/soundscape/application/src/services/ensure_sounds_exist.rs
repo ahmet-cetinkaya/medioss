@@ -18,3 +18,7 @@ pub(crate) async fn ensure_sounds_exist(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "ensure_sounds_exist.tests.rs"]
+mod tests;

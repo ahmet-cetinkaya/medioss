@@ -8,3 +8,7 @@ pub(crate) fn parse_icon_key(icon_key: Option<&str>) -> Result<Option<String>, A
         .map_err(|_| ApplicationError::InvalidInput("icon key"))?
         .flatten())
 }
+
+#[cfg(test)]
+#[path = "parse_icon_key.tests.rs"]
+mod tests;

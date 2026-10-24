@@ -30,3 +30,7 @@ impl DeleteMixHandler for DeleteMixService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "delete_mix_service.tests.rs"]
+mod tests;

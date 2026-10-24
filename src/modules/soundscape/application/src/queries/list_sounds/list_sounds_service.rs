@@ -25,3 +25,7 @@ impl ListSoundsHandler for ListSoundsService {
             .map_err(ApplicationError::Repository)
     }
 }
+
+#[cfg(test)]
+#[path = "list_sounds_service.tests.rs"]
+mod tests;

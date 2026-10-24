@@ -36,3 +36,7 @@ impl UpdateSoundHandler for UpdateSoundService {
             .ok_or(ApplicationError::NotFound)
     }
 }
+
+#[cfg(test)]
+#[path = "update_sound_service.tests.rs"]
+mod tests;

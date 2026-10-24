@@ -19,3 +19,7 @@ pub(crate) async fn remove_sound(
         .await
         .map_err(ApplicationError::Storage)
 }
+
+#[cfg(test)]
+#[path = "remove_sound.tests.rs"]
+mod tests;

@@ -44,3 +44,7 @@ impl CreateMixHandler for CreateMixService {
             .map_err(ApplicationError::Repository)
     }
 }
+
+#[cfg(test)]
+#[path = "create_mix_service.tests.rs"]
+mod tests;

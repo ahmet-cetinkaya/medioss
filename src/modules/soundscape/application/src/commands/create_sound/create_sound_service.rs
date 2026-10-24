@@ -118,3 +118,7 @@ impl CreateSoundHandler for CreateSoundService {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "create_sound_service.tests.rs"]
+mod tests;

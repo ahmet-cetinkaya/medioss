@@ -37,3 +37,7 @@ impl SetSoundIconHandler for SetSoundIconService {
         store_sound_icon(self.sounds.as_ref(), self.store.as_ref(), command.id, bytes).await
     }
 }
+
+#[cfg(test)]
+#[path = "set_sound_icon_service.tests.rs"]
+mod tests;

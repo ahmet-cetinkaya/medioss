@@ -23,3 +23,7 @@ impl DeleteSoundHandler for DeleteSoundService {
         remove_sound(self.sounds.as_ref(), self.store.as_ref(), command.id).await
     }
 }
+
+#[cfg(test)]
+#[path = "delete_sound_service.tests.rs"]
+mod tests;

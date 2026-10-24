@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 134
+# count: 113
 src/apps/web-api/src/config/session_secret.rs
 src/apps/web-api/src/image_normalization/vp8l_preflight.rs
 src/apps/web-api/src/image_normalization/webp_preflight.rs
@@ -94,27 +94,6 @@ src/modules/portability/presentation/src/handlers/export_json.rs
 src/modules/portability/presentation/src/handlers/import.rs
 src/modules/portability/presentation/src/router.rs
 src/modules/portability/presentation/src/support/responses.rs
-src/modules/soundscape/application/src/commands/clear_sound_icon/clear_sound_icon_service.rs
-src/modules/soundscape/application/src/commands/create_mix/create_mix_service.rs
-src/modules/soundscape/application/src/commands/create_sound/create_sound_service.rs
-src/modules/soundscape/application/src/commands/delete_category/delete_category_service.rs
-src/modules/soundscape/application/src/commands/delete_mix/delete_mix_service.rs
-src/modules/soundscape/application/src/commands/delete_sound/delete_sound_service.rs
-src/modules/soundscape/application/src/commands/rename_category/rename_category_service.rs
-src/modules/soundscape/application/src/commands/set_sound_icon/set_sound_icon_service.rs
-src/modules/soundscape/application/src/commands/update_mix/update_mix_service.rs
-src/modules/soundscape/application/src/commands/update_sound/update_sound_service.rs
-src/modules/soundscape/application/src/models/errors/application_error.rs
-src/modules/soundscape/application/src/queries/find_sound_icon/find_sound_icon_service.rs
-src/modules/soundscape/application/src/queries/list_categories/list_categories_service.rs
-src/modules/soundscape/application/src/queries/list_sounds/list_sounds_service.rs
-src/modules/soundscape/application/src/services/ensure_category_exists.rs
-src/modules/soundscape/application/src/services/ensure_sounds_exist.rs
-src/modules/soundscape/application/src/services/normalize_icon.rs
-src/modules/soundscape/application/src/services/parse_icon_key.rs
-src/modules/soundscape/application/src/services/remove_sound.rs
-src/modules/soundscape/application/src/services/store_sound_icon.rs
-src/modules/soundscape/application/src/services/validate_mix_items.rs
 src/modules/soundscape/domain/src/name/valid_name.rs
 src/modules/soundscape/domain/src/sound_category/sound_category.rs
 src/modules/soundscape/domain/src/sound/sound.rs

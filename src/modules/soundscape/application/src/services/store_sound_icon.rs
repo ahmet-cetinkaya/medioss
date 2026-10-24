@@ -43,3 +43,7 @@ pub(crate) async fn store_sound_icon(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "store_sound_icon.tests.rs"]
+mod tests;
