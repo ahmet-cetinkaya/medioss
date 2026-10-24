@@ -42,10 +42,8 @@ impl Clock for NullClock {
 pub(super) struct NullAdmission;
 
 impl LoginAdmission for NullAdmission {
-    type Permit = ();
-
-    fn try_acquire(&self) -> Result<Self::Permit, std::time::Duration> {
-        Ok(())
+    fn try_acquire(&self) -> Result<Box<dyn Send>, std::time::Duration> {
+        Ok(Box::new(()))
     }
 }
 
@@ -251,27 +249,187 @@ impl LoginThrottleRepository for EmptyRepository {
     }
 }
 
+pub(super) fn services(
+    repository: Arc<SeededRepository>,
+    hasher: Arc<NullHasher>,
+    clock: Arc<NullClock>,
+    admission: Arc<NullAdmission>,
+) -> identity_application::commands::authenticate::AuthenticateService {
+    let throttle: Arc<dyn identity_application::ports::LoginThrottleRepository> =
+        repository.clone();
+    let repository: Arc<dyn identity_application::ports::UserRepository> = repository;
+    let hasher: Arc<dyn identity_application::ports::PasswordHasher> = hasher;
+    let clock: Arc<dyn identity_application::ports::Clock> = clock;
+    let admission: Arc<dyn identity_application::ports::LoginAdmission> = admission;
+    identity_application::commands::authenticate::AuthenticateService::new(
+        repository.clone(),
+        throttle,
+        hasher.clone(),
+        clock,
+        admission,
+        PasswordHash::from_stored("null:dummy".to_owned()),
+    )
+}
+
 pub(super) fn dependencies(
-) -> SharedDependencies<EmptyRepository, NullHasher, NullClock, NullAdmission> {
+    repository: Arc<SeededRepository>,
+    hasher: Arc<NullHasher>,
+    clock: Arc<NullClock>,
+    admission: Arc<NullAdmission>,
+    avatar_store: Arc<dyn identity_application::ports::AvatarStore>,
+) -> SharedDependencies {
+    let authenticate: Arc<dyn identity_application::commands::authenticate::AuthenticateHandler> =
+        Arc::new(services(
+            repository.clone(),
+            hasher.clone(),
+            clock.clone(),
+            admission.clone(),
+        ));
+    let create_user: Arc<dyn identity_application::commands::create_user::CreateUserHandler> =
+        Arc::new(
+            identity_application::commands::create_user::CreateUserService::new(
+                repository_arc(&repository),
+                hasher.clone(),
+                clock.clone(),
+            ),
+        );
+    let change_password: Arc<
+        dyn identity_application::commands::change_password::ChangePasswordHandler,
+    > = Arc::new(
+        identity_application::commands::change_password::ChangePasswordService::new(
+            repository_arc(&repository),
+            hasher.clone(),
+        ),
+    );
+    let delete_own_account: Arc<
+        dyn identity_application::commands::delete_own_account::DeleteOwnAccountHandler,
+    > = Arc::new(
+        identity_application::commands::delete_own_account::DeleteOwnAccountService::new(
+            repository_arc(&repository),
+        ),
+    );
+    let delete_user_as_admin: Arc<
+        dyn identity_application::commands::delete_user_as_admin::DeleteUserAsAdminHandler,
+    > = Arc::new(
+        identity_application::commands::delete_user_as_admin::DeleteUserAsAdminService::new(
+            repository_arc(&repository),
+        ),
+    );
+    let set_display_name: Arc<
+        dyn identity_application::commands::set_display_name::SetDisplayNameHandler,
+    > = Arc::new(
+        identity_application::commands::set_display_name::SetDisplayNameService::new(
+            repository_arc(&repository),
+        ),
+    );
+    let set_user_status: Arc<
+        dyn identity_application::commands::set_user_status::SetUserStatusHandler,
+    > = Arc::new(
+        identity_application::commands::set_user_status::SetUserStatusService::new(repository_arc(
+            &repository,
+        )),
+    );
+    let setup_admin: Arc<dyn identity_application::commands::setup_admin::SetupAdminHandler> =
+        Arc::new(
+            identity_application::commands::setup_admin::SetupAdminService::new(
+                repository_arc(&repository),
+                hasher.clone(),
+                clock.clone(),
+            ),
+        );
+    let clear_login_throttle: Arc<
+        dyn identity_application::commands::clear_login_throttle::ClearLoginThrottleHandler,
+    > = Arc::new(
+        identity_application::commands::clear_login_throttle::ClearLoginThrottleService::new(
+            throttle_arc(&repository),
+        ),
+    );
+    let replace_avatar: Arc<
+        dyn identity_application::commands::replace_avatar::ReplaceAvatarHandler,
+    > = Arc::new(
+        identity_application::commands::replace_avatar::ReplaceAvatarService::new(
+            repository_arc(&repository),
+            avatar_store.clone(),
+        ),
+    );
+    let clear_avatar: Arc<dyn identity_application::commands::clear_avatar::ClearAvatarHandler> =
+        Arc::new(
+            identity_application::commands::clear_avatar::ClearAvatarService::new(
+                repository_arc(&repository),
+                avatar_store.clone(),
+            ),
+        );
+    let read_avatar: Arc<dyn identity_application::commands::read_avatar::ReadAvatarHandler> =
+        Arc::new(
+            identity_application::commands::read_avatar::ReadAvatarService::new(
+                repository_arc(&repository),
+                avatar_store.clone(),
+            ),
+        );
+    let count_users: Arc<dyn identity_application::queries::count_users::CountUsersHandler> =
+        Arc::new(
+            identity_application::queries::count_users::CountUsersService::new(repository_arc(
+                &repository,
+            )),
+        );
+    let find_user_by_id: Arc<
+        dyn identity_application::queries::find_user_by_id::FindUserByIdHandler,
+    > = Arc::new(
+        identity_application::queries::find_user_by_id::FindUserByIdService::new(repository_arc(
+            &repository,
+        )),
+    );
+    let list_users: Arc<dyn identity_application::queries::list_users::ListUsersHandler> = Arc::new(
+        identity_application::queries::list_users::ListUsersService::new(repository_arc(
+            &repository,
+        )),
+    );
+    let setup_status: Arc<dyn identity_application::queries::setup_status::IsSetupRequiredHandler> =
+        Arc::new(
+            identity_application::queries::setup_status::SetupStatusService::new(repository_arc(
+                &repository,
+            )),
+        );
+
     Arc::new(IdentityDependencies {
-        repository: Arc::new(EmptyRepository),
-        hasher: Arc::new(NullHasher),
-        clock: Arc::new(NullClock),
-        admission: Arc::new(NullAdmission),
+        authenticate,
+        create_user,
+        change_password,
+        delete_own_account,
+        delete_user_as_admin,
+        set_display_name,
+        set_user_status,
+        setup_admin,
+        clear_login_throttle,
+        replace_avatar,
+        clear_avatar,
+        read_avatar,
+        count_users,
+        find_user_by_id,
+        list_users,
+        setup_status,
         dummy_password_hash: PasswordHash::from_stored("null:dummy".to_owned()),
         session_secret: Arc::new("session-secret-value".to_owned()),
         medioss_origin: Arc::new("https://medioss.example".to_owned()),
-        deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
-        avatar_store: std::sync::Arc::new(NullAvatarStore),
+        deletion: Arc::new(crate::users_lifecycle::NoUserDeletion),
+        avatar_store,
     })
 }
 
+fn repository_arc(
+    repository: &Arc<SeededRepository>,
+) -> Arc<dyn identity_application::ports::UserRepository> {
+    repository.clone()
+}
+
+fn throttle_arc(
+    repository: &Arc<SeededRepository>,
+) -> Arc<dyn identity_application::ports::LoginThrottleRepository> {
+    repository.clone()
+}
+
 pub(super) fn app() -> axum::Router {
-    identity_router::<EmptyRepository, NullHasher, NullClock, NullAdmission>()
-        .with_state(dependencies())
-        .layer(tower_sessions::SessionManagerLayer::new(
-            tower_sessions::MemoryStore::default(),
-        ))
+    seeded_app(Vec::new())
 }
 
 pub(super) struct SeededRepository {
@@ -425,21 +583,20 @@ pub(super) fn seeded_app_with(
     users: Vec<User>,
     avatar_store: Arc<dyn identity_application::ports::AvatarStore>,
 ) -> axum::Router {
-    let dependencies = Arc::new(IdentityDependencies {
-        repository: Arc::new(SeededRepository {
+    let hasher = Arc::new(NullHasher);
+    let clock = Arc::new(NullClock);
+    let admission = Arc::new(NullAdmission);
+    let dependencies = dependencies(
+        Arc::new(SeededRepository {
             inner: EmptyRepository,
             users: std::sync::Mutex::new(users),
         }),
-        hasher: Arc::new(NullHasher),
-        clock: Arc::new(NullClock),
-        admission: Arc::new(NullAdmission),
-        dummy_password_hash: PasswordHash::from_stored("null:dummy".to_owned()),
-        session_secret: Arc::new("session-secret-value".to_owned()),
-        medioss_origin: Arc::new("https://medioss.example".to_owned()),
-        deletion: std::sync::Arc::new(crate::users_lifecycle::NoUserDeletion),
+        hasher,
+        clock,
+        admission,
         avatar_store,
-    });
-    identity_router::<SeededRepository, NullHasher, NullClock, NullAdmission>()
+    );
+    identity_router()
         .with_state(dependencies)
         .layer(tower_sessions::SessionManagerLayer::new(
             tower_sessions::MemoryStore::default(),

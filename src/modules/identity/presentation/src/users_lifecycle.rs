@@ -8,14 +8,10 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use identity_application::{
-    commands::{
-        delete_own_account, delete_user_as_admin, ensure_admin_can_delete_user,
-        ensure_can_delete_own_account, set_user_status,
-    },
-    ports::{Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository},
-    ApplicationError,
-};
+use identity_application::commands::delete_own_account::DeleteOwnAccount;
+use identity_application::commands::delete_user_as_admin::DeleteUserAsAdmin;
+use identity_application::commands::set_user_status::SetUserStatus;
+use identity_application::ApplicationError;
 use kernel::UserId;
 use serde::Deserialize;
 use tower_sessions::Session;
@@ -49,79 +45,74 @@ pub struct UserStatusRequest {
     pub disabled: bool,
 }
 
-pub async fn user_status<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub async fn user_status(
+    State(dependencies): State<SharedDependencies>,
     actor: AdminActor,
     headers: HeaderMap,
     Path(id): Path<i64>,
     Json(request): Json<UserStatusRequest>,
-) -> Result<StatusCode, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: PasswordHasher + 'static,
-    C: Clock + 'static,
-    A: LoginAdmission + 'static,
-{
+) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
-    set_user_status(
-        dependencies.repository.as_ref(),
-        &actor.0,
-        UserId::new(id),
-        request.disabled,
-    )
-    .await?;
+    dependencies
+        .set_user_status
+        .handle(SetUserStatus {
+            actor: actor.0,
+            target: UserId::new(id),
+            disabled: request.disabled,
+        })
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn user_delete<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub async fn user_delete(
+    State(dependencies): State<SharedDependencies>,
     actor: AdminActor,
     headers: HeaderMap,
     Path(id): Path<i64>,
-) -> Result<StatusCode, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: PasswordHasher + 'static,
-    C: Clock + 'static,
-    A: LoginAdmission + 'static,
-{
+) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     let actor = actor.0;
     let target = UserId::new(id);
     // Guards first: a refused request (last admin, unknown target) must
     // never destroy the target's data.
-    ensure_admin_can_delete_user(dependencies.repository.as_ref(), &actor, target).await?;
+    dependencies
+        .delete_user_as_admin
+        .ensure_admin_can_delete_user(&actor, target)
+        .await?;
     dependencies
         .deletion
         .on_user_deleted(target)
         .await
         .map_err(|_| ApiError::from(ApplicationError::Repository))?;
-    delete_user_as_admin(dependencies.repository.as_ref(), &actor, target).await?;
+    dependencies
+        .delete_user_as_admin
+        .handle(DeleteUserAsAdmin { actor, target })
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn me_delete<R, H, C, A>(
+pub async fn me_delete(
     session: Session,
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+    State(dependencies): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
-) -> Result<StatusCode, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: PasswordHasher + 'static,
-    C: Clock + 'static,
-    A: LoginAdmission + 'static,
-{
+) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     // Guards first: a refused self-deletion (last admin) must never
     // destroy the caller's data.
-    ensure_can_delete_own_account(dependencies.repository.as_ref(), &actor).await?;
+    dependencies
+        .delete_own_account
+        .ensure_can_delete_own_account(&actor)
+        .await?;
     dependencies
         .deletion
         .on_user_deleted(actor.user_id())
         .await
         .map_err(|_| ApiError::from(ApplicationError::Repository))?;
-    delete_own_account(dependencies.repository.as_ref(), &actor).await?;
+    dependencies
+        .delete_own_account
+        .handle(DeleteOwnAccount { actor })
+        .await?;
     session.flush().await?;
     Ok(StatusCode::NO_CONTENT)
 }

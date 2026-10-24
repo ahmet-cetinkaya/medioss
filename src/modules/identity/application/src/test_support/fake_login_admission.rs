@@ -19,9 +19,7 @@ impl FakeLoginAdmission {
 }
 
 impl LoginAdmission for FakeLoginAdmission {
-    type Permit = ();
-
-    fn try_acquire(&self) -> Result<Self::Permit, Duration> {
-        self.retry_after.map_or(Ok(()), Err)
+    fn try_acquire(&self) -> Result<Box<dyn Send>, Duration> {
+        self.retry_after.map_or(Ok(Box::new(())), Err)
     }
 }

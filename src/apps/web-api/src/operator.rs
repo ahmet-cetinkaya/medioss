@@ -117,8 +117,23 @@ pub(crate) async fn run_clear_throttle(identifier: &str) {
         .await
         .unwrap_or_else(|err| fail(with_causes(&err)));
 
-    let repository = identity_infrastructure::SeaOrmUserRepository::new(database.connection);
-    match identity_application::commands::clear_login_throttle(&repository, identifier).await {
+    let repository: std::sync::Arc<dyn identity_application::ports::LoginThrottleRepository> =
+        std::sync::Arc::new(identity_infrastructure::SeaOrmUserRepository::new(
+            database.connection,
+        ));
+    use identity_application::commands::clear_login_throttle::ClearLoginThrottleHandler;
+    let service =
+        identity_application::commands::clear_login_throttle::ClearLoginThrottleService::new(
+            repository,
+        );
+    match service
+        .handle(
+            identity_application::commands::clear_login_throttle::ClearLoginThrottle {
+                identifier: identifier.to_owned(),
+            },
+        )
+        .await
+    {
         Ok(()) => eprintln!("throttle cleared for {identifier}"),
         Err(err) => fail(format!("clear-throttle failed: {err}")),
     }

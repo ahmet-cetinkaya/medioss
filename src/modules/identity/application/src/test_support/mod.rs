@@ -1,4 +1,5 @@
 mod async_executor;
+mod fake_avatar_store;
 mod fake_hasher;
 mod fake_login_admission;
 mod fake_login_throttle_repository;
@@ -10,6 +11,7 @@ mod fixed_clock;
 use identity_domain::{Email, RawPassword};
 
 pub(crate) use async_executor::block_on;
+pub(crate) use fake_avatar_store::FakeAvatarStore;
 pub(crate) use fake_hasher::FakeHasher;
 pub(crate) use fake_login_admission::FakeLoginAdmission;
 pub(crate) use fake_repository::FakeRepository;

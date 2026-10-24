@@ -3,11 +3,8 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use identity_application::{
-    commands::create_user,
-    ports::{Clock, LoginAdmission, LoginThrottleRepository, PasswordHasher, UserRepository},
-    queries::list_users,
-};
+use identity_application::commands::create_user::CreateUser;
+use identity_application::queries::list_users::ListUsers;
 use identity_domain::{Email, RawPassword};
 use serde::{Deserialize, Serialize};
 
@@ -23,30 +20,23 @@ pub(crate) struct CreateUserRequest {
     password: String,
 }
 
-pub(crate) async fn users<R, H, C, A>(
-    State(dependencies): State<SharedDependencies<R, H, C, A>>,
+pub(crate) async fn users(
+    State(dependencies): State<SharedDependencies>,
     CurrentActor(actor): CurrentActor,
     headers: HeaderMap,
     Json(request): Json<CreateUserRequest>,
-) -> Result<(StatusCode, Json<UserResponse>), ApiError>
-where
-    R: UserRepository + LoginThrottleRepository,
-    H: PasswordHasher,
-    C: Clock,
-    A: LoginAdmission,
-{
+) -> Result<(StatusCode, Json<UserResponse>), ApiError> {
     ensure_browser_origin(&headers, &dependencies.medioss_origin)?;
     let email = Email::parse(&request.email)?;
     let temporary_password = RawPassword::parse(&request.password)?;
-    let user = create_user(
-        dependencies.repository.as_ref(),
-        dependencies.hasher.as_ref(),
-        dependencies.clock.as_ref(),
-        &actor,
-        email,
-        &temporary_password,
-    )
-    .await?;
+    let user = dependencies
+        .create_user
+        .handle(CreateUser {
+            actor,
+            email,
+            temporary_password,
+        })
+        .await?;
     Ok((StatusCode::CREATED, Json(user_response(&user))))
 }
 
@@ -62,17 +52,11 @@ pub(crate) struct UserListItem {
     has_avatar: bool,
 }
 
-pub(crate) async fn users_list<R, H, C, A>(
+pub(crate) async fn users_list(
     _actor: AdminActor,
-    State(_dependencies): State<SharedDependencies<R, H, C, A>>,
-) -> Result<Json<Vec<UserListItem>>, ApiError>
-where
-    R: UserRepository + LoginThrottleRepository + 'static,
-    H: PasswordHasher + 'static,
-    C: Clock + 'static,
-    A: LoginAdmission + 'static,
-{
-    let users = list_users(_dependencies.repository.as_ref()).await?;
+    State(dependencies): State<SharedDependencies>,
+) -> Result<Json<Vec<UserListItem>>, ApiError> {
+    let users = dependencies.list_users.handle(ListUsers).await?;
     Ok(Json(
         users
             .into_iter()

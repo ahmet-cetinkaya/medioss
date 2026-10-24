@@ -11,20 +11,11 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_sessions::{Expiry, SessionManagerLayer};
 
-use crate::{
-    session::resolve_actor,
-    state::{AppState, SystemClock, TokioSemaphoreAdmission},
-};
+use crate::{session::resolve_actor, state::AppState};
 
 pub fn router(state: AppState) -> Router {
     let static_files = ServeDir::new(&state.config.static_dir);
-    let identity = identity_presentation::identity_router::<
-        identity_infrastructure::SeaOrmUserRepository,
-        identity_infrastructure::BoundedArgon2PasswordHasher,
-        SystemClock,
-        TokioSemaphoreAdmission,
-    >()
-    .with_state(state.identity_dependencies.clone());
+    let identity = identity_presentation::identity_router().with_state(state.identity.clone());
 
     let meditation =
         meditation_presentation::meditation_router().with_state(state.meditation.clone());
