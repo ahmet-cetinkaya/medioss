@@ -1,26 +1,29 @@
 use std::sync::Arc;
 
-use super::import_own_data_handler::ImportOwnDataHandler;
+use super::import_own_data_command_validator::ImportOwnDataCommandValidator;
 use super::mood::{apply_mood_entries, existing_mood_keys};
 use super::practice::apply_practice;
-use super::{import_own_data::ImportFailure, import_own_data::ImportOwnData};
+use super::{
+    import_own_data_command::ImportFailure, import_own_data_command::ImportOwnDataCommand,
+};
 use crate::models::import_report::ImportReport;
+use crate::ports::command_handler::CommandHandler;
 use crate::ports::meditation_lookup::MeditationLookup;
 use crate::ports::mood_record_sink::MoodRecordSink;
 use crate::ports::own_mood_records::OwnMoodRecords;
 use crate::ports::own_practice_records::OwnPracticeRecords;
 use crate::ports::practice_sink::PracticeSink;
-use crate::queries::validate_import::validate_document;
 
-pub struct ImportOwnDataService {
+pub struct ImportOwnDataCommandHandler {
     mood_source: Arc<dyn OwnMoodRecords>,
     mood_sink: Arc<dyn MoodRecordSink>,
     practice_source: Arc<dyn OwnPracticeRecords>,
     practice_sink: Arc<dyn PracticeSink>,
     meditations: Arc<dyn MeditationLookup>,
+    validator: ImportOwnDataCommandValidator,
 }
 
-impl ImportOwnDataService {
+impl ImportOwnDataCommandHandler {
     pub fn new(
         mood_source: Arc<dyn OwnMoodRecords>,
         mood_sink: Arc<dyn MoodRecordSink>,
@@ -34,15 +37,18 @@ impl ImportOwnDataService {
             practice_source,
             practice_sink,
             meditations,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl ImportOwnDataHandler for ImportOwnDataService {
-    async fn handle(&self, command: ImportOwnData) -> Result<ImportReport, ImportFailure> {
-        validate_document(&command.document)
-            .map_err(|e| ImportFailure::Validation(e.to_string()))?;
+impl CommandHandler<ImportOwnDataCommand> for ImportOwnDataCommandHandler {
+    type Output = ImportReport;
+    type Error = ImportFailure;
+
+    async fn handle(&self, command: ImportOwnDataCommand) -> Result<ImportReport, ImportFailure> {
+        self.validator.validate(&command)?;
 
         let existing_moods = existing_mood_keys(command.user_id, self.mood_source.as_ref()).await?;
         let all_meditations = self.meditations.list_all().await?;
@@ -74,5 +80,5 @@ impl ImportOwnDataHandler for ImportOwnDataService {
 }
 
 #[cfg(test)]
-#[path = "import_own_data_service.tests.rs"]
+#[path = "import_own_data_command_handler.tests.rs"]
 mod tests;

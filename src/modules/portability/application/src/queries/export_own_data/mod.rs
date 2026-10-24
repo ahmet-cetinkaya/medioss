@@ -1,7 +1,7 @@
-mod export_own_data;
-mod export_own_data_handler;
-mod export_own_data_service;
+mod export_own_data_query;
+mod export_own_data_query_handler;
+mod export_own_data_query_validator;
 
-pub use export_own_data::ExportOwnData;
-pub use export_own_data_handler::ExportOwnDataHandler;
-pub use export_own_data_service::ExportOwnDataService;
+pub use export_own_data_query::ExportOwnDataQuery;
+pub use export_own_data_query_handler::ExportOwnDataQueryHandler;
+pub use export_own_data_query_validator::ExportOwnDataQueryValidator;

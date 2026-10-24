@@ -22,7 +22,7 @@ fn display_prints_internal_message_verbatim() {
 
 #[test]
 fn command_carries_user_and_document() {
-    let command = ImportOwnData {
+    let command = ImportOwnDataCommand {
         user_id: UserId::new(3),
         document: ExportDocument {
             format_version: 1,

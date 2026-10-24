@@ -2,7 +2,15 @@ use crate::models::note_record::NoteRecord;
 use crate::models::practice_snapshot::PracticeSnapshot;
 use crate::test_support::fixtures::{document, entry, snapshot, ts};
 
-use super::validate_document;
+use super::*;
+use kernel::UserId;
+
+fn validate_document(document: &ExportDocument) -> Result<(), ImportFailure> {
+    ImportOwnDataCommandValidator.validate(&ImportOwnDataCommand {
+        user_id: UserId::new(1),
+        document: document.clone(),
+    })
+}
 
 #[test]
 fn valid_document_passes() {

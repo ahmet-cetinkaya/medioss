@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use crate::ports::mood_record_sink::MoodRecordSink;
-use crate::queries::export_own_data::{ExportOwnData, ExportOwnDataHandler, ExportOwnDataService};
+use crate::ports::query_handler::QueryHandler;
+use crate::queries::export_own_data::{ExportOwnDataQuery, ExportOwnDataQueryHandler};
 use crate::test_support::fake_mood_store::FakeMoodStore;
 use crate::test_support::fake_practice_source::FakePracticeSource;
 use crate::test_support::fake_profile::FakeProfile;
@@ -15,9 +16,9 @@ async fn export_lists_own_records_through_ports() {
         .unwrap();
 
     let service =
-        ExportOwnDataService::new(mood, Arc::new(FakePracticeSource), Arc::new(FakeProfile));
+        ExportOwnDataQueryHandler::new(mood, Arc::new(FakePracticeSource), Arc::new(FakeProfile));
     let doc = service
-        .handle(ExportOwnData { user_id: user() })
+        .handle(ExportOwnDataQuery { user_id: user() })
         .await
         .unwrap();
 
