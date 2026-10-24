@@ -175,6 +175,10 @@ member_count() {
 # gain any. Same shrink-only discipline: `# count: N` <= MODRS_CEILING.
 MODRS_CEILING=14
 
+# Most code lines (no blanks or comments) a crate's src/main.rs may hold and
+# still count as a bin entry; the real one is 76, so this is a backstop, not a target.
+BIN_ENTRY_MAX_CODE_LINES=80
+
 # Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
 # hook or test hidden inside a comment is dead code to every check below.
 code_without_comments() {
@@ -349,13 +353,20 @@ is_gated_test_support() {
 # a static, macro_rules! or an inline `mod x { }` means logic lives there and it
 # needs a sibling test like any other file.
 is_bin_entry_file() {
-  local file="$1" code names
+  local file="$1" code names lines
   [ "$(basename "$file")" = "main.rs" ] || return 1
   [ "$(basename "$(dirname "$file")")" = "src" ] || return 1
   [ -f "$(dirname "$(dirname "$file")")/Cargo.toml" ] || return 1
   code="$(code_without_comments "$file")"
+  # Backstop: process glue stays small. Counted before whitespace collapse.
+  lines="$(grep -cv '^[[:space:]]*$' <<<"$code" || true)"
+  [ "$lines" -le "$BIN_ENTRY_MAX_CODE_LINES" ] || return 1
+  # Collapsed so `fn\nname()` and `mod a\n{` read like their one-line forms.
+  code="$(perl -0pe 's/\s+/ /g' <<<"$code")"
   grep -qE '\bfn +main\b' <<<"$code" || return 1
   grep -qE '\bimpl\b|\bstatic\b|macro_rules!|\bmod +[A-Za-z0-9_]+ *\{' <<<"$code" && return 1
+  # Item-level blocks run code at compile time without a fn: const X = { loop {} };
+  grep -qE '\b(const|static)\b[^;]*= *\{|\b(loop|while)\b' <<<"$code" && return 1
   names="$(grep -oE '\bfn +[A-Za-z0-9_]+' <<<"$code" | awk '{print $2}' | grep -vxE 'main|run' || true)"
   [ -z "$names" ]
 }
@@ -914,6 +925,11 @@ layout_self_test() {
   expect_bin_entry "$dir" reject "80. main.rs with an inline module" 'fn main() { run(); }\nasync fn run() {}\nmod logic { pub const A: u8 = 1; }\n' || ok=1
   expect_bin_entry "$dir" reject "81. main.rs without fn main" 'fn run() {}\n' || ok=1
   expect_bin_entry "$dir" accept "82. main.rs declaring an out-of-line module" 'fn main() { run(); }\nasync fn run() {}\nmod operator;\n' || ok=1
+  expect_bin_entry "$dir" reject "83. main.rs with a fn name on its own line" 'fn main() { run(); }\nasync fn run() {}\nfn\nhelper() -> u8 { 1 }\n' || ok=1
+  expect_bin_entry "$dir" reject "84. main.rs with an inline module brace on the next line" 'fn main() { run(); }\nasync fn run() {}\nmod logic\n{ pub const A: u8 = 1; }\n' || ok=1
+  expect_bin_entry "$dir" reject "85. main.rs with a const block initialiser" 'fn main() { run(); }\nasync fn run() {}\nconst X: u8 = { let mut i = 0; while i < 3 { i += 1; } i };\n' || ok=1
+  expect_bin_entry "$dir" reject "86. main.rs with a loop in an item-level block" 'fn main() { run(); }\nasync fn run() {}\nconst Y: u8 = { loop { break 1; } };\n' || ok=1
+  expect_bin_entry "$dir" reject "87. main.rs over the code-line cap" "$(printf 'fn main() {}\\n'; for i in $(seq 1 85); do printf 'use a%s;\\n' "$i"; done)" || ok=1
   remove_fixture_dir "$dir"
   return "$ok"
 }
