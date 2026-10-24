@@ -13,3 +13,7 @@ impl Clock for SystemClock {
         Utc::now()
     }
 }
+
+#[cfg(test)]
+#[path = "clock.tests.rs"]
+mod tests;

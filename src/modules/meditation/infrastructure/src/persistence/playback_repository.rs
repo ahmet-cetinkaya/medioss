@@ -131,3 +131,7 @@ impl PlaybackStateRepository for SeaOrmPlaybackRepository {
         Ok(rows)
     }
 }
+
+#[cfg(test)]
+#[path = "playback_repository.tests.rs"]
+mod tests;

@@ -111,3 +111,7 @@ impl CategoryRepository for SeaOrmCategoryRepository {
         Ok(rows > 0)
     }
 }
+
+#[cfg(test)]
+#[path = "category_repository.tests.rs"]
+mod tests;

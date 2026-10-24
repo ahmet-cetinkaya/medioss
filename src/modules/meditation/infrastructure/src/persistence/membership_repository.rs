@@ -174,3 +174,7 @@ impl MembershipRepository for SeaOrmMembershipRepository {
         Ok(homes)
     }
 }
+
+#[cfg(test)]
+#[path = "membership_repository.tests.rs"]
+mod tests;

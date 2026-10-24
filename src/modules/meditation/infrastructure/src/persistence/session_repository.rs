@@ -113,3 +113,7 @@ impl SessionRepository for SeaOrmSessionRepository {
         Ok(rows)
     }
 }
+
+#[cfg(test)]
+#[path = "session_repository.tests.rs"]
+mod tests;
