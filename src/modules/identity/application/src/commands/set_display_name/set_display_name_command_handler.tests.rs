@@ -3,7 +3,8 @@ use std::sync::Arc;
 use identity_domain::{DisplayName, Email, PasswordHash, Role, User};
 use kernel::{Actor, UserId};
 
-use super::{SetDisplayName, SetDisplayNameHandler, SetDisplayNameService};
+use super::{SetDisplayNameCommand, SetDisplayNameCommandHandler};
+use crate::ports::CommandHandler as _;
 use crate::{
     ports::Clock as _,
     test_support::{block_on, FakeRepository, FixedClock},
@@ -32,7 +33,7 @@ fn sets_trims_and_persists_the_display_name() {
     repository.seed_user(user(2, Role::Member));
 
     let updated = block_on(
-        SetDisplayNameService::new(repository.clone()).handle(SetDisplayName {
+        SetDisplayNameCommandHandler::new(repository.clone()).handle(SetDisplayNameCommand {
             user_id: UserId::new(2),
             display_name: Some(DisplayName::parse("  Ada  ").unwrap()),
         }),
@@ -53,7 +54,7 @@ fn empty_name_clears_an_existing_one() {
     repository.seed_user(named);
 
     block_on(
-        SetDisplayNameService::new(repository.clone()).handle(SetDisplayName {
+        SetDisplayNameCommandHandler::new(repository.clone()).handle(SetDisplayNameCommand {
             user_id: UserId::new(2),
             display_name: None,
         }),
@@ -70,7 +71,7 @@ fn keeps_the_avatar_untouched() {
     repository.seed_user(with_avatar);
 
     block_on(
-        SetDisplayNameService::new(repository.clone()).handle(SetDisplayName {
+        SetDisplayNameCommandHandler::new(repository.clone()).handle(SetDisplayNameCommand {
             user_id: UserId::new(2),
             display_name: Some(DisplayName::parse("Ada").unwrap()),
         }),
@@ -92,7 +93,7 @@ fn unknown_actor_is_not_found() {
 
     assert_eq!(
         block_on(
-            SetDisplayNameService::new(repository).handle(SetDisplayName {
+            SetDisplayNameCommandHandler::new(repository).handle(SetDisplayNameCommand {
                 user_id: actor.user_id(),
                 display_name: Some(DisplayName::parse("Ada").unwrap()),
             })

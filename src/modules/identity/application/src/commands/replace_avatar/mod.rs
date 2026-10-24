@@ -1,7 +1,7 @@
-mod replace_avatar;
-mod replace_avatar_handler;
-mod replace_avatar_service;
+mod replace_avatar_command;
+mod replace_avatar_command_handler;
+mod replace_avatar_command_validator;
 
-pub use replace_avatar::ReplaceAvatar;
-pub use replace_avatar_handler::ReplaceAvatarHandler;
-pub use replace_avatar_service::ReplaceAvatarService;
+pub use replace_avatar_command::ReplaceAvatarCommand;
+pub use replace_avatar_command_handler::ReplaceAvatarCommandHandler;
+pub use replace_avatar_command_validator::ReplaceAvatarCommandValidator;

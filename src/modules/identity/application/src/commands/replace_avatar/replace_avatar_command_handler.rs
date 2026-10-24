@@ -1,19 +1,24 @@
 use std::sync::Arc;
 
-use super::replace_avatar::ReplaceAvatar;
-use super::replace_avatar_handler::ReplaceAvatarHandler;
-use crate::ports::{AvatarStore, UserRepository};
+use super::replace_avatar_command::ReplaceAvatarCommand;
+use super::replace_avatar_command_validator::ReplaceAvatarCommandValidator;
+use crate::ports::{AvatarStore, CommandHandler, UserRepository};
 use crate::ApplicationError;
 use identity_domain::User;
 
-pub struct ReplaceAvatarService {
+pub struct ReplaceAvatarCommandHandler {
     repository: Arc<dyn UserRepository>,
     store: Arc<dyn AvatarStore>,
+    validator: ReplaceAvatarCommandValidator,
 }
 
-impl ReplaceAvatarService {
+impl ReplaceAvatarCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>, store: Arc<dyn AvatarStore>) -> Self {
-        Self { repository, store }
+        Self {
+            repository,
+            store,
+            validator: ReplaceAvatarCommandValidator::default(),
+        }
     }
 
     async fn replace_avatar(
@@ -57,12 +62,15 @@ impl ReplaceAvatarService {
 }
 
 #[async_trait::async_trait]
-impl ReplaceAvatarHandler for ReplaceAvatarService {
-    async fn handle(&self, command: ReplaceAvatar) -> Result<User, ApplicationError> {
+impl CommandHandler<ReplaceAvatarCommand> for ReplaceAvatarCommandHandler {
+    type Output = User;
+
+    async fn handle(&self, command: ReplaceAvatarCommand) -> Result<User, ApplicationError> {
+        self.validator.validate(&command)?;
         self.replace_avatar(&command.actor, command.bytes).await
     }
 }
 
 #[cfg(test)]
-#[path = "replace_avatar_service.tests.rs"]
+#[path = "replace_avatar_command_handler.tests.rs"]
 mod tests;

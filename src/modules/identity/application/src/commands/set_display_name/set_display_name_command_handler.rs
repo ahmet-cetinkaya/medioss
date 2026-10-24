@@ -1,19 +1,23 @@
 use std::sync::Arc;
 
-use super::set_display_name::SetDisplayName;
-use super::set_display_name_handler::SetDisplayNameHandler;
-use crate::ports::UserRepository;
+use super::set_display_name_command::SetDisplayNameCommand;
+use super::set_display_name_command_validator::SetDisplayNameCommandValidator;
+use crate::ports::{CommandHandler, UserRepository};
 use crate::ApplicationError;
 use identity_domain::User;
 use kernel::UserId;
 
-pub struct SetDisplayNameService {
+pub struct SetDisplayNameCommandHandler {
     repository: Arc<dyn UserRepository>,
+    validator: SetDisplayNameCommandValidator,
 }
 
-impl SetDisplayNameService {
+impl SetDisplayNameCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>) -> Self {
-        Self { repository }
+        Self {
+            repository,
+            validator: SetDisplayNameCommandValidator::default(),
+        }
     }
 
     async fn set_display_name(
@@ -36,13 +40,17 @@ impl SetDisplayNameService {
 }
 
 #[async_trait::async_trait]
-impl SetDisplayNameHandler for SetDisplayNameService {
-    async fn handle(&self, command: SetDisplayName) -> Result<User, ApplicationError> {
+impl CommandHandler<SetDisplayNameCommand> for SetDisplayNameCommandHandler {
+    type Output = User;
+
+    async fn handle(&self, command: SetDisplayNameCommand) -> Result<User, ApplicationError> {
+        self.validator.validate(&command)?;
+
         self.set_display_name(command.user_id, command.display_name)
             .await
     }
 }
 
 #[cfg(test)]
-#[path = "set_display_name_service.tests.rs"]
+#[path = "set_display_name_command_handler.tests.rs"]
 mod tests;

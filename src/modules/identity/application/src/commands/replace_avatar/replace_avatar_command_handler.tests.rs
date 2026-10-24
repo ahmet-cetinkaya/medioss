@@ -3,7 +3,8 @@ use std::sync::Arc;
 use identity_domain::{AvatarRef, DisplayName, Email, PasswordHash, Role, User};
 use kernel::{Actor, UserId};
 
-use super::{ReplaceAvatar, ReplaceAvatarHandler, ReplaceAvatarService};
+use super::{ReplaceAvatarCommand, ReplaceAvatarCommandHandler};
+use crate::ports::CommandHandler as _;
 use crate::{
     ports::{AvatarStoreError, Clock as _, UserRepository},
     test_support::{block_on, FakeAvatarStore, FakeRepository, FixedClock},
@@ -158,10 +159,12 @@ fn replace_persists_and_unlinks_the_previous_file() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let updated = block_on(
-        ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-            actor,
-            bytes: vec![7],
-        }),
+        ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+            ReplaceAvatarCommand {
+                actor,
+                bytes: vec![7],
+            },
+        ),
     )
     .unwrap();
 
@@ -188,10 +191,12 @@ fn replace_stages_a_new_key_and_only_deletes_the_old_one_after_the_update() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let updated = block_on(
-        ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-            actor,
-            bytes: vec![7],
-        }),
+        ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+            ReplaceAvatarCommand {
+                actor,
+                bytes: vec![7],
+            },
+        ),
     )
     .unwrap();
 
@@ -223,7 +228,7 @@ fn replace_on_db_update_failure_keeps_the_old_avatar_and_the_staged_blob_so_a_co
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let error = block_on(
-        ReplaceAvatarService::new(failing, store.clone()).handle(ReplaceAvatar {
+        ReplaceAvatarCommandHandler::new(failing, store.clone()).handle(ReplaceAvatarCommand {
             actor,
             bytes: vec![7],
         }),
@@ -248,10 +253,12 @@ fn replace_on_store_write_failure_keeps_everything_untouched() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let error = block_on(
-        ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-            actor,
-            bytes: vec![7],
-        }),
+        ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+            ReplaceAvatarCommand {
+                actor,
+                bytes: vec![7],
+            },
+        ),
     )
     .unwrap_err();
 
@@ -276,10 +283,12 @@ fn first_upload_writes_the_avatar_without_deleting_anything() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let updated = block_on(
-        ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-            actor,
-            bytes: vec![7],
-        }),
+        ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+            ReplaceAvatarCommand {
+                actor,
+                bytes: vec![7],
+            },
+        ),
     )
     .unwrap();
 
@@ -312,10 +321,12 @@ fn replace_keeps_the_display_name() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let updated = block_on(
-        ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-            actor,
-            bytes: vec![7],
-        }),
+        ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+            ReplaceAvatarCommand {
+                actor,
+                bytes: vec![7],
+            },
+        ),
     )
     .unwrap();
     assert_eq!(updated.display_name().map(|n| n.as_str()), Some("Ahmet QA"));
@@ -331,10 +342,12 @@ fn replace_rejects_invalid_payloads_and_writes_nothing() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     let error = block_on(
-        ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-            actor,
-            bytes: vec![0],
-        }),
+        ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+            ReplaceAvatarCommand {
+                actor,
+                bytes: vec![0],
+            },
+        ),
     )
     .unwrap_err();
 
@@ -370,10 +383,12 @@ fn replace_maps_normalization_failures_by_who_is_at_fault() {
         let actor = Actor::new(UserId::new(2), Role::Member);
 
         let error = block_on(
-            ReplaceAvatarService::new(repository.clone(), store.clone()).handle(ReplaceAvatar {
-                actor,
-                bytes: vec![1],
-            }),
+            ReplaceAvatarCommandHandler::new(repository.clone(), store.clone()).handle(
+                ReplaceAvatarCommand {
+                    actor,
+                    bytes: vec![1],
+                },
+            ),
         )
         .unwrap_err();
 

@@ -1,24 +1,33 @@
 use std::sync::Arc;
 
-use super::clear_avatar::ClearAvatar;
-use super::clear_avatar_handler::ClearAvatarHandler;
-use crate::ports::{AvatarStore, UserRepository};
+use super::clear_avatar_command::ClearAvatarCommand;
+use super::clear_avatar_command_validator::ClearAvatarCommandValidator;
+use crate::ports::{AvatarStore, CommandHandler, UserRepository};
 use crate::ApplicationError;
 
-pub struct ClearAvatarService {
+pub struct ClearAvatarCommandHandler {
     repository: Arc<dyn UserRepository>,
     store: Arc<dyn AvatarStore>,
+    validator: ClearAvatarCommandValidator,
 }
 
-impl ClearAvatarService {
+impl ClearAvatarCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>, store: Arc<dyn AvatarStore>) -> Self {
-        Self { repository, store }
+        Self {
+            repository,
+            store,
+            validator: ClearAvatarCommandValidator::default(),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl ClearAvatarHandler for ClearAvatarService {
-    async fn handle(&self, command: ClearAvatar) -> Result<(), ApplicationError> {
+impl CommandHandler<ClearAvatarCommand> for ClearAvatarCommandHandler {
+    type Output = ();
+
+    async fn handle(&self, command: ClearAvatarCommand) -> Result<(), ApplicationError> {
+        self.validator.validate(&command)?;
+
         let actor = &command.actor;
         let user = self
             .repository
@@ -40,5 +49,5 @@ impl ClearAvatarHandler for ClearAvatarService {
 }
 
 #[cfg(test)]
-#[path = "clear_avatar_service.tests.rs"]
+#[path = "clear_avatar_command_handler.tests.rs"]
 mod tests;

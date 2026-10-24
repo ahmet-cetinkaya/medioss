@@ -1,29 +1,36 @@
 use std::sync::Arc;
 
-use super::read_avatar::ReadAvatar;
-use super::read_avatar_handler::ReadAvatarHandler;
-use crate::ports::{AvatarStore, UserRepository};
+use super::read_avatar_command::ReadAvatarCommand;
+use super::read_avatar_command_validator::ReadAvatarCommandValidator;
+use crate::ports::{AvatarStore, CommandHandler, UserRepository};
 use crate::ApplicationError;
 use identity_domain::AvatarRef;
-use kernel::Role;
 
-pub struct ReadAvatarService {
+pub struct ReadAvatarCommandHandler {
     repository: Arc<dyn UserRepository>,
     store: Arc<dyn AvatarStore>,
+    validator: ReadAvatarCommandValidator,
 }
 
-impl ReadAvatarService {
+impl ReadAvatarCommandHandler {
     pub fn new(repository: Arc<dyn UserRepository>, store: Arc<dyn AvatarStore>) -> Self {
-        Self { repository, store }
+        Self {
+            repository,
+            store,
+            validator: ReadAvatarCommandValidator::default(),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl ReadAvatarHandler for ReadAvatarService {
-    async fn handle(&self, command: ReadAvatar) -> Result<(Vec<u8>, AvatarRef), ApplicationError> {
-        if command.reader.user_id() != command.requested && command.reader.role() != Role::Admin {
-            return Err(ApplicationError::Forbidden);
-        }
+impl CommandHandler<ReadAvatarCommand> for ReadAvatarCommandHandler {
+    type Output = (Vec<u8>, AvatarRef);
+
+    async fn handle(
+        &self,
+        command: ReadAvatarCommand,
+    ) -> Result<(Vec<u8>, AvatarRef), ApplicationError> {
+        self.validator.validate(&command)?;
 
         let user = self
             .repository
@@ -44,5 +51,5 @@ impl ReadAvatarHandler for ReadAvatarService {
 }
 
 #[cfg(test)]
-#[path = "read_avatar_service.tests.rs"]
+#[path = "read_avatar_command_handler.tests.rs"]
 mod tests;

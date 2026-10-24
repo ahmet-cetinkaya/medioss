@@ -3,8 +3,8 @@ use std::sync::Arc;
 use identity_domain::{AvatarRef, DisplayName, Email, PasswordHash, Role, User};
 use kernel::{Actor, UserId};
 
-use super::{ClearAvatar, ClearAvatarHandler, ClearAvatarService};
-use crate::ports::Clock as _;
+use super::{ClearAvatarCommand, ClearAvatarCommandHandler};
+use crate::ports::{Clock as _, CommandHandler as _};
 use crate::test_support::{block_on, FakeAvatarStore, FakeRepository, FixedClock};
 
 fn user(id: i64, role: Role) -> User {
@@ -32,13 +32,13 @@ fn clear_is_idempotent_and_removes_only_existing_files() {
     store_avatar(&repository, "webp");
     let store = Arc::new(FakeAvatarStore::accepting());
     let actor = Actor::new(UserId::new(2), Role::Member);
-    let service = ClearAvatarService::new(repository.clone(), store.clone());
+    let service = ClearAvatarCommandHandler::new(repository.clone(), store.clone());
 
-    block_on(service.handle(ClearAvatar {
+    block_on(service.handle(ClearAvatarCommand {
         actor: actor.clone(),
     }))
     .unwrap();
-    block_on(service.handle(ClearAvatar { actor })).unwrap();
+    block_on(service.handle(ClearAvatarCommand { actor })).unwrap();
 
     assert_eq!(store.removed(), vec![(2, "webp")]);
     let cleared = repository.user_by_id(UserId::new(2)).unwrap();
@@ -56,7 +56,8 @@ fn clear_keeps_the_display_name() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     block_on(
-        ClearAvatarService::new(repository.clone(), store.clone()).handle(ClearAvatar { actor }),
+        ClearAvatarCommandHandler::new(repository.clone(), store.clone())
+            .handle(ClearAvatarCommand { actor }),
     )
     .unwrap();
 
@@ -72,7 +73,8 @@ fn clear_without_an_avatar_touches_nothing() {
     let actor = Actor::new(UserId::new(2), Role::Member);
 
     block_on(
-        ClearAvatarService::new(repository.clone(), store.clone()).handle(ClearAvatar { actor }),
+        ClearAvatarCommandHandler::new(repository.clone(), store.clone())
+            .handle(ClearAvatarCommand { actor }),
     )
     .unwrap();
 
