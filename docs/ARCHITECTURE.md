@@ -492,3 +492,5 @@ Run them with `cargo test --workspace`; `default-members` would otherwise limit 
 ### Sibling-test rule and its exemption list
 
 `scripts/check-boundaries.sh` fails when a logic-bearing source file has no sibling `<name>.tests.rs` containing at least one `#[test]` and wired by `#[path = "<name>.tests.rs"]`. Files that predate the rule are listed in `scripts/layout-test-exemptions.txt`. That list may only shrink: a listed file that gains real tests, or a listed path that no longer exists, fails the check. Adding a line to make the check pass defeats the rule and is rejected in review. An empty `.tests.rs` does not satisfy it.
+
+Exempt means not covered by name, not necessarily untested. The exemption file also carries a `# count: N` header; the entry count may not exceed N, and N may not exceed the ceiling in `scripts/check-boundaries.sh`, so the list can only shrink.
