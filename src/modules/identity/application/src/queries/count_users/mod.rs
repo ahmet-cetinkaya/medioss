@@ -1,7 +1,7 @@
-mod count_users;
-mod count_users_handler;
-mod count_users_service;
+mod count_users_query;
+mod count_users_query_handler;
+mod count_users_query_validator;
 
-pub use count_users::CountUsers;
-pub use count_users_handler::CountUsersHandler;
-pub use count_users_service::CountUsersService;
+pub use count_users_query::CountUsersQuery;
+pub use count_users_query_handler::CountUsersQueryHandler;
+pub use count_users_query_validator::CountUsersQueryValidator;
