@@ -61,7 +61,7 @@ async fn test_state() -> (AppState, TempDir) {
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
     );
-    let mood_tracker = web_api::mood_tracker::mood_tracker_dependencies(
+    let (mood_tracker, mood_tracker_entries) = web_api::mood_tracker::mood_tracker_dependencies(
         connection.clone(),
         Arc::new("http://localhost".to_owned()),
     );
@@ -75,7 +75,7 @@ async fn test_state() -> (AppState, TempDir) {
             meditation.playback.clone(),
             meditation.sessions.clone(),
             soundscape.mixes.clone(),
-            mood_tracker.entries.clone(),
+            mood_tracker_entries.clone(),
             std::path::PathBuf::from(&data_dir).join("media"),
         ));
     let state = AppState::new(

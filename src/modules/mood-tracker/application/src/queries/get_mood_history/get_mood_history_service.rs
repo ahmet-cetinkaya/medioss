@@ -1,16 +1,44 @@
+use std::sync::Arc;
+
+use super::get_mood_history::MoodHistory;
+use super::get_mood_history_handler::MoodHistoryHandler;
+use crate::models::MoodRange;
+use crate::ports::{Clock, MoodEntryRepository, Page};
+use crate::ApplicationError;
 use chrono::{DateTime, FixedOffset, Utc};
-use kernel::UserId;
 use mood_tracker_domain::MoodEntry;
 
-use crate::{
-    ports::{MoodEntryRepository, Page},
-    ApplicationError,
-};
+pub struct MoodHistoryService {
+    entries: Arc<dyn MoodEntryRepository>,
+    clock: Arc<dyn Clock>,
+}
 
-pub async fn get_mood_history<R>(
+impl MoodHistoryService {
+    pub fn new(entries: Arc<dyn MoodEntryRepository>, clock: Arc<dyn Clock>) -> Self {
+        Self { entries, clock }
+    }
+}
+
+#[async_trait::async_trait]
+impl MoodHistoryHandler for MoodHistoryService {
+    async fn handle(&self, query: MoodHistory) -> Result<Page<MoodEntry>, ApplicationError> {
+        get_mood_history(
+            self.entries.as_ref(),
+            query.user_id,
+            query.range,
+            query.tz_offset_minutes,
+            self.clock.now().await,
+            query.limit,
+            query.cursor,
+        )
+        .await
+    }
+}
+
+pub(crate) async fn get_mood_history<R>(
     entries: &R,
-    user_id: UserId,
-    range: super::MoodRange,
+    user_id: kernel::UserId,
+    range: MoodRange,
     tz_offset_minutes: i16,
     now: DateTime<Utc>,
     limit: u16,

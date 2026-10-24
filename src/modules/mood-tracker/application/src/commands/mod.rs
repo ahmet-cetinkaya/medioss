@@ -1,7 +1,5 @@
-mod create_mood_entry;
-mod delete_mood_entry;
-mod update_mood_entry;
+//! Mood Tracker write side: one use case per folder.
 
-pub use create_mood_entry::create_mood_entry;
-pub use delete_mood_entry::delete_mood_entry;
-pub use update_mood_entry::update_mood_entry;
+pub mod create_mood_entry;
+pub mod delete_mood_entry;
+pub mod update_mood_entry;

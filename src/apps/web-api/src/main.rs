@@ -166,7 +166,7 @@ async fn build_state(config: Config, database: Database) -> AppState {
     );
     let portability =
         web_api::portability::portability_dependencies(database.connection.clone(), origin());
-    let mood_tracker =
+    let (mood_tracker, mood_tracker_entries) =
         web_api::mood_tracker::mood_tracker_dependencies(database.connection.clone(), origin());
     let soundscape = web_api::soundscape::soundscape_dependencies(
         database.connection.clone(),
@@ -179,7 +179,7 @@ async fn build_state(config: Config, database: Database) -> AppState {
             Arc::clone(&meditation.playback),
             Arc::clone(&meditation.sessions),
             Arc::clone(&soundscape.mixes),
-            Arc::clone(&mood_tracker.entries),
+            Arc::clone(&mood_tracker_entries),
             config.data_dir.join("media").join("identity"),
         ));
     let avatar_store = Arc::new(web_api::avatar_store::FileAvatarStore::new(
