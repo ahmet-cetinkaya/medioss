@@ -172,17 +172,32 @@ member_count() {
 # lower it together with the list; raising it needs a visible, reviewed edit.
 EXEMPTION_CEILING=20
 
+# Prints $1 without /* ... */ blocks (non-nested) and // line comments, so a
+# hook or test hidden inside a comment is dead code to every check below.
+code_without_comments() {
+  perl -0pe 's{/\*.*?\*/}{}gs' "$1" | grep -vE '^[[:space:]]*//'
+}
+
+# Joins lines, then drops asserts that cannot fail: assert!(true),
+# assert!(!false) and assert!/assert_eq! comparing one literal with itself
+# (true, false or a number). Comparisons of variables stay review-enforced.
+strip_tautologies() {
+  perl -0pe 's/\s+/ /g;
+    s/assert!\(\s*(?:true|!\s*false)\s*[,)]//g;
+    s/assert(?:_eq)?!\(\s*(true|false|-?\d+(?:\.\d+)?)\s*(?:,|==)\s*\1\s*[,)]//g'
+}
+
 # True when $1 holds a non-ignored #[test]/#[tokio::test] fn and a token that
 # asserts something, so commented-out, #[ignore]d or empty tests do not count.
 has_asserting_test() {
   local sibling="$1" code
-  code="$(grep -vE '^[[:space:]]*//' "$sibling")"
+  code="$(code_without_comments "$sibling")"
   printf '%s\n' "$code" | awk '
     /^[[:space:]]*#\[(tokio::)?test([^a-zA-Z_]|$)/ { pending = 1 }
     /^[[:space:]]*#\[ignore/ { ignored = 1 }
     /^[[:space:]]*(pub )?(async )?fn / { if (pending && !ignored) found++; pending = 0; ignored = 0 }
     END { exit found ? 0 : 1 }' &&
-    printf '%s\n' "$code" | sed -E 's/assert!\([[:space:]]*true[[:space:]]*[,)]//g' |
+    printf '%s\n' "$code" | strip_tautologies |
     grep -qE 'assert(_eq|_ne)?!|\.expect\(|\.unwrap\(|should_panic'
 }
 
@@ -191,7 +206,7 @@ has_asserting_test() {
 # cfg(any(test, ..)) and cfg(not(test)) are different literals and fail.
 has_wired_hook() {
   local file="$1" name="$2"
-  grep -vE '^[[:space:]]*//' "$file" | awk -v name="$name" '
+  code_without_comments "$file" | awk -v name="$name" '
     /^#\[cfg\(test\)\][[:space:]]*$/ { cfg = 1; path = 0; next }
     cfg && $0 == "#[path = \"" name "\"]" { path = 1; next }
     cfg && path && /^mod tests;[[:space:]]*$/ { found = 1 }
@@ -204,7 +219,7 @@ has_wired_hook() {
 # cfg(any(..)) are different literals and do not count.
 declares_under_cfg_test() {
   local parent="$1" module="$2"
-  grep -vE '^[[:space:]]*//' "$parent" | awk -v module="$module" '
+  code_without_comments "$parent" | awk -v module="$module" '
     /^[[:space:]]*#\[/ { if ($0 ~ /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/) gated = 1; next }
     $0 ~ "^[[:space:]]*(pub(\\([a-z]+\\))? )?mod " module ";[[:space:]]*$" { if (gated) found = 1 }
     { gated = 0 }
@@ -238,18 +253,41 @@ is_data_only_entity_file() {
 # Kind C: test_support.rs / test_support/ is exempt only when its crate root
 # declares it exactly once as `mod test_support;`, directly under a literal
 # `#[cfg(test)]` (or the cross-crate fakes gate `#[cfg(any(test, feature =
-# "test-support"))]`) at line start, with no #[path] redirect, and nothing but
-# cfg(test) code uses it. Other cfg(any(..)), cfg(not(test)) and comments fail.
+# "test-support"))]`) at line start, with no #[path] redirect, no other #[cfg*]
+# attribute (stacked cfg(not(test)), cfg_attr), and nothing but cfg(test) code
+# uses it. Other cfg(any(..)), cfg(not(test)) and comments fail. The feature
+# form also needs test_support_feature_is_dev_only.
 test_support_declaration_is_gated() {
   local parent="$1"
-  grep -vE '^[[:space:]]*//' "$parent" | awk '
-    /^#\[path/ { redirected = 1 }
+  code_without_comments "$parent" | awk '
     /^#\[cfg\(test\)\][[:space:]]*$/ { gated = 1; next }
     /^#\[cfg\(any\(test, feature = "test-support"\)\)\][[:space:]]*$/ { gated = 1; next }
+    /^#\[(path|cfg)/ { redirected = 1; next }
     /^#\[/ { next }
     /^(pub(\([a-z]+\))? )?mod test_support;[[:space:]]*$/ { decls++; if (gated && !redirected) ok++ }
     { gated = 0; redirected = 0 }
     END { exit (decls == 1 && ok == 1) ? 0 : 1 }'
+}
+
+# True when the crate manifest $1 defines `test-support = []` in [features]
+# with no other feature (such as `default`) listing it, and no non-dev
+# dependency table anywhere under $LAYOUT_ROOT enables it, so release builds
+# never compile the shared fakes.
+test_support_feature_is_dev_only() {
+  local manifest="$1" other
+  [ -f "$manifest" ] || return 1
+  awk '
+    /^\[/ { in_features = ($0 == "[features]") }
+    in_features && /^test-support[[:space:]]*=[[:space:]]*\[\][[:space:]]*$/ { defined = 1; next }
+    in_features && /test-support/ { leaked = 1 }
+    END { exit (defined && !leaked) ? 0 : 1 }' "$manifest" || return 1
+  while IFS= read -r other; do
+    awk '
+      /^\[/ { prod = ($0 ~ /dependencies/ && $0 !~ /dev-dependencies/) }
+      prod && /"test-support"/ { bad = 1 }
+      END { exit bad ? 0 : 1 }' "$other" && return 1
+  done < <(find "$LAYOUT_ROOT" -name Cargo.toml -not -path '*/node_modules/*' -not -path '*/target/*')
+  return 0
 }
 
 # True when $1 is a test-only module: a .tests.rs, a router_tests/ file, or a
@@ -287,12 +325,16 @@ is_gated_test_support() {
   done
   [ -n "$parent" ] || return 1
   test_support_declaration_is_gated "$parent" || return 1
-  [ "$(grep -vE '^[[:space:]]*//' "$parent" | grep -c 'test_support')" -eq 1 ] || return 1
+  if code_without_comments "$parent" | grep -qF 'feature = "test-support"'; then
+    test_support_feature_is_dev_only "$dir/../Cargo.toml" || return 1
+  fi
+  [ "$(code_without_comments "$parent" | grep -c 'test_support')" -eq 1 ] || return 1
   [ -f "$root" ] && grep -q 'fn main' "$root" && return 1
   while IFS= read -r user; do
     [ "$user" = "$parent" ] && continue
     is_test_only_module "$user" && continue
-    grep -vE '^[[:space:]]*//' "$user" | grep -qE '(crate|self|super)::test_support|mod test_support|use test_support' && return 1
+    code_without_comments "$user" | perl -0pe 's/\s+/ /g; s/\s*::\s*/::/g' |
+      grep -qE '(crate|self|super)::(\{[^;]*)?test_support|mod test_support|(^|[^:A-Za-z_])test_support::' && return 1
   done < <(find "$dir" -name '*.rs' -not -path '*/test_support/*' -not -name test_support.rs)
   return 0
 }
@@ -312,10 +354,26 @@ check_exemption_budget() {
   fi
 }
 
+# True when $1 sits under a tests/ directory directly beside a Cargo.toml, i.e.
+# a cargo integration test; a tests/ folder inside src/ is production code.
+is_crate_integration_test() {
+  local dir
+  dir="$(dirname "$1")"
+  while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+    [ "$(basename "$dir")" = "tests" ] && [ -f "$(dirname "$dir")/Cargo.toml" ] && return 0
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+# Review-enforced, not machine-checked: */mod.rs and */lib.rs are skipped below
+# although 17 of them hold fn/impl wiring. A "no fn bodies" rule would need a
+# long new exemption list, so reviewers must watch for logic landing there.
 check_file_layout() {
   local root="$1" ceiling="${2:-$EXEMPTION_CEILING}" file sibling name relative
   local exemptions="$root/scripts/layout-test-exemptions.txt"
   local violations="" exempt_listed
+  LAYOUT_ROOT="$root"
   while IFS= read -r file; do
     relative="${file#"$root"/}"
     case "$file" in
@@ -329,8 +387,9 @@ check_file_layout() {
         ;;
     esac
     case "$file" in
-      */mod.rs | */lib.rs | *.tests.rs | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
+      */mod.rs | */lib.rs | *.tests.rs | */migrations/* | *_entity.rs | */entities.rs) continue ;;
     esac
+    is_crate_integration_test "$file" && continue
     relative="${file#"$root"/}"
     if grep -q 'mod tests {' "$file"; then
       violations+="  inline test module: $relative"$'\n'
@@ -620,12 +679,13 @@ expect_hook() {
 # test_support/shipped.rs holds branching logic, and whose extra file $5 (path
 # under src/, may be empty) has content $6; yields verdict $2.
 expect_support() {
-  local verdict="$2" label="$3" lib="$4" extra="${5:-}" extra_body="${6:-}" dir accepted=reject
+  local verdict="$2" label="$3" lib="$4" extra="${5:-}" extra_body="${6:-}" manifest="${7:-}" dir accepted=reject
   dir="$(new_fixture_dir)"
   mkdir -p "$dir/src/test_support"
   printf "$lib" >"$dir/src/lib.rs"
   printf 'pub fn pick(a: bool) -> u8 { if a { 1 } else { 2 } }\n' >"$dir/src/test_support/shipped.rs"
-  [ -z "$extra" ] || printf "$extra_body" >"$dir/src/$extra"
+  [ -z "$extra" ] || { mkdir -p "$(dirname "$dir/src/$extra")"; printf "$extra_body" >"$dir/src/$extra"; }
+  [ -z "$manifest" ] || printf "$manifest" >"$dir/Cargo.toml"
   check_file_layout "$dir" >/dev/null && accepted=accept
   if [ "$accepted" = "$verdict" ]; then
     echo "  ok   ${verdict%e}ed: $label"
@@ -702,7 +762,7 @@ layout_self_test() {
   expect_support "$dir" accept "37. test_support under literal cfg(test), declared once" \
     '#[cfg(test)]\nmod test_support;\n' || ok=1
   expect_support "$dir" accept "38. test_support under the cross-crate test-support gate" \
-    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' || ok=1
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' '' '' '[features]\ntest-support = []\n' || ok=1
   expect_support "$dir" reject "39. test_support declared without cfg" \
     'pub mod test_support;\n' || ok=1
   expect_support "$dir" reject "40. cfg(test) only in a comment" \
@@ -719,6 +779,58 @@ layout_self_test() {
     '#[cfg(test)]\nmod test_support;\n#[cfg(test)]\nmod test_support;\n' || ok=1
   expect_support "$dir" reject "46. production file uses crate::test_support" \
     '#[cfg(test)]\nmod test_support;\nmod prod;\n' prod.rs 'use crate::test_support::shipped::pick;\npub fn run() -> u8 { pick(true) }\n' || ok=1
+  expect_hook "$dir" reject "47. hook inside a block comment" \
+    '/*\n#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n*/\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "48. cfg(test) only inside a one-line block comment" \
+    ' /* #[cfg(test)] */\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(super::add(1, 1), 2); }\n' || ok=1
+  expect_hook "$dir" reject "49. multi-line assert!(true)" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() {\n    assert!(\n        true\n    );\n}\n' || ok=1
+  expect_hook "$dir" reject "50. assert_eq!(1, 1) literal tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(1, 1); }\n' || ok=1
+  expect_hook "$dir" reject "51. assert!(true == true) tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert!(true == true); }\n' || ok=1
+  expect_hook "$dir" reject "52. assert!(!false) tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert!(!false); }\n' || ok=1
+  expect_hook "$dir" accept "53. assert_eq!(1, 2 - 1) is not a literal tautology" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { assert_eq!(1, 2 - 1); }\n' || ok=1
+  expect_hook "$dir" accept "54. assert_eq!(v, v) on a variable stays review-enforced" \
+    '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' '#[test]\nfn adds() { let v = super::add(1, 1); assert_eq!(v, v); }\n' || ok=1
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src/tests"
+  printf 'pub fn pick(a: bool) -> u8 { if a { 1 } else { 2 } }\n' >"$dir/src/tests/shipped.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 55. production logic hidden in src/tests/"
+    ok=1
+  else
+    echo "  ok   rejected: 55. production logic hidden in src/tests/"
+  fi
+  : >"$dir/src/Cargo.toml"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  ok   accepted: 56. tests/ directly beside a Cargo.toml"
+  else
+    echo "  FAIL wrongly rejected: 56. tests/ directly beside a Cargo.toml"
+    ok=1
+  fi
+  expect_support "$dir" reject "57. feature gate without a [features] entry" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' '' '' '[package]\nname = "x"\n' || ok=1
+  expect_support "$dir" reject "58. feature gate with test-support in default" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' '' '' '[features]\ndefault = ["test-support"]\ntest-support = []\n' || ok=1
+  expect_support "$dir" reject "59. non-dev dependency enables test-support" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' 'consumer/Cargo.toml' '[dependencies]\nx = { path = "..", features = ["test-support"] }\n' '[features]\ntest-support = []\n' || ok=1
+  expect_support "$dir" accept "60. dev-dependency enables test-support" \
+    '#[cfg(any(test, feature = "test-support"))]\npub mod test_support;\n' 'consumer/Cargo.toml' '[dev-dependencies]\nx = { path = "..", features = ["test-support"] }\n' '[features]\ntest-support = []\n' || ok=1
+  expect_support "$dir" reject "61. production use crate::{test_support::x}" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' 'prod.rs' 'use crate::{test_support::shipped::pick};\npub fn run() -> u8 { 1 }\n' '' || ok=1
+  expect_support "$dir" reject "62. production use crate :: test_support (spaces)" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' 'prod.rs' 'use crate\n    :: test_support::shipped::pick;\npub fn run() -> u8 { 1 }\n' '' || ok=1
+  expect_support "$dir" reject "63. production glob import then bare test_support::" \
+    '#[cfg(test)]\nmod test_support;\nmod prod;\n' 'prod.rs' 'use crate::*;\npub fn run() -> u8 { test_support::shipped::pick(true) }\n' '' || ok=1
+  expect_support "$dir" reject "64. test_support declared inside an inline module" \
+    'mod inner {\n    #[cfg(test)]\n    mod test_support;\n}\n' '' '' '' || ok=1
+  expect_support "$dir" reject "65. stacked cfg(test) and cfg(not(test))" \
+    '#[cfg(test)]\n#[cfg(not(test))]\nmod test_support;\n' '' '' '' || ok=1
+  expect_support "$dir" reject "66. cfg_attr path redirect" \
+    '#[cfg(test)]\n#[cfg_attr(test, path = "elsewhere.rs")]\nmod test_support;\n' '' '' '' || ok=1
   printf '# count: 1\nsrc/a.rs\nsrc/b.rs\n' >"$dir/budget.txt"
   expect_budget "$dir/budget.txt" 5 reject "19. exemption list grew past its count" || ok=1
   printf '# count: 9\nsrc/a.rs\n' >"$dir/budget.txt"
