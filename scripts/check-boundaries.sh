@@ -210,12 +210,13 @@ is_cfg_test_module_file() {
 }
 
 # Kind B: a SeaORM entity file holding data only: no fn, no macro_rules!, and
-# no impl other than the empty ActiveModelBehavior marker.
+# no static or closure initialiser, and no impl other than the empty
+# ActiveModelBehavior marker.
 is_data_only_entity_file() {
   local file="$1" code
   case "$file" in */persistence/entities/*.rs | */entity.rs) ;; *) return 1 ;; esac
   code="$(grep -vE '^[[:space:]]*//' "$file")"
-  printf '%s\n' "$code" | grep -qE '\bfn\b|macro_rules!' && return 1
+  printf '%s\n' "$code" | grep -qE '\bfn\b|macro_rules!|\bstatic\b|\|\|' && return 1
   ! printf '%s\n' "$code" | grep -E '\bimpl\b' |
     grep -qvE '^[[:space:]]*impl ActiveModelBehavior for ActiveModel \{\}[[:space:]]*$'
 }
@@ -611,10 +612,20 @@ kind_self_test() {
   kind_expect "$dir" reject "26. entity with a non-empty impl" || ok=1
   printf 'pub struct Model;\nmacro_rules! m { () => {}; }\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
   kind_expect "$dir" reject "27. entity with macro_rules!" || ok=1
+  printf 'pub static F: LazyLock<u8> = LazyLock::new(|| 1);\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
+  kind_expect "$dir" reject "29. entity with a static closure initialiser" || ok=1
   printf 'pub struct Model;\nimpl ActiveModelBehavior for ActiveModel {}\n' >"$entity"
   mkdir -p "$dir/scripts"
   printf '# count: 1\nsrc/persistence/entities/users.rs\n' >"$dir/scripts/layout-test-exemptions.txt"
   kind_expect "$dir" reject "28. stale exemption for a kind file" || ok=1
+  remove_fixture_dir "$dir"
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src/router_tests"
+  printf '#[cfg(test)]\n#[path = "router_tests/mod.rs"]\nmod router_tests;\n' >"$dir/src/lib.rs"
+  printf 'mod auth;\n' >"$dir/src/router_tests/mod.rs"
+  printf 'pub fn helper() {}\n' >"$dir/src/router_tests/auth.rs"
+  printf 'pub fn orphan() {}\n' >"$dir/src/router_tests/orphan.rs"
+  kind_expect "$dir" reject "30. router_tests file never declared in mod.rs" || ok=1
   remove_fixture_dir "$dir"
   return "$ok"
 }
