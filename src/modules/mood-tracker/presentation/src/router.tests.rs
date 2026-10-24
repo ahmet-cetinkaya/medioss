@@ -17,7 +17,7 @@ use mood_tracker_application::{
     ports::{
         Clock, MeditationTimelineEvent, MeditationTimelineEventKind, MeditationTimelineSource,
     },
-    queries::get_mood_history::MoodHistoryService,
+    queries::get_mood_history::GetMoodHistoryService,
     queries::get_mood_statistics::GetMoodStatisticsService,
     queries::get_timeline::GetTimelineService,
     test_support::{FakeMoodEntryRepository, FixedClock},
@@ -57,7 +57,7 @@ fn app(events: Vec<MeditationTimelineEvent>) -> TestApp {
         create: StdArc::new(CreateMoodEntryService::new(entries.clone(), clock.clone())),
         update: StdArc::new(UpdateMoodEntryService::new(entries.clone(), clock.clone())),
         delete: StdArc::new(DeleteMoodEntryService::new(entries.clone())),
-        get_mood_history: StdArc::new(MoodHistoryService::new(entries.clone(), clock.clone())),
+        get_mood_history: StdArc::new(GetMoodHistoryService::new(entries.clone(), clock.clone())),
         get_mood_statistics: StdArc::new(GetMoodStatisticsService::new(entries, clock.clone())),
         get_timeline: StdArc::new(GetTimelineService::new(
             timeline_entries,

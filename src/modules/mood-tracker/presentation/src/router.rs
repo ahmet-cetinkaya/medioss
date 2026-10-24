@@ -8,7 +8,7 @@ use mood_tracker_application::commands::create_mood_entry::CreateMoodEntry;
 use mood_tracker_application::commands::delete_mood_entry::DeleteMoodEntry;
 use mood_tracker_application::commands::update_mood_entry::UpdateMoodEntry;
 use mood_tracker_application::models::MoodRange;
-use mood_tracker_application::queries::get_mood_history::MoodHistory;
+use mood_tracker_application::queries::get_mood_history::GetMoodHistory;
 use mood_tracker_application::queries::get_mood_statistics::GetMoodStatistics;
 use mood_tracker_application::queries::get_timeline::{GetTimeline, TimelineKind};
 use mood_tracker_application::ApplicationError;
@@ -230,7 +230,7 @@ async fn list(
 ) -> Result<Json<HistoryResponse>, ApiError> {
     let page = deps
         .get_mood_history
-        .handle(MoodHistory {
+        .handle(GetMoodHistory {
             user_id: actor.user_id(),
             range: range(
                 query.range.as_deref(),

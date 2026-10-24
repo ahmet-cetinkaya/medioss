@@ -1,27 +1,27 @@
 use std::sync::Arc;
 
-use super::get_mood_history::MoodHistory;
-use super::get_mood_history_handler::MoodHistoryHandler;
+use super::get_mood_history::GetMoodHistory;
+use super::get_mood_history_handler::GetMoodHistoryHandler;
 use crate::models::MoodRange;
 use crate::ports::{Clock, MoodEntryRepository, Page};
 use crate::ApplicationError;
 use chrono::{DateTime, FixedOffset, Utc};
 use mood_tracker_domain::MoodEntry;
 
-pub struct MoodHistoryService {
+pub struct GetMoodHistoryService {
     entries: Arc<dyn MoodEntryRepository>,
     clock: Arc<dyn Clock>,
 }
 
-impl MoodHistoryService {
+impl GetMoodHistoryService {
     pub fn new(entries: Arc<dyn MoodEntryRepository>, clock: Arc<dyn Clock>) -> Self {
         Self { entries, clock }
     }
 }
 
 #[async_trait::async_trait]
-impl MoodHistoryHandler for MoodHistoryService {
-    async fn handle(&self, query: MoodHistory) -> Result<Page<MoodEntry>, ApplicationError> {
+impl GetMoodHistoryHandler for GetMoodHistoryService {
+    async fn handle(&self, query: GetMoodHistory) -> Result<Page<MoodEntry>, ApplicationError> {
         get_mood_history(
             self.entries.as_ref(),
             query.user_id,
