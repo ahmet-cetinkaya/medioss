@@ -1,18 +1,21 @@
 use std::sync::Arc;
 
 use super::continue_program::ContinueProgram;
-use super::get_continue_program::GetContinueProgram;
-use super::get_continue_program_handler::GetContinueProgramHandler;
-use crate::ports::{MembershipRepository, PlaybackStateRepository, ProgramRepository};
+use super::get_continue_program_query::GetContinueProgramQuery;
+use super::get_continue_program_query_validator::GetContinueProgramQueryValidator;
+use crate::ports::{
+    MembershipRepository, PlaybackStateRepository, ProgramRepository, QueryHandler,
+};
 use crate::ApplicationError;
 
-pub struct GetContinueProgramService {
+pub struct GetContinueProgramQueryHandler {
     playback: Arc<dyn PlaybackStateRepository>,
     memberships: Arc<dyn MembershipRepository>,
     programs: Arc<dyn ProgramRepository>,
+    validator: GetContinueProgramQueryValidator,
 }
 
-impl GetContinueProgramService {
+impl GetContinueProgramQueryHandler {
     pub fn new(
         playback: Arc<dyn PlaybackStateRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -22,16 +25,20 @@ impl GetContinueProgramService {
             playback,
             memberships,
             programs,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl GetContinueProgramHandler for GetContinueProgramService {
+impl QueryHandler<GetContinueProgramQuery> for GetContinueProgramQueryHandler {
+    type Output = Option<ContinueProgram>;
+
     async fn handle(
         &self,
-        query: GetContinueProgram,
+        query: GetContinueProgramQuery,
     ) -> Result<Option<ContinueProgram>, ApplicationError> {
+        self.validator.validate(&query)?;
         let user_id = query.user_id;
         // Walk touches most-recent-first: a deleted meditation (no membership,
         // no program) must not permanently hide "continue" behind a live one
@@ -68,5 +75,5 @@ impl GetContinueProgramHandler for GetContinueProgramService {
 }
 
 #[cfg(test)]
-#[path = "get_continue_program_service.tests.rs"]
+#[path = "get_continue_program_query_handler.tests.rs"]
 mod tests;

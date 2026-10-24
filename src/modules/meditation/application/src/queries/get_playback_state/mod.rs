@@ -1,7 +1,7 @@
-mod get_playback_state;
-mod get_playback_state_handler;
-mod get_playback_state_service;
+mod get_playback_state_query;
+mod get_playback_state_query_handler;
+mod get_playback_state_query_validator;
 
-pub use get_playback_state::GetPlaybackState;
-pub use get_playback_state_handler::GetPlaybackStateHandler;
-pub use get_playback_state_service::GetPlaybackStateService;
+pub use get_playback_state_query::GetPlaybackStateQuery;
+pub use get_playback_state_query_handler::GetPlaybackStateQueryHandler;
+pub use get_playback_state_query_validator::GetPlaybackStateQueryValidator;

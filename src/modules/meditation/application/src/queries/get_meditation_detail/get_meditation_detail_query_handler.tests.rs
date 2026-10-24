@@ -1,12 +1,13 @@
+use crate::ports::QueryHandler;
 use crate::ports::{MembershipRepository, ProgramRepository};
 use crate::queries::get_meditation_detail::{
-    GetMeditationDetail, GetMeditationDetailHandler, GetMeditationDetailService,
+    GetMeditationDetailQuery, GetMeditationDetailQueryHandler,
 };
 use crate::test_support::TestDeps;
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> GetMeditationDetailService {
-    GetMeditationDetailService::new(
+fn service(deps: &TestDeps) -> GetMeditationDetailQueryHandler {
+    GetMeditationDetailQueryHandler::new(
         deps.meditations.clone(),
         deps.memberships.clone(),
         deps.programs.clone(),
@@ -20,7 +21,7 @@ async fn includes_the_home_program() {
     let meditation = deps.seed_meditation_in(program, "Sit").await;
 
     let detail = service(&deps)
-        .handle(GetMeditationDetail {
+        .handle(GetMeditationDetailQuery {
             meditation_id: meditation.id(),
         })
         .await
@@ -41,7 +42,7 @@ async fn meditation_without_membership_has_no_program() {
         .unwrap();
 
     let detail = service(&deps)
-        .handle(GetMeditationDetail {
+        .handle(GetMeditationDetailQuery {
             meditation_id: meditation.id(),
         })
         .await
@@ -58,7 +59,7 @@ async fn missing_program_row_degrades_to_no_program() {
     deps.programs.delete(program).await.unwrap();
 
     let detail = service(&deps)
-        .handle(GetMeditationDetail {
+        .handle(GetMeditationDetailQuery {
             meditation_id: meditation.id(),
         })
         .await
@@ -72,7 +73,7 @@ async fn unknown_meditation_is_not_found() {
     let deps = TestDeps::new();
 
     let result = service(&deps)
-        .handle(GetMeditationDetail {
+        .handle(GetMeditationDetailQuery {
             meditation_id: 9999,
         })
         .await;

@@ -1,23 +1,21 @@
 use crate::commands::replace_program_cover::{
-    ReplaceProgramCoverCommand, ReplaceProgramCoverCommandHandler,
+    ReplaceProgramCover, ReplaceProgramCoverHandler, ReplaceProgramCoverService,
 };
-use crate::ports::CommandHandler;
-use crate::queries::get_program_cover::{
-    GetProgramCover, GetProgramCoverHandler, GetProgramCoverService,
-};
+use crate::ports::QueryHandler;
+use crate::queries::get_program_cover::{GetProgramCoverQuery, GetProgramCoverQueryHandler};
 use crate::test_support::{user_a, TestDeps};
 use crate::ApplicationError;
 
 const PNG_MAGIC: [u8; 4] = [0x89, b'P', b'N', b'G'];
 const JPEG_MAGIC: [u8; 3] = [0xFF, 0xD8, 0xFF];
 
-fn service(deps: &TestDeps) -> GetProgramCoverService {
-    GetProgramCoverService::new(deps.programs.clone(), deps.store.clone())
+fn service(deps: &TestDeps) -> GetProgramCoverQueryHandler {
+    GetProgramCoverQueryHandler::new(deps.programs.clone(), deps.store.clone())
 }
 
 async fn store_cover(deps: &TestDeps, program_id: i64, bytes: &[u8]) {
-    ReplaceProgramCoverCommandHandler::new(deps.programs.clone(), deps.store.clone())
-        .handle(ReplaceProgramCoverCommand {
+    ReplaceProgramCoverService::new(deps.programs.clone(), deps.store.clone())
+        .handle(ReplaceProgramCover {
             requester_id: user_a(),
             program_id,
             bytes: bytes.to_vec(),
@@ -31,7 +29,7 @@ async fn content_type_for(bytes: &[u8]) -> &'static str {
     let program = deps.seed_program("Program").await;
     store_cover(&deps, program, bytes).await;
     service(&deps)
-        .handle(GetProgramCover {
+        .handle(GetProgramCoverQuery {
             requester_id: user_a(),
             program_id: program,
         })
@@ -55,7 +53,7 @@ async fn returns_the_exact_bytes() {
     store_cover(&deps, program, b"RIFFxxxxWEBP").await;
 
     let cover = service(&deps)
-        .handle(GetProgramCover {
+        .handle(GetProgramCoverQuery {
             requester_id: user_a(),
             program_id: program,
         })
@@ -72,7 +70,7 @@ async fn program_without_cover_yields_none() {
     let program = deps.seed_program("Program").await;
 
     let cover = service(&deps)
-        .handle(GetProgramCover {
+        .handle(GetProgramCoverQuery {
             requester_id: user_a(),
             program_id: program,
         })
@@ -87,7 +85,7 @@ async fn unknown_program_yields_none() {
     let deps = TestDeps::new();
 
     let cover = service(&deps)
-        .handle(GetProgramCover {
+        .handle(GetProgramCoverQuery {
             requester_id: user_a(),
             program_id: 9999,
         })
@@ -105,7 +103,7 @@ async fn store_failure_is_a_storage_error() {
     *deps.store.failures.lock().unwrap() = true;
 
     let result = service(&deps)
-        .handle(GetProgramCover {
+        .handle(GetProgramCoverQuery {
             requester_id: user_a(),
             program_id: program,
         })

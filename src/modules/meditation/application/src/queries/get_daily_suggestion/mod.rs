@@ -1,9 +1,9 @@
 mod daily_suggestion;
-mod get_daily_suggestion;
-mod get_daily_suggestion_handler;
-mod get_daily_suggestion_service;
+mod get_daily_suggestion_query;
+mod get_daily_suggestion_query_handler;
+mod get_daily_suggestion_query_validator;
 
 pub use daily_suggestion::DailySuggestion;
-pub use get_daily_suggestion::GetDailySuggestion;
-pub use get_daily_suggestion_handler::GetDailySuggestionHandler;
-pub use get_daily_suggestion_service::GetDailySuggestionService;
+pub use get_daily_suggestion_query::GetDailySuggestionQuery;
+pub use get_daily_suggestion_query_handler::GetDailySuggestionQueryHandler;
+pub use get_daily_suggestion_query_validator::GetDailySuggestionQueryValidator;

@@ -1,7 +1,7 @@
 use kernel::UserId;
 
 #[derive(Debug, Clone)]
-pub struct GetProgramCover {
+pub struct GetProgramCoverQuery {
     /// Authenticated requester; covers are only served to signed-in users.
     #[allow(dead_code)]
     pub requester_id: UserId,

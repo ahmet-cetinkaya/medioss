@@ -1,18 +1,24 @@
 use std::sync::Arc;
 
-use super::get_program_cover::GetProgramCover;
-use super::get_program_cover_handler::{GetProgramCoverHandler, ProgramCover};
-use crate::ports::{BlobStore, ProgramRepository};
+use super::get_program_cover_query::GetProgramCoverQuery;
+use super::get_program_cover_query_validator::GetProgramCoverQueryValidator;
+use super::program_cover::ProgramCover;
+use crate::ports::{BlobStore, ProgramRepository, QueryHandler};
 use crate::ApplicationError;
 
-pub struct GetProgramCoverService {
+pub struct GetProgramCoverQueryHandler {
     programs: Arc<dyn ProgramRepository>,
     store: Arc<dyn BlobStore>,
+    validator: GetProgramCoverQueryValidator,
 }
 
-impl GetProgramCoverService {
+impl GetProgramCoverQueryHandler {
     pub fn new(programs: Arc<dyn ProgramRepository>, store: Arc<dyn BlobStore>) -> Self {
-        Self { programs, store }
+        Self {
+            programs,
+            store,
+            validator: Default::default(),
+        }
     }
 }
 
@@ -27,11 +33,14 @@ fn sniff_content_type(bytes: &[u8]) -> &'static str {
 }
 
 #[async_trait::async_trait]
-impl GetProgramCoverHandler for GetProgramCoverService {
+impl QueryHandler<GetProgramCoverQuery> for GetProgramCoverQueryHandler {
+    type Output = Option<ProgramCover>;
+
     async fn handle(
         &self,
-        query: GetProgramCover,
+        query: GetProgramCoverQuery,
     ) -> Result<Option<ProgramCover>, ApplicationError> {
+        self.validator.validate(&query)?;
         let program = self
             .programs
             .find_by_id(query.program_id)
@@ -54,5 +63,5 @@ impl GetProgramCoverHandler for GetProgramCoverService {
 }
 
 #[cfg(test)]
-#[path = "get_program_cover_service.tests.rs"]
+#[path = "get_program_cover_query_handler.tests.rs"]
 mod tests;

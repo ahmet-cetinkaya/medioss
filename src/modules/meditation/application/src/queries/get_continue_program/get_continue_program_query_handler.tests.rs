@@ -1,11 +1,12 @@
 use crate::ports::PlaybackStateRepository;
+use crate::ports::QueryHandler;
 use crate::queries::get_continue_program::{
-    GetContinueProgram, GetContinueProgramHandler, GetContinueProgramService,
+    GetContinueProgramQuery, GetContinueProgramQueryHandler,
 };
 use crate::test_support::{user_a, TestDeps};
 
-fn service(deps: &TestDeps) -> GetContinueProgramService {
-    GetContinueProgramService::new(
+fn service(deps: &TestDeps) -> GetContinueProgramQueryHandler {
+    GetContinueProgramQueryHandler::new(
         deps.playback.clone(),
         deps.memberships.clone(),
         deps.programs.clone(),
@@ -23,7 +24,7 @@ async fn continue_program_resolves_the_home_program_of_the_last_touch() {
         .expect("touch");
 
     let found = service(&deps)
-        .handle(GetContinueProgram { user_id: user_a() })
+        .handle(GetContinueProgramQuery { user_id: user_a() })
         .await
         .expect("query")
         .expect("some");
@@ -35,7 +36,7 @@ async fn continue_program_resolves_the_home_program_of_the_last_touch() {
 async fn continue_program_is_none_for_an_untouched_user() {
     let deps = TestDeps::new();
     let found = service(&deps)
-        .handle(GetContinueProgram { user_id: user_a() })
+        .handle(GetContinueProgramQuery { user_id: user_a() })
         .await
         .expect("query");
     assert!(found.is_none());
@@ -62,7 +63,7 @@ async fn continue_program_falls_back_past_a_deleted_meditations_touch() {
         .expect("touch orphan");
 
     let found = service(&deps)
-        .handle(GetContinueProgram { user_id: user_a() })
+        .handle(GetContinueProgramQuery { user_id: user_a() })
         .await
         .expect("query")
         .expect("some");

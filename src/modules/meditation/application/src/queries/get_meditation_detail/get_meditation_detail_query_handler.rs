@@ -1,19 +1,20 @@
 use std::sync::Arc;
 
-use super::get_meditation_detail::GetMeditationDetail;
-use super::get_meditation_detail_handler::GetMeditationDetailHandler;
+use super::get_meditation_detail_query::GetMeditationDetailQuery;
+use super::get_meditation_detail_query_validator::GetMeditationDetailQueryValidator;
 use super::meditation_detail::MeditationDetail;
-use crate::ports::{MeditationRepository, MembershipRepository, ProgramRepository};
+use crate::ports::{MeditationRepository, MembershipRepository, ProgramRepository, QueryHandler};
 use crate::services::load_meditation;
 use crate::ApplicationError;
 
-pub struct GetMeditationDetailService {
+pub struct GetMeditationDetailQueryHandler {
     meditations: Arc<dyn MeditationRepository>,
     memberships: Arc<dyn MembershipRepository>,
     programs: Arc<dyn ProgramRepository>,
+    validator: GetMeditationDetailQueryValidator,
 }
 
-impl GetMeditationDetailService {
+impl GetMeditationDetailQueryHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -23,16 +24,20 @@ impl GetMeditationDetailService {
             meditations,
             memberships,
             programs,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl GetMeditationDetailHandler for GetMeditationDetailService {
+impl QueryHandler<GetMeditationDetailQuery> for GetMeditationDetailQueryHandler {
+    type Output = MeditationDetail;
+
     async fn handle(
         &self,
-        query: GetMeditationDetail,
+        query: GetMeditationDetailQuery,
     ) -> Result<MeditationDetail, ApplicationError> {
+        self.validator.validate(&query)?;
         // Loads one meditation together with its home program (spec FR-008):
         // the Player borrows the program's cover and links to it by title, so
         // the detail read needs the program row, not just its id. `program` is
@@ -61,5 +66,5 @@ impl GetMeditationDetailHandler for GetMeditationDetailService {
 }
 
 #[cfg(test)]
-#[path = "get_meditation_detail_service.tests.rs"]
+#[path = "get_meditation_detail_query_handler.tests.rs"]
 mod tests;

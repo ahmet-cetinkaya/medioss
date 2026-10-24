@@ -1,18 +1,19 @@
 use std::sync::Arc;
 
-use super::get_playback_state::GetPlaybackState;
-use super::get_playback_state_handler::GetPlaybackStateHandler;
+use super::get_playback_state_query::GetPlaybackStateQuery;
+use super::get_playback_state_query_validator::GetPlaybackStateQueryValidator;
 use crate::ports::PlaybackState;
-use crate::ports::{MeditationRepository, PlaybackStateRepository};
+use crate::ports::{MeditationRepository, PlaybackStateRepository, QueryHandler};
 use crate::services::load_meditation;
 use crate::ApplicationError;
 
-pub struct GetPlaybackStateService {
+pub struct GetPlaybackStateQueryHandler {
     meditations: Arc<dyn MeditationRepository>,
     playback: Arc<dyn PlaybackStateRepository>,
+    validator: GetPlaybackStateQueryValidator,
 }
 
-impl GetPlaybackStateService {
+impl GetPlaybackStateQueryHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         playback: Arc<dyn PlaybackStateRepository>,
@@ -20,15 +21,22 @@ impl GetPlaybackStateService {
         Self {
             meditations,
             playback,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl GetPlaybackStateHandler for GetPlaybackStateService {
-    async fn handle(&self, query: GetPlaybackState) -> Result<PlaybackState, ApplicationError> {
+impl QueryHandler<GetPlaybackStateQuery> for GetPlaybackStateQueryHandler {
+    type Output = PlaybackState;
+
+    async fn handle(
+        &self,
+        query: GetPlaybackStateQuery,
+    ) -> Result<PlaybackState, ApplicationError> {
+        self.validator.validate(&query)?;
         // Zero/false when never played (spec FR-016).
-        let GetPlaybackState {
+        let GetPlaybackStateQuery {
             user_id,
             meditation_id,
         } = query;
@@ -46,5 +54,5 @@ impl GetPlaybackStateHandler for GetPlaybackStateService {
 }
 
 #[cfg(test)]
-#[path = "get_playback_state_service.tests.rs"]
+#[path = "get_playback_state_query_handler.tests.rs"]
 mod tests;

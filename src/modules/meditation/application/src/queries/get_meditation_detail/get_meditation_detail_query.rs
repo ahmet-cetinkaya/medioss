@@ -1,4 +1,4 @@
 #[derive(Debug, Clone)]
-pub struct GetMeditationDetail {
+pub struct GetMeditationDetailQuery {
     pub meditation_id: i64,
 }

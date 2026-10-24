@@ -1,12 +1,11 @@
 use crate::ports::PlaybackState;
-use crate::queries::get_playback_state::{
-    GetPlaybackState, GetPlaybackStateHandler, GetPlaybackStateService,
-};
+use crate::ports::QueryHandler;
+use crate::queries::get_playback_state::{GetPlaybackStateQuery, GetPlaybackStateQueryHandler};
 use crate::test_support::{user_a, user_b, TestDeps};
 use crate::ApplicationError;
 
-fn service(deps: &TestDeps) -> GetPlaybackStateService {
-    GetPlaybackStateService::new(deps.meditations.clone(), deps.playback.clone())
+fn service(deps: &TestDeps) -> GetPlaybackStateQueryHandler {
+    GetPlaybackStateQueryHandler::new(deps.meditations.clone(), deps.playback.clone())
 }
 
 #[tokio::test]
@@ -15,7 +14,7 @@ async fn never_played_is_zero_and_not_completed() {
     let meditation = deps.seeded_meditation().await;
 
     let state = service(&deps)
-        .handle(GetPlaybackState {
+        .handle(GetPlaybackStateQuery {
             user_id: user_a(),
             meditation_id: meditation.id(),
         })
@@ -44,14 +43,14 @@ async fn returns_the_stored_state_for_that_user_only() {
         .seed_playback(user_a(), meditation.id(), stored);
 
     let own = service(&deps)
-        .handle(GetPlaybackState {
+        .handle(GetPlaybackStateQuery {
             user_id: user_a(),
             meditation_id: meditation.id(),
         })
         .await
         .unwrap();
     let other = service(&deps)
-        .handle(GetPlaybackState {
+        .handle(GetPlaybackStateQuery {
             user_id: user_b(),
             meditation_id: meditation.id(),
         })
@@ -67,7 +66,7 @@ async fn unknown_meditation_is_not_found() {
     let deps = TestDeps::new();
 
     let result = service(&deps)
-        .handle(GetPlaybackState {
+        .handle(GetPlaybackStateQuery {
             user_id: user_a(),
             meditation_id: 9999,
         })

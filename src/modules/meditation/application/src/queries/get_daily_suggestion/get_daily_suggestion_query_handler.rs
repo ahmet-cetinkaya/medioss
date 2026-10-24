@@ -1,20 +1,23 @@
 use std::sync::Arc;
 
 use super::daily_suggestion::DailySuggestion;
-use super::get_daily_suggestion::GetDailySuggestion;
-use super::get_daily_suggestion_handler::GetDailySuggestionHandler;
-use crate::ports::{Clock, MeditationRepository, MembershipRepository, ProgramRepository};
+use super::get_daily_suggestion_query::GetDailySuggestionQuery;
+use super::get_daily_suggestion_query_validator::GetDailySuggestionQueryValidator;
+use crate::ports::{
+    Clock, MeditationRepository, MembershipRepository, ProgramRepository, QueryHandler,
+};
 use crate::ApplicationError;
 use chrono::Datelike;
 
-pub struct GetDailySuggestionService {
+pub struct GetDailySuggestionQueryHandler {
     meditations: Arc<dyn MeditationRepository>,
     clock: Arc<dyn Clock>,
     memberships: Arc<dyn MembershipRepository>,
     programs: Arc<dyn ProgramRepository>,
+    validator: GetDailySuggestionQueryValidator,
 }
 
-impl GetDailySuggestionService {
+impl GetDailySuggestionQueryHandler {
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         clock: Arc<dyn Clock>,
@@ -26,16 +29,20 @@ impl GetDailySuggestionService {
             clock,
             memberships,
             programs,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl GetDailySuggestionHandler for GetDailySuggestionService {
+impl QueryHandler<GetDailySuggestionQuery> for GetDailySuggestionQueryHandler {
+    type Output = Option<DailySuggestion>;
+
     async fn handle(
         &self,
-        _query: GetDailySuggestion,
+        _query: GetDailySuggestionQuery,
     ) -> Result<Option<DailySuggestion>, ApplicationError> {
+        self.validator.validate(&_query)?;
         let mut library = self
             .meditations
             .list_all()
@@ -73,5 +80,5 @@ impl GetDailySuggestionHandler for GetDailySuggestionService {
 }
 
 #[cfg(test)]
-#[path = "get_daily_suggestion_service.tests.rs"]
+#[path = "get_daily_suggestion_query_handler.tests.rs"]
 mod tests;
