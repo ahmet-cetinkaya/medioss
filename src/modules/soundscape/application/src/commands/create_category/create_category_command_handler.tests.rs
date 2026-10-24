@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use super::{CreateCategory, CreateCategoryHandler, CreateCategoryService};
+use super::{CreateCategoryCommand, CreateCategoryCommandHandler};
+use crate::ports::CommandHandler;
 use crate::ports::{CategoryDelete, CategoryRepository};
 use crate::ApplicationError;
 use async_trait::async_trait;
@@ -31,10 +32,10 @@ impl CategoryRepository for Categories {
 
 #[tokio::test]
 async fn duplicate_category_is_a_conflict_shaped_application_error() {
-    let service = CreateCategoryService::new(Arc::new(Categories));
+    let service = CreateCategoryCommandHandler::new(Arc::new(Categories));
     assert_eq!(
         service
-            .handle(CreateCategory {
+            .handle(CreateCategoryCommand {
                 name: "Rain".into()
             })
             .await,

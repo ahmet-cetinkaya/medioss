@@ -11,16 +11,16 @@ fn item(sound_id: i64, position: i64) -> MixItem {
     }
 }
 
-fn service(mixes: Arc<InMemoryMixes>) -> CreateMixService {
-    CreateMixService::new(
+fn service(mixes: Arc<InMemoryMixes>) -> CreateMixCommandHandler {
+    CreateMixCommandHandler::new(
         mixes,
         Arc::new(InMemorySounds::with(vec![sample_sound(1), sample_sound(2)])),
         Arc::new(FixedClock(sample_epoch())),
     )
 }
 
-fn command(name: &str, items: Vec<MixItem>) -> CreateMix {
-    CreateMix {
+fn command(name: &str, items: Vec<MixItem>) -> CreateMixCommand {
+    CreateMixCommand {
         user_id: UserId::new(7),
         name: name.into(),
         items,

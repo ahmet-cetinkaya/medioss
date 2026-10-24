@@ -1,19 +1,21 @@
 use std::sync::Arc;
 
-use super::update_mix::UpdateMix;
-use super::update_mix_handler::UpdateMixHandler;
+use super::update_mix_command::UpdateMixCommand;
+use super::update_mix_command_validator::UpdateMixCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::{Clock, MixRepository, NewMix, SoundRepository};
-use crate::services::{ensure_sounds_exist, validate_mix_items};
+use crate::services::ensure_sounds_exist;
 use crate::ApplicationError;
-use soundscape_domain::{valid_name, Mix};
+use soundscape_domain::Mix;
 
-pub struct UpdateMixService {
+pub struct UpdateMixCommandHandler {
     mixes: Arc<dyn MixRepository>,
     sounds: Arc<dyn SoundRepository>,
     clock: Arc<dyn Clock>,
+    validator: UpdateMixCommandValidator,
 }
 
-impl UpdateMixService {
+impl UpdateMixCommandHandler {
     pub fn new(
         mixes: Arc<dyn MixRepository>,
         sounds: Arc<dyn SoundRepository>,
@@ -23,22 +25,24 @@ impl UpdateMixService {
             mixes,
             sounds,
             clock,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl UpdateMixHandler for UpdateMixService {
-    async fn handle(&self, command: UpdateMix) -> Result<Mix, ApplicationError> {
-        valid_name(&command.name).map_err(|_| ApplicationError::InvalidInput("mix name"))?;
-        validate_mix_items(&command.items)?;
+impl CommandHandler<UpdateMixCommand> for UpdateMixCommandHandler {
+    type Output = Mix;
+
+    async fn handle(&self, command: UpdateMixCommand) -> Result<Self::Output, ApplicationError> {
+        self.validator.validate(&command)?;
         ensure_sounds_exist(self.sounds.as_ref(), &command.items).await?;
         self.mixes
             .replace(
                 command.id,
                 NewMix {
                     user_id: command.user_id,
-                    name: command.name.trim().into(),
+                    name: self.validator.normalized_name(&command),
                     items: command.items,
                     now: self.clock.now().await,
                 },
@@ -50,5 +54,5 @@ impl UpdateMixHandler for UpdateMixService {
 }
 
 #[cfg(test)]
-#[path = "update_mix_service.tests.rs"]
+#[path = "update_mix_command_handler.tests.rs"]
 mod tests;

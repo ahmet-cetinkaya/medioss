@@ -1,8 +1,8 @@
 use super::*;
 use crate::test_support::InMemoryCategories;
 
-fn command(name: &str) -> RenameCategory {
-    RenameCategory {
+fn command(name: &str) -> RenameCategoryCommand {
+    RenameCategoryCommand {
         id: 1,
         name: name.into(),
     }
@@ -11,7 +11,7 @@ fn command(name: &str) -> RenameCategory {
 #[tokio::test]
 async fn renames_an_existing_category() {
     let categories = InMemoryCategories::with(vec![SoundCategory::new(1, "Old", "old").unwrap()]);
-    let renamed = RenameCategoryService::new(Arc::new(categories))
+    let renamed = RenameCategoryCommandHandler::new(Arc::new(categories))
         .handle(command("Nature"))
         .await
         .unwrap();
@@ -20,7 +20,7 @@ async fn renames_an_existing_category() {
 
 #[tokio::test]
 async fn blank_name_is_rejected() {
-    let result = RenameCategoryService::new(Arc::new(InMemoryCategories::default()))
+    let result = RenameCategoryCommandHandler::new(Arc::new(InMemoryCategories::default()))
         .handle(command("  "))
         .await;
     assert_eq!(result, Err(ApplicationError::InvalidInput("category name")));
@@ -28,7 +28,7 @@ async fn blank_name_is_rejected() {
 
 #[tokio::test]
 async fn unknown_category_is_not_found() {
-    let result = RenameCategoryService::new(Arc::new(InMemoryCategories::default()))
+    let result = RenameCategoryCommandHandler::new(Arc::new(InMemoryCategories::default()))
         .handle(command("Nature"))
         .await;
     assert_eq!(result, Err(ApplicationError::NotFound));
@@ -38,7 +38,7 @@ async fn unknown_category_is_not_found() {
 async fn unique_violation_becomes_duplicate() {
     let categories =
         InMemoryCategories::failing("UNIQUE constraint failed: soundscape_categories.name");
-    let result = RenameCategoryService::new(Arc::new(categories))
+    let result = RenameCategoryCommandHandler::new(Arc::new(categories))
         .handle(command("Nature"))
         .await;
     assert_eq!(result, Err(ApplicationError::Duplicate));
@@ -46,7 +46,7 @@ async fn unique_violation_becomes_duplicate() {
 
 #[tokio::test]
 async fn other_repository_failure_is_reported() {
-    let result = RenameCategoryService::new(Arc::new(InMemoryCategories::failing("boom")))
+    let result = RenameCategoryCommandHandler::new(Arc::new(InMemoryCategories::failing("boom")))
         .handle(command("Nature"))
         .await;
     assert_eq!(result, Err(ApplicationError::Repository("boom".into())));

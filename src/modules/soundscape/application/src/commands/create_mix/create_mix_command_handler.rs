@@ -1,19 +1,21 @@
 use std::sync::Arc;
 
-use super::create_mix::CreateMix;
-use super::create_mix_handler::CreateMixHandler;
+use super::create_mix_command::CreateMixCommand;
+use super::create_mix_command_validator::CreateMixCommandValidator;
+use crate::ports::CommandHandler;
 use crate::ports::{Clock, MixRepository, NewMix, SoundRepository};
-use crate::services::{ensure_sounds_exist, validate_mix_items};
+use crate::services::ensure_sounds_exist;
 use crate::ApplicationError;
-use soundscape_domain::{valid_name, Mix};
+use soundscape_domain::Mix;
 
-pub struct CreateMixService {
+pub struct CreateMixCommandHandler {
     mixes: Arc<dyn MixRepository>,
     sounds: Arc<dyn SoundRepository>,
     clock: Arc<dyn Clock>,
+    validator: CreateMixCommandValidator,
 }
 
-impl CreateMixService {
+impl CreateMixCommandHandler {
     pub fn new(
         mixes: Arc<dyn MixRepository>,
         sounds: Arc<dyn SoundRepository>,
@@ -23,20 +25,22 @@ impl CreateMixService {
             mixes,
             sounds,
             clock,
+            validator: Default::default(),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl CreateMixHandler for CreateMixService {
-    async fn handle(&self, command: CreateMix) -> Result<Mix, ApplicationError> {
-        valid_name(&command.name).map_err(|_| ApplicationError::InvalidInput("mix name"))?;
-        validate_mix_items(&command.items)?;
+impl CommandHandler<CreateMixCommand> for CreateMixCommandHandler {
+    type Output = Mix;
+
+    async fn handle(&self, command: CreateMixCommand) -> Result<Self::Output, ApplicationError> {
+        self.validator.validate(&command)?;
         ensure_sounds_exist(self.sounds.as_ref(), &command.items).await?;
         self.mixes
             .create(NewMix {
                 user_id: command.user_id,
-                name: command.name.trim().into(),
+                name: self.validator.normalized_name(&command),
                 items: command.items,
                 now: self.clock.now().await,
             })
@@ -46,5 +50,5 @@ impl CreateMixHandler for CreateMixService {
 }
 
 #[cfg(test)]
-#[path = "create_mix_service.tests.rs"]
+#[path = "create_mix_command_handler.tests.rs"]
 mod tests;

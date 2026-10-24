@@ -14,7 +14,7 @@ fn item(sound_id: i64, position: i64) -> MixItem {
     }
 }
 
-async fn service_with_existing_mix() -> (UpdateMixService, Arc<InMemoryMixes>) {
+async fn service_with_existing_mix() -> (UpdateMixCommandHandler, Arc<InMemoryMixes>) {
     let mixes = Arc::new(InMemoryMixes::default());
     mixes
         .create(NewMix {
@@ -25,7 +25,7 @@ async fn service_with_existing_mix() -> (UpdateMixService, Arc<InMemoryMixes>) {
         })
         .await
         .unwrap();
-    let service = UpdateMixService::new(
+    let service = UpdateMixCommandHandler::new(
         mixes.clone(),
         Arc::new(InMemorySounds::with(vec![sample_sound(1), sample_sound(2)])),
         Arc::new(FixedClock(sample_epoch())),
@@ -33,8 +33,8 @@ async fn service_with_existing_mix() -> (UpdateMixService, Arc<InMemoryMixes>) {
     (service, mixes)
 }
 
-fn command(user: i64, name: &str, items: Vec<MixItem>) -> UpdateMix {
-    UpdateMix {
+fn command(user: i64, name: &str, items: Vec<MixItem>) -> UpdateMixCommand {
+    UpdateMixCommand {
         id: 1,
         user_id: UserId::new(user),
         name: name.into(),
@@ -89,7 +89,7 @@ async fn unknown_sound_is_not_found() {
 
 #[tokio::test]
 async fn repository_failure_is_reported() {
-    let service = UpdateMixService::new(
+    let service = UpdateMixCommandHandler::new(
         Arc::new(InMemoryMixes::failing("boom")),
         Arc::new(InMemorySounds::with(vec![sample_sound(1)])),
         Arc::new(FixedClock(sample_epoch())),

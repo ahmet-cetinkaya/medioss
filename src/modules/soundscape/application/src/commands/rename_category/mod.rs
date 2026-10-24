@@ -1,7 +1,7 @@
-mod rename_category;
-mod rename_category_handler;
-mod rename_category_service;
+mod rename_category_command;
+mod rename_category_command_handler;
+mod rename_category_command_validator;
 
-pub use rename_category::RenameCategory;
-pub use rename_category_handler::RenameCategoryHandler;
-pub use rename_category_service::RenameCategoryService;
+pub use rename_category_command::RenameCategoryCommand;
+pub use rename_category_command_handler::RenameCategoryCommandHandler;
+pub use rename_category_command_validator::RenameCategoryCommandValidator;

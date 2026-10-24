@@ -25,8 +25,8 @@ async fn mixes_with_one_owned_by(owner: i64) -> Arc<InMemoryMixes> {
 #[tokio::test]
 async fn owner_can_delete_the_mix() {
     let mixes = mixes_with_one_owned_by(7).await;
-    DeleteMixService::new(mixes.clone())
-        .handle(DeleteMix {
+    DeleteMixCommandHandler::new(mixes.clone())
+        .handle(DeleteMixCommand {
             id: 1,
             user_id: UserId::new(7),
         })
@@ -38,8 +38,8 @@ async fn owner_can_delete_the_mix() {
 #[tokio::test]
 async fn another_users_mix_is_not_found_and_kept() {
     let mixes = mixes_with_one_owned_by(7).await;
-    let result = DeleteMixService::new(mixes.clone())
-        .handle(DeleteMix {
+    let result = DeleteMixCommandHandler::new(mixes.clone())
+        .handle(DeleteMixCommand {
             id: 1,
             user_id: UserId::new(8),
         })
@@ -50,8 +50,8 @@ async fn another_users_mix_is_not_found_and_kept() {
 
 #[tokio::test]
 async fn repository_failure_is_reported() {
-    let result = DeleteMixService::new(Arc::new(InMemoryMixes::failing("boom")))
-        .handle(DeleteMix {
+    let result = DeleteMixCommandHandler::new(Arc::new(InMemoryMixes::failing("boom")))
+        .handle(DeleteMixCommand {
             id: 1,
             user_id: UserId::new(7),
         })

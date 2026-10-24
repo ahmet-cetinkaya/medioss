@@ -1,7 +1,7 @@
-mod create_mix;
-mod create_mix_handler;
-mod create_mix_service;
+mod create_mix_command;
+mod create_mix_command_handler;
+mod create_mix_command_validator;
 
-pub use create_mix::CreateMix;
-pub use create_mix_handler::CreateMixHandler;
-pub use create_mix_service::CreateMixService;
+pub use create_mix_command::CreateMixCommand;
+pub use create_mix_command_handler::CreateMixCommandHandler;
+pub use create_mix_command_validator::CreateMixCommandValidator;
