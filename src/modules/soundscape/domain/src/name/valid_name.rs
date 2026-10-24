@@ -9,3 +9,7 @@ pub fn valid_name(name: &str) -> Result<String, DomainError> {
     }
     Ok(name.to_owned())
 }
+
+#[cfg(test)]
+#[path = "valid_name.tests.rs"]
+mod tests;

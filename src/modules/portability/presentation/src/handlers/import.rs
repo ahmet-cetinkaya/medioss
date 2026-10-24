@@ -59,3 +59,7 @@ pub fn register(router: axum::Router<SharedDependencies>) -> axum::Router<Shared
         )),
     )
 }
+
+#[cfg(test)]
+#[path = "import.tests.rs"]
+mod tests;

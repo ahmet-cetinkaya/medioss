@@ -9,4 +9,7 @@ pub mod handlers;
 pub mod router;
 pub mod support;
 
+#[cfg(test)]
+mod test_support;
+
 pub use router::SharedDependencies;

@@ -30,3 +30,7 @@ pub async fn export_csv(
 pub fn register(router: axum::Router<SharedDependencies>) -> axum::Router<SharedDependencies> {
     router.route("/portability/export/csv", axum::routing::get(export_csv))
 }
+
+#[cfg(test)]
+#[path = "export_csv.tests.rs"]
+mod tests;

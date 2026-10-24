@@ -30,3 +30,7 @@ pub async fn export_json(
 pub fn register(router: axum::Router<SharedDependencies>) -> axum::Router<SharedDependencies> {
     router.route("/portability/export/json", axum::routing::get(export_json))
 }
+
+#[cfg(test)]
+#[path = "export_json.tests.rs"]
+mod tests;

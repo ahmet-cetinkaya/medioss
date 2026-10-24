@@ -19,3 +19,7 @@ impl<S: Send + Sync> FromRequestParts<S> for CurrentActor {
             .ok_or(StatusCode::UNAUTHORIZED)
     }
 }
+
+#[cfg(test)]
+#[path = "extractors.tests.rs"]
+mod tests;

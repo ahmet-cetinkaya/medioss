@@ -2,7 +2,7 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 31
+# count: 21
 src/apps/web-api/src/main.rs
 src/apps/web-api/src/operator.rs
 src/apps/web-api/src/router.rs
@@ -22,15 +22,5 @@ src/modules/portability/application/src/commands/import_own_data/import_own_data
 src/modules/portability/application/src/commands/import_own_data/meditation_index.rs
 src/modules/portability/application/src/commands/import_own_data/mood.rs
 src/modules/portability/application/src/commands/import_own_data/practice.rs
-src/modules/portability/presentation/src/extractors.rs
-src/modules/portability/presentation/src/handlers/export_csv.rs
-src/modules/portability/presentation/src/handlers/export_json.rs
-src/modules/portability/presentation/src/handlers/import.rs
-src/modules/portability/presentation/src/router.rs
-src/modules/portability/presentation/src/support/responses.rs
-src/modules/soundscape/domain/src/name/valid_name.rs
-src/modules/soundscape/domain/src/sound_category/sound_category.rs
-src/modules/soundscape/domain/src/sound/sound.rs
-src/modules/soundscape/domain/src/sound/valid_content_type.rs
 src/modules/soundscape/presentation/src/test_support.rs
 src/shared/media-store/src/storage/media_stream.rs

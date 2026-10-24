@@ -16,3 +16,7 @@ impl SoundCategory {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "sound_category.tests.rs"]
+mod tests;
