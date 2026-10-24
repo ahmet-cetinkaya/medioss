@@ -21,3 +21,7 @@ pub(crate) async fn ensure_not_last_active_admin(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "last_active_admin_guard.tests.rs"]
+mod tests;
