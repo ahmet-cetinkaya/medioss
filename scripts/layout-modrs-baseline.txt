@@ -1,0 +1,19 @@
+# mod.rs/lib.rs files that may still hold fn/impl/static/macro_rules!, as of 2026-10-24.
+# This list may only shrink: extract the logic into a named file with a sibling
+# .tests.rs, then delete the line. New logic in an unlisted mod.rs/lib.rs fails
+# check-boundaries.sh. Separate from layout-test-exemptions.txt on purpose.
+# count: 14
+src/apps/web-api/src/bootstrap/database/mod.rs
+src/apps/web-api/src/bootstrap/mod.rs
+src/apps/web-api/src/config/mod.rs
+src/apps/web-api/src/image_normalization/mod.rs
+src/modules/identity/infrastructure/src/hashing/mod.rs
+src/modules/identity/infrastructure/src/migrations/mod.rs
+src/modules/identity/infrastructure/src/persistence/repository/mod.rs
+src/modules/meditation/infrastructure/src/migrations/mod.rs
+src/modules/meditation/infrastructure/src/persistence/mod.rs
+src/modules/mood-tracker/presentation/src/lib.rs
+src/modules/soundscape/application/src/ports/mod.rs
+src/modules/soundscape/infrastructure/src/migrations/mod.rs
+src/modules/soundscape/infrastructure/src/persistence/mod.rs
+src/shared/http-range/src/lib.rs
