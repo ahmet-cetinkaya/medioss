@@ -163,31 +163,56 @@ member_count() {
 
 # Reports file-layout drift against docs/ARCHITECTURE.md "File Organization
 # Inside a Crate": no inline test modules, and a sibling <name>.tests.rs beside
-# every logic-bearing file. Advisory (WARN, never fails) until the layout
-# migration completes; flip to failing then. Files holding no logic are exempt:
+# every logic-bearing file. Hard-failing: every logic-bearing file needs a sibling
+# .tests.rs with a #[test], wired by #[path], unless it is listed in
+# scripts/layout-test-exemptions.txt (a list that may only shrink). Files holding no logic are exempt:
 # re-export mod.rs/lib.rs, trait-only declarations, data-only structs, and
 # generated/fixture trees (migrations, entities, test support, crate tests/).
 check_file_layout() {
-  local root="$1" file warnings=""
+  local root="$1" file sibling name relative
+  local exemptions="$root/scripts/layout-test-exemptions.txt"
+  local violations="" exempt_listed
   while IFS= read -r file; do
     case "$file" in
       */mod.rs | */lib.rs | *.tests.rs | */test_support/* | */tests/* | */migrations/* | *_entity.rs | */entities.rs) continue ;;
     esac
+    relative="${file#"$root"/}"
     if grep -q 'mod tests {' "$file"; then
-      warnings+="  inline test module: $file"$'\n'
+      violations+="  inline test module: $relative"$'\n'
       continue
     fi
     # Trait-only files hold signatures, not logic; data-only files hold neither
-    # functions nor impls. Everything else needs a sibling .tests.rs.
-    if grep -qE '\bimpl\b' "$file"; then
-      [ -f "${file%.rs}.tests.rs" ] || warnings+="  missing tests: $file"$'\n'
-    elif grep -qE '\bfn\b' "$file" && ! grep -qE '\btrait\b' "$file"; then
-      [ -f "${file%.rs}.tests.rs" ] || warnings+="  missing tests: $file"$'\n'
+    # functions nor impls. Everything else needs a real sibling .tests.rs.
+    if ! grep -qE '\bimpl\b' "$file" &&
+      ! { grep -qE '\bfn\b' "$file" && ! grep -qE '\btrait\b' "$file"; }; then
+      continue
+    fi
+    sibling="${file%.rs}.tests.rs"
+    name="$(basename "$sibling")"
+    exempt_listed=0
+    if [ -f "$exemptions" ] && grep -qxF "$relative" "$exemptions"; then
+      exempt_listed=1
+    fi
+    if [ -f "$sibling" ] &&
+      grep -qE '#\[(tokio::)?test' "$sibling" &&
+      grep -qF "#[path = \"$name\"]" "$file"; then
+      if [ "$exempt_listed" -eq 1 ]; then
+        violations+="  stale exemption (it has real tests now; remove it from layout-test-exemptions.txt): $relative"$'\n'
+      fi
+    elif [ "$exempt_listed" -eq 0 ]; then
+      violations+="  needs a wired sibling $name with at least one #[test]: $relative"$'\n'
     fi
   done < <(find "$root/src" -name '*.rs')
-  if [ -n "$warnings" ]; then
-    echo "LAYOUT WARNINGS (advisory until the layout migration completes):"
-    printf '%s' "$warnings"
+  if [ -f "$exemptions" ]; then
+    while IFS= read -r relative; do
+      case "$relative" in '' | '#'*) continue ;; esac
+      [ -f "$root/$relative" ] || violations+="  exemption names a missing file: $relative"$'\n'
+    done <"$exemptions"
+  fi
+  if [ -n "$violations" ]; then
+    echo "LAYOUT VIOLATIONS:"
+    printf '%s' "$violations"
+    return 1
   fi
 }
 
@@ -396,6 +421,46 @@ expect_absent() {
   esac
 }
 
+# Proves check_file_layout hard-fails on a logic file with no real test, and
+# passes once a wired sibling with a #[test] exists. Uses a throwaway root.
+layout_self_test() {
+  local dir ok=0
+  dir="$(new_fixture_dir)"
+  mkdir -p "$dir/src"
+  printf 'pub fn add(a: u8, b: u8) -> u8 { a + b }\n' >"$dir/src/add.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 11. logic file without a sibling test"
+    ok=1
+  else
+    echo "  ok   rejected: 11. logic file without a sibling test"
+  fi
+  : >"$dir/src/add.tests.rs"
+  printf '#[cfg(test)]\n#[path = "add.tests.rs"]\nmod tests;\n' >>"$dir/src/add.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 12. hollow sibling with no #[test]"
+    ok=1
+  else
+    echo "  ok   rejected: 12. hollow sibling with no #[test]"
+  fi
+  printf '#[test]\nfn adds() {}\n' >"$dir/src/add.tests.rs"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  ok   accepted: 13. wired sibling with a #[test]"
+  else
+    echo "  FAIL wrongly reported: 13. wired sibling with a #[test]"
+    ok=1
+  fi
+  mkdir -p "$dir/scripts"
+  printf 'src/add.rs\n' >"$dir/scripts/layout-test-exemptions.txt"
+  if check_file_layout "$dir" >/dev/null; then
+    echo "  FAIL wrongly accepted: 14. stale exemption for a tested file"
+    ok=1
+  else
+    echo "  ok   rejected: 14. stale exemption for a tested file"
+  fi
+  remove_fixture_dir "$dir"
+  return "$ok"
+}
+
 self_test() {
   local bad_root clean_root output failed=0
   bad_root="$(new_fixture_dir)"
@@ -447,6 +512,8 @@ self_test() {
     failed=1
   fi
 
+  layout_self_test || failed=1
+
   if [ "$failed" -ne 0 ]; then
     echo "self-test: FAILED"
     return 1
@@ -464,7 +531,7 @@ main() {
   root="$(git rev-parse --show-toplevel)"
   check_workspace "$root/Cargo.toml"
   echo "boundary check: OK ($(member_count "$root/Cargo.toml") workspace members)"
-  check_file_layout "$root"
+  check_file_layout "$root" || return 1
 }
 
 main "$@"
