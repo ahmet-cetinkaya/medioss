@@ -73,3 +73,7 @@ pub(crate) async fn users_list(
             .collect(),
     ))
 }
+
+#[cfg(test)]
+#[path = "user_admin.tests.rs"]
+mod tests;

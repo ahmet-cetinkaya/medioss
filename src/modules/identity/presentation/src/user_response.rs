@@ -29,3 +29,7 @@ pub(crate) fn role_to_str(role: Role) -> &'static str {
         Role::Member => "member",
     }
 }
+
+#[cfg(test)]
+#[path = "user_response.tests.rs"]
+mod tests;

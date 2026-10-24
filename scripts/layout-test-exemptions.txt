@@ -2,28 +2,12 @@
 # This list may only shrink: add real tests, wire them with #[path],
 # then delete the line. A file with real tests that is still listed
 # fails the check. Never add a new line to make the check pass.
-# count: 47
+# count: 31
 src/apps/web-api/src/main.rs
 src/apps/web-api/src/operator.rs
 src/apps/web-api/src/router.rs
 src/kernel/src/actor/actor.rs
 src/kernel/src/actor/user_id.rs
-src/modules/identity/application/src/models/errors/application_error.rs
-src/modules/identity/application/src/ports/credential_change.rs
-src/modules/identity/application/src/ports/initial_admin_registration.rs
-src/modules/identity/application/src/ports/member_registration.rs
-src/modules/identity/infrastructure/src/persistence/repository/login_throttle_repository.rs
-src/modules/identity/infrastructure/src/persistence/repository/timestamps.rs
-src/modules/identity/infrastructure/src/persistence/repository/user_repository.rs
-src/modules/identity/infrastructure/src/persistence/repository/user_row.rs
-src/modules/identity/presentation/src/actors.rs
-src/modules/identity/presentation/src/auth.rs
-src/modules/identity/presentation/src/origin_guard.rs
-src/modules/identity/presentation/src/profile.rs
-src/modules/identity/presentation/src/router.rs
-src/modules/identity/presentation/src/user_admin.rs
-src/modules/identity/presentation/src/user_response.rs
-src/modules/identity/presentation/src/users_lifecycle.rs
 src/modules/mood-tracker/application/src/application_tests.rs
 src/modules/mood-tracker/application/src/commands/create_mood_entry/create_mood_entry_service.rs
 src/modules/mood-tracker/application/src/commands/delete_mood_entry/delete_mood_entry_service.rs

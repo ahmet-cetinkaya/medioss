@@ -131,3 +131,7 @@ pub(crate) async fn me_password(
         .await?;
     Ok(Json(user_response(&user)))
 }
+
+#[cfg(test)]
+#[path = "auth.tests.rs"]
+mod tests;

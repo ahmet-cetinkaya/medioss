@@ -145,3 +145,7 @@ impl LoginThrottleRepository for SeaOrmUserRepository {
             .map_err(|_| RepositoryError::OperationFailed)
     }
 }
+
+#[cfg(test)]
+#[path = "login_throttle_repository.tests.rs"]
+mod tests;

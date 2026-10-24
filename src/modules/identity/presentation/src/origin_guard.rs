@@ -45,3 +45,7 @@ pub(crate) fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
         .fold(0u8, |acc, (l, r)| acc | (l ^ r))
         == 0
 }
+
+#[cfg(test)]
+#[path = "origin_guard.tests.rs"]
+mod tests;

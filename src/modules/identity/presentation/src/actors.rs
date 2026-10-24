@@ -76,3 +76,7 @@ where
             .ok_or(ApiError(ApplicationError::InvalidCredentials))
     }
 }
+
+#[cfg(test)]
+#[path = "actors.tests.rs"]
+mod tests;

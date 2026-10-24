@@ -8,7 +8,7 @@ use kernel::Role;
 
 use crate::{identity_router, IdentityDependencies, SharedDependencies};
 
-pub(super) struct NullHasher;
+pub(crate) struct NullHasher;
 
 #[async_trait::async_trait]
 impl PasswordHasher for NullHasher {
@@ -31,7 +31,7 @@ impl PasswordHasher for NullHasher {
     }
 }
 
-pub(super) struct NullClock;
+pub(crate) struct NullClock;
 
 impl Clock for NullClock {
     fn now(&self) -> chrono::DateTime<chrono::Utc> {
@@ -39,7 +39,7 @@ impl Clock for NullClock {
     }
 }
 
-pub(super) struct NullAdmission;
+pub(crate) struct NullAdmission;
 
 impl LoginAdmission for NullAdmission {
     fn try_acquire(&self) -> Result<Box<dyn Send>, std::time::Duration> {
@@ -113,7 +113,7 @@ impl identity_application::ports::AvatarStore for RecordingAvatarStore {
     }
 }
 
-pub(super) struct NullAvatarStore;
+pub(crate) struct NullAvatarStore;
 
 #[async_trait::async_trait]
 impl identity_application::ports::AvatarStore for NullAvatarStore {
@@ -150,7 +150,7 @@ impl identity_application::ports::AvatarStore for NullAvatarStore {
     }
 }
 
-pub(super) struct EmptyRepository;
+pub(crate) struct EmptyRepository;
 
 #[async_trait::async_trait]
 impl UserRepository for EmptyRepository {
@@ -249,7 +249,7 @@ impl LoginThrottleRepository for EmptyRepository {
     }
 }
 
-pub(super) fn services(
+pub(crate) fn services(
     repository: Arc<SeededRepository>,
     hasher: Arc<NullHasher>,
     clock: Arc<NullClock>,
@@ -271,7 +271,7 @@ pub(super) fn services(
     )
 }
 
-pub(super) fn dependencies(
+pub(crate) fn dependencies(
     repository: Arc<SeededRepository>,
     hasher: Arc<NullHasher>,
     clock: Arc<NullClock>,
@@ -428,11 +428,20 @@ fn throttle_arc(
     repository.clone()
 }
 
-pub(super) fn app() -> axum::Router {
+pub(crate) fn app() -> axum::Router {
     seeded_app(Vec::new())
 }
 
-pub(super) struct SeededRepository {
+impl SeededRepository {
+    pub(crate) fn empty() -> Self {
+        Self {
+            inner: EmptyRepository,
+            users: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+}
+
+pub(crate) struct SeededRepository {
     pub(super) inner: EmptyRepository,
     pub(super) users: std::sync::Mutex<Vec<User>>,
 }
@@ -575,11 +584,11 @@ impl LoginThrottleRepository for SeededRepository {
     }
 }
 
-pub(super) fn seeded_app(users: Vec<User>) -> axum::Router {
+pub(crate) fn seeded_app(users: Vec<User>) -> axum::Router {
     seeded_app_with(users, Arc::new(NullAvatarStore))
 }
 
-pub(super) fn seeded_app_with(
+pub(crate) fn seeded_app_with(
     users: Vec<User>,
     avatar_store: Arc<dyn identity_application::ports::AvatarStore>,
 ) -> axum::Router {
@@ -603,7 +612,7 @@ pub(super) fn seeded_app_with(
         ))
 }
 
-pub(super) fn user(id: i64, email: &str, role: Role) -> User {
+pub(crate) fn user(id: i64, email: &str, role: Role) -> User {
     User::new_permanent(
         kernel::UserId::new(id),
         Email::parse(email).unwrap(),
@@ -613,6 +622,6 @@ pub(super) fn user(id: i64, email: &str, role: Role) -> User {
     )
 }
 
-pub(super) fn disabled_user(id: i64, email: &str, role: Role) -> User {
+pub(crate) fn disabled_user(id: i64, email: &str, role: Role) -> User {
     user(id, email, role).with_disabled(true)
 }

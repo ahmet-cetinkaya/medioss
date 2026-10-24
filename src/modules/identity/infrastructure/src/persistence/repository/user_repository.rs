@@ -250,3 +250,7 @@ impl UserRepository for SeaOrmUserRepository {
         restore_user(updated)
     }
 }
+
+#[cfg(test)]
+#[path = "user_repository.tests.rs"]
+mod tests;
