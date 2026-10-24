@@ -1,6 +1,7 @@
 use crate::commands::replace_program_cover::{
-    ReplaceProgramCover, ReplaceProgramCoverHandler, ReplaceProgramCoverService,
+    ReplaceProgramCoverCommand, ReplaceProgramCoverCommandHandler,
 };
+use crate::ports::CommandHandler as _;
 use crate::ports::QueryHandler;
 use crate::queries::get_program_cover::{GetProgramCoverQuery, GetProgramCoverQueryHandler};
 use crate::test_support::{user_a, TestDeps};
@@ -14,8 +15,8 @@ fn service(deps: &TestDeps) -> GetProgramCoverQueryHandler {
 }
 
 async fn store_cover(deps: &TestDeps, program_id: i64, bytes: &[u8]) {
-    ReplaceProgramCoverService::new(deps.programs.clone(), deps.store.clone())
-        .handle(ReplaceProgramCover {
+    ReplaceProgramCoverCommandHandler::new(deps.programs.clone(), deps.store.clone())
+        .handle(ReplaceProgramCoverCommand {
             requester_id: user_a(),
             program_id,
             bytes: bytes.to_vec(),

@@ -1,8 +1,7 @@
 use crate::commands::record_position::{RecordPositionCommand, RecordPositionCommandHandler};
 use crate::ports::CommandHandler;
-use crate::queries::get_playback_state::{
-    GetPlaybackState, GetPlaybackStateHandler, GetPlaybackStateService,
-};
+use crate::ports::QueryHandler as _;
+use crate::queries::get_playback_state::{GetPlaybackStateQuery, GetPlaybackStateQueryHandler};
 use crate::test_support::{user_a, user_b, TestDeps};
 use crate::ApplicationError;
 
@@ -30,8 +29,8 @@ async fn position_reports_are_validated_and_default_to_zero() {
         .await;
     assert!(matches!(negative, Err(ApplicationError::InvalidInput(_))));
 
-    let fresh = GetPlaybackStateService::new(deps.meditations.clone(), deps.playback.clone())
-        .handle(GetPlaybackState {
+    let fresh = GetPlaybackStateQueryHandler::new(deps.meditations.clone(), deps.playback.clone())
+        .handle(GetPlaybackStateQuery {
             user_id: user_b(),
             meditation_id: meditation.id(),
         })

@@ -1,5 +1,5 @@
-use crate::commands::add_member::{AddMember, AddMemberHandler, AddMemberService};
-use crate::commands::create_note::{CreateNote, CreateNoteHandler, CreateNoteService};
+use crate::commands::add_member::{AddMemberCommand, AddMemberCommandHandler};
+use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
 use crate::commands::delete_meditation::{DeleteMeditationCommand, DeleteMeditationCommandHandler};
 use crate::ports::CommandHandler;
 use crate::test_support::{user_a, TestDeps};
@@ -19,24 +19,24 @@ async fn delete_removes_row_bytes_memberships_and_notes() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
     let program_id = deps.seed_program("Program").await;
-    AddMemberService::new(
+    AddMemberCommandHandler::new(
         deps.meditations.clone(),
         deps.programs.clone(),
         deps.memberships.clone(),
         deps.clock.clone(),
     )
-    .handle(AddMember {
+    .handle(AddMemberCommand {
         program_id,
         meditation_id: meditation.id(),
     })
     .await
     .expect("member");
-    CreateNoteService::new(
+    CreateNoteCommandHandler::new(
         deps.meditations.clone(),
         deps.notes.clone(),
         deps.clock.clone(),
     )
-    .handle(CreateNote {
+    .handle(CreateNoteCommand {
         user_id: user_a(),
         meditation_id: meditation.id(),
         text: "felt calm".into(),
