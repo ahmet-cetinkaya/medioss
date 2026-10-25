@@ -39,9 +39,6 @@ The health check calls `GET /api/health`. For HTTPS, put a reverse proxy in fron
 
 ## Publishing the image
 
-`.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. Pull requests, pushes to `main`, and every run before `DOCKERHUB_IMAGE` is set, only build it (no login, no push), so CI stays green. Only stable semver tags (`vX.Y.Z`, no prerelease suffix) publish `X.Y.Z`, `X.Y`, `X` and move `latest`, in one atomic push — `latest` always points at the last stable release, and prerelease tags like `v1.0.0-rc.1` never touch the registry.
+`.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. Pull requests and pushes to `main` only build it (no login, no push), so CI stays green. Only stable semver tags (`vX.Y.Z`, no prerelease suffix) publish `X.Y.Z`, `X.Y`, `X` and move `latest`, in one atomic push — `latest` always points at the last stable release, and prerelease tags like `v1.0.0-rc.1` never touch the registry.
 
-Set these in the repository settings before the first publish:
-
-- Secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token with write scope).
-- Variable `DOCKERHUB_IMAGE`, for example `your-namespace/medioss`. Until it is set the workflow only builds and never publishes.
+The image is published to GitHub Container Registry as `ghcr.io/<owner>/medioss`. The workflow logs in with the built-in `GITHUB_TOKEN`, so no secrets or variables are needed. After the first publish, set the package to public (package settings, Change visibility) and connect it to the repository so anyone can pull it.
