@@ -21,12 +21,10 @@
   import { t } from "$lib/i18n/locale.svelte";
   import notice from "$repo/NOTICE?raw";
   import { aboutMessages as m } from "./about.messages";
-  import ThirdPartyLicensesDialog from "./third-party-licenses-dialog.svelte";
 
   /** The NOTICE paragraph stating the project license, shown verbatim. */
   const LICENSE_STATEMENT = notice.split("\n\n")[1]?.replace(/\s+/g, " ");
 
-  let thirdPartyOpen = $state(false);
   let supportOpen = $state(false);
   let meta = $state<AppMeta | null>(null);
   let failed = $state(false);
@@ -63,10 +61,6 @@
         </div>
       </dl>
       <p class="text-sm text-ink-body">{LICENSE_STATEMENT}</p>
-      <ThirdPartyLicensesDialog
-        bind:open={thirdPartyOpen}
-        repositoryUrl={meta.source}
-      />
     {:else if failed}
       <RegionState
         status="error"
@@ -99,7 +93,12 @@
           <ScalesIcon aria-hidden="true" />
           {t(m.licenseFullText)}
         </Button>
-        <Button variant="secondary" onclick={() => (thirdPartyOpen = true)}>
+        <Button
+          variant="secondary"
+          href={`${meta.source}/blob/main/NOTICE`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <PackageIcon aria-hidden="true" />
           {t(m.thirdPartyOpen)}
         </Button>
