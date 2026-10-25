@@ -12,11 +12,17 @@
   import { Panel } from "$lib/components/ui/panel/index.js";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { t } from "$lib/i18n/locale.svelte";
+  import notice from "$repo/NOTICE?raw";
   import { aboutMessages as m } from "./settings.messages";
+  import ThirdPartyLicensesDialog from "./third-party-licenses-dialog.svelte";
 
   /** Canonical donation page; the only link the app advertises. */
   const DONATE_URL = "https://ahmetcetinkaya.me/donate";
 
+  /** The NOTICE paragraph stating the project license, shown verbatim. */
+  const LICENSE_STATEMENT = notice.split("\n\n")[1]?.replace(/\s+/g, " ");
+
+  let thirdPartyOpen = $state(false);
   let meta = $state<AppMeta | null>(null);
   let failed = $state(false);
   let request = 0;
@@ -67,6 +73,21 @@
           </dd>
         </div>
       </dl>
+      <p class="text-sm text-ink-body">{LICENSE_STATEMENT}</p>
+      <div class="flex flex-wrap gap-3">
+        <Button
+          variant="secondary"
+          href={`${meta.source}/blob/main/LICENSE`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t(m.licenseFullText)}
+        </Button>
+        <Button variant="secondary" onclick={() => (thirdPartyOpen = true)}>
+          {t(m.thirdPartyOpen)}
+        </Button>
+      </div>
+      <ThirdPartyLicensesDialog bind:open={thirdPartyOpen} />
     {:else if failed}
       <RegionState
         status="error"

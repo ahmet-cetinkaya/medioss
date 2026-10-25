@@ -2,7 +2,10 @@
 
 # Stage 1: Build the Astro + Svelte frontend (bun, matching local and CI tooling)
 FROM oven/bun:1.4-slim@sha256:debbe76858f2e398d2937c1eceeb82c571ac1fcd78aadf00e9634578ac2b5ef7 AS frontend
-WORKDIR /app
+# Repo-relative layout: the About page imports NOTICE and the sound manifest via `$repo`.
+WORKDIR /repo/src/apps/web-ui
+COPY NOTICE /repo/NOTICE
+COPY assets/sounds/soundscape-builtin/manifest.json /repo/assets/sounds/soundscape-builtin/manifest.json
 COPY src/apps/web-ui/package.json src/apps/web-ui/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY src/apps/web-ui .
@@ -14,7 +17,7 @@ RUN bun run build
 FROM rust:1.98.0-bookworm@sha256:82150a52ec202c1b14d7817e14516c392bb7f5cfebd88f1ed531cb37ebd39922 AS builder
 WORKDIR /app
 COPY . .
-COPY --from=frontend /app/dist src/apps/web-api/static
+COPY --from=frontend /repo/src/apps/web-ui/dist src/apps/web-api/static
 # Cache mounts keep the ~91 locked crates and their artifacts across builds, but their
 # contents never land in a layer -- hence copying the binary out to a real path.
 RUN --mount=type=cache,target=/usr/local/cargo/registry \

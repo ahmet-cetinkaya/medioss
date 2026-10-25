@@ -15,9 +15,11 @@ export default defineConfig({
     resolve: {
       alias: {
         $lib: fileURLToPath(new URL("./src/lib", import.meta.url)),
+        $repo: fileURLToPath(new URL("../../..", import.meta.url)),
       },
     },
     server: {
+      fs: { allow: [fileURLToPath(new URL("../../..", import.meta.url))] },
       proxy: {
         "/api": {
           target: process.env.ASTRO_API_TARGET ?? "http://localhost:3000",
