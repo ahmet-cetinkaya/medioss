@@ -19,11 +19,7 @@
   import SupportDialog from "$lib/components/dialogs/support-dialog.svelte";
   import { shellMessages } from "$lib/components/shell/shell.messages";
   import { t } from "$lib/i18n/locale.svelte";
-  import notice from "$repo/NOTICE?raw";
   import { aboutMessages as m } from "./about.messages";
-
-  /** The NOTICE paragraph stating the project license, shown verbatim. */
-  const LICENSE_STATEMENT = notice.split("\n\n")[1]?.replace(/\s+/g, " ");
 
   let supportOpen = $state(false);
   let meta = $state<AppMeta | null>(null);
@@ -46,23 +42,19 @@
 
 <Panel aria-labelledby="about-heading">
   {#snippet heading()}
-    <h2 id="about-heading"><BrandLockup /></h2>
+    <h2 id="about-heading" class="flex flex-wrap items-center gap-3">
+      <BrandLockup />
+      {#if meta}
+        <span
+          class="rounded-full bg-surface-solid px-3 py-1 text-xs font-medium text-ink-strong"
+          >{`v${meta.version}`}</span
+        >
+      {/if}
+    </h2>
   {/snippet}
   <div class="flex flex-col gap-4">
     <p class="text-body-md text-ink-body">{t(m.description)}</p>
-    {#if meta}
-      <dl class="flex flex-col gap-2 text-sm">
-        <div class="flex gap-2">
-          <dt class="text-ink-muted">{t(m.version)}</dt>
-          <dd class="font-medium text-ink-strong">{meta.version}</dd>
-        </div>
-        <div class="flex gap-2">
-          <dt class="text-ink-muted">{t(m.license)}</dt>
-          <dd class="font-medium text-ink-strong">{meta.license}</dd>
-        </div>
-      </dl>
-      <p class="text-sm text-ink-body">{LICENSE_STATEMENT}</p>
-    {:else if failed}
+    {#if failed}
       <RegionState
         status="error"
         minHeight="4rem"
@@ -71,7 +63,7 @@
       >
         <span class="sr-only">{t(m.loadFailed)}</span>
       </RegionState>
-    {:else}
+    {:else if !meta}
       <p class="text-sm text-ink-muted" aria-busy="true">…</p>
     {/if}
     <div class="flex flex-wrap items-center gap-3">
