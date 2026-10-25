@@ -114,33 +114,37 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content>
-    <div class="flex flex-col items-center gap-2 text-center">
-      <span
-        aria-hidden="true"
-        class="relative block size-24 overflow-hidden rounded-tile motion-safe:animate-breathe"
-      >
-        <GeneratedArtwork seed={meditationId} category="meditation" wash />
-      </span>
-      <Dialog.Title class="text-greeting text-ink-strong">
-        {t(m.doneTitle)}
-      </Dialog.Title>
-      <Dialog.Description>{t(m.doneText)}</Dialog.Description>
+  <Dialog.Content class="motion-safe:duration-1500">
+    <div
+      class="grid gap-5 motion-safe:animate-in motion-safe:duration-1500 motion-safe:delay-500 motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both"
+    >
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span
+          aria-hidden="true"
+          class="relative block size-24 overflow-hidden rounded-tile motion-safe:animate-breathe"
+        >
+          <GeneratedArtwork seed={meditationId} category="meditation" wash />
+        </span>
+        <Dialog.Title class="text-greeting text-ink-strong">
+          {t(m.doneTitle)}
+        </Dialog.Title>
+        <Dialog.Description>{t(m.doneText)}</Dialog.Description>
+      </div>
+
+      <label for="player-done-note" class="text-sm font-medium text-ink-body">
+        {t(m.doneNoteLabel)}
+      </label>
+      <Textarea
+        id="player-done-note"
+        bind:value={draft}
+        placeholder={t(m.notePlaceholder)}
+      />
+
+      <Dialog.Footer>
+        <Button onclick={() => void continueToProgram()}>
+          {t(programId ? m.doneContinue : m.doneContinueLibrary)}
+        </Button>
+      </Dialog.Footer>
     </div>
-
-    <label for="player-done-note" class="text-sm font-medium text-ink-body">
-      {t(m.doneNoteLabel)}
-    </label>
-    <Textarea
-      id="player-done-note"
-      bind:value={draft}
-      placeholder={t(m.notePlaceholder)}
-    />
-
-    <Dialog.Footer>
-      <Button onclick={() => void continueToProgram()}>
-        {t(programId ? m.doneContinue : m.doneContinueLibrary)}
-      </Button>
-    </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
