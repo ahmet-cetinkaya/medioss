@@ -2,14 +2,14 @@
 
 This roadmap turns the [PRD's implementation phases](./PRD.md#implementation-phases) into ordered, verifiable milestones aligned with the [module-first architecture](./ARCHITECTURE.md). Each milestone lists its deliverables and an explicit exit criterion; a milestone is done when its exit criterion passes, not when its code merges.
 
-Business modules are created on demand, milestone by milestone, following the `src/modules/<module>/{domain,application,infrastructure,presentation}` pattern. Module names below are working names; final boundaries are decided when each module is built (see the draft note in ARCHITECTURE.md).
+Business modules were created on demand, milestone by milestone, following the `src/modules/<module>/{domain,application,infrastructure,presentation}` pattern. Five exist as of v1.0.0: `identity`, `meditation`, `mood-tracker`, `portability` and `soundscape` (see [ARCHITECTURE.md](./ARCHITECTURE.md)). Milestones M0-M9 are delivered and v1.0.0 is released; Phase 3 is open.
 
 ```text
 M0 ── M1 ── M2 ── M3 ── M4                  Phase 1: MVP
                        │
                        └── M5 ── M6 ── M7 ── M8   Phase 2: Enhanced
                                                  │
-                                                 └── M9 ── v0.1.0          Release
+                                                 └── M9 ── v1.0.0          Release
 
 M10+                                           Phase 3: Polish & Expansion
 ```
@@ -18,11 +18,11 @@ Execution order (scope decision, 2026-10-03; renumbered so numbers follow execut
 
 ---
 
-## Phase 1: MVP
+## Phase 1: MVP (delivered)
 
-Goal: a single-user, self-hosted instance where one person can register, upload meditation audio, mix white noise, and log moods — deployed with one `docker-compose up`.
+Goal: a single-user, self-hosted instance where one person can register, upload meditation audio, mix white noise, and log moods — deployed with one `docker compose up`.
 
-### M0 — Workspace Skeleton
+### M0 — Workspace Skeleton (delivered)
 
 The empty workspace that proves the architecture compiles before any feature exists.
 
@@ -34,7 +34,7 @@ The empty workspace that proves the architecture compiles before any feature exi
 - Dockerfile (3-stage) and `docker-compose.yml` matching [DEPLOYMENT.md](./DEPLOYMENT.md)
 - CI: `cargo test --workspace`, `cargo clippy`, the dependency-boundary check from [ARCHITECTURE.md: Testing Strategy](./ARCHITECTURE.md#testing-strategy-and-boundary-enforcement), and an Astro build
 
-**Exit criterion:** `docker-compose up` serves the health endpoint and the placeholder UI from one container; CI is green on an empty feature set.
+**Exit criterion:** `docker compose up` serves the health endpoint and the placeholder UI from one container; CI is green on an empty feature set.
 
 ### M1 — Identity Module (delivered)
 
@@ -50,7 +50,7 @@ First real module; every later module depends on its `Actor` context. Delivered 
 
 **Exit criterion:** E2E test — register, log in, call an authenticated endpoint, get 401 without a session. Runs in CI against the real binary. CLI reset restores access to a locked-out admin account.
 
-### M2 — Meditation Module (worked example becomes real)
+### M2 — Meditation Module (delivered)
 
 Implements the module documented throughout ARCHITECTURE.md.
 
@@ -62,7 +62,7 @@ Implements the module documented throughout ARCHITECTURE.md.
 
 **Exit criterion:** E2E test — upload an MP3, stream it back with a Range header as the owner, receive 404 for another user's file. Playback works in a real browser.
 
-### M3 — Soundscape Module
+### M3 — Soundscape Module (delivered)
 
 - `soundscape` module: upload custom loops (reusing `media-store`), sound library
 - Mixer: 3 simultaneous sounds with per-sound volume
@@ -71,9 +71,9 @@ Implements the module documented throughout ARCHITECTURE.md.
 
 **Exit criterion:** manual QA script — mix 3 sounds, set a fade timer, verify smooth fade; automated tests cover upload/list/stream ownership.
 
-### M4 — Mood Module
+### M4 — Mood Tracker Module (delivered)
 
-- `mood` module: 1–10 scale log with emotion/activity tags and optional note
+- `mood-tracker` module: 1–10 scale log with emotion/activity tags and optional note
 - Seeded tag list (predefined emotions and activities)
 - Daily log view and simple history list
 - Optional post-meditation mood prompt (frontend composition of two module APIs — no cross-module Rust dependency)
@@ -82,33 +82,33 @@ Implements the module documented throughout ARCHITECTURE.md.
 
 ---
 
-## Phase 2: Enhanced Features
+## Phase 2: Enhanced Features (delivered)
 
 Goal: multi-user instances become pleasant to run and richer to use.
 
-### M5 — Multi-User & Admin
+### M5 — Multi-User & Admin (delivered)
 
 - Admin dashboard: list/disable/remove users
 - Account and data deletion: user-initiated and admin-initiated, wiping all database records and `media/{user_id}/` (PRD: Account & Data Deletion)
-- Per-user storage quotas
+- ~~Per-user storage quotas~~ — not delivered in v1.0.0; deferred to Phase 3 (no quota code exists)
 - Profile settings: display name, avatar, password change
 
 **Exit criterion:** two concurrent users cannot see each other's media, moods, or sessions — verified by an automated isolation test suite. Deleting an account leaves zero database rows and zero media files for that user.
 
-### M6 — Library & Mixer Depth
+### M6 — Library & Mixer Depth (delivered)
 
 - Meditation: full-text search over titles and categories (tags and duration filters remain maybe-level; see M10+)
 - Soundscape: unlimited simultaneous sounds, saved mixes, 5–120 min fade timers (delivered by spec 0003)
 - Player: Media Session API hardware/lock-screen controls **Exit criterion:** search returns correct results over a 100+ item library; hardware media keys control playback on a real device.
 
-### M7 — Data Portability
+### M7 — Data Portability (delivered)
 
 - Mood trends: weekly/monthly charts (delivered by spec 0006)
 - CSV/JSON export and import of the caller's own data (lossless round-trip, enabling instance migration)
 
 **Exit criterion:** export → import round-trip on a fresh instance reproduces the original data.
 
-### M8 — UI Design (Full Design Pass)
+### M8 — UI Design (Full Design Pass) (delivered)
 
 Closes Phase 2. Until it ships, the UI stays at functional basic level — no design work lands earlier.
 
@@ -120,15 +120,15 @@ Closes Phase 2. Until it ships, the UI stays at functional basic level — no de
 
 ---
 
-## Release: v0.1.0
+## Release: v1.0.0 (delivered)
 
 Runs after M8; operational only.
 
-### M9 — MVP Hardening & Release
+### M9 — MVP Hardening & Release (delivered)
 
 - Backup/restore procedure tested against a populated `$MEDIOSS_DATA_DIR`
 - Seed-content documentation (where operators can source public-domain audio)
-- Version `0.1.0` tag, release image, and a validated [DEPLOYMENT.md](./DEPLOYMENT.md) walkthrough on a clean VPS
+- Version `1.0.0` tag, release image (`ghcr.io/ahmet-cetinkaya/medioss`), and a validated [DEPLOYMENT.md](./DEPLOYMENT.md) walkthrough on a clean VPS
 
 **Exit criterion:** PRD Phase 1 checklist fully checked; a non-author deploys a working instance from the docs alone in under 5 minutes.
 
@@ -144,6 +144,7 @@ Goal: long-tail quality and optional integrations. Scope here is intentionally l
 - Daily reminder notifications (in-app/PWA local only, per PRD Non-Goals)
 - Advanced insights (meditation ↔ mood correlation views)
 - Aggregate, non-content admin instance insight (active user counts, storage use; never another user's content) — moved from M5 (previously M6) by user decision 2026-09-30
+- Per-user storage quotas (deferred from M5)
 - Meditation tag system and duration filters
 - Notification preferences (in-app reminders; local only, per PRD Non-Goals)
 - Performance pass: startup time, memory ceiling, 10k+ mood entries

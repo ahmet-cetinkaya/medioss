@@ -21,8 +21,9 @@ Welcome to the MediOSS wellness application documentation. This guide will help 
   - Implementation phases and roadmap
   - Success criteria and metrics
 - **[Roadmap](./ROADMAP.md)** - Milestone plan with exit criteria
-  - Phase 1 MVP milestones (M0-M5)
-  - Phase 2 enhanced features (M6-M8)
+  - Phase 1 MVP milestones (M0-M4)
+  - Phase 2 enhanced features (M5-M8)
+  - M9 hardening and the v1.0.0 release
   - Phase 3 candidates and working agreements
 
 ### 🏗️ Technical Documentation
