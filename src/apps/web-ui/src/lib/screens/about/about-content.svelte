@@ -11,6 +11,7 @@
   import CoffeeIcon from "phosphor-svelte/lib/CoffeeIcon";
   import PackageIcon from "phosphor-svelte/lib/PackageIcon";
   import ScalesIcon from "phosphor-svelte/lib/ScalesIcon";
+  import BrandLockup from "$lib/components/content/brand-lockup.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import RegionState from "$lib/components/feedback/region-state.svelte";
@@ -46,9 +47,7 @@
 
 <Panel aria-labelledby="about-heading">
   {#snippet heading()}
-    <h2 id="about-heading" class="text-heading text-ink-strong">
-      {t(m.heading)}
-    </h2>
+    <h2 id="about-heading"><BrandLockup /></h2>
   {/snippet}
   <div class="flex flex-col gap-4">
     {#if meta}

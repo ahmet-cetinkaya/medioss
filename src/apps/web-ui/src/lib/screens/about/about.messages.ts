@@ -3,7 +3,6 @@
 import { defineMessages } from "../../i18n/message";
 
 export const aboutMessages = defineMessages({
-  heading: { en: "MediOSS", tr: "MediOSS" },
   version: { en: "Version", tr: "Sürüm" },
   license: { en: "License", tr: "Lisans" },
   source: { en: "Source code", tr: "Kaynak kodu" },
