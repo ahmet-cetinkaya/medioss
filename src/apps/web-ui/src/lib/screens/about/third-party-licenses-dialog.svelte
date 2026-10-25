@@ -11,7 +11,13 @@
   import { aboutMessages as m } from "./about.messages";
   import { soundGroups } from "./third-party-sounds";
 
-  let { open = $bindable(false) }: { open?: boolean } = $props();
+  let {
+    open = $bindable(false),
+    repositoryUrl,
+  }: { open?: boolean; repositoryUrl: string } = $props();
+
+  const SOUNDS_LICENSE_PATH = "blob/main/assets/sounds/soundscape-builtin/LICENSE";
+  const NOTICE_PATH = "blob/main/NOTICE";
 
   const linkClass =
     "focus-ring rounded-sm text-accent-strong underline underline-offset-2";
@@ -51,6 +57,21 @@
           href={CC0_URL}
           rel="noopener noreferrer"
           target="_blank">{t(m.linkCc0)}</a
+        >
+      </p>
+      <p class="text-sm">
+        <a
+          class={linkClass}
+          href={`${repositoryUrl}/${SOUNDS_LICENSE_PATH}`}
+          rel="noopener noreferrer"
+          target="_blank">{t(m.soundsLicenseFile)}</a
+        >
+        ·
+        <a
+          class={linkClass}
+          href={`${repositoryUrl}/${NOTICE_PATH}`}
+          rel="noopener noreferrer"
+          target="_blank">{t(m.noticeFile)}</a
         >
       </p>
       {#each soundGroups as group (group.category)}

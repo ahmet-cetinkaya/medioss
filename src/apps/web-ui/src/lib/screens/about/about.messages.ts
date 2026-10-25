@@ -23,6 +23,11 @@ export const aboutMessages = defineMessages({
     en: "From the Moodist project, which states they are under the Pixabay Content License or CC0 1.0, without a per-file list.",
     tr: "Moodist projesinden gelir; proje bunların dosya bazında ayrım yapmadan Pixabay İçerik Lisansı veya CC0 1.0 altında olduğunu belirtir.",
   },
+  soundsLicenseFile: {
+    en: "Sound licenses on GitHub",
+    tr: "Ses lisansları (GitHub)",
+  },
+  noticeFile: { en: "NOTICE on GitHub", tr: "NOTICE dosyası (GitHub)" },
   soundSource: { en: "Source", tr: "Kaynak" },
   linkMoodist: { en: "Moodist", tr: "Moodist" },
   linkPixabay: {

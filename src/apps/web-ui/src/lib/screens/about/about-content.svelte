@@ -87,7 +87,10 @@
           {t(m.thirdPartyOpen)}
         </Button>
       </div>
-      <ThirdPartyLicensesDialog bind:open={thirdPartyOpen} />
+      <ThirdPartyLicensesDialog
+        bind:open={thirdPartyOpen}
+        repositoryUrl={meta.source}
+      />
     {:else if failed}
       <RegionState
         status="error"
