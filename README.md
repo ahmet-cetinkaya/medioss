@@ -85,10 +85,11 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Docker production setup and [do
 
 ### Stack
 
-- **Backend** — Rust (Axum, SQLx, Tokio)
-- **Frontend** — Svelte, TypeScript, Tailwind CSS
-- **Storage** — SQLite (single file, no server needed)
-- **Media** — FFmpeg for audio transcoding; WebP normalization for images
+- **Backend** — ![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white) ![Axum](https://img.shields.io/badge/Axum-000000?style=flat&logo=rust&logoColor=white) ![SQLx](https://img.shields.io/badge/SQLx-000000?style=flat&logo=rust&logoColor=white) ![Tokio](https://img.shields.io/badge/Tokio-000000?style=flat&logo=rust&logoColor=white)
+- **Frontend** — ![Svelte](https://img.shields.io/badge/Svelte-FF3E00?style=flat&logo=svelte&logoColor=white) ![Astro](https://img.shields.io/badge/Astro-BC52EE?style=flat&logo=astro&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=flat&logo=tailwindcss&logoColor=white) ![shadcn/ui](https://img.shields.io/badge/shadcn/ui-000000?style=flat&logo=shadcnui&logoColor=white)
+- **Storage** — ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white) (single file, no server needed)
+- **Media** — ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=flat&logo=ffmpeg&logoColor=white) for audio transcoding; WebP normalization for images
+- **Deployment** — ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 
 ## 📚 Documentation
 
