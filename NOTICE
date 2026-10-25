@@ -10,7 +10,8 @@ The built-in ambient sound files in assets/sounds/soundscape-builtin/ come from
 the Moodist project (https://github.com/remvze/moodist). Moodist states that
 they are subject to the Pixabay Content License or CC0, without a per-file
 list. They are not licensed under the AGPL. See
-assets/sounds/soundscape-builtin/LICENSE for the details and open questions.
+https://github.com/ahmet-cetinkaya/medioss/blob/main/assets/sounds/soundscape-builtin/LICENSE
+for the details and open questions (per-file source and license table).
 
 Other bundled software
 ----------------------
