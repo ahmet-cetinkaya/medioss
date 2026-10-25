@@ -36,10 +36,10 @@ cd medioss
 cp .env.example .env
 # Edit .env: set SESSION_SECRET (generate with: openssl rand -base64 32)
 # and MEDIOSS_ORIGIN (e.g. http://localhost:3000 or your domain)
-docker compose up   # or: make docker-up (detached)
+docker compose up -d   # pulls ghcr.io/ahmet-cetinkaya/medioss:latest
 ```
 
-Or pull the prebuilt image instead of building: `docker pull ghcr.io/ahmet-cetinkaya/medioss:1.0.0` (`:latest` tracks the newest stable release). See [docs/docker.md](docs/docker.md).
+Pin a release with `MEDIOSS_VERSION=1.0.0` in `.env`. To build from source instead, run `make docker-up`. See [docs/docker.md](docs/docker.md).
 
 Open `http://localhost:3000` (or your `MEDIOSS_ORIGIN`) and register the first admin.
 
@@ -91,8 +91,8 @@ make clean    # remove target/, the built UI and the static dir
 Docker and demo targets:
 
 ```bash
-make docker-build    # docker compose build
-make docker-up       # docker compose up -d --build
+make docker-build    # docker compose -f docker-compose.dev.yml build
+make docker-up       # build from source and start (docker-compose.dev.yml)
 make docker-down     # stop and remove the containers (keeps the volume)
 make docker-restart  # rebuild and recreate the containers
 make docker-logs     # follow the logs

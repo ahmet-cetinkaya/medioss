@@ -4,12 +4,16 @@ The `Dockerfile` builds the UI with bun, the binary with Rust in release mode, a
 
 ## Start
 
+`docker-compose.yml` runs the published image from `ghcr.io`. `docker-compose.dev.yml` builds the image from the local source instead.
+
 ```bash
 cp .env.example .env     # then set SESSION_SECRET: openssl rand -base64 32
-make docker-up           # docker compose up -d --build
+docker compose up -d     # pulls ghcr.io/ahmet-cetinkaya/medioss
 ```
 
-Open the address you set in `MEDIOSS_ORIGIN` (default `http://localhost:3000`) and register the first admin. `docker-compose.yml` refuses to start when `SESSION_SECRET` or `MEDIOSS_ORIGIN` is empty. Compose reads both from your environment or from `.env`; never commit `.env`.
+To build from source (for development or an unreleased change), use `make docker-up`, which runs `docker compose -f docker-compose.dev.yml up -d --build`.
+
+Open the address you set in `MEDIOSS_ORIGIN` (default `http://localhost:3000`) and register the first admin. Both compose files refuse to start when `SESSION_SECRET` or `MEDIOSS_ORIGIN` is empty. Compose reads both from your environment or from `.env`; never commit `.env`.
 
 ## Settings
 
@@ -28,14 +32,14 @@ All state lives in the `app_data` volume mounted at `/data` (SQLite database and
 
 ## Prebuilt image
 
-Instead of building locally, pull the published image (`linux/amd64` and `linux/arm64`):
+The published image supports `linux/amd64` and `linux/arm64`:
 
 ```bash
 docker pull ghcr.io/ahmet-cetinkaya/medioss:1.0.0   # a pinned release
 docker pull ghcr.io/ahmet-cetinkaya/medioss:latest  # the newest stable release
 ```
 
-To run it with Compose, replace `build: .` with `image: ghcr.io/ahmet-cetinkaya/medioss:1.0.0` in the `backend` service, then run `docker compose up -d`.
+`docker-compose.yml` uses `latest` by default. Pin a release by setting `MEDIOSS_VERSION=1.0.0` in `.env`, then run `docker compose pull && docker compose up -d`.
 
 ## Operate
 

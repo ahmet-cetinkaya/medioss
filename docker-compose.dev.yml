@@ -1,0 +1,30 @@
+services:
+  backend:
+    build: .
+    ports: ["3000:3000"]
+    volumes:
+      - app_data:/data
+    environment:
+      - RUST_LOG=info
+      - MEDIOSS_DATA_DIR=/data
+      # Required for constant-time first-run setup possession; not cookie signing.
+      - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET must be set}
+      - MEDIOSS_ORIGIN=${MEDIOSS_ORIGIN:?MEDIOSS_ORIGIN must be set}
+      - SESSION_TIMEOUT=${SESSION_TIMEOUT:-7d}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  app_data:
+    driver: local

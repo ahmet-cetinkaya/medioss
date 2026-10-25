@@ -1,6 +1,6 @@
 services:
   backend:
-    build: .
+    image: ghcr.io/ahmet-cetinkaya/medioss:${MEDIOSS_VERSION:-latest}
     ports: ["3000:3000"]
     volumes:
       - app_data:/data
