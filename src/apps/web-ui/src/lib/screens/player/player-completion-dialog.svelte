@@ -114,7 +114,7 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="motion-safe:duration-1500">
+  <Dialog.Content class="motion-safe:data-[state=open]:duration-1500">
     <div
       class="grid gap-5 motion-safe:animate-in motion-safe:duration-1500 motion-safe:delay-500 motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both"
     >
