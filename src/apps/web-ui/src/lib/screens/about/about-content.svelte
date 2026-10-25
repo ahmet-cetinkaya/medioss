@@ -25,6 +25,13 @@
   /** The NOTICE paragraph stating the project license, shown verbatim. */
   const LICENSE_STATEMENT = notice.split("\n\n")[1]?.replace(/\s+/g, " ");
 
+  const INTRO = [
+    { heading: m.whatHeading, body: m.whatBody },
+    { heading: m.whyHeading, body: m.whyBody },
+    { heading: m.howHeading, body: m.howBody },
+    { heading: m.whoHeading, body: m.whoBody },
+  ];
+
   let supportOpen = $state(false);
   let meta = $state<AppMeta | null>(null);
   let failed = $state(false);
@@ -49,6 +56,14 @@
     <h2 id="about-heading"><BrandLockup /></h2>
   {/snippet}
   <div class="flex flex-col gap-4">
+    <dl class="grid gap-3 text-body-md">
+      {#each INTRO as { heading, body } (heading)}
+        <div>
+          <dt class="font-medium text-ink-strong">{t(heading)}</dt>
+          <dd class="text-ink-body">{t(body)}</dd>
+        </div>
+      {/each}
+    </dl>
     {#if meta}
       <dl class="flex flex-col gap-2 text-sm">
         <div class="flex gap-2">
