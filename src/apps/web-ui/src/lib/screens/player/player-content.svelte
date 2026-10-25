@@ -130,6 +130,7 @@
         {program}
         {mix}
         onCompleted={() => (doneOpen = true)}
+        holdFocus={doneOpen}
       />
       <PlayerNotes meditationId={id} refresh={notesVersion} />
     </div>

@@ -80,9 +80,30 @@
     mix: PlayerMix;
     /** The completion was recorded (end of the meditation). */
     onCompleted: () => void;
+    /** The completion dialog is open: the focus overlay stays up behind it. */
+    holdFocus?: boolean;
   };
 
-  let { meditation, playback, program, mix, onCompleted }: Props = $props();
+  let {
+    meditation,
+    playback,
+    program,
+    mix,
+    onCompleted,
+    holdFocus = false,
+  }: Props = $props();
+  // `ended` bridges the gap between the audio ending and the completion
+  // dialog opening, so the overlay never flashes the inline player.
+  let ended = $state(false);
+  const focused = $derived(playing || ended || holdFocus);
+  let dialogWasHeld = false;
+  $effect(() => {
+    if (holdFocus) dialogWasHeld = true;
+    else if (dialogWasHeld) {
+      dialogWasHeld = false;
+      ended = false;
+    }
+  });
 
   const IDLE_MS = 5000;
 
@@ -132,7 +153,10 @@
     send: (startedAt, finishedAt) =>
       void postCompletion(meditation.id, startedAt, finishedAt).then(
         onCompleted,
-        () => (notice = m.completionFailed),
+        () => {
+          ended = false;
+          notice = m.completionFailed;
+        },
       ),
   });
 
@@ -171,6 +195,7 @@
   }
 
   function onPlay() {
+    ended = false;
     playing = true;
     reporter.play();
     tracker.play();
@@ -179,6 +204,8 @@
   }
 
   function onPause() {
+    // Browsers fire `pause` just before `ended`; keep the overlay up then.
+    if (audio?.ended) ended = true;
     playing = false;
     reporter.pause();
     syncSessionState(audio);
@@ -186,6 +213,7 @@
   }
 
   function onEnded() {
+    ended = true;
     playing = false;
     mix.pause();
     tracker.ended(duration * 1000);
@@ -223,7 +251,7 @@
   // cannot scroll and is fully hidden behind the opaque color wash. The
   // controls are never duplicated, so single-match locators keep working.
   $effect(() => {
-    if (!playing || !stage) return;
+    if (!focused || !stage) return;
     return enterFocusOverlay(stage);
   });
 
@@ -231,7 +259,7 @@
   // fades out and only the big elapsed clock remains. Any input restores it.
   let idle = $state(false);
   $effect(() => {
-    if (!playing) {
+    if (!focused) {
       idle = false;
       return;
     }
@@ -270,7 +298,7 @@
      $effect toggles .player-focus-on on <body>, hiding the rest of the
      page UI behind the opaque wash. -->
 <div bind:this={stage} data-player-floating="" class="min-w-0">
-  {#if playing}
+  {#if focused}
     <PlayerFocusBackdrop
       {program}
       {showCover}
@@ -291,9 +319,9 @@
   <Panel
     aria-labelledby="player-controls-heading"
     data-elevation="featured"
-    class="elevation-3 flex flex-col gap-6 {playing
+    class="elevation-3 flex flex-col gap-6 {focused
       ? 'overlay-floating'
-      : ''} {playing && idle
+      : ''} {focused && (idle || !playing)
       ? 'pointer-events-none opacity-0'
       : ''} motion-safe:transition-opacity motion-safe:duration-700"
   >
