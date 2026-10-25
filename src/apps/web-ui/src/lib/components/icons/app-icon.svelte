@@ -76,6 +76,7 @@
     "clock-counter-clockwise": ClockCounterClockwiseIcon,
     "chart-bar": ChartBarIcon,
     "gear-six": GearSixIcon,
+    coffee: CoffeeIcon,
     "shield-check": ShieldCheckIcon,
     shuffle: ShuffleIcon,
     "sign-out": SignOutIcon,

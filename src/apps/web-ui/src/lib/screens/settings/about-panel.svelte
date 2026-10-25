@@ -14,13 +14,11 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import RegionState from "$lib/components/feedback/region-state.svelte";
+  import { DONATE_URL } from "$lib/navigation/support";
   import { t } from "$lib/i18n/locale.svelte";
   import notice from "$repo/NOTICE?raw";
   import { aboutMessages as m } from "./settings.messages";
   import ThirdPartyLicensesDialog from "./third-party-licenses-dialog.svelte";
-
-  /** Canonical donation page; the only link the app advertises. */
-  const DONATE_URL = "https://ahmetcetinkaya.me/donate";
 
   /** The NOTICE paragraph stating the project license, shown verbatim. */
   const LICENSE_STATEMENT = notice.split("\n\n")[1]?.replace(/\s+/g, " ");
@@ -51,7 +49,11 @@
     </h2>
   {/snippet}
   <div class="flex flex-col gap-4">
-    <p class="text-body-md text-ink-body">{t(m.donateIntro)}</p>
+    <div class="grid gap-2">
+      <h3 class="text-heading text-ink-strong">{t(m.donateStoryHeading)}</h3>
+      <p class="text-body-md text-ink-body">{t(m.donateStory)}</p>
+      <p class="text-body-md text-ink-body">{t(m.donateFunds)}</p>
+    </div>
     {#if meta}
       <dl class="flex flex-col gap-2 text-sm">
         <div class="flex gap-2">

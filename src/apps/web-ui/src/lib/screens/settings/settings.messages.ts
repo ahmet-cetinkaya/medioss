@@ -180,9 +180,17 @@ export const aboutMessages = defineMessages({
     tr: "Poppins, SIL Open Font License 1.1 ile lisanslıdır.",
   },
   donate: { en: "Buy me a coffee", tr: "Bana bir kahve ısmarla" },
-  donateIntro: {
-    en: "MediOSS is free software built in a spare time. Donations keep it going.",
-    tr: "MediOSS boş zamanlarda geliştirilen özgün bir yazılımdır. Bağışlar gelişimini sürdürür.",
+  donateStoryHeading: {
+    en: "Free, ad-free, yours",
+    tr: "Ücretsiz, reklamsız, sizin",
+  },
+  donateStory: {
+    en: "MediOSS is free software built in spare time. It shows no ads and tracks nothing.",
+    tr: "MediOSS boş zamanlarda geliştirilen özgür bir yazılımdır. Reklam göstermez, sizi izlemez.",
+  },
+  donateFunds: {
+    en: "If it helps you, a coffee supports its ongoing development.",
+    tr: "İşinize yarıyorsa bir kahve, geliştirmenin sürmesine destek olur.",
   },
   loadFailed: {
     en: "Version information could not be loaded.",

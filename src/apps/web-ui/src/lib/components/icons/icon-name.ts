@@ -43,6 +43,7 @@ export const ICON_NAMES = [
   "clock-counter-clockwise",
   "chart-bar",
   "gear-six",
+  "coffee",
   "shield-check",
   "shuffle",
   "sign-out",

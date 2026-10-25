@@ -19,6 +19,7 @@
     navCurrentFor,
     type ScreenKey,
   } from "$lib/navigation/routes";
+  import { DONATE_URL } from "$lib/navigation/support";
   import NavItem from "./nav-item.svelte";
   import { shellMessages } from "./shell.messages";
 
@@ -78,6 +79,15 @@
           {/if}
         </li>
       {/each}
+      <li>
+        <NavItem
+          variant="sidebar"
+          href={DONATE_URL}
+          external
+          label={t(shellMessages.support)}
+          icon="coffee"
+        />
+      </li>
     </ul>
   </nav>
 </Sheet>
