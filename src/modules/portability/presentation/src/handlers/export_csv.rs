@@ -4,7 +4,7 @@ use crate::router::SharedDependencies;
 use crate::support::{attachment, internal};
 use axum::extract::State;
 use axum::response::Response;
-use portability_application::queries::export_mood_records::ExportMoodRecords;
+use portability_application::queries::export_mood_records::ExportMoodRecordsQuery;
 
 pub async fn export_csv(
     CurrentActor(actor): CurrentActor,
@@ -12,7 +12,7 @@ pub async fn export_csv(
 ) -> Response {
     let entries = deps
         .export_mood_records
-        .handle(ExportMoodRecords {
+        .handle(ExportMoodRecordsQuery {
             user_id: actor.user_id(),
         })
         .await;

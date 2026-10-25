@@ -5,17 +5,15 @@ use axum::http::{header, Request};
 use axum::Router;
 use chrono::{TimeZone, Utc};
 use kernel::{Actor, Role, UserId};
-use portability_application::commands::import_own_data::{
-    ImportFailure, ImportOwnData, ImportOwnDataHandler,
-};
+use portability_application::commands::import_own_data::{ImportFailure, ImportOwnDataCommand};
 use portability_application::models::export_document::ExportDocument;
 use portability_application::models::import_report::ImportReport;
 use portability_application::models::mood_record::MoodRecord;
 use portability_application::models::practice_snapshot::PracticeSnapshot;
-use portability_application::queries::export_mood_records::{
-    ExportMoodRecords, ExportMoodRecordsHandler,
-};
-use portability_application::queries::export_own_data::{ExportOwnData, ExportOwnDataHandler};
+use portability_application::ports::command_handler::CommandHandler;
+use portability_application::ports::query_handler::QueryHandler;
+use portability_application::queries::export_mood_records::ExportMoodRecordsQuery;
+use portability_application::queries::export_own_data::ExportOwnDataQuery;
 
 use crate::router::{router, SharedDependencies};
 
@@ -44,8 +42,11 @@ pub fn document(entries: Vec<MoodRecord>) -> ExportDocument {
 pub struct StubExportOwnData(pub Result<ExportDocument, String>);
 
 #[async_trait::async_trait]
-impl ExportOwnDataHandler for StubExportOwnData {
-    async fn handle(&self, _command: ExportOwnData) -> Result<ExportDocument, String> {
+impl QueryHandler<ExportOwnDataQuery> for StubExportOwnData {
+    type Output = ExportDocument;
+    type Error = String;
+
+    async fn handle(&self, _command: ExportOwnDataQuery) -> Result<ExportDocument, String> {
         self.0.clone()
     }
 }
@@ -53,8 +54,11 @@ impl ExportOwnDataHandler for StubExportOwnData {
 pub struct StubExportMoodRecords(pub Result<Vec<MoodRecord>, String>);
 
 #[async_trait::async_trait]
-impl ExportMoodRecordsHandler for StubExportMoodRecords {
-    async fn handle(&self, _command: ExportMoodRecords) -> Result<Vec<MoodRecord>, String> {
+impl QueryHandler<ExportMoodRecordsQuery> for StubExportMoodRecords {
+    type Output = Vec<MoodRecord>;
+    type Error = String;
+
+    async fn handle(&self, _command: ExportMoodRecordsQuery) -> Result<Vec<MoodRecord>, String> {
         self.0.clone()
     }
 }
@@ -75,8 +79,11 @@ impl RecordingImport {
 }
 
 #[async_trait::async_trait]
-impl ImportOwnDataHandler for RecordingImport {
-    async fn handle(&self, command: ImportOwnData) -> Result<ImportReport, ImportFailure> {
+impl CommandHandler<ImportOwnDataCommand> for RecordingImport {
+    type Output = ImportReport;
+    type Error = ImportFailure;
+
+    async fn handle(&self, command: ImportOwnDataCommand) -> Result<ImportReport, ImportFailure> {
         self.received
             .lock()
             .unwrap()

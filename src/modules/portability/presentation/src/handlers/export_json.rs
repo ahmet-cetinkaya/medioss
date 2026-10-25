@@ -4,7 +4,7 @@ use crate::router::SharedDependencies;
 use crate::support::{attachment, internal};
 use axum::extract::State;
 use axum::response::Response;
-use portability_application::queries::export_own_data::ExportOwnData;
+use portability_application::queries::export_own_data::ExportOwnDataQuery;
 
 pub async fn export_json(
     CurrentActor(actor): CurrentActor,
@@ -12,7 +12,7 @@ pub async fn export_json(
 ) -> Response {
     let document = deps
         .export_own_data
-        .handle(ExportOwnData {
+        .handle(ExportOwnDataQuery {
             user_id: actor.user_id(),
         })
         .await;
