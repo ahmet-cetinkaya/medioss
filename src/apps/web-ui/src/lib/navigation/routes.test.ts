@@ -23,12 +23,13 @@ describe("routes", () => {
     ).toEqual([
       ["practice", ["home", "library", "soundscape", "mood"]],
       ["progress", ["history", "stats"]],
-      ["account", ["settings", "about", "admin", "signOut"]],
+      ["account", ["settings", "admin", "signOut"]],
+      ["project", ["about"]],
     ]);
   });
 
   test("sign out is an action, not a screen", () => {
-    const signOut = NAV_GROUPS[2].items[3];
+    const signOut = NAV_GROUPS[2].items[2];
     expect(signOut.kind).toBe("action");
     expect(signOut.label).toBe(navMessages.signOut);
     expect(signOut.icon).toBe("sign-out");
@@ -63,9 +64,9 @@ describe("routes", () => {
       "history",
       "stats",
       "settings",
-      "about",
       "admin",
       "signOut",
+      "about",
     ]);
   });
 

@@ -22,7 +22,7 @@ export type ScreenKey =
   | "about"
   | "admin";
 
-export type NavGroupKey = "practice" | "progress" | "account";
+export type NavGroupKey = "practice" | "progress" | "account" | "project";
 
 export type Screen = {
   readonly key: ScreenKey;
@@ -132,7 +132,7 @@ export const ROUTES: Readonly<Record<ScreenKey, Screen>> = {
     "about",
     "/about/",
     screenTitleMessages.about,
-    "account",
+    "project",
     "info",
   ),
   admin: screen(
@@ -247,12 +247,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     key: "account",
     label: navGroupMessages.account,
-    items: [
-      screenItem("settings"),
-      screenItem("about"),
-      screenItem("admin"),
-      SIGN_OUT_ITEM,
-    ],
+    items: [screenItem("settings"), screenItem("admin"), SIGN_OUT_ITEM],
+  },
+  {
+    key: "project",
+    label: navGroupMessages.project,
+    items: [screenItem("about")],
   },
 ];
 

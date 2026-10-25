@@ -10,6 +10,7 @@ export const navGroupMessages = defineMessages({
   practice: { en: "Practice", tr: "Pratik" },
   progress: { en: "Progress", tr: "İlerleme" },
   account: { en: "Account", tr: "Hesap" },
+  project: { en: "MediOSS", tr: "MediOSS" },
 });
 
 export const navMessages = defineMessages({

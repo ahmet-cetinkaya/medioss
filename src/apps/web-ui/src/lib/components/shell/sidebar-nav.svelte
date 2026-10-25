@@ -68,14 +68,18 @@
             {/if}
           </li>
         {/each}
+        {#if group.key === "project"}
+          <li>
+            <NavItem
+              variant="sidebar"
+              label={t(shellMessages.support)}
+              icon="coffee"
+              onclick={() => (supportOpen = true)}
+            />
+          </li>
+        {/if}
       </ul>
     </div>
   {/each}
-  <NavItem
-    variant="sidebar"
-    label={t(shellMessages.support)}
-    icon="coffee"
-    onclick={() => (supportOpen = true)}
-  />
   <SupportDialog bind:open={supportOpen} />
 </nav>
