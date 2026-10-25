@@ -4,8 +4,8 @@ import { defineMessages } from "../../i18n/message";
 
 export const aboutMessages = defineMessages({
   description: {
-    en: "MediOSS is a self-hosted wellness app for calmer days: a meditation library, an ambient soundscape mixer and a mood tracker, all behind one account on your own server. It exists so your practice and your moods stay yours, with no third-party services and no tracking. One program serves the web interface and the API from a single SQLite database, and the administrator creates the accounts. It is built by Ahmet Çetinkaya and the MediOSS contributors as open source software under the AGPL.",
-    tr: "MediOSS, kendi sunucunuzda çalışan bir esenlik uygulamasıdır: meditasyon kütüphanesi, ortam sesi karıştırıcı ve ruh hâli takibi tek bir hesapta bir arada. Meditasyon alışkanlığınız ve ruh hâliniz yalnızca size ait kalsın diye geliştirildi; üçüncü taraf hizmet kullanmaz, sizi izlemez. Web arayüzünü ve API'yi tek bir program sunar, veriler tek bir SQLite veritabanında durur; hesapları yönetici oluşturur. MediOSS'u Ahmet Çetinkaya ve katkıda bulunanlar, AGPL lisanslı açık kaynaklı bir yazılım olarak geliştiriyor.",
+    en: "MediOSS is a calm space for your wellbeing: a library of guided meditations, a mixer for soothing ambient sounds and a mood journal, all in one place and all yours. It runs on your own server, so your practice and your feelings stay private: no ads, no tracking. MediOSS is free and open source, made by Ahmet Çetinkaya and its contributors.",
+    tr: "MediOSS, esenliğiniz için sakin bir alan: rehberli meditasyonlar, huzur veren ortam sesleri ve bir ruh hâli günlüğü, hepsi tek yerde ve yalnızca size ait. Kendi sunucunuzda çalıştığı için meditasyonlarınız ve duygularınız gizli kalır; reklam yok, takip yok. MediOSS ücretsiz ve açık kaynaklıdır; Ahmet Çetinkaya ve katkıda bulunanlar tarafından geliştirilir.",
   },
   version: { en: "Version", tr: "Sürüm" },
   license: { en: "License", tr: "Lisans" },
