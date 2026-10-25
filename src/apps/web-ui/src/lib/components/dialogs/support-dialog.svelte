@@ -43,9 +43,10 @@
 
 <style>
   /* An orb-styled heart: the brand orb gradient and a soft glass highlight,
-     cut to a heart shape. The glow sits on a wrapper because a mask clips shadows. */
+     cut to a heart shape. The thin edge and the glow sit on a wrapper because a mask clips shadows. */
   .heart-glow {
-    filter: drop-shadow(0 10px 14px rgb(126 83 173 / 0.45));
+    filter: drop-shadow(0 0 0.75px rgb(110 58 120 / 0.9))
+      drop-shadow(0 10px 14px rgb(126 83 173 / 0.45));
   }
 
   .heart {
