@@ -57,7 +57,7 @@
       </h2>
     {/snippet}
     <div class="flex flex-col gap-4">
-      <p class="text-body-md text-ink-body">{t(m.description)}</p>
+      <p class="text-start text-body-md text-ink-body">{t(m.description)}</p>
       {#if failed}
         <RegionState
           status="error"
