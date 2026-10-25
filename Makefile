@@ -90,15 +90,15 @@ test:
 	./scripts/check-boundaries.sh --self-test
 
 docker-build:
-	docker compose build
+	docker compose -f docker-compose.dev.yml build
 docker-up:
-	docker compose up -d --build
+	docker compose -f docker-compose.dev.yml up -d --build
 docker-down:
-	docker compose down
+	docker compose -f docker-compose.dev.yml down
 docker-restart:
-	docker compose up -d --build --force-recreate
+	docker compose -f docker-compose.dev.yml up -d --build --force-recreate
 docker-logs:
-	docker compose logs -f
+	docker compose -f docker-compose.dev.yml logs -f
 
 # Demo content and screenshots (docs/demo.md). demo-seed and demo-screenshots
 # need a running empty instance on DEMO_PORT and SESSION_SECRET in the environment.

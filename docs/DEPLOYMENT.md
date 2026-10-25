@@ -31,14 +31,14 @@ docker compose up -d
 open http://localhost:3000
 ```
 
-To skip the local build, pull the prebuilt multi-arch image (`linux/amd64`, `linux/arm64`) and point the `backend` service at it, for example with `image: ghcr.io/ahmet-cetinkaya/medioss:1.0.0` in place of `build: .`:
+`docker-compose.yml` pulls the prebuilt multi-arch image (`linux/amd64`, `linux/arm64`) from `ghcr.io/ahmet-cetinkaya/medioss`, `latest` by default. Pin a release with `MEDIOSS_VERSION=1.0.0` in `.env`. You can also pull it by hand:
 
 ```bash
 docker pull ghcr.io/ahmet-cetinkaya/medioss:1.0.0   # a pinned release
 docker pull ghcr.io/ahmet-cetinkaya/medioss:latest  # the newest stable release
 ```
 
-The Makefile wraps the Compose commands: `make docker-build`, `make docker-up`, `make docker-down`, `make docker-restart` and `make docker-logs`.
+To build from local source instead, use `docker-compose.dev.yml`. The Makefile wraps it: `make docker-build`, `make docker-up`, `make docker-down`, `make docker-restart` and `make docker-logs`.
 
 ### Option 2: Home Server Deployment
 
@@ -173,7 +173,7 @@ Two constraints are worth calling out, because breaking them produces confusing 
 
 ### Docker Compose Setup
 
-The stack is defined in [`docker-compose.yml`](../docker-compose.yml) at the repository root, and `make docker-up` / `make docker-down` drive it. It declares one service and one named volume.
+The stack is defined in [`docker-compose.yml`](../docker-compose.yml) at the repository root, and `docker-compose.dev.yml` builds the same stack from local source (`make docker-up` / `make docker-down` drive that one). It declares one service and one named volume.
 
 The service builds the image from the `Dockerfile` above, publishes the app on port 3000, restarts unless you stop it explicitly, and polls `/api/health` so an unhealthy container is visible in `docker ps` rather than silently serving errors. Its environment sets `MEDIOSS_DATA_DIR` to the mount point and passes required `SESSION_SECRET` and `MEDIOSS_ORIGIN` values through from your shell or the `.env` file described above; the secret is never baked into the image or committed. Session timeout and secure-cookie settings retain their documented defaults unless explicitly overridden.
 
@@ -380,17 +380,12 @@ networks:
 Back up first (see _Backup Strategy_).
 
 ```bash
-# Stop current deployment
-docker compose down
-
-# Pull latest changes
-git pull origin main
-
-# Rebuild and start (or: make docker-up)
-docker compose up -d --build
-
-# Prebuilt image instead: change the image tag, then
+# Prebuilt image (default): set MEDIOSS_VERSION in .env if you pin a release, then
 docker compose pull && docker compose up -d
+
+# Building from source instead
+git pull origin main
+docker compose -f docker-compose.dev.yml up -d --build   # or: make docker-up
 
 # Database migrations (automatic)
 # The Rust app handles migrations on startup
