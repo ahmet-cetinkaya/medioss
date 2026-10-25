@@ -1,6 +1,6 @@
 use kernel::UserId;
 
 #[derive(Debug)]
-pub struct ExportOwnData {
+pub struct ExportOwnDataQuery {
     pub user_id: UserId,
 }

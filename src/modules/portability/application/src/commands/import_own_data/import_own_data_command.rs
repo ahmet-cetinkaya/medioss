@@ -2,7 +2,7 @@ use crate::models::export_document::ExportDocument;
 use kernel::UserId;
 
 #[derive(Debug)]
-pub struct ImportOwnData {
+pub struct ImportOwnDataCommand {
     pub user_id: UserId,
     pub document: ExportDocument,
 }
@@ -29,5 +29,5 @@ impl std::fmt::Display for ImportFailure {
 }
 
 #[cfg(test)]
-#[path = "import_own_data.tests.rs"]
+#[path = "import_own_data_command.tests.rs"]
 mod tests;

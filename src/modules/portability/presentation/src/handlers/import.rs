@@ -8,7 +8,7 @@ use axum::extract::{Multipart, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use portability_application::commands::import_own_data::{ImportFailure, ImportOwnData};
+use portability_application::commands::import_own_data::{ImportFailure, ImportOwnDataCommand};
 
 pub async fn import(
     CurrentActor(actor): CurrentActor,
@@ -36,7 +36,7 @@ pub async fn import(
     };
     match deps
         .import_own_data
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: actor.user_id(),
             document,
         })

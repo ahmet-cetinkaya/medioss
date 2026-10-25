@@ -237,7 +237,7 @@ pub fn portability_dependencies(
     };
 
     let export_own_data =
-        portability_application::queries::export_own_data::ExportOwnDataService::new(
+        portability_application::queries::export_own_data::ExportOwnDataQueryHandler::new(
             mood_records(),
             practice_source(),
             Arc::new(ProfileNames {
@@ -245,11 +245,11 @@ pub fn portability_dependencies(
             }),
         );
     let export_mood_records =
-        portability_application::queries::export_mood_records::ExportMoodRecordsService::new(
+        portability_application::queries::export_mood_records::ExportMoodRecordsQueryHandler::new(
             mood_records(),
         );
     let import_own_data =
-        portability_application::commands::import_own_data::ImportOwnDataService::new(
+        portability_application::commands::import_own_data::ImportOwnDataCommandHandler::new(
             mood_records(),
             mood_sink(),
             practice_source(),

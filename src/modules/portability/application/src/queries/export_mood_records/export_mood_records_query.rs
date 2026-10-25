@@ -1,6 +1,6 @@
 use kernel::UserId;
 
 #[derive(Debug)]
-pub struct ExportMoodRecords {
+pub struct ExportMoodRecordsQuery {
     pub user_id: UserId,
 }

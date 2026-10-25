@@ -1,6 +1,16 @@
+use super::import_own_data_command::{ImportFailure, ImportOwnDataCommand};
 use crate::models::export_document::ExportDocument;
 use crate::FORMAT_VERSION;
 use chrono::Utc;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ImportOwnDataCommandValidator;
+
+impl ImportOwnDataCommandValidator {
+    pub fn validate(&self, command: &ImportOwnDataCommand) -> Result<(), ImportFailure> {
+        validate_document(&command.document).map_err(|e| ImportFailure::Validation(e.to_string()))
+    }
+}
 
 #[derive(Debug)]
 pub enum ImportError {
@@ -21,7 +31,7 @@ impl std::fmt::Display for ImportError {
     }
 }
 
-pub fn validate_document(document: &ExportDocument) -> Result<(), ImportError> {
+fn validate_document(document: &ExportDocument) -> Result<(), ImportError> {
     if document.format_version != FORMAT_VERSION {
         return Err(ImportError::UnknownFormatVersion(document.format_version));
     }
@@ -66,5 +76,5 @@ pub fn validate_document(document: &ExportDocument) -> Result<(), ImportError> {
 }
 
 #[cfg(test)]
-#[path = "validate_import.tests.rs"]
+#[path = "import_own_data_command_validator.tests.rs"]
 mod tests;

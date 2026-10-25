@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use crate::commands::import_own_data::ImportOwnDataHandler;
-use crate::commands::import_own_data::ImportOwnDataService;
-use crate::commands::import_own_data::{ImportFailure, ImportOwnData};
+use crate::commands::import_own_data::ImportOwnDataCommandHandler;
+use crate::commands::import_own_data::{ImportFailure, ImportOwnDataCommand};
 use crate::models::practice_snapshot::PracticeSnapshot;
+use crate::ports::command_handler::CommandHandler;
 use crate::ports::mood_record_sink::MoodRecordSink;
 use crate::ports::own_practice_records::OwnPracticeRecords;
 use crate::test_support::fake_library::FakeLibrary;
@@ -36,8 +36,8 @@ fn service(
     mood_sink: Arc<dyn crate::ports::mood_record_sink::MoodRecordSink>,
     practice_source: Arc<dyn OwnPracticeRecords>,
     practice_sink: Arc<dyn crate::ports::practice_sink::PracticeSink>,
-) -> ImportOwnDataService {
-    ImportOwnDataService::new(
+) -> ImportOwnDataCommandHandler {
+    ImportOwnDataCommandHandler::new(
         mood_source,
         mood_sink,
         practice_source,
@@ -92,7 +92,7 @@ async fn round_trip_reproduces_history_exactly() {
         Arc::new(FakePracticeSource),
         Arc::new(practice),
     )
-    .handle(ImportOwnData {
+    .handle(ImportOwnDataCommand {
         user_id: user(),
         document: doc,
     })
@@ -129,7 +129,7 @@ async fn second_import_of_same_file_creates_nothing() {
     );
 
     let first = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: doc.clone(),
         })
@@ -138,7 +138,7 @@ async fn second_import_of_same_file_creates_nothing() {
     assert_eq!((first.mood_created, first.mood_duplicates_skipped), (2, 0));
 
     let second = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: doc,
         })
@@ -188,7 +188,7 @@ async fn practice_records_for_missing_meditations_are_skipped_and_counted() {
         Arc::new(FakePracticeSource),
         practice.clone(),
     )
-    .handle(ImportOwnData {
+    .handle(ImportOwnDataCommand {
         user_id: user(),
         document: doc,
     })
@@ -212,7 +212,7 @@ async fn invalid_document_rejects_with_zero_writes() {
 
     let bad_score = document(vec![entry(9, None, 10)], PracticeSnapshot::default());
     let err = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: bad_score,
         })
@@ -224,7 +224,7 @@ async fn invalid_document_rejects_with_zero_writes() {
     let mut bad_version = document(vec![entry(3, None, 10)], PracticeSnapshot::default());
     bad_version.format_version = 99;
     let err = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: bad_version,
         })
@@ -235,7 +235,7 @@ async fn invalid_document_rejects_with_zero_writes() {
 
     let future = document(vec![entry(3, None, -60)], PracticeSnapshot::default());
     let err = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: future,
         })
@@ -285,7 +285,7 @@ async fn repeat_import_reports_practice_as_duplicates_without_writing() {
         practice.clone(),
     );
     let first = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: doc.clone(),
         })
@@ -303,7 +303,7 @@ async fn repeat_import_reports_practice_as_duplicates_without_writing() {
     }
 
     let second = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: doc,
         })
@@ -330,7 +330,7 @@ async fn oversized_mood_note_and_empty_practice_note_reject_with_zero_writes() {
     let big = "x".repeat(10_001);
     let over = document(vec![entry(3, Some(&big), 10)], PracticeSnapshot::default());
     let err = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: over,
         })
@@ -353,7 +353,7 @@ async fn oversized_mood_note_and_empty_practice_note_reject_with_zero_writes() {
         ),
     );
     let err = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: empty,
         })
@@ -386,7 +386,7 @@ async fn sink_failure_stops_import_as_internal_error_keeping_earlier_writes() {
         ),
     );
 
-    let svc = ImportOwnDataService::new(
+    let svc = ImportOwnDataCommandHandler::new(
         Arc::new(store),
         Arc::new(failing_sink),
         Arc::new(FakePracticeSource),
@@ -394,7 +394,7 @@ async fn sink_failure_stops_import_as_internal_error_keeping_earlier_writes() {
         Arc::new(FakeLibrary(std::sync::Mutex::new(library_meditations()))),
     );
     let err = svc
-        .handle(ImportOwnData {
+        .handle(ImportOwnDataCommand {
             user_id: user(),
             document: both,
         })
