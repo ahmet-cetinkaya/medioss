@@ -6,7 +6,7 @@
 
 # MediOSS
 
-[![CI](https://img.shields.io/github/actions/workflow/status/ahmet-cetinkaya/medioss/ci.yml?logo=github&style=flat)](https://github.com/ahmet-cetinkaya/medioss/actions/workflows/ci.yml) [![GitHub stars](https://img.shields.io/github/stars/ahmet-cetinkaya/medioss?style=flat)](https://github.com/ahmet-cetinkaya/medioss/stargazers) [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE) [![Donate](https://img.shields.io/badge/Donate-ahmetcetinkaya.me%2Fdonate-blue?style=flat)](https://ahmetcetinkaya.me/donate)
+[![CI](https://img.shields.io/github/actions/workflow/status/ahmet-cetinkaya/medioss/ci.yml?logo=github&style=flat)](https://github.com/ahmet-cetinkaya/medioss/actions/workflows/ci.yml) [![GitHub stars](https://img.shields.io/github/stars/ahmet-cetinkaya/medioss?style=flat)](https://github.com/ahmet-cetinkaya/medioss/stargazers) [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE) [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ffdd00?style=flat&logo=buymeacoffee&logoColor=black)](https://ahmetcetinkaya.me/donate)
 
 A self-hosted wellness app for calmer days: a meditation library, an ambient soundscape mixer, and a mood tracker, all behind one account on your own server. Your data stays in one SQLite file that you control.
 

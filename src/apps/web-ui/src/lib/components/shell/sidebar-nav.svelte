@@ -16,6 +16,7 @@
     navCurrentFor,
     type ScreenKey,
   } from "$lib/navigation/routes";
+  import SupportDialog from "$lib/components/dialogs/support-dialog.svelte";
   import NavItem from "./nav-item.svelte";
   import { shellMessages } from "./shell.messages";
 
@@ -30,6 +31,7 @@
 
   const current = $derived(navCurrentFor(screen));
   const groupId = $props.id();
+  let supportOpen = $state(false);
 </script>
 
 <nav
@@ -66,7 +68,18 @@
             {/if}
           </li>
         {/each}
+        {#if group.key === "project"}
+          <li>
+            <NavItem
+              variant="sidebar"
+              label={t(shellMessages.support)}
+              icon="coffee"
+              onclick={() => (supportOpen = true)}
+            />
+          </li>
+        {/if}
       </ul>
     </div>
   {/each}
+  <SupportDialog bind:open={supportOpen} />
 </nav>

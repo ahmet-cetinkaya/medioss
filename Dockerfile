@@ -2,10 +2,9 @@
 
 # Stage 1: Build the Astro + Svelte frontend (bun, matching local and CI tooling)
 FROM oven/bun:1.4-slim@sha256:debbe76858f2e398d2937c1eceeb82c571ac1fcd78aadf00e9634578ac2b5ef7 AS frontend
-# Repo-relative layout: the About page imports NOTICE and the sound manifest via `$repo`.
+# Repo-relative layout: the About page imports NOTICE via `$repo`.
 WORKDIR /repo/src/apps/web-ui
 COPY NOTICE /repo/NOTICE
-COPY assets/sounds/soundscape-builtin/manifest.json /repo/assets/sounds/soundscape-builtin/manifest.json
 COPY src/apps/web-ui/package.json src/apps/web-ui/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY src/apps/web-ui .

@@ -1,0 +1,9 @@
+---
+import AppLayout from "../layouts/AppLayout.astro";
+import AppSkeleton from "../layouts/AppSkeleton.astro";
+import AboutPage from "$lib/screens/about/about-page.svelte";
+---
+
+<AppLayout screen="about">
+  <AboutPage client:only="svelte"><AppSkeleton slot="fallback" /></AboutPage>
+</AppLayout>

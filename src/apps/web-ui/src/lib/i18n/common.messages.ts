@@ -10,6 +10,7 @@ export const navGroupMessages = defineMessages({
   practice: { en: "Practice", tr: "Pratik" },
   progress: { en: "Progress", tr: "İlerleme" },
   account: { en: "Account", tr: "Hesap" },
+  project: { en: "MediOSS", tr: "MediOSS" },
 });
 
 export const navMessages = defineMessages({
@@ -20,6 +21,7 @@ export const navMessages = defineMessages({
   history: { en: "History", tr: "Geçmiş" },
   statistics: { en: "Statistics", tr: "İstatistikler" },
   settings: { en: "Settings", tr: "Ayarlar" },
+  about: { en: "About", tr: "Hakkında" },
   admin: { en: "Admin", tr: "Yönetim" },
   signOut: { en: "Sign out", tr: "Çıkış yap" },
   more: { en: "More", tr: "Daha fazla" },
@@ -35,6 +37,7 @@ export const screenTitleMessages = defineMessages({
   history: { en: "History", tr: "Geçmiş" },
   statistics: { en: "Statistics", tr: "İstatistikler" },
   settings: { en: "Settings", tr: "Ayarlar" },
+  about: { en: "About", tr: "Hakkında" },
   admin: { en: "Admin", tr: "Yönetim" },
   login: { en: "Sign in", tr: "Giriş yap" },
   setup: { en: "Setup", tr: "Kurulum" },

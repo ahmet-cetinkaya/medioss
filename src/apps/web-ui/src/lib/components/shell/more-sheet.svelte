@@ -11,6 +11,7 @@
   `returnFocusTo?` (the More button).
 -->
 <script lang="ts">
+  import SupportDialog from "$lib/components/dialogs/support-dialog.svelte";
   import Sheet from "$lib/components/dialogs/sheet.svelte";
   import { t } from "$lib/i18n/locale.svelte";
   import {
@@ -40,6 +41,7 @@
 
   const current = $derived(navCurrentFor(screen));
   let signingOut = false;
+  let supportOpen = $state(false);
 </script>
 
 <Sheet
@@ -78,6 +80,18 @@
           {/if}
         </li>
       {/each}
+      <li>
+        <NavItem
+          variant="sidebar"
+          label={t(shellMessages.support)}
+          icon="coffee"
+          onclick={() => {
+            open = false;
+            supportOpen = true;
+          }}
+        />
+      </li>
     </ul>
   </nav>
 </Sheet>
+<SupportDialog bind:open={supportOpen} />
