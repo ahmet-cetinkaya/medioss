@@ -16,7 +16,8 @@
     repositoryUrl,
   }: { open?: boolean; repositoryUrl: string } = $props();
 
-  const SOUNDS_LICENSE_PATH = "blob/main/assets/sounds/soundscape-builtin/LICENSE";
+  const SOUNDS_LICENSE_PATH =
+    "blob/main/assets/sounds/soundscape-builtin/LICENSE";
   const NOTICE_PATH = "blob/main/NOTICE";
 
   const linkClass =

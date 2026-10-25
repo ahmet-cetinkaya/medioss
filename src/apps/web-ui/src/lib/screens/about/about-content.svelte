@@ -63,7 +63,24 @@
         </div>
       </dl>
       <p class="text-sm text-ink-body">{LICENSE_STATEMENT}</p>
-      <div class="flex flex-wrap gap-3">
+      <ThirdPartyLicensesDialog
+        bind:open={thirdPartyOpen}
+        repositoryUrl={meta.source}
+      />
+    {:else if failed}
+      <RegionState
+        status="error"
+        minHeight="4rem"
+        errorMessage={t(m.loadFailed)}
+        onRetry={() => void load()}
+      >
+        <span class="sr-only">{t(m.loadFailed)}</span>
+      </RegionState>
+    {:else}
+      <p class="text-sm text-ink-muted" aria-busy="true">…</p>
+    {/if}
+    <div class="flex flex-wrap items-center gap-3">
+      {#if meta}
         <Button
           variant="secondary"
           href={meta.source}
@@ -86,24 +103,7 @@
           <PackageIcon aria-hidden="true" />
           {t(m.thirdPartyOpen)}
         </Button>
-      </div>
-      <ThirdPartyLicensesDialog
-        bind:open={thirdPartyOpen}
-        repositoryUrl={meta.source}
-      />
-    {:else if failed}
-      <RegionState
-        status="error"
-        minHeight="4rem"
-        errorMessage={t(m.loadFailed)}
-        onRetry={() => void load()}
-      >
-        <span class="sr-only">{t(m.loadFailed)}</span>
-      </RegionState>
-    {:else}
-      <p class="text-sm text-ink-muted" aria-busy="true">…</p>
-    {/if}
-    <div>
+      {/if}
       <Button
         variant="secondary"
         size="lg"
@@ -113,7 +113,7 @@
         <CoffeeIcon weight="fill" aria-hidden="true" />
         {t(shellMessages.support)}
       </Button>
-      <SupportDialog bind:open={supportOpen} />
     </div>
+    <SupportDialog bind:open={supportOpen} />
   </div>
 </Panel>
