@@ -8,6 +8,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { fetchAppMeta, type AppMeta } from "$lib/api/meta";
+  import CoffeeIcon from "phosphor-svelte/lib/CoffeeIcon";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import RegionState from "$lib/components/feedback/region-state.svelte";
@@ -103,10 +104,13 @@
     <div>
       <Button
         variant="secondary"
+        size="lg"
+        class="border-transparent bg-[#ffdd00] font-semibold text-[#1a1a1a] hover:bg-[#ffe84d]"
         href={DONATE_URL}
         target="_blank"
         rel="noopener noreferrer"
       >
+        <CoffeeIcon weight="fill" aria-hidden="true" />
         {t(m.donate)}
       </Button>
     </div>
