@@ -9,6 +9,8 @@
   import { onMount } from "svelte";
   import { fetchAppMeta, type AppMeta } from "$lib/api/meta";
   import CoffeeIcon from "phosphor-svelte/lib/CoffeeIcon";
+  import PackageIcon from "phosphor-svelte/lib/PackageIcon";
+  import ScalesIcon from "phosphor-svelte/lib/ScalesIcon";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import RegionState from "$lib/components/feedback/region-state.svelte";
@@ -82,9 +84,11 @@
           target="_blank"
           rel="noopener noreferrer"
         >
+          <ScalesIcon aria-hidden="true" />
           {t(m.licenseFullText)}
         </Button>
         <Button variant="secondary" onclick={() => (thirdPartyOpen = true)}>
+          <PackageIcon aria-hidden="true" />
           {t(m.thirdPartyOpen)}
         </Button>
       </div>
