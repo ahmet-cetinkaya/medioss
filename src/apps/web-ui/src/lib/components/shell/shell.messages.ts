@@ -10,7 +10,7 @@ export const shellMessages = defineMessages({
   sidebarNav: { en: "Main navigation", tr: "Ana gezinme" },
   railNav: { en: "Compact navigation", tr: "Kompakt gezinme" },
   bottomNav: { en: "Bottom navigation", tr: "Alt gezinme" },
-  support: { en: "Support MediOSS", tr: "MediOSS'a destek ol" },
+  support: { en: "Support", tr: "Destek ol" },
   supportTitle: {
     en: "Free, ad-free, yours",
     tr: "Ücretsiz, reklamsız, sizin",
