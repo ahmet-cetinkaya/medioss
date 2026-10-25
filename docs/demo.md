@@ -9,11 +9,11 @@ make demo                   # elsewhere: needs bun, ffmpeg, openssl and a Playwr
 
 ## What it does
 
-1. `scripts/demo.sh` runs `make build`, then starts `target/release/medioss` on `DEMO_PORT` (default 3917) with a temporary data directory and a random `SESSION_SECRET`.
+1. `scripts/demo.sh` runs `make build`, then starts `target/release/medioss` on `DEMO_PORT` (default 3917) with a temporary data directory, a random `SESSION_SECRET` and `MEDIOSS_BUILTIN_SOUNDS_DIR` pointing at `assets/sounds/soundscape-builtin` (so the built-in sounds exist).
 2. `make demo-seed` (`src/apps/web-ui/demo/seed-demo.ts`) registers the test-only admin and member from `e2e/support/auth.ts` (`@example.test` addresses). It then creates three programs with covers and sessions, two uploaded sounds, a mix of built-in sounds, 45 days of mood entries and ten completed sessions. The content is fixed, so every run looks the same apart from dates. It refuses an instance that already has programs.
 3. `make demo-screenshots` (`demo/screenshots.ts`) signs in with those users and captures 11 screens at desktop (1280×800) and mobile (390×844).
 
-The two targets can also be run by hand against your own empty instance on `DEMO_PORT`: set `SESSION_SECRET` to the value that instance was started with, because first-run setup needs it.
+The two targets can also be run by hand against your own empty instance on `DEMO_PORT`: set `SESSION_SECRET` to the value that instance was started with, because first-run setup needs it. `make run` and `make dev` do not set `MEDIOSS_BUILTIN_SOUNDS_DIR`, so also set it (for example `MEDIOSS_BUILTIN_SOUNDS_DIR=$PWD/assets/sounds/soundscape-builtin`) or the mix of built-in sounds will be empty.
 
 ## Notes
 

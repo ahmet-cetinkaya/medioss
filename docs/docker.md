@@ -26,6 +26,17 @@ See [`.env.example`](../.env.example) for the full list.
 
 All state lives in the `app_data` volume mounted at `/data` (SQLite database and uploaded media). Back it up before upgrading. The container root filesystem is read-only, all capabilities are dropped, and `no-new-privileges` is set.
 
+## Prebuilt image
+
+Instead of building locally, pull the published image (`linux/amd64` and `linux/arm64`):
+
+```bash
+docker pull ghcr.io/ahmet-cetinkaya/medioss:1.0.0   # a pinned release
+docker pull ghcr.io/ahmet-cetinkaya/medioss:latest  # the newest stable release
+```
+
+To run it with Compose, replace `build: .` with `image: ghcr.io/ahmet-cetinkaya/medioss:1.0.0` in the `backend` service, then run `docker compose up -d`.
+
 ## Operate
 
 ```bash
@@ -41,4 +52,21 @@ The health check calls `GET /api/health`. For HTTPS, put a reverse proxy in fron
 
 `.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. Pull requests and pushes to `main` only build it (no login, no push), so CI stays green. Only stable semver tags (`vX.Y.Z`, no prerelease suffix) publish `X.Y.Z`, `X.Y`, `X` and move `latest`, in one atomic push — `latest` always points at the last stable release, and prerelease tags like `v1.0.0-rc.1` never touch the registry.
 
-The image is published to GitHub Container Registry as `ghcr.io/<owner>/medioss`. The workflow logs in with the built-in `GITHUB_TOKEN`, so no secrets or variables are needed. After the first publish, set the package to public (package settings, Change visibility) and connect it to the repository so anyone can pull it.
+The image is published to GitHub Container Registry as `ghcr.io/ahmet-cetinkaya/medioss`. The workflow logs in with the built-in `GITHUB_TOKEN`, so no secrets or variables are needed. After the first publish, set the package to public (package settings, Change visibility) and connect it to the repository so anyone can pull it.
+
+## Releasing a new version
+
+1. Bump `version` in `[workspace.package]` in the root `Cargo.toml` (every crate inherits it) and commit.
+2. Push a stable tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. CI publishes `X.Y.Z`, `X.Y`, `X` and `latest` to `ghcr.io/ahmet-cetinkaya/medioss`.
+
+Manual fallback, when CI cannot publish:
+
+```bash
+docker build -t ghcr.io/ahmet-cetinkaya/medioss:X.Y.Z -t ghcr.io/ahmet-cetinkaya/medioss:latest .
+docker login ghcr.io     # user name + a classic personal access token with write:packages
+docker push ghcr.io/ahmet-cetinkaya/medioss:X.Y.Z
+docker push ghcr.io/ahmet-cetinkaya/medioss:latest
+```
+
+Enter the token only at the login prompt. Never write it into a file, a script or a shell history. After the first publish, make the package public and connect it to the repository (see above).

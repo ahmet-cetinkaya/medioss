@@ -26,7 +26,7 @@ All source components live under the top-level `src/` directory. There is no top
     media-store does not)
 ```
 
-This is a **draft**. Final business-module boundaries are decided feature by feature as the product is built. `meditation` is used throughout as the single worked example; it is not a complete module inventory, and the number of modules is deliberately left open.
+As of v1.0.0 there are five business modules: `identity`, `meditation`, `mood-tracker`, `portability` and `soundscape`. `meditation` is used throughout as the single worked example; the same layering applies to every module. New modules follow the same pattern and are added when a feature needs a new boundary.
 
 ---
 

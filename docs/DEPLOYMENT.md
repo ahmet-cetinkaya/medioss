@@ -1,10 +1,10 @@
-# Deployment Guide: MediOSS Wellness App
+# Deployment Guide: MediOSS
 
-This guide covers deploying the MediOSS wellness app with its Rust backend and Astro frontend.
+This guide covers deploying MediOSS with its Rust backend and Astro frontend.
 
 ## Prerequisites
 
-- Docker and docker-compose installed
+- Docker with the Compose plugin (`docker compose`) installed
 - **ffmpeg** on the host PATH (meditation uploads are converted to Ogg Opus through it; without it the server starts but uploads answer 503)
 - 128MB RAM minimum (256MB recommended for multiple users)
 - 5GB storage space (10GB for multiple users)
@@ -21,12 +21,24 @@ Best for testing and personal use on a single machine.
 git clone https://github.com/ahmet-cetinkaya/medioss.git
 cd medioss
 
-# Start the application
-docker-compose up -d
+# Set SESSION_SECRET and MEDIOSS_ORIGIN first (see Configuration below)
+cp .env.example .env
+
+# Start the application (or: make docker-up)
+docker compose up -d
 
 # Access the app
 open http://localhost:3000
 ```
+
+To skip the local build, pull the prebuilt multi-arch image (`linux/amd64`, `linux/arm64`) and point the `backend` service at it, for example with `image: ghcr.io/ahmet-cetinkaya/medioss:1.0.0` in place of `build: .`:
+
+```bash
+docker pull ghcr.io/ahmet-cetinkaya/medioss:1.0.0   # a pinned release
+docker pull ghcr.io/ahmet-cetinkaya/medioss:latest  # the newest stable release
+```
+
+The Makefile wraps the Compose commands: `make docker-build`, `make docker-up`, `make docker-down`, `make docker-restart` and `make docker-logs`.
 
 ### Option 2: Home Server Deployment
 
@@ -38,11 +50,11 @@ git clone https://github.com/ahmet-cetinkaya/medioss.git
 cd medioss
 
 # Configure for home use (optional)
-cp docker-compose.yml docker-compose.home.yml
-# Edit docker-compose.home.yml to adjust resource limits
+cp docker-compose.yml compose.home.yml
+# Edit compose.home.yml to adjust resource limits
 
 # Start with custom configuration
-docker-compose -f docker-compose.home.yml up -d
+docker compose -f compose.home.yml up -d
 
 # Setup reverse proxy (recommended)
 # Add Nginx/Caddy configuration for HTTPS
@@ -65,7 +77,7 @@ sudo sh get-docker.sh
 # Clone and deploy
 git clone https://github.com/ahmet-cetinkaya/medioss.git
 cd medioss
-docker-compose up -d
+docker compose up -d
 
 # Configure firewall
 sudo ufw allow 80/tcp
@@ -95,7 +107,8 @@ For maximum performance and minimal resource usage.
 # Build the Rust binary
 cargo build --release
 
-# Run directly
+# Run directly (MEDIOSS_DATA_DIR, SESSION_SECRET and MEDIOSS_ORIGIN are required;
+# build the UI first with `make build-ui` or set MEDIOSS_STATIC_DIR)
 ./target/release/medioss
 
 # Or install system-wide
@@ -119,7 +132,6 @@ PORT=3000
 # Everything mutable — the SQLite file and uploaded media — lives under
 # this one directory: $MEDIOSS_DATA_DIR/medioss.db and $MEDIOSS_DATA_DIR/media/
 MEDIOSS_DATA_DIR=/data
-MAX_UPLOAD_SIZE=100MB
 
 # Session and request security
 SESSION_SECRET=<strong-random-secret>
@@ -127,11 +139,14 @@ MEDIOSS_ORIGIN=https://medioss.example
 SESSION_TIMEOUT=7d
 SESSION_COOKIE_SECURE=true
 
-# Backup Configuration
-BACKUP_ENABLED=true
-BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
-BACKUP_PATH=/data/backups
+# Optional paths
+# MEDIOSS_STATIC_DIR=/srv/medioss/static               # built UI; the Docker image sets this
+# MEDIOSS_BUILTIN_SOUNDS_DIR=/srv/medioss/builtin-sounds  # built-in sound set (see below)
 ```
+
+The application reads these variables: `MEDIOSS_BIND`, `MEDIOSS_BUILTIN_SOUNDS_DIR`, `MEDIOSS_DATA_DIR`, `MEDIOSS_DEV_ORIGIN` (set by `make dev`; not for production), `MEDIOSS_ORIGIN`, `MEDIOSS_STATIC_DIR`, `PORT`, `RUST_LOG`, `SESSION_COOKIE_SECURE`, `SESSION_SECRET` and `SESSION_TIMEOUT`. Anything else is ignored. There is no backup setting and no upload-size setting: the upload limit is fixed at 100MB. See _Backup Strategy_ for backups.
+
+`MEDIOSS_BUILTIN_SOUNDS_DIR` points at the directory with the built-in sound set (`manifest.json` and `LICENSE`). When it is unset the server probes `/srv/medioss/builtin-sounds` (where the Docker image ships the set) and then `./builtin-sounds`. `make run` and `make dev` do not set it, so a source checkout has no built-in sounds until you set it (the `.env` copied from `.env.example` does, with a path relative to the repo root), for example `MEDIOSS_BUILTIN_SOUNDS_DIR=$PWD/assets/sounds/soundscape-builtin make run`.
 
 `MEDIOSS_DATA_DIR` has no default and the application refuses to start without it. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
 
@@ -198,45 +213,72 @@ Backups capture everything when they capture this directory. Restoring a backup 
 
 ## Volume Management
 
+Compose names the data volume `<project>_app_data`. The project name defaults to the directory name, so a clone in `medioss/` gives `medioss_app_data`. Check the real name before you copy it into a command:
+
 ```bash
-# List volumes
-docker volume ls
-
-# Backup data volume
-docker run --rm -v medioss_data:/data -v $(pwd):/backup \
-  alpine tar czf /backup/medioss-data-backup.tar.gz /data
-
-# Restore from backup
-docker run --rm -v medioss_data:/data -v $(pwd):/backup \
-  alpine tar xzf /backup/medioss-data-backup.tar.gz -C /
+docker volume ls | grep app_data
 ```
 
 ## Backup Strategy
 
-### Automated Backups
+All state is in `$MEDIOSS_DATA_DIR`: the SQLite file `medioss.db` and the `media/` directory. Back up both together; a database without its media (or the reverse) is not a consistent copy. The application has no built-in backup job, and no backup script ships with the repository. Use the manual flow below and schedule it with host cron if you want it automated.
+
+The runtime image contains no `sqlite3` binary, so the Docker flow uses a short-lived helper container that mounts the same volume.
+
+### Manual Backup (Docker)
+
+The service name is `backend` and the volume is `medioss_app_data` (see _Volume Management_). Stop the service for a copy that is guaranteed consistent:
 
 ```bash
-# Add to crontab for daily backups
-0 2 * * * /path/to/backup-script.sh
+mkdir -p backups
+docker compose stop backend
+docker run --rm -v medioss_app_data:/data:ro -v "$PWD/backups":/backup \
+  alpine tar czf "/backup/medioss-$(date +%Y%m%d).tar.gz" -C /data .
+docker compose start backend
 ```
 
-`backup-script.sh`:
+To keep the service running, copy the database with the SQLite online backup command and archive the media next to it:
 
 ```bash
-#!/bin/bash
-BACKUP_DIR="/var/backups/wellness"
-DATE=$(date +%Y%m%d)
-docker exec medioss-backend sqlite3 /data/medioss.db ".backup /tmp/backup_$DATE.db"
-docker cp medioss-backend:/tmp/backup_$DATE.db $BACKUP_DIR/
-find $BACKUP_DIR -name "backup_*.db" -mtime +30 -delete
+mkdir -p backups
+docker run --rm -v medioss_app_data:/data:ro -v "$PWD/backups":/backup alpine sh -c '
+  apk add --no-cache sqlite >/dev/null &&
+  sqlite3 /data/medioss.db ".backup /backup/medioss.db" &&
+  tar czf /backup/media.tar.gz -C /data media'
 ```
 
-### Manual Backup
+### Manual Backup (without Docker)
+
+Run these on the host that has `$MEDIOSS_DATA_DIR`:
 
 ```bash
-# Full backup including database and media
-./scripts/backup.sh /path/to/backup/directory
+mkdir -p /path/to/backups
+sqlite3 "$MEDIOSS_DATA_DIR/medioss.db" ".backup /path/to/backups/medioss.db"
+tar czf /path/to/backups/media.tar.gz -C "$MEDIOSS_DATA_DIR" media
 ```
+
+### Restore
+
+Stop the service, then put the files back into an empty data directory or volume:
+
+```bash
+docker compose down
+docker run --rm -v medioss_app_data:/data -v "$PWD/backups":/backup alpine \
+  sh -c 'rm -rf /data/* && tar xzf /backup/medioss-YYYYMMDD.tar.gz -C /data && chown -R 10001:10001 /data'
+docker compose up -d
+```
+
+For the online-backup pair, copy `medioss.db` to `/data/medioss.db`, extract `media.tar.gz` into `/data`, and keep the `10001:10001` ownership.
+
+### Scheduled Backups
+
+Put the manual commands in a script of your own and call it from the host crontab, for example daily at 02:00 (`BACKUP_DIR` is whatever directory you choose, such as `/var/backups/medioss`):
+
+```bash
+0 2 * * * cd /path/to/medioss && /path/to/your-backup-script.sh
+```
+
+Delete old archives in that script (for example `find "$BACKUP_DIR" -name 'medioss-*.tar.gz' -mtime +30 -delete`) and copy the archives off the host.
 
 ## Monitoring
 
@@ -247,23 +289,23 @@ find $BACKUP_DIR -name "backup_*.db" -mtime +30 -delete
 curl http://localhost:3000/api/health
 
 # Check logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Monitor resource usage
-docker stats medioss-backend
+docker stats "$(docker compose ps -q backend)"
 ```
 
 ### Rust-Specific Monitoring
 
 ```bash
 # Check memory usage (very low for Rust)
-docker stats --no-stream medioss-backend
+docker stats --no-stream "$(docker compose ps -q backend)"
 
 # View application logs
-docker-compose logs -f backend | grep "INFO"
+docker compose logs -f backend | grep "INFO"
 
 # Monitor database performance
-docker exec medioss-backend sqlite3 /data/medioss.db "PRAGMA integrity_check;"
+docker run --rm -v medioss_app_data:/data:ro alpine sh -c 'apk add --no-cache sqlite >/dev/null && sqlite3 /data/medioss.db "PRAGMA integrity_check;"'
 ```
 
 ## Troubleshooting
@@ -274,21 +316,21 @@ docker exec medioss-backend sqlite3 /data/medioss.db "PRAGMA integrity_check;"
 
 ```bash
 # Check logs
-docker-compose logs backend
+docker compose logs backend
 
 # Verify database permissions
-docker exec medioss-backend ls -la /data/
+docker compose exec backend ls -la /data/
 
 # Check environment variables
-docker-compose config
+docker compose config
 ```
 
 **Database errors:**
 
 ```bash
 # Reinitialize database
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 **Audio playback issues:**
@@ -303,11 +345,8 @@ docker-compose up -d
 # Adjust Rust logging level
 export RUST_LOG=warn  # Reduce logging overhead
 
-# Optimize SQLite performance
-docker exec medioss-backend sqlite3 /data/medioss.db "PRAGMA optimize;"
-
 # Monitor memory usage (should be very low)
-docker stats medioss-backend
+docker stats "$(docker compose ps -q backend)"
 ```
 
 ## Security Considerations
@@ -338,15 +377,20 @@ networks:
 
 ## Upgrading
 
+Back up first (see _Backup Strategy_).
+
 ```bash
 # Stop current deployment
-docker-compose down
+docker compose down
 
 # Pull latest changes
 git pull origin main
 
-# Rebuild and start
-docker-compose up -d --build
+# Rebuild and start (or: make docker-up)
+docker compose up -d --build
+
+# Prebuilt image instead: change the image tag, then
+docker compose pull && docker compose up -d
 
 # Database migrations (automatic)
 # The Rust app handles migrations on startup
@@ -354,7 +398,7 @@ docker-compose up -d --build
 
 ### Rollbacks
 
-Database migrations are irreversible by design: the identity migration's `down` refuses to run because reverting would destroy every account and the setup-claim state. To roll back a deployment, restore the database volume from a backup taken **before** the upgrade (see _Backup Configuration_), then start the previous image version.
+Database migrations are irreversible by design: the identity migration's `down` refuses to run because reverting would destroy every account and the setup-claim state. To roll back a deployment, restore the database volume from a backup taken **before** the upgrade (see _Backup Strategy_), then start the previous image version.
 
 ## Performance Optimization
 
@@ -372,17 +416,6 @@ strip target/release/medioss
 
 # Profile memory usage
 valgrind --tool=massif ./target/release/medioss
-```
-
-### Database Optimization
-
-```bash
-# Run SQLite optimization
-docker exec medioss-backend sqlite3 /data/medioss.db "
-PRAGMA optimize;
-ANALYZE;
-VACUUM;
-"
 ```
 
 ## Support

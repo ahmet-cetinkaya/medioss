@@ -36,8 +36,10 @@ cd medioss
 cp .env.example .env
 # Edit .env: set SESSION_SECRET (generate with: openssl rand -base64 32)
 # and MEDIOSS_ORIGIN (e.g. http://localhost:3000 or your domain)
-docker compose up
+docker compose up   # or: make docker-up (detached)
 ```
+
+Or pull the prebuilt image instead of building: `docker pull ghcr.io/ahmet-cetinkaya/medioss:1.0.0` (`:latest` tracks the newest stable release). See [docs/docker.md](docs/docker.md).
 
 Open `http://localhost:3000` (or your `MEDIOSS_ORIGIN`) and register the first admin.
 
@@ -66,7 +68,7 @@ Set these in `.env` or as environment variables (env vars take priority):
 | `MEDIOSS_BIND` |  | 0.0.0.0 | Listen address; use `127.0.0.1` for localhost only |
 | `SESSION_TIMEOUT` |  | 7d | Session lifetime (e.g. `7d`, `24h`, `30m`) |
 | `SESSION_COOKIE_SECURE` |  | true | Set to `false` only for local HTTP testing (not production) |
-| `MEDIOSS_BUILTIN_SOUNDS_DIR` |  | `assets/sounds/soundscape-builtin` | Built-in soundscape directory |
+| `MEDIOSS_BUILTIN_SOUNDS_DIR` |  | (probed) | Built-in sound set. Unset: the server tries `/srv/medioss/builtin-sounds` (Docker image), then `./builtin-sounds`. `make run` / `make dev` do not set it, so set it to `$PWD/assets/sounds/soundscape-builtin` for built-in sounds from a checkout without `.env` |
 
 See [`.env.example`](.env.example) for all options and full descriptions.
 
@@ -75,10 +77,28 @@ See [`.env.example`](.env.example) for all options and full descriptions.
 ### Quick start
 
 ```bash
-make dev      # run in development mode (file watchers + live reload)
-make build    # build the release binary
-make lint     # run linters (cargo clippy + markdownlint)
-make test     # run all tests
+make dev      # Astro dev server (:4321, proxies /api) + cargo-watch API (:3000)
+make run      # build the UI, then serve API + UI from one process on :3000
+make build    # build the release binary with the UI bundled
+make format   # prettier + cargo fmt
+make lint     # prettier --check, cargo fmt --check, clippy -D warnings, boundary check
+make test     # bun test, cargo test --workspace, boundary-check self-test
+make clean    # remove target/, the built UI and the static dir
+```
+
+`make run` / `make dev` do not set `MEDIOSS_BUILTIN_SOUNDS_DIR` (the copied `.env` from `.env.example` does, relative to the repo root). Without it there are no built-in sounds, so point the server at them: `MEDIOSS_BUILTIN_SOUNDS_DIR=$PWD/assets/sounds/soundscape-builtin make run`.
+
+Docker and demo targets:
+
+```bash
+make docker-build    # docker compose build
+make docker-up       # docker compose up -d --build
+make docker-down     # stop and remove the containers (keeps the volume)
+make docker-restart  # rebuild and recreate the containers
+make docker-logs     # follow the logs
+make demo            # seed a throwaway instance and write screenshots (docs/demo.md)
+make demo-seed       # seed demo content into a running empty instance
+make demo-screenshots # capture screenshots from a seeded instance
 ```
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Docker production setup and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for codebase structure.
