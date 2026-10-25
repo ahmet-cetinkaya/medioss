@@ -14,6 +14,7 @@
   import ClockCounterClockwiseIcon from "phosphor-svelte/lib/ClockCounterClockwiseIcon";
   import DotsThreeIcon from "phosphor-svelte/lib/DotsThreeIcon";
   import DownloadSimpleIcon from "phosphor-svelte/lib/DownloadSimpleIcon";
+  import InfoIcon from "phosphor-svelte/lib/InfoIcon";
   import GearSixIcon from "phosphor-svelte/lib/GearSixIcon";
   import HouseIcon from "phosphor-svelte/lib/HouseIcon";
   import MagnifyingGlassIcon from "phosphor-svelte/lib/MagnifyingGlassIcon";
@@ -77,6 +78,7 @@
     "chart-bar": ChartBarIcon,
     "gear-six": GearSixIcon,
     coffee: CoffeeIcon,
+    info: InfoIcon,
     "shield-check": ShieldCheckIcon,
     shuffle: ShuffleIcon,
     "sign-out": SignOutIcon,

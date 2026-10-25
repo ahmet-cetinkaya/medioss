@@ -44,6 +44,7 @@ export const ICON_NAMES = [
   "chart-bar",
   "gear-six",
   "coffee",
+  "info",
   "shield-check",
   "shuffle",
   "sign-out",

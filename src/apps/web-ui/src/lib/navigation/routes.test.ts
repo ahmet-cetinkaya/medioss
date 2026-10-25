@@ -23,12 +23,12 @@ describe("routes", () => {
     ).toEqual([
       ["practice", ["home", "library", "soundscape", "mood"]],
       ["progress", ["history", "stats"]],
-      ["account", ["settings", "admin", "signOut"]],
+      ["account", ["settings", "about", "admin", "signOut"]],
     ]);
   });
 
   test("sign out is an action, not a screen", () => {
-    const signOut = NAV_GROUPS[2].items[2];
+    const signOut = NAV_GROUPS[2].items[3];
     expect(signOut.kind).toBe("action");
     expect(signOut.label).toBe(navMessages.signOut);
     expect(signOut.icon).toBe("sign-out");
@@ -63,16 +63,18 @@ describe("routes", () => {
       "history",
       "stats",
       "settings",
+      "about",
       "admin",
       "signOut",
     ]);
   });
 
-  test("More is current exactly for history, stats, settings, admin", () => {
+  test("More is current exactly for history, stats, settings, about, admin", () => {
     expect(ALL_SCREENS.filter(isMoreCurrent)).toEqual([
       "history",
       "stats",
       "settings",
+      "about",
       "admin",
     ]);
   });
@@ -82,11 +84,11 @@ describe("routes", () => {
       ...NAV_GROUPS.flatMap((g) => g.items.map((i) => i.icon)),
       MORE_ICON,
     ];
-    expect(icons).toHaveLength(10);
+    expect(icons).toHaveLength(11);
     for (const icon of icons) expect(ICON_NAMES).toContain(icon);
   });
 
-  test("allowlist is the ten directory-form paths", () => {
+  test("allowlist is the eleven directory-form paths", () => {
     expect(SCREEN_ALLOWLIST).toEqual([
       "/",
       "/library/",
@@ -97,6 +99,7 @@ describe("routes", () => {
       "/history/",
       "/stats/",
       "/settings/",
+      "/about/",
       "/admin/",
     ]);
   });

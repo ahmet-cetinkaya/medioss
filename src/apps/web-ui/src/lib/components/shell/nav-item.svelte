@@ -12,8 +12,7 @@
   tooltip on hover and keyboard focus), `bar` (bottom bar: icon over a small
   label).
 
-  `external` opens the link in a new tab.
-  Props: `label` (translated), `icon`, `variant`, `current`, `href?`, `external?`,
+  Props: `label` (translated), `icon`, `variant`, `current`, `href?`,
   `onclick?`, `bind:ref`.
 -->
 <script lang="ts">
@@ -26,7 +25,6 @@
     variant: "sidebar" | "rail" | "bar";
     current?: boolean;
     href?: string;
-    external?: boolean;
     onclick?: (event: MouseEvent & { currentTarget: HTMLElement }) => void;
     ref?: HTMLElement | null;
   };
@@ -37,7 +35,6 @@
     variant,
     current = false,
     href,
-    external = false,
     onclick,
     ref = $bindable(null),
   }: Props = $props();
@@ -86,8 +83,6 @@
   <a
     bind:this={ref}
     {href}
-    target={external ? "_blank" : undefined}
-    rel={external ? "noopener noreferrer" : undefined}
     class={classes}
     aria-current={current ? "page" : undefined}
   >

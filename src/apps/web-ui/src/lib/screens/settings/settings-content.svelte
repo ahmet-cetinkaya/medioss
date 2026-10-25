@@ -13,7 +13,6 @@
   import { t } from "$lib/i18n/locale.svelte";
   import { session } from "$lib/session/session.svelte";
   import DataPanel from "./data-panel.svelte";
-  import AboutPanel from "./about-panel.svelte";
   import DeleteAccountPanel from "./delete-account-panel.svelte";
   import ProfilePanel from "./profile-panel.svelte";
   import {
@@ -53,8 +52,6 @@
     </Panel>
 
     <DataPanel />
-
-    <AboutPanel />
 
     <DeleteAccountPanel {user} />
   </div>

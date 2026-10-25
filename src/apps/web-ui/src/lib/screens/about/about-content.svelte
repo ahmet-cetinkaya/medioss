@@ -14,16 +14,18 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import RegionState from "$lib/components/feedback/region-state.svelte";
-  import { DONATE_URL } from "$lib/navigation/support";
+  import SupportDialog from "$lib/components/dialogs/support-dialog.svelte";
+  import { shellMessages } from "$lib/components/shell/shell.messages";
   import { t } from "$lib/i18n/locale.svelte";
   import notice from "$repo/NOTICE?raw";
-  import { aboutMessages as m } from "./settings.messages";
+  import { aboutMessages as m } from "./about.messages";
   import ThirdPartyLicensesDialog from "./third-party-licenses-dialog.svelte";
 
   /** The NOTICE paragraph stating the project license, shown verbatim. */
   const LICENSE_STATEMENT = notice.split("\n\n")[1]?.replace(/\s+/g, " ");
 
   let thirdPartyOpen = $state(false);
+  let supportOpen = $state(false);
   let meta = $state<AppMeta | null>(null);
   let failed = $state(false);
   let request = 0;
@@ -42,18 +44,13 @@
   onMount(() => void load());
 </script>
 
-<Panel aria-labelledby="settings-about-heading">
+<Panel aria-labelledby="about-heading">
   {#snippet heading()}
-    <h2 id="settings-about-heading" class="text-heading text-ink-strong">
+    <h2 id="about-heading" class="text-heading text-ink-strong">
       {t(m.heading)}
     </h2>
   {/snippet}
   <div class="flex flex-col gap-4">
-    <div class="grid gap-2">
-      <h3 class="text-heading text-ink-strong">{t(m.donateStoryHeading)}</h3>
-      <p class="text-body-md text-ink-body">{t(m.donateStory)}</p>
-      <p class="text-body-md text-ink-body">{t(m.donateFunds)}</p>
-    </div>
     {#if meta}
       <dl class="flex flex-col gap-2 text-sm">
         <div class="flex gap-2">
@@ -112,13 +109,12 @@
         variant="secondary"
         size="lg"
         class="border-transparent bg-[#ffdd00] font-semibold text-[#1a1a1a] hover:bg-[#ffe84d]"
-        href={DONATE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+        onclick={() => (supportOpen = true)}
       >
         <CoffeeIcon weight="fill" aria-hidden="true" />
-        {t(m.donate)}
+        {t(shellMessages.support)}
       </Button>
+      <SupportDialog bind:open={supportOpen} />
     </div>
   </div>
 </Panel>

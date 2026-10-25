@@ -8,7 +8,7 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { t } from "$lib/i18n/locale.svelte";
-  import { aboutMessages as m } from "./settings.messages";
+  import { aboutMessages as m } from "./about.messages";
   import { soundGroups } from "./third-party-sounds";
 
   let { open = $bindable(false) }: { open?: boolean } = $props();

@@ -19,6 +19,7 @@ export type ScreenKey =
   | "history"
   | "stats"
   | "settings"
+  | "about"
   | "admin";
 
 export type NavGroupKey = "practice" | "progress" | "account";
@@ -127,6 +128,13 @@ export const ROUTES: Readonly<Record<ScreenKey, Screen>> = {
     "account",
     "gear-six",
   ),
+  about: screen(
+    "about",
+    "/about/",
+    screenTitleMessages.about,
+    "account",
+    "info",
+  ),
   admin: screen(
     "admin",
     "/admin/",
@@ -137,7 +145,7 @@ export const ROUTES: Readonly<Record<ScreenKey, Screen>> = {
   ),
 };
 
-/** The ten screen paths, directory form. */
+/** The screen paths, directory form. */
 export const SCREEN_ALLOWLIST: readonly string[] = Object.values(ROUTES).map(
   (route) => route.path,
 );
@@ -194,6 +202,7 @@ const navLabels: Record<ScreenKey, StringMessage> = {
   history: navMessages.history,
   stats: navMessages.statistics,
   settings: navMessages.settings,
+  about: navMessages.about,
   admin: navMessages.admin,
 };
 
@@ -238,7 +247,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     key: "account",
     label: navGroupMessages.account,
-    items: [screenItem("settings"), screenItem("admin"), SIGN_OUT_ITEM],
+    items: [
+      screenItem("settings"),
+      screenItem("about"),
+      screenItem("admin"),
+      SIGN_OUT_ITEM,
+    ],
   },
 ];
 
