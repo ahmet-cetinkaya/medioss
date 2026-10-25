@@ -5,7 +5,7 @@ import { defineMessages } from "../../i18n/message";
 export const aboutMessages = defineMessages({
   version: { en: "Version", tr: "Sürüm" },
   license: { en: "License", tr: "Lisans" },
-  source: { en: "Source code", tr: "Kaynak kodu" },
+  openSource: { en: "Open source", tr: "Açık kaynak" },
   licenseFullText: {
     en: "Read the full license",
     tr: "Lisansın tam metnini oku",

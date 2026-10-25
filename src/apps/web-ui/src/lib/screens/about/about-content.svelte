@@ -9,6 +9,7 @@
   import { onMount } from "svelte";
   import { fetchAppMeta, type AppMeta } from "$lib/api/meta";
   import CoffeeIcon from "phosphor-svelte/lib/CoffeeIcon";
+  import GithubLogoIcon from "phosphor-svelte/lib/GithubLogoIcon";
   import PackageIcon from "phosphor-svelte/lib/PackageIcon";
   import ScalesIcon from "phosphor-svelte/lib/ScalesIcon";
   import BrandLockup from "$lib/components/content/brand-lockup.svelte";
@@ -60,22 +61,18 @@
           <dt class="text-ink-muted">{t(m.license)}</dt>
           <dd class="font-medium text-ink-strong">{meta.license}</dd>
         </div>
-        <div class="flex gap-2">
-          <dt class="text-ink-muted">{t(m.source)}</dt>
-          <dd>
-            <a
-              class="focus-ring rounded-sm text-accent-strong underline underline-offset-2"
-              href={meta.source}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              {meta.source}
-            </a>
-          </dd>
-        </div>
       </dl>
       <p class="text-sm text-ink-body">{LICENSE_STATEMENT}</p>
       <div class="flex flex-wrap gap-3">
+        <Button
+          variant="secondary"
+          href={meta.source}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <GithubLogoIcon aria-hidden="true" />
+          {t(m.openSource)}
+        </Button>
         <Button
           variant="secondary"
           href={`${meta.source}/blob/main/LICENSE`}
