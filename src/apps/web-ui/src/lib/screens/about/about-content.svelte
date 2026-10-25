@@ -40,72 +40,77 @@
   onMount(() => void load());
 </script>
 
-<Panel aria-labelledby="about-heading">
-  {#snippet heading()}
-    <h2 id="about-heading" class="flex flex-wrap items-center gap-3">
-      <BrandLockup />
-      {#if meta}
-        <span
-          class="rounded-full bg-surface-solid px-3 py-1 text-xs font-medium text-ink-strong"
-          >{`v${meta.version}`}</span
-        >
-      {/if}
-    </h2>
-  {/snippet}
-  <div class="flex flex-col gap-4">
-    <p class="text-body-md text-ink-body">{t(m.description)}</p>
-    {#if failed}
-      <RegionState
-        status="error"
-        minHeight="4rem"
-        errorMessage={t(m.loadFailed)}
-        onRetry={() => void load()}
+<div class="mx-auto w-full max-w-xl text-center">
+  <Panel aria-labelledby="about-heading">
+    {#snippet heading()}
+      <h2
+        id="about-heading"
+        class="flex flex-wrap items-center justify-center gap-3"
       >
-        <span class="sr-only">{t(m.loadFailed)}</span>
-      </RegionState>
-    {:else if !meta}
-      <p class="text-sm text-ink-muted" aria-busy="true">…</p>
-    {/if}
-    <div class="flex flex-wrap items-center gap-3">
-      {#if meta}
-        <Button
-          variant="secondary"
-          href={meta.source}
-          target="_blank"
-          rel="noopener noreferrer"
+        <BrandLockup />
+        {#if meta}
+          <span
+            class="rounded-full bg-surface-solid px-3 py-1 text-xs font-medium text-ink-strong"
+            >{`v${meta.version}`}</span
+          >
+        {/if}
+      </h2>
+    {/snippet}
+    <div class="flex flex-col gap-4">
+      <p class="text-body-md text-ink-body">{t(m.description)}</p>
+      {#if failed}
+        <RegionState
+          status="error"
+          minHeight="4rem"
+          errorMessage={t(m.loadFailed)}
+          onRetry={() => void load()}
         >
-          <GithubLogoIcon aria-hidden="true" />
-          {t(m.openSource)}
-        </Button>
-        <Button
-          variant="secondary"
-          href={`${meta.source}/blob/main/LICENSE`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <ScalesIcon aria-hidden="true" />
-          {t(m.licenseFullText)}
-        </Button>
-        <Button
-          variant="secondary"
-          href={`${meta.source}/blob/main/NOTICE`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <PackageIcon aria-hidden="true" />
-          {t(m.thirdPartyOpen)}
-        </Button>
+          <span class="sr-only">{t(m.loadFailed)}</span>
+        </RegionState>
+      {:else if !meta}
+        <p class="text-sm text-ink-muted" aria-busy="true">…</p>
       {/if}
-      <Button
-        variant="secondary"
-        size="lg"
-        class="border-transparent bg-[#ffdd00] font-semibold text-[#1a1a1a] hover:bg-[#ffe84d]"
-        onclick={() => (supportOpen = true)}
-      >
-        <CoffeeIcon weight="fill" aria-hidden="true" />
-        {t(shellMessages.support)}
-      </Button>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        {#if meta}
+          <Button
+            variant="secondary"
+            href={meta.source}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <GithubLogoIcon aria-hidden="true" />
+            {t(m.openSource)}
+          </Button>
+          <Button
+            variant="secondary"
+            href={`${meta.source}/blob/main/LICENSE`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ScalesIcon aria-hidden="true" />
+            {t(m.licenseFullText)}
+          </Button>
+          <Button
+            variant="secondary"
+            href={`${meta.source}/blob/main/NOTICE`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <PackageIcon aria-hidden="true" />
+            {t(m.thirdPartyOpen)}
+          </Button>
+        {/if}
+        <Button
+          variant="secondary"
+          size="lg"
+          class="border-transparent bg-[#ffdd00] font-semibold text-[#1a1a1a] hover:bg-[#ffe84d]"
+          onclick={() => (supportOpen = true)}
+        >
+          <CoffeeIcon weight="fill" aria-hidden="true" />
+          {t(shellMessages.support)}
+        </Button>
+      </div>
+      <SupportDialog bind:open={supportOpen} />
     </div>
-    <SupportDialog bind:open={supportOpen} />
-  </div>
-</Panel>
+  </Panel>
+</div>
