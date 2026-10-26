@@ -92,12 +92,21 @@ impl OpusConverter for FfmpegOpusConverter {
     }
 }
 
+/// Stages `bytes` at `path` without duplicating them: `tokio::fs::write` copies
+/// the whole slice into an owned buffer first, doubling the memory of a large
+/// upload, while `write_all` on a file copies through a small bounded buffer.
+async fn stage_bytes(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    let mut file = tokio::fs::File::create(path).await?;
+    file.write_all(bytes).await?;
+    file.flush().await
+}
+
 async fn probe_duration(bytes: &[u8], extension: &str) -> Result<i64, String> {
     let file = tempfile::Builder::new()
         .suffix(&format!(".{extension}"))
         .tempfile()
         .map_err(|_| "duration staging unavailable".to_owned())?;
-    tokio::fs::write(file.path(), bytes)
+    stage_bytes(file.path(), bytes)
         .await
         .map_err(|_| "duration staging failed".to_owned())?;
     let result = Command::new("ffprobe")

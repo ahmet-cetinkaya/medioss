@@ -58,6 +58,15 @@ async fn run_encode(mut child: Child, bytes: Vec<u8>) -> Result<(), ConvertError
     Ok(())
 }
 
+/// Stages `bytes` at `path` without duplicating them: `tokio::fs::write` copies
+/// the whole slice into an owned buffer first, doubling the memory of a large
+/// upload, while `write_all` on a file copies through a small bounded buffer.
+async fn stage_bytes(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    let mut file = tokio::fs::File::create(path).await?;
+    file.write_all(bytes).await?;
+    file.flush().await
+}
+
 /// Probes the stored bytes for their duration; a probe failure is not
 /// fatal to the upload, it just leaves progress unknown (`0`). ffprobe
 /// cannot size a container from a pipe (`format=duration` reports `N/A`),
@@ -79,7 +88,7 @@ async fn probe_duration_ms(bytes: &[u8]) -> i64 {
     else {
         return 0;
     };
-    if tokio::fs::write(file.path(), bytes).await.is_err() {
+    if stage_bytes(file.path(), bytes).await.is_err() {
         return 0;
     }
     let output = Command::new(FFPROBE)
