@@ -8,5 +8,6 @@ export * from "./meditation-library";
 export * from "./meditation-programs";
 export * from "./meditation-categories";
 export * from "./meditation-notes";
+export * from "./meditation-favorites";
 export * from "./meditation-playback";
 export * from "./meditation-statistics";

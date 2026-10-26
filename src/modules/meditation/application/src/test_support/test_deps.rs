@@ -5,9 +5,9 @@ use chrono::Utc;
 
 use super::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
-    FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
-    FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
-    TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES,
+    FakeFavoriteRepository, FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository,
+    FakePlaybackRepository, FakeProgramRepository, FakeSessionRepository, FakeValidator,
+    FixedClock, RepoState, TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES,
 };
 use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
 use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
@@ -22,6 +22,7 @@ pub struct TestDeps {
     pub sessions: Arc<FakeSessionRepository>,
     pub notes: Arc<FakeNoteRepository>,
     pub playback: Arc<FakePlaybackRepository>,
+    pub favorites: Arc<FakeFavoriteRepository>,
     pub store: Arc<FakeBlobStore>,
     pub clock: Arc<FixedClock>,
 }
@@ -36,6 +37,7 @@ impl TestDeps {
             sessions: Arc::new(FakeSessionRepository(RepoState::new())),
             notes: Arc::new(FakeNoteRepository(RepoState::new())),
             playback: Arc::new(FakePlaybackRepository(RepoState::new())),
+            favorites: Arc::new(FakeFavoriteRepository(RepoState::new())),
             store: Arc::new(FakeBlobStore::new()),
             clock: Arc::new(FixedClock(Utc::now())),
         }

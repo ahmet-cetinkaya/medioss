@@ -13,7 +13,7 @@ use meditation_application::queries::get_meditation_detail::GetMeditationDetailQ
 use meditation_application::queries::list_library::ListLibraryQuery;
 
 use crate::meditation_response::{
-    meditation_response, with_playback, MeditationResponse, ProgramSummary,
+    caller_favorite_ids, meditation_response, with_playback, MeditationResponse, ProgramSummary,
 };
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
 
@@ -31,9 +31,11 @@ pub async fn daily_suggestion(
     let Some(found) = found else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
     let mut response = with_playback(
         deps.get_playback_state.as_ref(),
         actor.user_id(),
+        &favorite_ids,
         &found.meditation,
     )
     .await;
@@ -93,11 +95,13 @@ pub async fn library(
         })
         .await
         .map_err(ApiError::Application)?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
     let mut responses = Vec::with_capacity(listed.len());
     for entry in &listed {
         let mut response = with_playback(
             deps.get_playback_state.as_ref(),
             actor.user_id(),
+            &favorite_ids,
             &entry.meditation,
         )
         .await;
@@ -120,9 +124,11 @@ pub async fn meditation(
         .handle(GetMeditationDetailQuery { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
     let mut response = with_playback(
         deps.get_playback_state.as_ref(),
         actor.user_id(),
+        &favorite_ids,
         &found.meditation,
     )
     .await;

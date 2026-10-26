@@ -17,6 +17,7 @@ export interface Meditation {
   created_at: string;
   completed: boolean;
   progress_percent: number;
+  favorite: boolean;
   program_id?: number;
   program_has_cover?: boolean;
   program?: ProgramSummary | null;

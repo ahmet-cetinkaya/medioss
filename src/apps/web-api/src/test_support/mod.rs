@@ -57,6 +57,7 @@ pub(crate) async fn test_state_with_cookie_secure(
     let deletion: std::sync::Arc<dyn identity_presentation::UserDeletionListener> =
         std::sync::Arc::new(crate::user_deletion::CrossModuleUserDeletion::new(
             meditation_module.notes.clone(),
+            meditation_module.favorites.clone(),
             meditation_module.playback.clone(),
             meditation_module.sessions.clone(),
             soundscape.mixes.clone(),

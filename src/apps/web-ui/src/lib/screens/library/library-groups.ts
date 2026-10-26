@@ -39,7 +39,9 @@ export function groupPrograms(
 }
 
 export type ProgramState = "completed" | "in-progress" | "not-started";
-export type LibraryFilter = "all" | ProgramState;
+export type ProgramFilter = "all" | ProgramState;
+/** The chip values: program states plus the flat favorites list. */
+export type LibraryFilter = ProgramFilter | "favorites";
 
 /** Where a program stands, from its 0..1 progress. */
 export function programState(progress: number): ProgramState {
@@ -53,7 +55,7 @@ export function programState(progress: number): ProgramState {
  */
 export function filterGroups(
   groups: readonly LibraryGroup[],
-  filter: LibraryFilter,
+  filter: ProgramFilter,
 ): LibraryGroup[] {
   if (filter === "all") return [...groups];
   return groups

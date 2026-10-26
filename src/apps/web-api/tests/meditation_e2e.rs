@@ -654,6 +654,80 @@ async fn m2_full_battery() {
         .await;
     assert_eq!(response.status, 404, "B cannot touch A's note");
 
+    // --- Favorites are per user and idempotent.
+    let favorite_path = format!("/api/meditation/{meditation_id}/favorite");
+    for _ in 0..2 {
+        let response = server
+            .request(
+                "PUT",
+                &favorite_path,
+                &[origin(), ("cookie".to_owned(), cookie_a.clone())],
+                None,
+            )
+            .await;
+        assert_eq!(response.status, 204, "re-favoriting stays 204");
+    }
+    let favorites_a = server
+        .request(
+            "GET",
+            "/api/meditation/favorites",
+            &[origin(), ("cookie".to_owned(), cookie_a.clone())],
+            None,
+        )
+        .await;
+    assert!(favorites_a.text().contains("\"favorite\":true"));
+    let favorites_b = server
+        .request(
+            "GET",
+            "/api/meditation/favorites",
+            &[origin(), ("cookie".to_owned(), cookie_b.clone())],
+            None,
+        )
+        .await;
+    assert_eq!(
+        favorites_b.text().trim(),
+        "[]",
+        "B sees none of A's favorites"
+    );
+    let detail_b = server
+        .request(
+            "GET",
+            &format!("/api/meditation/{meditation_id}"),
+            &[origin(), ("cookie".to_owned(), cookie_b.clone())],
+            None,
+        )
+        .await;
+    assert!(detail_b.text().contains("\"favorite\":false"));
+    let response = server
+        .request(
+            "PUT",
+            &favorite_path,
+            &[origin(), ("cookie".to_owned(), cookie_b.clone())],
+            None,
+        )
+        .await;
+    assert_eq!(response.status, 204);
+    for _ in 0..2 {
+        let response = server
+            .request(
+                "DELETE",
+                &favorite_path,
+                &[origin(), ("cookie".to_owned(), cookie_b.clone())],
+                None,
+            )
+            .await;
+        assert_eq!(response.status, 204, "re-unfavoriting stays 204");
+    }
+    let response = server
+        .request(
+            "PUT",
+            "/api/meditation/999999/favorite",
+            &[origin(), ("cookie".to_owned(), cookie_a.clone())],
+            None,
+        )
+        .await;
+    assert_eq!(response.status, 404);
+
     // --- Download is an authenticated attachment (FR-040, SC-017).
     let response = server
         .request(
@@ -702,4 +776,18 @@ async fn m2_full_battery() {
         )
         .await;
     assert_eq!(notes_a.status, 404, "notes went with the meditation");
+
+    let favorites_a = server
+        .request(
+            "GET",
+            "/api/meditation/favorites",
+            &[origin(), ("cookie".to_owned(), cookie_a.clone())],
+            None,
+        )
+        .await;
+    assert_eq!(
+        favorites_a.text().trim(),
+        "[]",
+        "favorites went with the meditation"
+    );
 }

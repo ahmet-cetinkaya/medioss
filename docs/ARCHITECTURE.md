@@ -393,6 +393,20 @@ Commands and queries are separated as an **organizational** discipline, nothing 
 
 ---
 
+## Favorite Meditations API
+
+The `meditation` module stores each user's favorites in `meditation_favorites` (`user_id`, `meditation_id`, `created_at`; primary key on the first two). The routes need a session. The two write routes also check the `Origin` header.
+
+| Route | Result |
+| --- | --- |
+| `PUT /api/meditation/{id}/favorite` | `204`. Idempotent. `404` if the meditation does not exist. |
+| `DELETE /api/meditation/{id}/favorite` | `204`. Idempotent: `204` even if it was not a favorite. `404` if the meditation does not exist. |
+| `GET /api/meditation/favorites` | `200`, a JSON array of the caller's favorite meditations, most recently favorited first. Each item has the `MeditationResponse` shape with `"favorite": true`. |
+
+Every `MeditationResponse` that is made for the caller (library, daily suggestion, detail, program members) has a boolean `favorite`. The upload and description-update replies always send `"favorite": false`. Deleting a meditation or a user removes the matching favorite rows.
+
+Known limit: export/import does not carry favorites. The portability module is not changed.
+
 ## Runtime Data and Media Security
 
 No runtime state lives in the source tree. Everything mutable lives under `$MEDIOSS_DATA_DIR`, supplied by the environment and mounted as a volume in Docker.

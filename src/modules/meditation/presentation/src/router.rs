@@ -23,6 +23,7 @@ use crate::audio_upload::upload;
 use crate::categories::{
     assign_category, categories, create_category, delete_category, rename_category,
 };
+use crate::handlers_favorites::{favorite, favorites, unfavorite};
 use crate::handlers_notes::{create_note, delete_note, notes, update_note};
 use crate::handlers_playback::{completion, playback_state, position, set_completed};
 use crate::handlers_statistics::statistics;
@@ -73,6 +74,10 @@ pub struct MeditationDependencies {
     pub update_note: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_note::UpdateNoteCommand, Output = ()>>,
     pub delete_note: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::delete_note::DeleteNoteCommand, Output = ()>>,
     pub list_notes: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_notes::ListNotesQuery, Output = Vec<meditation_application::ports::Note>>>,
+    pub favorite_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::favorite_meditation::FavoriteMeditationCommand, Output = ()>>,
+    pub unfavorite_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::unfavorite_meditation::UnfavoriteMeditationCommand, Output = ()>>,
+    pub list_favorite_meditations: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_favorite_meditations::ListFavoriteMeditationsQuery, Output = Vec<meditation_domain::Meditation>>>,
+    pub list_favorite_ids: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_favorite_ids::ListFavoriteIdsQuery, Output = std::collections::HashSet<i64>>>,
     pub get_continue_program: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_continue_program::GetContinueProgramQuery, Output = Option<meditation_application::queries::get_continue_program::ContinueProgram>>>,
     pub list_recent_programs: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_recent_programs::ListRecentProgramsQuery, Output = Vec<meditation_application::queries::list_recent_programs::RecentProgram>>>,
     /// Program rows for the existence gates and the cover surfaces.
@@ -122,6 +127,7 @@ pub fn meditation_router(
         .merge(meditation_routes())
         .merge(playback_routes())
         .merge(note_routes())
+        .merge(favorite_routes())
 }
 
 fn audio_routes(max_upload_bytes: usize) -> Router<SharedDependencies> {
@@ -200,6 +206,15 @@ fn meditation_routes() -> Router<SharedDependencies> {
         .route(
             "/meditation/{id}",
             get(meditation).delete(delete_meditation),
+        )
+}
+
+fn favorite_routes() -> Router<SharedDependencies> {
+    Router::new()
+        .route("/meditation/favorites", get(favorites))
+        .route(
+            "/meditation/{id}/favorite",
+            put(favorite).delete(unfavorite),
         )
 }
 

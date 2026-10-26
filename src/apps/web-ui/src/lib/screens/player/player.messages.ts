@@ -29,6 +29,11 @@ export const playerMessages = defineMessages({
     en: "Your listening position could not be saved.",
     tr: "Dinleme konumunuz kaydedilemedi.",
   },
+  favorite: { en: "Favorite", tr: "Favori" },
+  favoriteFailed: {
+    en: "The favorite could not be saved.",
+    tr: "Favori kaydedilemedi.",
+  },
   completionFailed: {
     en: "The completion could not be recorded.",
     tr: "Tamamlama kaydedilemedi.",

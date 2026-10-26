@@ -13,6 +13,7 @@
   import { onMount } from "svelte";
   import {
     fetchCategories,
+    fetchFavorites,
     fetchLibrary,
     fetchPrograms,
     meditationDownloadUrl,
@@ -51,6 +52,9 @@
   let groupsFailure = $state<ServerReason | null>(null);
   let filter = $state<LibraryFilter>("all");
 
+  let favorites = $state<Meditation[] | null>(null);
+  let favoritesFailure = $state<ServerReason | null>(null);
+
   let results = $state<Meditation[] | null>(null);
   let searchFailure = $state<ServerReason | null>(null);
   let searchRequest = 0;
@@ -58,14 +62,26 @@
   const query = $derived(libraryQuery.query);
 
   const groups = $derived(programs ? groupPrograms(programs, categories) : []);
-  const visibleGroups = $derived(filterGroups(groups, filter));
+  const visibleGroups = $derived(
+    filter === "favorites" ? [] : filterGroups(groups, filter),
+  );
   const chips = $derived([
     { value: "all" as const, label: t(m.all) },
     { value: "completed" as const, label: t(m.filterCompleted) },
     { value: "in-progress" as const, label: t(m.filterInProgress) },
     { value: "not-started" as const, label: t(m.filterNotStarted) },
+    { value: "favorites" as const, label: t(m.filterFavorites) },
   ]);
 
+  const favoritesStatus = $derived(
+    favoritesFailure
+      ? "error"
+      : !favorites
+        ? "loading"
+        : favorites.length === 0
+          ? "empty"
+          : "ready",
+  );
   const groupsStatus = $derived(
     groupsFailure
       ? "error"
@@ -105,6 +121,16 @@
     }
   }
 
+  async function loadFavorites() {
+    favorites = null;
+    favoritesFailure = null;
+    try {
+      favorites = await fetchFavorites();
+    } catch (error) {
+      favoritesFailure = reasonOf(error);
+    }
+  }
+
   async function search(text: string) {
     const id = ++searchRequest;
     results = null;
@@ -119,6 +145,11 @@
       if (id === searchRequest) searchFailure = reasonOf(error);
     }
   }
+
+  // Re-read on every selection so a heart toggled in the Player shows up.
+  $effect(() => {
+    if (filter === "favorites") void loadFavorites();
+  });
 
   onMount(() => {
     void loadGroups();
@@ -146,6 +177,50 @@
   const programHref = (id: number) => `${ROUTES.program.path}?id=${id}`;
   const adminHref = `/admin/meditations/`;
 </script>
+
+{#snippet meditationCards(list: Meditation[])}
+  <ul class="flex flex-wrap gap-4">
+    {#each list as meditation (meditation.id)}
+      <li class="min-w-0">
+        <ContentCard
+          compact
+          aspect="3/4"
+          overlay
+          class="max-w-48"
+          href={playerHref(meditation.id)}
+          title={meditation.name}
+          meta={[
+            formatDuration(meditation.duration_ms, locale.current, "short"),
+          ].filter((item): item is string => item !== null)}
+          progress={meditation.completed
+            ? 1
+            : meditation.progress_percent / 100}
+          progressLabel={meditationProgressLabel(meditation, locale.current) ??
+            undefined}
+          coverUrl={meditation.program_has_cover && meditation.program_id
+            ? programCoverUrl(meditation.program_id)
+            : null}
+          artworkSeed={meditation.id}
+          artworkCategory="meditation"
+          completed={meditation.completed}
+        >
+          {#snippet actions()}
+            <OverflowMenu
+              label={t(m.moreActionsFor, { name: meditation.name })}
+            >
+              <OverflowItem
+                icon="download-simple"
+                label={t(m.downloadNamed, { name: meditation.name })}
+                onclick={() =>
+                  downloadFile(meditationDownloadUrl(meditation.id))}
+              />
+            </OverflowMenu>
+          {/snippet}
+        </ContentCard>
+      </li>
+    {/each}
+  </ul>
+{/snippet}
 
 {#snippet clearSearch()}
   <Button variant="secondary" onclick={libraryQuery.clear}>
@@ -181,49 +256,7 @@
       {#snippet emptyAction()}
         {@render clearSearch()}
       {/snippet}
-      <ul class="flex flex-wrap gap-4">
-        {#each results ?? [] as meditation (meditation.id)}
-          <li class="min-w-0">
-            <ContentCard
-              compact
-              aspect="3/4"
-              overlay
-              class="max-w-48"
-              href={playerHref(meditation.id)}
-              title={meditation.name}
-              meta={[
-                formatDuration(meditation.duration_ms, locale.current, "short"),
-              ].filter((item): item is string => item !== null)}
-              progress={meditation.completed
-                ? 1
-                : meditation.progress_percent / 100}
-              progressLabel={meditationProgressLabel(
-                meditation,
-                locale.current,
-              ) ?? undefined}
-              coverUrl={meditation.program_has_cover && meditation.program_id
-                ? programCoverUrl(meditation.program_id)
-                : null}
-              artworkSeed={meditation.id}
-              artworkCategory="meditation"
-              completed={meditation.completed}
-            >
-              {#snippet actions()}
-                <OverflowMenu
-                  label={t(m.moreActionsFor, { name: meditation.name })}
-                >
-                  <OverflowItem
-                    icon="download-simple"
-                    label={t(m.downloadNamed, { name: meditation.name })}
-                    onclick={() =>
-                      downloadFile(meditationDownloadUrl(meditation.id))}
-                  />
-                </OverflowMenu>
-              {/snippet}
-            </ContentCard>
-          </li>
-        {/each}
-      </ul>
+      {@render meditationCards(results ?? [])}
     </RegionState>
   </section>
 {:else}
@@ -245,7 +278,18 @@
         name="library-filter"
         legend={t(m.filterLegend)}
       />
-      {#if visibleGroups.length === 0}
+      {#if filter === "favorites"}
+        <RegionState
+          status={favoritesStatus}
+          minHeight="12rem"
+          errorMessage={failureText(favoritesFailure, m.favoritesFailed)}
+          onRetry={() => void loadFavorites()}
+          emptyTitle={t(m.favoritesEmptyTitle)}
+          emptyText={t(m.favoritesEmptyText)}
+        >
+          {@render meditationCards(favorites ?? [])}
+        </RegionState>
+      {:else if visibleGroups.length === 0}
         <p class="text-ink-muted" role="status">
           <span class="font-medium text-ink-strong">
             {t(m.filterEmptyTitle)}

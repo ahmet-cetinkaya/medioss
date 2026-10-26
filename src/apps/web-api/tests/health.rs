@@ -78,6 +78,7 @@ async fn test_state() -> (AppState, TempDir) {
     let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
         Arc::new(web_api::user_deletion::CrossModuleUserDeletion::new(
             meditation_module.notes.clone(),
+            meditation_module.favorites.clone(),
             meditation_module.playback.clone(),
             meditation_module.sessions.clone(),
             soundscape.mixes.clone(),

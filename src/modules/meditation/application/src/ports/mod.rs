@@ -5,6 +5,7 @@ mod category_repository;
 mod clock;
 mod command_handler;
 mod cover_validator;
+mod favorite_repository;
 mod meditation_repository;
 mod membership_repository;
 mod note_repository;
@@ -20,6 +21,7 @@ pub use category_repository::{Category, CategoryRepository, RenameCategoryError}
 pub use clock::Clock;
 pub use command_handler::CommandHandler;
 pub use cover_validator::{CoverNormalizationError, CoverValidator};
+pub use favorite_repository::FavoriteRepository;
 pub use meditation_repository::MeditationRepository;
 pub use membership_repository::{Membership, MembershipRepository};
 pub use note_repository::{Note, NoteRepository};

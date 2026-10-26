@@ -1,7 +1,7 @@
 use crate::commands::add_member::{AddMemberCommand, AddMemberCommandHandler};
 use crate::commands::create_note::{CreateNoteCommand, CreateNoteCommandHandler};
 use crate::commands::delete_meditation::{DeleteMeditationCommand, DeleteMeditationCommandHandler};
-use crate::ports::CommandHandler;
+use crate::ports::{CommandHandler, FavoriteRepository};
 use crate::test_support::{user_a, TestDeps};
 use crate::ApplicationError;
 
@@ -10,12 +10,13 @@ fn service(deps: &TestDeps) -> DeleteMeditationCommandHandler {
         deps.meditations.clone(),
         deps.memberships.clone(),
         deps.notes.clone(),
+        deps.favorites.clone(),
         deps.store.clone(),
     )
 }
 
 #[tokio::test]
-async fn delete_removes_row_bytes_memberships_and_notes() {
+async fn delete_removes_row_bytes_memberships_notes_and_favorites() {
     let deps = TestDeps::new();
     let meditation = deps.seeded_meditation().await;
     let program_id = deps.seed_program("Program").await;
@@ -44,6 +45,11 @@ async fn delete_removes_row_bytes_memberships_and_notes() {
     .await
     .expect("note");
 
+    deps.favorites
+        .add(user_a(), meditation.id(), deps.clock.0)
+        .await
+        .expect("favorite");
+
     service(&deps)
         .handle(DeleteMeditationCommand {
             meditation_id: meditation.id(),
@@ -55,6 +61,7 @@ async fn delete_removes_row_bytes_memberships_and_notes() {
     assert!(deps.meditations.0.meditations.lock().unwrap().is_empty());
     assert!(deps.memberships.0.memberships.lock().unwrap().is_empty());
     assert!(deps.notes.0.notes.lock().unwrap().is_empty());
+    assert!(deps.favorites.0.favorites.lock().unwrap().is_empty());
 }
 
 #[tokio::test]

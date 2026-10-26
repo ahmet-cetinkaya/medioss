@@ -73,6 +73,7 @@ export const ICON_NAMES = [
   "timer",
   "skip-back",
   "speaker-high",
+  "heart",
   ...SOUND_ICON_KEYS,
 ] as const;
 

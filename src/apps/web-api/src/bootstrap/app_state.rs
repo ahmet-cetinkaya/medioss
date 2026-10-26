@@ -33,6 +33,7 @@ pub async fn build_state(config: Config, database: Database) -> AppState {
     let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
         Arc::new(crate::user_deletion::CrossModuleUserDeletion::new(
             Arc::clone(&meditation_module.notes),
+            Arc::clone(&meditation_module.favorites),
             Arc::clone(&meditation_module.playback),
             Arc::clone(&meditation_module.sessions),
             Arc::clone(&soundscape.mixes),

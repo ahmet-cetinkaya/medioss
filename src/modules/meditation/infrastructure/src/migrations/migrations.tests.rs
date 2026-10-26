@@ -76,6 +76,7 @@ async fn up_creates_every_module_table_under_its_own_ledger() {
         "meditation_playback_state",
         "meditation_sessions",
         "meditation_notes",
+        "meditation_favorites",
     ] {
         assert!(
             table_exists(&database.pool, table).await,
@@ -84,7 +85,7 @@ async fn up_creates_every_module_table_under_its_own_ledger() {
     }
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        2
+        3
     );
     // Ledger isolation: identity's ledger is untouched.
     assert!(!table_exists(&database.pool, "identity_migrations").await);
@@ -97,7 +98,7 @@ async fn up_is_idempotent_across_restarts() {
     migrate(&database.connection).await.unwrap();
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        2
+        3
     );
 }
 
@@ -117,7 +118,7 @@ async fn down_is_refused_and_leaves_schema_untouched() {
     // The refused down() did not roll the applied migration back either.
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        2
+        3
     );
 }
 
@@ -174,7 +175,7 @@ async fn a_failing_migration_rolls_back_and_the_same_database_recovers() {
     migrate(&database.connection).await.unwrap();
     assert_eq!(
         ledger_rows(&database.pool, "meditation_migrations").await,
-        2
+        3
     );
     let described = column_names(&database.pool, "meditation_meditations").await;
     assert!(described.contains(&"description".to_owned()));

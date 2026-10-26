@@ -6,6 +6,7 @@ use sea_orm_migration::prelude::*;
 
 mod m20260926_000001_meditation_create_schema;
 mod m20261008_000001_meditation_v1_additions;
+mod m20261026_000001_meditation_favorites;
 
 pub use m20260926_000001_meditation_create_schema::Migration;
 
@@ -28,6 +29,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(Migration),
             Box::new(m20261008_000001_meditation_v1_additions::Migration),
+            Box::new(m20261026_000001_meditation_favorites::Migration),
         ]
     }
 
