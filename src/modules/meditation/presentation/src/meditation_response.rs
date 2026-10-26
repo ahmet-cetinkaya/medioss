@@ -99,16 +99,25 @@ pub(crate) async fn with_playback(
 }
 
 /// The caller's favorite identifiers: one read per request, shared by every
-/// meditation the response decorates.
+/// meditation the response decorates. The flag is decoration, like playback
+/// progress, so a failed read degrades to "nothing is a favorite" and a
+/// warning instead of failing the whole response.
 pub(crate) async fn caller_favorite_ids(
     deps: &crate::SharedDependencies,
     user_id: kernel::UserId,
-) -> Result<HashSet<i64>, crate::ApiError> {
+) -> HashSet<i64> {
     use meditation_application::queries::list_favorite_ids::ListFavoriteIdsQuery;
-    deps.list_favorite_ids
+    match deps
+        .list_favorite_ids
         .handle(ListFavoriteIdsQuery { user_id })
         .await
-        .map_err(crate::ApiError::Application)
+    {
+        Ok(ids) => ids,
+        Err(error) => {
+            tracing::warn!(%error, "favorite ids unavailable; serving favorite=false");
+            HashSet::new()
+        }
+    }
 }
 
 #[cfg(test)]

@@ -204,3 +204,24 @@ async fn mismatched_origin_is_forbidden_for_both_verbs() {
     }
     assert!(list_favorites(&app, member_actor()).await.is_empty());
 }
+
+#[tokio::test]
+async fn missing_origin_is_forbidden_for_both_verbs() {
+    use tower::ServiceExt;
+
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    for method in ["PUT", "DELETE"] {
+        let mut request = axum::http::Request::builder()
+            .method(method)
+            .uri(format!("/meditation/{}/favorite", meditation.id()))
+            .body(axum::body::Body::empty())
+            .unwrap();
+        request.extensions_mut().insert(member_actor());
+
+        let response = app.router.clone().oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN, "{method}");
+    }
+    assert!(list_favorites(&app, member_actor()).await.is_empty());
+}

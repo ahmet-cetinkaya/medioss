@@ -37,6 +37,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Lockfile is current
+        run: cargo metadata --locked --format-version 1 > /dev/null
+
       - name: Format
         run: cargo fmt --all --check
 
@@ -52,7 +55,13 @@ jobs:
       - name: Guard the rsa advisory ignore
         run: |
           # .cargo/audit.toml ignores RUSTSEC-2023-0071 only while rsa is not compiled.
-          if [ -n "$(cargo tree --locked --workspace -e normal -i rsa 2>/dev/null)" ]; then
+          # A failing `cargo tree` (stale lock, rsa gone from the lock) must fail
+          # this step, not read as "rsa is absent"; only stdout carries the graph.
+          rsa_graph=$(cargo tree --locked --workspace -e normal -i rsa) || {
+            echo "cargo tree failed: check that Cargo.lock is current and still lists rsa" >&2
+            exit 1
+          }
+          if [ -n "$rsa_graph" ]; then
             echo "rsa is now in the build graph: remove the audit ignore and fix it" >&2
             exit 1
           fi
