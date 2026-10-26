@@ -69,6 +69,9 @@ Set these in `.env` or as environment variables (env vars take priority):
 | `SESSION_TIMEOUT` |  | 7d | Session lifetime (e.g. `7d`, `24h`, `30m`) |
 | `SESSION_COOKIE_SECURE` |  | true | Set to `false` only for local HTTP testing (not production) |
 | `MEDIOSS_BUILTIN_SOUNDS_DIR` |  | (probed) | Built-in sound set. Unset: the server tries `/srv/medioss/builtin-sounds` (Docker image), then `./builtin-sounds`. `make run` / `make dev` do not set it, so set it to `$PWD/assets/sounds/soundscape-builtin` for built-in sounds from a checkout without `.env` |
+| `MEDIOSS_MAX_UPLOAD_BYTES` |  | 104857600 | Largest meditation audio upload in bytes (100 MiB); 1 to 10 GiB |
+| `MEDIOSS_MAX_SOUND_UPLOAD_BYTES` |  | 104857600 | Largest soundscape audio upload in bytes (100 MiB); 1 to 10 GiB |
+| `MEDIOSS_MAX_COVER_BYTES` |  | 5242880 | Largest program cover upload in bytes (5 MiB); 1 to 10 GiB |
 
 See [`.env.example`](.env.example) for all options and full descriptions.
 
