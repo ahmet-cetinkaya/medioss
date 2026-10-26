@@ -55,10 +55,16 @@ jobs:
       - name: Guard the rsa advisory ignore
         run: |
           # .cargo/audit.toml ignores RUSTSEC-2023-0071 only while rsa is not compiled.
-          # A failing `cargo tree` (stale lock, rsa gone from the lock) must fail
-          # this step, not read as "rsa is absent"; only stdout carries the graph.
+          # Once rsa leaves Cargo.lock the ignore is moot and the guard passes;
+          # `cargo tree -i rsa` would exit 101 there, so the lock is checked first.
+          # Any other `cargo tree` failure must fail this step, not read as
+          # "rsa is absent"; only stdout carries the graph.
+          if ! grep -qx 'name = "rsa"' Cargo.lock; then
+            echo "::notice::rsa is not in Cargo.lock: the audit ignore can be removed"
+            exit 0
+          fi
           rsa_graph=$(cargo tree --locked --workspace -e normal -i rsa) || {
-            echo "cargo tree failed: check that Cargo.lock is current and still lists rsa" >&2
+            echo "cargo tree failed: check that Cargo.lock is current" >&2
             exit 1
           }
           if [ -n "$rsa_graph" ]; then
