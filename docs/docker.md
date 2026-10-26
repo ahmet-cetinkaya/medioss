@@ -33,7 +33,7 @@ See [`.env.example`](../.env.example) for the full list.
 
 ## Data
 
-All state lives in the `app_data` volume mounted at `/data` (SQLite database and uploaded media). Audio conversion needs scratch space, and the read-only root filesystem has no writable `/tmp`, so at startup the server empties and recreates `/data/tmp` and points `TMPDIR` at it (an upload of N bytes can briefly need about N bytes of free space there). It refuses to start when it cannot write to that folder. Back it up before upgrading. The container root filesystem is read-only, all capabilities are dropped, and `no-new-privileges` is set.
+All state lives in the `app_data` volume mounted at `/data` (SQLite database and uploaded media). Audio conversion needs scratch space, and the read-only root filesystem has no writable `/tmp`, so at startup the server empties and recreates `/data/tmp` and points `TMPDIR` at it (an upload of N bytes can briefly need about N bytes of free space there). It refuses to start when it cannot write to that folder, and prints the reason to stderr. Never point two containers at the same `/data` volume: the second one would empty the first one's scratch folder. Back it up before upgrading. The container root filesystem is read-only, all capabilities are dropped, and `no-new-privileges` is set.
 
 ## Prebuilt image
 
