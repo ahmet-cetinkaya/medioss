@@ -26,7 +26,7 @@ pub async fn program_members(
         .handle(ListProgramMembersQuery { program_id: id })
         .await
         .map_err(ApiError::Application)?;
-    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await;
     let mut responses = Vec::with_capacity(members.len());
     for member in &members {
         let meditation = deps

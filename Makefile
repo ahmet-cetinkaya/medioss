@@ -80,6 +80,7 @@ run: build
 lint:
 	$(UI_SETUP) && $(PRETTIER) --check $(PRETTIER_UI_FILES)
 	$(PRETTIER) --check $(PRETTIER_REPO_FILES)
+	cargo metadata --locked --format-version 1 > /dev/null
 	@$(call cargo-gate,fmt --all --check,rustfmt)
 	@$(call cargo-gate,clippy --workspace --all-targets -- -D warnings,clippy)
 	./scripts/check-boundaries.sh

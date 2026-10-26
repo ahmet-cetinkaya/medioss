@@ -5,6 +5,7 @@ mod access;
 mod audio;
 mod covers;
 mod description;
+mod favorite_ids_unavailable;
 mod helpers;
 mod library;
 mod listening;

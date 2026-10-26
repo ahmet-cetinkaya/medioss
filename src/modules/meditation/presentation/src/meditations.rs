@@ -31,7 +31,7 @@ pub async fn daily_suggestion(
     let Some(found) = found else {
         return Ok(StatusCode::NO_CONTENT.into_response());
     };
-    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await;
     let mut response = with_playback(
         deps.get_playback_state.as_ref(),
         actor.user_id(),
@@ -95,7 +95,7 @@ pub async fn library(
         })
         .await
         .map_err(ApiError::Application)?;
-    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await;
     let mut responses = Vec::with_capacity(listed.len());
     for entry in &listed {
         let mut response = with_playback(
@@ -124,7 +124,7 @@ pub async fn meditation(
         .handle(GetMeditationDetailQuery { meditation_id: id })
         .await
         .map_err(ApiError::Application)?;
-    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await;
     let mut response = with_playback(
         deps.get_playback_state.as_ref(),
         actor.user_id(),
