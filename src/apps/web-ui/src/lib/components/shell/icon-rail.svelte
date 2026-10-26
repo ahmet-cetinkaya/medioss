@@ -33,7 +33,7 @@
 
 <nav
   aria-label={t(shellMessages.railNav)}
-  class="w-22 shrink-0 flex-col items-center gap-4 py-6 {className}"
+  class="w-22 shrink-0 flex-col items-center gap-4 overflow-y-auto py-6 {className}"
 >
   <BrandLockup compact href="/" />
   {#each NAV_GROUPS as group, index (group.key)}

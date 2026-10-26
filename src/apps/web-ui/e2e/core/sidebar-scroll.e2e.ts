@@ -45,3 +45,27 @@ test.describe("sidebar in a short window", () => {
     await expect(lastLink).toBeInViewport();
   });
 });
+
+// The icon rail (768-1279 px) sits in the same clipped shell and had the same
+// bug, so it gets the same guarantee.
+const SHORT_NARROW_DESKTOP = { width: 1000, height: 400 };
+
+test.describe("icon rail in a short window", () => {
+  test.use({
+    storageState: storageStatePath("member"),
+    viewport: SHORT_NARROW_DESKTOP,
+  });
+
+  test("scrolls on its own and keeps the last item reachable", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const rail = page.getByRole("navigation", { name: "Compact navigation" });
+    const lastItem = rail.getByRole("button", { name: "Sign out" });
+
+    await expect(lastItem).not.toBeInViewport();
+
+    await rail.evaluate((nav) => nav.scrollTo({ top: nav.scrollHeight }));
+    await expect(lastItem).toBeInViewport();
+  });
+});
