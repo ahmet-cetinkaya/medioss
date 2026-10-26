@@ -155,6 +155,26 @@ impl E2eServer {
         text[start..end].to_owned()
     }
 
+    async fn upload_sound(&self, cookie: &str, audio: Vec<u8>) -> u16 {
+        let (content_type, body) = multipart(&[
+            ("name", "", b"Rain".to_vec()),
+            ("category_id", "", b"1".to_vec()),
+            ("file", "rain.mp3", audio),
+        ]);
+        self.request(
+            "POST",
+            "/api/soundscape/sounds",
+            &[
+                ("origin", "http://localhost"),
+                ("cookie", cookie),
+                ("content-type", &content_type),
+            ],
+            body,
+        )
+        .await
+        .0
+    }
+
     async fn upload_audio(&self, cookie: &str, program_id: &str, audio: Vec<u8>) -> u16 {
         let (content_type, body) = multipart(&[
             ("name", "", b"Large".to_vec()),
@@ -173,6 +193,30 @@ impl E2eServer {
         )
         .await
         .0
+    }
+}
+
+const EARLY_REJECTION_DEADLINE: Duration = Duration::from_secs(3);
+const DECLARED_BODY_BYTES: usize = 200 * MIB;
+
+impl E2eServer {
+    /// Sends only the request head, declaring a body that never arrives, and
+    /// keeps the socket open. Returns the status line's code, or 0 when the
+    /// server stayed silent past the deadline (it was waiting for the body).
+    async fn declared_status_without_body(&self, method: &str, path: &str) -> u16 {
+        let mut stream = tokio::net::TcpStream::connect(("127.0.0.1", self.port))
+            .await
+            .unwrap();
+        let head = format!(
+            "{method} {path} HTTP/1.1\r\nhost: localhost\r\norigin: http://localhost\r\ncontent-type: multipart/form-data; boundary={BOUNDARY}\r\ncontent-length: {DECLARED_BODY_BYTES}\r\n\r\n"
+        );
+        stream.write_all(head.as_bytes()).await.unwrap();
+        let mut buffer = vec![0u8; 1024];
+        let read = tokio::time::timeout(EARLY_REJECTION_DEADLINE, stream.read(&mut buffer)).await;
+        match read {
+            Ok(Ok(count)) => parse_response(&buffer[..count]).0,
+            _ => 0,
+        }
     }
 }
 
@@ -311,4 +355,34 @@ fn invalid_limit_aborts_startup_naming_the_variable() {
 
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("MEDIOSS_MAX_COVER_BYTES"));
+}
+
+#[tokio::test]
+async fn declared_oversize_length_gets_413_before_any_body_is_sent() {
+    let server = E2eServer::spawn(&[]).await;
+
+    for (method, path) in [
+        ("POST", "/api/meditation/audio"),
+        ("POST", "/api/soundscape/sounds"),
+        ("POST", "/api/meditation/programs"),
+        ("PUT", "/api/meditation/programs/1/cover"),
+    ] {
+        let status = server.declared_status_without_body(method, path).await;
+        assert_eq!(status, 413, "{method} {path}");
+    }
+}
+
+#[tokio::test]
+async fn sound_exactly_at_the_cap_is_not_rejected_for_multipart_overhead() {
+    let server = E2eServer::spawn(&[("MEDIOSS_MAX_SOUND_UPLOAD_BYTES", &MIB.to_string())]).await;
+    let cookie = server.admin_cookie().await;
+
+    let at_cap = server.upload_sound(&cookie, mp3_of_size(MIB)).await;
+    let over_cap = server.upload_sound(&cookie, mp3_of_size(MIB + 1)).await;
+
+    // The category may not exist in this bare data dir, so the at-cap upload
+    // can fail validation; what matters is that the envelope alone is not a 413.
+    assert_ne!(at_cap, 413);
+    assert_ne!(at_cap, 0);
+    assert_eq!(over_cap, 413);
 }

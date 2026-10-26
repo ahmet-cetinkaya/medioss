@@ -33,9 +33,10 @@ struct ValidUpload {
 
 /// `POST /meditation/audio` — admin-only multipart upload (file + name).
 ///
-/// The configured upload cap is enforced twice: against the multipart field's declared
-/// length before its body is accepted (spec FR-002), and against a running
-/// byte counter so understated lengths cannot smuggle past (spec FR-003).
+/// The configured upload cap is enforced twice: the route's body-limit layer answers
+/// 413 from a declared `Content-Length` over the cap before any body byte is read
+/// (spec FR-002), and a running byte counter aborts a stream that exceeds it, so
+/// understated lengths cannot smuggle past (spec FR-003).
 pub async fn upload(
     AdminActor(_actor): AdminActor,
     State(deps): State<SharedDependencies>,

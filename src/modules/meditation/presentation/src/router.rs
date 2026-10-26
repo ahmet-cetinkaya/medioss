@@ -12,6 +12,8 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
+use tower_http::limit::RequestBodyLimitLayer;
+
 use meditation_application::ports::{
     BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository,
 };
@@ -95,6 +97,15 @@ pub type SharedDependencies = Arc<MeditationDependencies>;
 /// Headroom above a payload cap for the multipart envelope around the file.
 const MULTIPART_OVERHEAD_BYTES: usize = 1024 * 1024;
 
+/// Body cap for a multipart upload route. `RequestBodyLimitLayer` answers 413
+/// from a declared `Content-Length` over the cap before any body byte is read
+/// (spec FR-002); `DefaultBodyLimit` raises axum's 2 MiB extractor default and
+/// still counts bytes as they stream in (spec FR-003).
+fn upload_body_limit(max_bytes: usize) -> (DefaultBodyLimit, RequestBodyLimitLayer) {
+    let cap = max_bytes + MULTIPART_OVERHEAD_BYTES;
+    (DefaultBodyLimit::max(cap), RequestBodyLimitLayer::new(cap))
+}
+
 /// The meditation HTTP surface (plan D5). Every route is authenticated;
 /// content-management routes are admin-gated through the
 /// [`AdminActor`] extractor.
@@ -120,9 +131,7 @@ fn audio_routes(max_upload_bytes: usize) -> Router<SharedDependencies> {
         // upload route owns its limit (spec FR-002/003).
         .route(
             "/meditation/audio",
-            post(upload).layer(DefaultBodyLimit::max(
-                max_upload_bytes + MULTIPART_OVERHEAD_BYTES,
-            )),
+            post(upload).layer(upload_body_limit(max_upload_bytes)),
         )
         .route("/meditation/{id}/audio", get(audio))
         .route("/meditation/{id}/download", get(download))
@@ -147,9 +156,7 @@ fn program_routes(max_cover_bytes: usize) -> Router<SharedDependencies> {
             "/meditation/programs",
             get(programs)
                 .post(create_program)
-                .layer(DefaultBodyLimit::max(
-                    max_cover_bytes + MULTIPART_OVERHEAD_BYTES,
-                )),
+                .layer(upload_body_limit(max_cover_bytes)),
         )
         .route(
             "/meditation/programs/{id}",
@@ -178,9 +185,9 @@ fn program_member_routes() -> Router<SharedDependencies> {
 fn program_cover_routes(max_cover_bytes: usize) -> Router<SharedDependencies> {
     Router::new().route(
         "/meditation/programs/{id}/cover",
-        get(cover).put(replace_cover).layer(DefaultBodyLimit::max(
-            max_cover_bytes + MULTIPART_OVERHEAD_BYTES,
-        )),
+        get(cover)
+            .put(replace_cover)
+            .layer(upload_body_limit(max_cover_bytes)),
     )
 }
 
