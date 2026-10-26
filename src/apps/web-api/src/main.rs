@@ -7,7 +7,7 @@ use web_api::{
         logging::init_tracing,
         media_layout::migrate_media_layout,
         migrations::migrate_all,
-        report::{fail, with_causes},
+        report::{exit_before_logging, fail, with_causes},
         scratch_dir::use_scratch_dir_as_temp_dir,
     },
     config::{self, Config},
@@ -42,12 +42,10 @@ fn main() {
     // Environment mutation is only sound while the process is single-threaded,
     // so the server config is read and published before the runtime exists.
     let server_config = cli.command.is_none().then(|| {
-        let config = config::from_env().unwrap_or_else(|err| {
-            eprintln!("{}", with_causes(&err));
-            std::process::exit(1)
-        });
+        let config = config::from_env().unwrap_or_else(|err| exit_before_logging(&err));
         config::publish_dev_origin(&config);
-        use_scratch_dir_as_temp_dir(&config.data_dir).unwrap_or_else(|err| fail(with_causes(&err)));
+        use_scratch_dir_as_temp_dir(&config.data_dir)
+            .unwrap_or_else(|err| exit_before_logging(&err));
         config
     });
     tokio::runtime::Builder::new_multi_thread()
