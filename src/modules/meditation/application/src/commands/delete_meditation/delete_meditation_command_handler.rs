@@ -3,7 +3,8 @@ use std::sync::Arc;
 use super::delete_meditation_command::DeleteMeditationCommand;
 use super::delete_meditation_command_validator::DeleteMeditationCommandValidator;
 use crate::ports::{
-    BlobStore, CommandHandler, MeditationRepository, MembershipRepository, NoteRepository,
+    BlobStore, CommandHandler, FavoriteRepository, MeditationRepository, MembershipRepository,
+    NoteRepository,
 };
 use crate::ApplicationError;
 
@@ -11,6 +12,7 @@ pub struct DeleteMeditationCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
     memberships: Arc<dyn MembershipRepository>,
     notes: Arc<dyn NoteRepository>,
+    favorites: Arc<dyn FavoriteRepository>,
     store: Arc<dyn BlobStore>,
     validator: DeleteMeditationCommandValidator,
 }
@@ -20,12 +22,14 @@ impl DeleteMeditationCommandHandler {
         meditations: Arc<dyn MeditationRepository>,
         memberships: Arc<dyn MembershipRepository>,
         notes: Arc<dyn NoteRepository>,
+        favorites: Arc<dyn FavoriteRepository>,
         store: Arc<dyn BlobStore>,
     ) -> Self {
         Self {
             meditations,
             memberships,
             notes,
+            favorites,
             store,
             validator: DeleteMeditationCommandValidator,
         }
@@ -56,6 +60,10 @@ impl CommandHandler<DeleteMeditationCommand> for DeleteMeditationCommandHandler 
             .await
             .map_err(ApplicationError::Repository)?;
         self.notes
+            .delete_for_meditation(meditation_id)
+            .await
+            .map_err(ApplicationError::Repository)?;
+        self.favorites
             .delete_for_meditation(meditation_id)
             .await
             .map_err(ApplicationError::Repository)?;

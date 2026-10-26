@@ -18,6 +18,7 @@ use meditation_application::commands::delete_category::DeleteCategoryCommandHand
 use meditation_application::commands::delete_meditation::DeleteMeditationCommandHandler;
 use meditation_application::commands::delete_note::DeleteNoteCommandHandler;
 use meditation_application::commands::delete_program::DeleteProgramCommandHandler;
+use meditation_application::commands::favorite_meditation::FavoriteMeditationCommandHandler;
 use meditation_application::commands::record_completion::RecordCompletionCommandHandler;
 use meditation_application::commands::record_position::RecordPositionCommandHandler;
 use meditation_application::commands::remove_member::RemoveMemberCommandHandler;
@@ -25,6 +26,7 @@ use meditation_application::commands::rename_category::RenameCategoryCommandHand
 use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommandHandler;
 use meditation_application::commands::set_completed::SetCompletedCommandHandler;
 use meditation_application::commands::set_program_category::SetProgramCategoryCommandHandler;
+use meditation_application::commands::unfavorite_meditation::UnfavoriteMeditationCommandHandler;
 use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommandHandler;
 use meditation_application::commands::update_note::UpdateNoteCommandHandler;
 use meditation_application::commands::update_program::UpdateProgramCommandHandler;
@@ -38,6 +40,8 @@ use meditation_application::queries::get_playback_state::GetPlaybackStateQueryHa
 use meditation_application::queries::get_program_cover::GetProgramCoverQueryHandler;
 use meditation_application::queries::get_user_statistics::GetUserStatisticsQueryHandler;
 use meditation_application::queries::list_categories::ListCategoriesQueryHandler;
+use meditation_application::queries::list_favorite_ids::ListFavoriteIdsQueryHandler;
+use meditation_application::queries::list_favorite_meditations::ListFavoriteMeditationsQueryHandler;
 use meditation_application::queries::list_library::ListLibraryQueryHandler;
 use meditation_application::queries::list_notes::ListNotesQueryHandler;
 use meditation_application::queries::list_program_members::ListProgramMembersQueryHandler;
@@ -45,8 +49,9 @@ use meditation_application::queries::list_programs::ListProgramsQueryHandler;
 use meditation_application::queries::list_recent_programs::ListRecentProgramsQueryHandler;
 use meditation_application::test_support::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
-    FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
-    FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
+    FakeFavoriteRepository, FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository,
+    FakePlaybackRepository, FakeProgramRepository, FakeSessionRepository, FakeValidator,
+    FixedClock, RepoState,
 };
 
 use crate::{meditation_router, MeditationDependencies};
@@ -81,6 +86,8 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
         Arc::new(FakeMembershipRepository(state.clone()));
     let notes: Arc<dyn meditation_application::ports::NoteRepository> =
         Arc::new(FakeNoteRepository(state.clone()));
+    let favorites: Arc<dyn meditation_application::ports::FavoriteRepository> =
+        Arc::new(FakeFavoriteRepository(state.clone()));
     let playback: Arc<dyn meditation_application::ports::PlaybackStateRepository> =
         Arc::new(FakePlaybackRepository(state.clone()));
     let sessions: Arc<dyn meditation_application::ports::SessionRepository> =
@@ -158,6 +165,7 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             meditations.clone(),
             memberships.clone(),
             notes.clone(),
+            favorites.clone(),
             store_port.clone(),
         )),
         update_meditation_description: Arc::new(UpdateMeditationDescriptionCommandHandler::new(
@@ -214,6 +222,20 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
         )),
         update_note: Arc::new(UpdateNoteCommandHandler::new(notes.clone(), clock.clone())),
         delete_note: Arc::new(DeleteNoteCommandHandler::new(notes.clone())),
+        favorite_meditation: Arc::new(FavoriteMeditationCommandHandler::new(
+            meditations.clone(),
+            favorites.clone(),
+            clock.clone(),
+        )),
+        unfavorite_meditation: Arc::new(UnfavoriteMeditationCommandHandler::new(
+            meditations.clone(),
+            favorites.clone(),
+        )),
+        list_favorite_meditations: Arc::new(ListFavoriteMeditationsQueryHandler::new(
+            meditations.clone(),
+            favorites.clone(),
+        )),
+        list_favorite_ids: Arc::new(ListFavoriteIdsQueryHandler::new(favorites)),
         list_notes: Arc::new(ListNotesQueryHandler::new(meditations, notes)),
         get_continue_program: Arc::new(GetContinueProgramQueryHandler::new(
             playback.clone(),

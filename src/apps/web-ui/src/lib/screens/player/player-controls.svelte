@@ -39,14 +39,18 @@
   import { fetchMeProfile } from "$lib/api/identity";
   import {
     meditationAudioUrl,
+    favoriteMeditation,
     meditationDownloadUrl,
     postCompletion,
     postPosition,
     type Meditation,
     type PlaybackState,
     type ProgramSummary,
+    unfavoriteMeditation,
   } from "$lib/api/meditation";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
+  import IconButton from "$lib/components/ui/icon-button/icon-button.svelte";
+  import { toggleFavoriteOptimistically } from "$lib/meditation/favorite-toggle";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { formatClock } from "$lib/i18n/formatting/clock-format";
   import { formatNumber } from "$lib/i18n/formatting/number-format";
@@ -117,6 +121,8 @@
   let notice = $state<StringMessage | null>(null);
   let resumed = false;
   let mixOpen = $state(false);
+  let favorite = $state(meditation.favorite);
+  let favoritePending = $state(false);
 
   // Focus overlay: the stage div (backdrop + panel wrapper) that moves
   // under <body> while playing and back on pause.
@@ -159,6 +165,26 @@
         },
       ),
   });
+
+  async function toggleFavorite() {
+    if (favoritePending) return;
+    favoritePending = true;
+    try {
+      await toggleFavoriteOptimistically(
+        favorite,
+        (value) => (favorite = value),
+        (next) =>
+          next
+            ? favoriteMeditation(meditation.id)
+            : unfavoriteMeditation(meditation.id),
+      );
+      if (notice === m.favoriteFailed) notice = null;
+    } catch {
+      notice = m.favoriteFailed;
+    } finally {
+      favoritePending = false;
+    }
+  }
 
   function seekTo(seconds: number) {
     if (!audio) return;
@@ -380,6 +406,13 @@
     {/if}
 
     <div class="flex flex-wrap items-center justify-end gap-4">
+      <IconButton
+        icon="heart"
+        filled={favorite}
+        pressed={favorite}
+        label={t(m.favorite)}
+        onclick={() => void toggleFavorite()}
+      />
       <OverflowMenu label={t(m.moreActionsFor, { name: meditation.name })}>
         <OverflowItem
           icon="download-simple"

@@ -6,6 +6,8 @@ pub mod get_playback_state;
 pub mod get_program_cover;
 pub mod get_user_statistics;
 pub mod list_categories;
+pub mod list_favorite_ids;
+pub mod list_favorite_meditations;
 pub mod list_library;
 pub mod list_notes;
 pub mod list_program_members;

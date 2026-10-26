@@ -3,6 +3,7 @@
 mod audio_stream;
 mod audio_upload;
 mod categories;
+mod handlers_favorites;
 mod handlers_notes;
 mod handlers_playback;
 mod handlers_statistics;

@@ -1,6 +1,7 @@
 //! SeaORM entities, one file per table.
 
 pub mod categories;
+pub mod favorites;
 pub mod meditations;
 pub mod memberships;
 pub mod notes;

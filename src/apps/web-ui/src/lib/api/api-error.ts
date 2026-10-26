@@ -51,6 +51,9 @@ export type ApiAction =
   | "note.create"
   | "note.update"
   | "note.delete"
+  | "favorites.load"
+  | "favorite.add"
+  | "favorite.remove"
   | "audio.upload"
   | "meditation.description"
   // mood

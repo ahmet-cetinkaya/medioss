@@ -1,4 +1,6 @@
 //! Meditation JSON shape shared by every meditation-returning surface.
+use std::collections::HashSet;
+
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -14,6 +16,9 @@ pub struct MeditationResponse {
     /// caller never touched this meditation.
     pub completed: bool,
     pub progress_percent: i64,
+    /// Whether the caller favorited this meditation; `false` on surfaces
+    /// that are not caller-specific (upload and description-update replies).
+    pub favorite: bool,
     /// The meditation's home program: set on the daily-suggestion and library
     /// responses (cover borrowing, \"no program\" detection); absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -48,6 +53,7 @@ pub(crate) fn meditation_response(
         description: meditation.description().map(str::to_owned),
         completed: false,
         progress_percent: 0,
+        favorite: false,
         program_id: None,
         program_has_cover: false,
         program: None,
@@ -55,7 +61,8 @@ pub(crate) fn meditation_response(
 }
 
 /// Fills a meditation response's `completed`/`progress_percent` from the
-/// caller's own playback state; every meditation surface must show progress,
+/// caller's own playback state and favorite flag (`favorite_ids` is the caller's
+/// set, read once per request by [`caller_favorite_ids`]); every meditation surface must show progress,
 /// so this is not optional decoration.
 pub(crate) async fn with_playback(
     get_playback_state: &dyn meditation_application::ports::QueryHandler<
@@ -63,10 +70,12 @@ pub(crate) async fn with_playback(
         Output = meditation_application::ports::PlaybackState,
     >,
     user_id: kernel::UserId,
+    favorite_ids: &HashSet<i64>,
     meditation: &meditation_domain::Meditation,
 ) -> MeditationResponse {
     use meditation_application::queries::get_playback_state::GetPlaybackStateQuery;
     let mut response = meditation_response(meditation);
+    response.favorite = favorite_ids.contains(&meditation.id());
     // The query zeroes never-played state itself (spec FR-016), so one call
     // always yields the fields to render.
     if let Ok(state) = get_playback_state
@@ -87,6 +96,19 @@ pub(crate) async fn with_playback(
         };
     }
     response
+}
+
+/// The caller's favorite identifiers: one read per request, shared by every
+/// meditation the response decorates.
+pub(crate) async fn caller_favorite_ids(
+    deps: &crate::SharedDependencies,
+    user_id: kernel::UserId,
+) -> Result<HashSet<i64>, crate::ApiError> {
+    use meditation_application::queries::list_favorite_ids::ListFavoriteIdsQuery;
+    deps.list_favorite_ids
+        .handle(ListFavoriteIdsQuery { user_id })
+        .await
+        .map_err(crate::ApiError::Application)
 }
 
 #[cfg(test)]

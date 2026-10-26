@@ -8,6 +8,9 @@ use crate::ports::{Category, MeditationSession, Membership, Note, PlaybackState,
 /// (user, meditation, touched-at) rows tracking playback touch order.
 type PlaybackTouches = Vec<(i64, i64, DateTime<Utc>)>;
 
+/// (user, meditation, favorited-at) rows.
+pub type FavoriteRow = (i64, i64, DateTime<Utc>);
+
 /// Shared in-memory state for all repository fakes; clone gives another
 /// handle to the same data.
 #[derive(Clone, Default)]
@@ -19,6 +22,7 @@ pub struct RepoState {
     pub sessions: Arc<Mutex<Vec<MeditationSession>>>,
     pub notes: Arc<Mutex<Vec<Note>>>,
     pub playback: Arc<Mutex<std::collections::HashMap<(i64, i64), PlaybackState>>>,
+    pub favorites: Arc<Mutex<Vec<FavoriteRow>>>,
     /// Touch order for playback rows, oldest first; mirrors the real
     /// repository's `updated_at` ordering for `list_touched`.
     pub playback_touches: Arc<Mutex<PlaybackTouches>>,

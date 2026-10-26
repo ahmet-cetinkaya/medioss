@@ -7,9 +7,12 @@ use std::sync::Arc;
 use chrono::{Duration, Utc};
 use identity_presentation::UserDeletionListener;
 use kernel::UserId;
-use meditation_application::ports::{NoteRepository, PlaybackStateRepository, SessionRepository};
+use meditation_application::ports::{
+    FavoriteRepository, NoteRepository, PlaybackStateRepository, SessionRepository,
+};
 use meditation_infrastructure::persistence::{
-    SeaOrmNoteRepository, SeaOrmPlaybackRepository, SeaOrmSessionRepository,
+    SeaOrmFavoriteRepository, SeaOrmNoteRepository, SeaOrmPlaybackRepository,
+    SeaOrmSessionRepository,
 };
 use mood_tracker_application::ports::MoodEntryRepository;
 use mood_tracker_domain::MoodScore;
@@ -71,6 +74,10 @@ fn notes(database: &TestDatabase) -> SeaOrmNoteRepository {
     SeaOrmNoteRepository::new(database.connection.clone())
 }
 
+fn favorites(database: &TestDatabase) -> SeaOrmFavoriteRepository {
+    SeaOrmFavoriteRepository::new(database.connection.clone())
+}
+
 fn playback(database: &TestDatabase) -> SeaOrmPlaybackRepository {
     SeaOrmPlaybackRepository::new(database.connection.clone())
 }
@@ -94,6 +101,7 @@ fn listener(
 ) -> CrossModuleUserDeletion {
     CrossModuleUserDeletion::new(
         notes_store,
+        Arc::new(favorites(database)),
         Arc::new(playback(database)),
         Arc::new(sessions(database)),
         Arc::new(mixes(database)),
@@ -105,6 +113,13 @@ fn listener(
 async fn seed_note(database: &TestDatabase, user_id: UserId, text: &str) {
     notes(database)
         .insert(user_id, 1, text.to_owned(), Utc::now())
+        .await
+        .unwrap();
+}
+
+async fn seed_favorite(database: &TestDatabase, user_id: UserId) {
+    favorites(database)
+        .add(user_id, 1, Utc::now())
         .await
         .unwrap();
 }
@@ -178,6 +193,8 @@ async fn on_user_deleted_purges_every_module_but_leaves_other_users_intact() {
     seed_note(&database, kept, "kept note").await;
     seed_session(&database, gone).await;
     seed_session(&database, kept).await;
+    seed_favorite(&database, gone).await;
+    seed_favorite(&database, kept).await;
     seed_playback(&database, gone, 3_000).await;
     seed_playback(&database, kept, 4_000).await;
     seed_mix(&database, gone, "Gone Mix").await;
@@ -204,6 +221,15 @@ async fn on_user_deleted_purges_every_module_but_leaves_other_users_intact() {
     assert_eq!(
         sessions(&database).list_for_user(kept).await.unwrap().len(),
         1
+    );
+    assert!(favorites(&database)
+        .list_for_user(gone)
+        .await
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        favorites(&database).list_for_user(kept).await.unwrap(),
+        vec![1]
     );
     assert_eq!(playback(&database).get(gone, 1).await.unwrap(), None);
     assert_eq!(

@@ -4,6 +4,7 @@
 pub mod category_repository;
 pub mod clock;
 pub mod entities;
+pub mod favorite_repository;
 pub mod meditation_repository;
 pub mod membership_repository;
 pub mod note_repository;
@@ -13,6 +14,7 @@ pub mod session_repository;
 
 pub use category_repository::SeaOrmCategoryRepository;
 pub use clock::SystemClock;
+pub use favorite_repository::SeaOrmFavoriteRepository;
 pub use meditation_repository::SeaOrmMeditationRepository;
 pub use membership_repository::SeaOrmMembershipRepository;
 pub use note_repository::SeaOrmNoteRepository;

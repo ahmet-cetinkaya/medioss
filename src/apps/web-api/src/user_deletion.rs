@@ -7,12 +7,15 @@
 use std::sync::Arc;
 
 use kernel::UserId;
-use meditation_application::ports::{NoteRepository, PlaybackStateRepository, SessionRepository};
+use meditation_application::ports::{
+    FavoriteRepository, NoteRepository, PlaybackStateRepository, SessionRepository,
+};
 use mood_tracker_application::ports::MoodEntryRepository;
 use soundscape_application::ports::MixRepository;
 
 pub struct CrossModuleUserDeletion {
     meditation_notes: Arc<dyn NoteRepository>,
+    meditation_favorites: Arc<dyn FavoriteRepository>,
     meditation_playback: Arc<dyn PlaybackStateRepository>,
     meditation_sessions: Arc<dyn SessionRepository>,
     soundscape_mixes: Arc<dyn MixRepository>,
@@ -24,6 +27,7 @@ impl CrossModuleUserDeletion {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         meditation_notes: Arc<dyn NoteRepository>,
+        meditation_favorites: Arc<dyn FavoriteRepository>,
         meditation_playback: Arc<dyn PlaybackStateRepository>,
         meditation_sessions: Arc<dyn SessionRepository>,
         soundscape_mixes: Arc<dyn MixRepository>,
@@ -32,6 +36,7 @@ impl CrossModuleUserDeletion {
     ) -> Self {
         Self {
             meditation_notes,
+            meditation_favorites,
             meditation_playback,
             meditation_sessions,
             soundscape_mixes,
@@ -62,6 +67,10 @@ impl identity_presentation::UserDeletionListener for CrossModuleUserDeletion {
             .delete_all_for_user(user_id)
             .await
             .map_err(|e| format!("meditation notes purge failed: {e}"))?;
+        self.meditation_favorites
+            .delete_all_for_user(user_id)
+            .await
+            .map_err(|e| format!("meditation favorites purge failed: {e}"))?;
         self.meditation_playback
             .delete_all_for_user(user_id)
             .await

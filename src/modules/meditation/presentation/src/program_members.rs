@@ -11,7 +11,7 @@ use meditation_application::queries::get_meditation::GetMeditationQuery;
 use meditation_application::queries::list_program_members::ListProgramMembersQuery;
 use serde::{Deserialize, Serialize};
 
-use crate::meditation_response::{with_playback, MeditationResponse};
+use crate::meditation_response::{caller_favorite_ids, with_playback, MeditationResponse};
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
 
 /// `GET /meditation/programs/{id}/members` — the program's meditations, in
@@ -26,6 +26,7 @@ pub async fn program_members(
         .handle(ListProgramMembersQuery { program_id: id })
         .await
         .map_err(ApiError::Application)?;
+    let favorite_ids = caller_favorite_ids(&deps, actor.user_id()).await?;
     let mut responses = Vec::with_capacity(members.len());
     for member in &members {
         let meditation = deps
@@ -39,6 +40,7 @@ pub async fn program_members(
             with_playback(
                 deps.get_playback_state.as_ref(),
                 actor.user_id(),
+                &favorite_ids,
                 &meditation,
             )
             .await,

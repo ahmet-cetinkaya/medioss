@@ -44,6 +44,7 @@
   import CloudRainIcon from "phosphor-svelte/lib/CloudRainIcon";
   import CoffeeIcon from "phosphor-svelte/lib/CoffeeIcon";
   import FireIcon from "phosphor-svelte/lib/FireIcon";
+  import HeartIcon from "phosphor-svelte/lib/HeartIcon";
   import HeartbeatIcon from "phosphor-svelte/lib/HeartbeatIcon";
   import MoonStarsIcon from "phosphor-svelte/lib/MoonStarsIcon";
   import MusicNotesIcon from "phosphor-svelte/lib/MusicNotesIcon";
@@ -107,6 +108,7 @@
     timer: TimerIcon,
     "skip-back": SkipBackIcon,
     "speaker-high": SpeakerHighIcon,
+    heart: HeartIcon,
     birds: BirdIcon,
     thunder: CloudLightningIcon,
     rain: CloudRainIcon,

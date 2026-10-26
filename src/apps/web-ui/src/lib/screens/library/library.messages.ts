@@ -8,6 +8,16 @@ export const libraryMessages = defineMessages({
   filterCompleted: { en: "Completed", tr: "Bitirilenler" },
   filterInProgress: { en: "In progress", tr: "Devam edenler" },
   filterNotStarted: { en: "Not started", tr: "Hiç başlanmamışlar" },
+  filterFavorites: { en: "Favorites", tr: "Favoriler" },
+  favoritesFailed: {
+    en: "Could not load your favorites. Try again.",
+    tr: "Favorileriniz yüklenemedi. Yeniden deneyin.",
+  },
+  favoritesEmptyTitle: { en: "No favorites yet", tr: "Henüz favori yok" },
+  favoritesEmptyText: {
+    en: "Tap the heart in the Player to save a meditation here.",
+    tr: "Bir meditasyonu buraya kaydetmek için Oynatıcı'daki kalbe dokunun.",
+  },
   filterEmptyTitle: {
     en: "No programs here",
     tr: "Burada program yok",

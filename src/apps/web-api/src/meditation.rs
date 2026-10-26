@@ -14,6 +14,7 @@ use meditation_application::commands::delete_category::DeleteCategoryCommandHand
 use meditation_application::commands::delete_meditation::DeleteMeditationCommandHandler;
 use meditation_application::commands::delete_note::DeleteNoteCommandHandler;
 use meditation_application::commands::delete_program::DeleteProgramCommandHandler;
+use meditation_application::commands::favorite_meditation::FavoriteMeditationCommandHandler;
 use meditation_application::commands::record_completion::RecordCompletionCommandHandler;
 use meditation_application::commands::record_position::RecordPositionCommandHandler;
 use meditation_application::commands::remove_member::RemoveMemberCommandHandler;
@@ -21,12 +22,15 @@ use meditation_application::commands::rename_category::RenameCategoryCommandHand
 use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommandHandler;
 use meditation_application::commands::set_completed::SetCompletedCommandHandler;
 use meditation_application::commands::set_program_category::SetProgramCategoryCommandHandler;
+use meditation_application::commands::unfavorite_meditation::UnfavoriteMeditationCommandHandler;
 use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommandHandler;
 use meditation_application::commands::update_note::UpdateNoteCommandHandler;
 use meditation_application::commands::update_program::UpdateProgramCommandHandler;
 use meditation_application::commands::update_program_order::UpdateProgramOrderCommandHandler;
 use meditation_application::commands::upload_meditation::UploadMeditationCommandHandler;
-use meditation_application::ports::{NoteRepository, PlaybackStateRepository, SessionRepository};
+use meditation_application::ports::{
+    FavoriteRepository, NoteRepository, PlaybackStateRepository, SessionRepository,
+};
 use meditation_application::queries::get_continue_program::GetContinueProgramQueryHandler;
 use meditation_application::queries::get_daily_suggestion::GetDailySuggestionQueryHandler;
 use meditation_application::queries::get_meditation::GetMeditationQueryHandler;
@@ -35,6 +39,8 @@ use meditation_application::queries::get_playback_state::GetPlaybackStateQueryHa
 use meditation_application::queries::get_program_cover::GetProgramCoverQueryHandler;
 use meditation_application::queries::get_user_statistics::GetUserStatisticsQueryHandler;
 use meditation_application::queries::list_categories::ListCategoriesQueryHandler;
+use meditation_application::queries::list_favorite_ids::ListFavoriteIdsQueryHandler;
+use meditation_application::queries::list_favorite_meditations::ListFavoriteMeditationsQueryHandler;
 use meditation_application::queries::list_library::ListLibraryQueryHandler;
 use meditation_application::queries::list_notes::ListNotesQueryHandler;
 use meditation_application::queries::list_program_members::ListProgramMembersQueryHandler;
@@ -42,9 +48,9 @@ use meditation_application::queries::list_programs::ListProgramsQueryHandler;
 use meditation_application::queries::list_recent_programs::ListRecentProgramsQueryHandler;
 use meditation_infrastructure::media::{FfmpegAudioValidator, FfmpegOpusConverter};
 use meditation_infrastructure::persistence::{
-    SeaOrmCategoryRepository, SeaOrmMeditationRepository, SeaOrmMembershipRepository,
-    SeaOrmNoteRepository, SeaOrmPlaybackRepository, SeaOrmProgramRepository,
-    SeaOrmSessionRepository, SystemClock as MeditationClock,
+    SeaOrmCategoryRepository, SeaOrmFavoriteRepository, SeaOrmMeditationRepository,
+    SeaOrmMembershipRepository, SeaOrmNoteRepository, SeaOrmPlaybackRepository,
+    SeaOrmProgramRepository, SeaOrmSessionRepository, SystemClock as MeditationClock,
 };
 use meditation_presentation::{MeditationDependencies, SharedDependencies as MeditationShared};
 use sea_orm::DatabaseConnection;
@@ -145,14 +151,15 @@ pub fn ffmpeg_available() -> bool {
 }
 
 /// Builds the meditation dependencies over the shared connection and data
-/// dir, returning them together with the note/playback/session ports that
+/// dir, returning them together with the note/favorite/playback/session ports that
 /// user deletion purges directly. A missing ffmpeg logs a warning; uploads
 /// surface 503 until the operator installs it.
-/// The module dependencies plus the three raw ports that user deletion
-/// purges directly (notes, playback states, sessions).
+/// The module dependencies plus the four raw ports that user deletion
+/// purges directly (notes, favorites, playback states, sessions).
 pub struct MeditationModule {
     pub shared: MeditationShared,
     pub notes: Arc<dyn NoteRepository>,
+    pub favorites: Arc<dyn FavoriteRepository>,
     pub playback: Arc<dyn PlaybackStateRepository>,
     pub sessions: Arc<dyn SessionRepository>,
 }
@@ -170,6 +177,8 @@ pub fn meditation_dependencies(
     }
     let media_root = data_dir.join("media").join("meditation");
     let notes: Arc<dyn NoteRepository> = Arc::new(SeaOrmNoteRepository::new(connection.clone()));
+    let favorites: Arc<dyn FavoriteRepository> =
+        Arc::new(SeaOrmFavoriteRepository::new(connection.clone()));
     let playback: Arc<dyn PlaybackStateRepository> =
         Arc::new(SeaOrmPlaybackRepository::new(connection.clone()));
     let sessions: Arc<dyn SessionRepository> =
@@ -180,6 +189,7 @@ pub fn meditation_dependencies(
         Arc::new(SeaOrmCategoryRepository::new(connection.clone())),
         Arc::new(SeaOrmMembershipRepository::new(connection)),
         Arc::clone(&notes),
+        Arc::clone(&favorites),
         Arc::clone(&playback),
         Arc::clone(&sessions),
         Arc::new(FfmpegAudioValidator),
@@ -198,6 +208,7 @@ pub fn meditation_dependencies(
     MeditationModule {
         shared: dependencies,
         notes,
+        favorites,
         playback,
         sessions,
     }
@@ -214,6 +225,7 @@ fn meditation_dependencies_with_ports(
     categories: Arc<dyn meditation_application::ports::CategoryRepository>,
     memberships: Arc<dyn meditation_application::ports::MembershipRepository>,
     notes: Arc<dyn NoteRepository>,
+    favorites: Arc<dyn FavoriteRepository>,
     playback: Arc<dyn PlaybackStateRepository>,
     sessions: Arc<dyn SessionRepository>,
     validator: Arc<dyn meditation_application::ports::AudioValidator>,
@@ -290,6 +302,7 @@ fn meditation_dependencies_with_ports(
             meditations.clone(),
             memberships.clone(),
             notes.clone(),
+            favorites.clone(),
             store.clone(),
         )),
         update_meditation_description: Arc::new(UpdateMeditationDescriptionCommandHandler::new(
@@ -349,6 +362,20 @@ fn meditation_dependencies_with_ports(
         )),
         update_note: Arc::new(UpdateNoteCommandHandler::new(notes.clone(), clock.clone())),
         delete_note: Arc::new(DeleteNoteCommandHandler::new(notes.clone())),
+        favorite_meditation: Arc::new(FavoriteMeditationCommandHandler::new(
+            meditations.clone(),
+            favorites.clone(),
+            clock.clone(),
+        )),
+        unfavorite_meditation: Arc::new(UnfavoriteMeditationCommandHandler::new(
+            meditations.clone(),
+            favorites.clone(),
+        )),
+        list_favorite_meditations: Arc::new(ListFavoriteMeditationsQueryHandler::new(
+            meditations.clone(),
+            favorites.clone(),
+        )),
+        list_favorite_ids: Arc::new(ListFavoriteIdsQueryHandler::new(favorites)),
         list_notes: Arc::new(ListNotesQueryHandler::new(meditations, notes)),
         get_continue_program: Arc::new(GetContinueProgramQueryHandler::new(
             playback.clone(),
