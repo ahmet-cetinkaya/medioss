@@ -7,6 +7,7 @@ use axum::{
 use serde::Serialize;
 use soundscape_application::commands::create_sound::CreateSoundCommand;
 use soundscape_application::queries::list_sounds::ListSoundsQuery;
+use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::extractors::{admin, AdminActor, CurrentActor};
 use crate::router::SharedDependencies;
@@ -116,13 +117,29 @@ async fn upload_sound(
     Ok((StatusCode::CREATED, Json(sound.into())))
 }
 
+/// Room for the multipart envelope (boundaries, part headers, the name field)
+/// around a file that is exactly at the cap.
+const MULTIPART_OVERHEAD_BYTES: usize = 1024 * 1024;
+
+/// Body cap for the sound upload route. `RequestBodyLimitLayer` answers 413 from
+/// a declared `Content-Length` over the cap before any body byte is read (spec
+/// FR-002); `DefaultBodyLimit` raises axum's 2 MiB extractor default and still
+/// counts bytes as they stream in (spec FR-003).
+fn upload_body_limit(max_bytes: usize) -> (axum::extract::DefaultBodyLimit, RequestBodyLimitLayer) {
+    let cap = max_bytes + MULTIPART_OVERHEAD_BYTES;
+    (
+        axum::extract::DefaultBodyLimit::max(cap),
+        RequestBodyLimitLayer::new(cap),
+    )
+}
+
 pub(crate) fn register(
     router: Router<SharedDependencies>,
     max_upload_bytes: usize,
 ) -> Router<SharedDependencies> {
     router.route("/soundscape/sounds", get(list_sounds)).route(
         "/soundscape/sounds",
-        post(upload_sound).layer(axum::extract::DefaultBodyLimit::max(max_upload_bytes)),
+        post(upload_sound).layer(upload_body_limit(max_upload_bytes)),
     )
 }
 
