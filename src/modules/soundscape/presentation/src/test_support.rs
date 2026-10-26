@@ -18,6 +18,8 @@ use tower::ServiceExt;
 
 use crate::router::{soundscape_router, SoundscapeDependencies};
 
+pub(super) const TEST_MAX_UPLOAD_BYTES: usize = 100 * 1024 * 1024;
+
 pub(super) fn member_actor() -> Actor {
     Actor::new(UserId::new(2), Role::Member)
 }
@@ -429,6 +431,7 @@ pub(super) fn app() -> TestApp {
                 Arc::new(FakeConverter),
                 store.clone(),
                 Arc::new(FakeImageNormalizer(state.clone())),
+                TEST_MAX_UPLOAD_BYTES,
             ),
         ),
         update_sound: Arc::new(
@@ -479,9 +482,10 @@ pub(super) fn app() -> TestApp {
         sounds,
         mixes,
         medioss_origin: Arc::new("http://localhost".into()),
+        max_upload_bytes: TEST_MAX_UPLOAD_BYTES,
     };
     TestApp {
-        router: soundscape_router().with_state(Arc::new(deps)),
+        router: soundscape_router(TEST_MAX_UPLOAD_BYTES).with_state(Arc::new(deps)),
         state,
     }
 }

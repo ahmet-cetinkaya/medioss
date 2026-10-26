@@ -18,6 +18,7 @@ pub async fn build_state(config: Config, database: Database) -> AppState {
         database.connection.clone(),
         &config.data_dir,
         origin(),
+        config.upload_limits,
     );
     let portability =
         crate::portability::portability_dependencies(database.connection.clone(), origin());
@@ -27,6 +28,7 @@ pub async fn build_state(config: Config, database: Database) -> AppState {
         database.connection.clone(),
         &config.data_dir,
         origin(),
+        config.upload_limits.sound_audio_bytes,
     );
     let deletion: Arc<dyn identity_presentation::UserDeletionListener> =
         Arc::new(crate::user_deletion::CrossModuleUserDeletion::new(

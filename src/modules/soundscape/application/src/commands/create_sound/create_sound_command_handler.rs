@@ -31,6 +31,7 @@ impl CreateSoundCommandHandler {
         converter: Arc<dyn OpusConverter>,
         store: Arc<dyn BlobStore>,
         image_normalizer: Arc<dyn ImageNormalizer>,
+        max_upload_bytes: usize,
     ) -> Self {
         Self {
             categories,
@@ -39,7 +40,7 @@ impl CreateSoundCommandHandler {
             converter,
             store,
             image_normalizer,
-            command_validator: Default::default(),
+            command_validator: CreateSoundCommandValidator::new(max_upload_bytes),
         }
     }
 

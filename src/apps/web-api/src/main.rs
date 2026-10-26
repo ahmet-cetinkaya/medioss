@@ -72,6 +72,7 @@ async fn run(cli: Cli, server_config: Option<Config>) {
 
     init_tracing();
     config::warn_about_weakened_defaults(&config);
+    config::log_upload_limits(&config);
     if let Err(err) = ensure_data_dir(&config.data_dir) {
         fail(with_causes(&err));
     }

@@ -1,11 +1,11 @@
 use crate::ports::CommandHandler as _;
 use std::sync::Arc;
 
-use crate::commands::create_program::{
-    CreateProgramCommand, CreateProgramCommandHandler, MAX_COVER_BYTES,
-};
+use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
 use crate::ports::{CoverNormalizationError, CoverValidator};
-use crate::test_support::{FailingCoverValidator, FakeCoverValidator, TestDeps};
+use crate::test_support::{
+    FailingCoverValidator, FakeCoverValidator, TestDeps, TEST_MAX_COVER_BYTES,
+};
 use crate::ApplicationError;
 
 fn service_with(
@@ -17,6 +17,7 @@ fn service_with(
         validator,
         deps.store.clone(),
         deps.clock.clone(),
+        TEST_MAX_COVER_BYTES,
     )
 }
 
@@ -39,7 +40,7 @@ async fn covers_are_validated_and_capped() {
     assert_eq!(result.unwrap_err(), ApplicationError::UnsupportedMedia);
     assert!(deps.store.is_empty());
 
-    let mut oversized = vec![0u8; MAX_COVER_BYTES + 12];
+    let mut oversized = vec![0u8; TEST_MAX_COVER_BYTES + 12];
     oversized[0] = 0x89;
     oversized[1] = b'P';
     oversized[2] = b'N';

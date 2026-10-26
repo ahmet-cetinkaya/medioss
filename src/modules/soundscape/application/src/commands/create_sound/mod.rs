@@ -3,6 +3,5 @@ mod create_sound_command_handler;
 mod create_sound_command_validator;
 
 pub use create_sound_command::CreateSoundCommand;
-pub use create_sound_command::MAX_UPLOAD_BYTES;
 pub use create_sound_command_handler::CreateSoundCommandHandler;
 pub use create_sound_command_validator::CreateSoundCommandValidator;

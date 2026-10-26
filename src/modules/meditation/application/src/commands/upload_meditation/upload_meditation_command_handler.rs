@@ -22,6 +22,7 @@ pub struct UploadMeditationCommandHandler {
 }
 
 impl UploadMeditationCommandHandler {
+    #[allow(clippy::too_many_arguments)] // every port plus the injected size cap
     pub fn new(
         meditations: Arc<dyn MeditationRepository>,
         memberships: Arc<dyn MembershipRepository>,
@@ -30,6 +31,7 @@ impl UploadMeditationCommandHandler {
         converter: Arc<dyn OpusConverter>,
         store: Arc<dyn BlobStore>,
         clock: Arc<dyn Clock>,
+        max_upload_bytes: usize,
     ) -> Self {
         Self {
             meditations,
@@ -39,7 +41,7 @@ impl UploadMeditationCommandHandler {
             converter,
             store,
             clock,
-            input_validator: UploadMeditationCommandValidator,
+            input_validator: UploadMeditationCommandValidator::new(max_upload_bytes),
         }
     }
 }

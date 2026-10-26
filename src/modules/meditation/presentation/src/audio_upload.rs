@@ -33,7 +33,7 @@ struct ValidUpload {
 
 /// `POST /meditation/audio` — admin-only multipart upload (file + name).
 ///
-/// The 100MB cap is enforced twice: against the multipart field's declared
+/// The configured upload cap is enforced twice: against the multipart field's declared
 /// length before its body is accepted (spec FR-002), and against a running
 /// byte counter so understated lengths cannot smuggle past (spec FR-003).
 pub async fn upload(
@@ -43,13 +43,16 @@ pub async fn upload(
     multipart: Multipart,
 ) -> Result<(StatusCode, Json<MeditationResponse>), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    let form = parse_upload_form(multipart).await?;
+    let form = parse_upload_form(multipart, deps.max_upload_bytes).await?;
     let upload = validate_upload_form(form)?;
     let meditation = persist_upload(&deps, upload).await?;
     Ok((StatusCode::CREATED, Json(meditation_response(&meditation))))
 }
 
-async fn parse_upload_form(mut multipart: Multipart) -> Result<UploadForm, ApiError> {
+async fn parse_upload_form(
+    mut multipart: Multipart,
+    max_upload_bytes: usize,
+) -> Result<UploadForm, ApiError> {
     // Text fields are bounded the same way: a streaming field cannot grow
     // past the name limit in memory.
     let max_text = commands::MAX_NAME_LENGTH * 4;
@@ -81,7 +84,7 @@ async fn parse_upload_form(mut multipart: Multipart) -> Result<UploadForm, ApiEr
                 form.description = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("file") => {
-                form.bytes = Some(read_field_capped(&mut field, commands::MAX_UPLOAD_BYTES).await?);
+                form.bytes = Some(read_field_capped(&mut field, max_upload_bytes).await?);
             }
             _ => {
                 let _ = field.bytes().await;

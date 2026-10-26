@@ -295,3 +295,62 @@ fn session_cookie_secure_rejects_non_literal_booleans() {
         assert!(error.to_string().contains("SESSION_COOKIE_SECURE"));
     }
 }
+
+const UPLOAD_LIMIT_VARS: [&str; 3] = [
+    "MEDIOSS_MAX_UPLOAD_BYTES",
+    "MEDIOSS_MAX_SOUND_UPLOAD_BYTES",
+    "MEDIOSS_MAX_COVER_BYTES",
+];
+
+#[test]
+fn upload_limits_default_to_the_documented_sizes() {
+    let config = from_vars(&required_vars(&[])).unwrap();
+
+    assert_eq!(
+        config.upload_limits,
+        UploadLimits {
+            meditation_audio_bytes: 104_857_600,
+            sound_audio_bytes: 104_857_600,
+            program_cover_bytes: 5_242_880,
+        }
+    );
+}
+
+#[test]
+fn upload_limits_accept_valid_overrides_independently() {
+    let config = from_vars(&required_vars(&[
+        ("MEDIOSS_MAX_UPLOAD_BYTES", "209715200"),
+        ("MEDIOSS_MAX_SOUND_UPLOAD_BYTES", " 1024 "),
+        ("MEDIOSS_MAX_COVER_BYTES", "1"),
+    ]))
+    .unwrap();
+
+    assert_eq!(config.upload_limits.meditation_audio_bytes, 209_715_200);
+    assert_eq!(config.upload_limits.sound_audio_bytes, 1024);
+    assert_eq!(config.upload_limits.program_cover_bytes, 1);
+}
+
+#[test]
+fn upload_limit_accepts_the_ceiling_and_rejects_one_byte_above() {
+    let ceiling = UPLOAD_LIMIT_CEILING_BYTES.to_string();
+    let above = (UPLOAD_LIMIT_CEILING_BYTES + 1).to_string();
+
+    for variable in UPLOAD_LIMIT_VARS {
+        assert!(from_vars(&required_vars(&[(variable, &ceiling)])).is_ok());
+        let error = from_vars(&required_vars(&[(variable, &above)])).unwrap_err();
+        assert!(error.to_string().contains(variable), "{variable}");
+    }
+}
+
+#[test]
+fn upload_limit_rejects_zero_and_non_numeric_values_naming_the_variable() {
+    for variable in UPLOAD_LIMIT_VARS {
+        for value in ["0", "abc", "", "-5", "1.5", "100MB"] {
+            let error = from_vars(&required_vars(&[(variable, value)])).unwrap_err();
+            assert!(
+                matches!(error, ConfigError::InvalidUploadLimit { variable: named, .. } if named == variable),
+                "{variable}={value:?} gave {error}"
+            );
+        }
+    }
+}

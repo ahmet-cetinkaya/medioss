@@ -4,6 +4,8 @@
 
 use std::sync::Arc;
 
+use crate::config::UploadLimits;
+
 use meditation_application::commands::add_member::AddMemberCommandHandler;
 use meditation_application::commands::create_category::CreateCategoryCommandHandler;
 use meditation_application::commands::create_note::CreateNoteCommandHandler;
@@ -159,6 +161,7 @@ pub fn meditation_dependencies(
     connection: DatabaseConnection,
     data_dir: &std::path::Path,
     medioss_origin: Arc<String>,
+    upload_limits: UploadLimits,
 ) -> MeditationModule {
     if !ffmpeg_available() {
         tracing::warn!(
@@ -180,13 +183,17 @@ pub fn meditation_dependencies(
         Arc::clone(&playback),
         Arc::clone(&sessions),
         Arc::new(FfmpegAudioValidator),
-        Arc::new(CoverNormalizer),
+        Arc::new(CoverNormalizer {
+            maximum_output_bytes: upload_limits.program_cover_bytes,
+        }),
         Arc::new(FfmpegOpusConverter),
         Arc::new(MediaStoreBlobs::new(media_store::MediaStore::new(
             media_root,
         ))),
         Arc::new(MeditationClock),
         medioss_origin,
+        upload_limits.meditation_audio_bytes,
+        upload_limits.program_cover_bytes,
     );
     MeditationModule {
         shared: dependencies,
@@ -215,6 +222,8 @@ fn meditation_dependencies_with_ports(
     store: Arc<dyn meditation_application::ports::BlobStore>,
     clock: Arc<dyn meditation_application::ports::Clock>,
     medioss_origin: Arc<String>,
+    max_upload_bytes: usize,
+    max_cover_bytes: usize,
 ) -> MeditationShared {
     Arc::new(MeditationDependencies {
         create_category: Arc::new(CreateCategoryCommandHandler::new(
@@ -239,6 +248,7 @@ fn meditation_dependencies_with_ports(
             cover_validator.clone(),
             store.clone(),
             clock.clone(),
+            max_cover_bytes,
         )),
         update_program: Arc::new(UpdateProgramCommandHandler::new(programs.clone())),
         delete_program: Arc::new(DeleteProgramCommandHandler::new(
@@ -274,6 +284,7 @@ fn meditation_dependencies_with_ports(
             converter,
             store.clone(),
             clock.clone(),
+            max_upload_bytes,
         )),
         delete_meditation: Arc::new(DeleteMeditationCommandHandler::new(
             meditations.clone(),
@@ -354,13 +365,15 @@ fn meditation_dependencies_with_ports(
         cover_validator,
         store,
         medioss_origin,
+        max_upload_bytes,
+        max_cover_bytes,
     })
 }
 
 const MAX_COVER_DIMENSION: u32 = 1_024;
-const MAX_COVER_OUTPUT_BYTES: usize = meditation_application::commands::MAX_COVER_BYTES;
-
-struct CoverNormalizer;
+struct CoverNormalizer {
+    maximum_output_bytes: usize,
+}
 
 #[async_trait::async_trait]
 impl meditation_application::ports::CoverValidator for CoverNormalizer {
@@ -372,7 +385,7 @@ impl meditation_application::ports::CoverValidator for CoverNormalizer {
             bytes,
             crate::image_normalization::ImageSpec {
                 maximum_dimension: MAX_COVER_DIMENSION,
-                maximum_output_bytes: MAX_COVER_OUTPUT_BYTES,
+                maximum_output_bytes: self.maximum_output_bytes,
                 square: false,
             },
         )

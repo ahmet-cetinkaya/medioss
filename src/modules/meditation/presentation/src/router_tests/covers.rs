@@ -85,7 +85,8 @@ async fn cover_normalization_failures_keep_their_operational_statuses() {
         let store = FakeBlobStore::new();
         let mut deps = test_dependencies(state.clone(), &store);
         deps.cover_validator = Arc::new(FailingCoverValidator(error));
-        let router = meditation_router().with_state(Arc::new(deps));
+        let router = meditation_router(TEST_MAX_UPLOAD_BYTES, TEST_MAX_COVER_BYTES)
+            .with_state(Arc::new(deps));
 
         let program_id = FakeProgramRepository(state.clone())
             .insert("Holder".to_owned(), None, chrono::Utc::now())

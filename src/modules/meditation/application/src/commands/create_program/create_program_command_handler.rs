@@ -21,9 +21,10 @@ impl CreateProgramCommandHandler {
         cover_validator: Arc<dyn CoverValidator>,
         store: Arc<dyn BlobStore>,
         clock: Arc<dyn Clock>,
+        max_cover_bytes: usize,
     ) -> Self {
         Self {
-            validator: CreateProgramCommandValidator,
+            validator: CreateProgramCommandValidator::new(max_cover_bytes),
             programs,
             cover_validator,
             store,

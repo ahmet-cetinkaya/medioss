@@ -1,5 +1,4 @@
 use super::*;
-use crate::commands::create_sound::MAX_UPLOAD_BYTES;
 use crate::ports::media::{AudioFormat, StoredAudio};
 use crate::test_support::{
     FakeAudioValidator, FakeImageNormalizer, FakeOpusConverter, InMemoryCategories, InMemorySounds,
@@ -7,6 +6,7 @@ use crate::test_support::{
 };
 use soundscape_domain::SoundCategory;
 
+const TEST_MAX_UPLOAD_BYTES: usize = 100 * 1024 * 1024;
 const PNG_MAGIC: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
 const STORED_BYTES: [u8; 3] = [1, 2, 3];
 
@@ -44,6 +44,7 @@ impl Fixture {
             Arc::new(FakeOpusConverter(self.converter.clone())),
             self.store.clone(),
             Arc::new(FakeImageNormalizer(Ok(vec![9, 9]))),
+            TEST_MAX_UPLOAD_BYTES,
         )
     }
 }
@@ -119,7 +120,7 @@ async fn oversized_upload_is_rejected_before_any_write() {
     let result = fixture
         .service()
         .handle(CreateSoundCommand {
-            bytes: vec![0; MAX_UPLOAD_BYTES + 1],
+            bytes: vec![0; TEST_MAX_UPLOAD_BYTES + 1],
             ..command("Rain")
         })
         .await;

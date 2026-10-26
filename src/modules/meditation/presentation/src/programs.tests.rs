@@ -59,7 +59,7 @@ async fn oversized_title_field_is_413() {
 #[tokio::test]
 async fn oversized_cover_is_413() {
     let app = app();
-    let big = vec![0u8; meditation_application::commands::MAX_COVER_BYTES + 1];
+    let big = vec![0u8; TEST_MAX_COVER_BYTES + 1];
     assert_eq!(
         create(&app, &[("title", "", b"P"), ("cover", "c.png", &big)])
             .await

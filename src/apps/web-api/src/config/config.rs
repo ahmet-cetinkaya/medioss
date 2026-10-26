@@ -5,7 +5,7 @@
 
 use std::{net::IpAddr, path::PathBuf, time::Duration};
 
-use super::SessionSecret;
+use super::{SessionSecret, UploadLimits};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
@@ -18,4 +18,5 @@ pub struct Config {
     pub medioss_origin: String,
     pub dev_origin: Option<String>,
     pub session_cookie_secure: bool,
+    pub upload_limits: UploadLimits,
 }

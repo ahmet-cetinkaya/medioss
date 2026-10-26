@@ -158,7 +158,7 @@ async fn replace_unknown_program_is_404() {
 async fn replace_oversized_cover_is_413() {
     let app = app();
     let program = make_program(&app, None).await;
-    let big = vec![0u8; meditation_application::commands::MAX_COVER_BYTES + 1];
+    let big = vec![0u8; TEST_MAX_COVER_BYTES + 1];
     assert_eq!(
         put_cover(
             &app,

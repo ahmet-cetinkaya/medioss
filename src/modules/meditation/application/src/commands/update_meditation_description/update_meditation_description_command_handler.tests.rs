@@ -28,6 +28,7 @@ async fn description_is_stored_on_upload_and_updatable() {
         Arc::new(FakeConverter { fail: false }),
         deps.store.clone(),
         deps.clock.clone(),
+        crate::test_support::TEST_MAX_UPLOAD_BYTES,
     )
     .handle(UploadMeditationCommand {
         name: "Described".into(),

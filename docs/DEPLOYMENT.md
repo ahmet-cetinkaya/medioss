@@ -139,14 +139,21 @@ MEDIOSS_ORIGIN=https://medioss.example
 SESSION_TIMEOUT=7d
 SESSION_COOKIE_SECURE=true
 
+# Upload limits in bytes (optional; defaults shown)
+# MEDIOSS_MAX_UPLOAD_BYTES=104857600        # meditation audio
+# MEDIOSS_MAX_SOUND_UPLOAD_BYTES=104857600  # soundscape audio
+# MEDIOSS_MAX_COVER_BYTES=5242880           # program cover
+
 # Optional paths
 # MEDIOSS_STATIC_DIR=/srv/medioss/static               # built UI; the Docker image sets this
 # MEDIOSS_BUILTIN_SOUNDS_DIR=/srv/medioss/builtin-sounds  # built-in sound set (see below)
 ```
 
-The application reads these variables: `MEDIOSS_BIND`, `MEDIOSS_BUILTIN_SOUNDS_DIR`, `MEDIOSS_DATA_DIR`, `MEDIOSS_DEV_ORIGIN` (set by `make dev`; not for production), `MEDIOSS_ORIGIN`, `MEDIOSS_STATIC_DIR`, `PORT`, `RUST_LOG`, `SESSION_COOKIE_SECURE`, `SESSION_SECRET` and `SESSION_TIMEOUT`. Anything else is ignored. There is no backup setting and no upload-size setting: the upload limit is fixed at 100MB. See _Backup Strategy_ for backups.
+The application reads these variables: `MEDIOSS_BIND`, `MEDIOSS_BUILTIN_SOUNDS_DIR`, `MEDIOSS_DATA_DIR`, `MEDIOSS_DEV_ORIGIN` (set by `make dev`; not for production), `MEDIOSS_MAX_COVER_BYTES`, `MEDIOSS_MAX_SOUND_UPLOAD_BYTES`, `MEDIOSS_MAX_UPLOAD_BYTES`, `MEDIOSS_ORIGIN`, `MEDIOSS_STATIC_DIR`, `PORT`, `RUST_LOG`, `SESSION_COOKIE_SECURE`, `SESSION_SECRET` and `SESSION_TIMEOUT`. Anything else is ignored. There is no backup setting. See _Backup Strategy_ for backups.
 
 `MEDIOSS_BUILTIN_SOUNDS_DIR` points at the directory with the built-in sound set (`manifest.json` and `LICENSE`). When it is unset the server probes `/srv/medioss/builtin-sounds` (where the Docker image ships the set) and then `./builtin-sounds`. `make run` and `make dev` do not set it, so a source checkout has no built-in sounds until you set it (the `.env` copied from `.env.example` does, with a path relative to the repo root), for example `MEDIOSS_BUILTIN_SOUNDS_DIR=$PWD/assets/sounds/soundscape-builtin make run`.
+
+`MEDIOSS_MAX_UPLOAD_BYTES` (meditation audio, default 100 MiB), `MEDIOSS_MAX_SOUND_UPLOAD_BYTES` (soundscape audio, default 100 MiB) and `MEDIOSS_MAX_COVER_BYTES` (program cover, default 5 MiB) set the upload size limits. Each is a whole number of bytes from 1 to 10 GiB (`10737418240`); the application refuses to start on `0`, a non-number or a larger value, and the error names the variable. The effective limits are logged at startup. A declared size over the limit is answered with 413 before the body is read. Uploads are buffered in memory, so choose limits your RAM can hold. A reverse proxy has its own body limit: raise it to at least the largest upload limit plus 1 MiB for the multipart envelope (nginx: `client_max_body_size`, default 1 MB), or the proxy answers 413 before the request reaches MediOSS.
 
 `MEDIOSS_DATA_DIR` has no default and the application refuses to start without it. There is no separate `DATABASE_URL` or `MEDIA_PATH`: both are derived from `MEDIOSS_DATA_DIR` so the runtime state stays a single directory to mount and back up.
 

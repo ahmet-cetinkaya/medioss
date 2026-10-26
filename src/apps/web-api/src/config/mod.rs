@@ -16,10 +16,16 @@ use url::{Position, Url};
 pub mod config;
 pub mod error;
 pub mod session_secret;
+pub mod upload_limits;
 
 pub use config::Config;
 pub use error::ConfigError;
 pub use session_secret::SessionSecret;
+pub use upload_limits::UploadLimits;
+
+use upload_limits::{
+    DEFAULT_MAX_COVER_BYTES, DEFAULT_MAX_SOUND_UPLOAD_BYTES, DEFAULT_MAX_UPLOAD_BYTES,
+};
 
 const DATA_DIR_VAR: &str = "MEDIOSS_DATA_DIR";
 const PORT_VAR: &str = "PORT";
@@ -30,6 +36,9 @@ const SESSION_TIMEOUT_VAR: &str = "SESSION_TIMEOUT";
 const MEDIOSS_ORIGIN_VAR: &str = "MEDIOSS_ORIGIN";
 const DEV_ORIGIN_VAR: &str = "MEDIOSS_DEV_ORIGIN";
 const SESSION_COOKIE_SECURE_VAR: &str = "SESSION_COOKIE_SECURE";
+const MAX_UPLOAD_BYTES_VAR: &str = "MEDIOSS_MAX_UPLOAD_BYTES";
+const MAX_SOUND_UPLOAD_BYTES_VAR: &str = "MEDIOSS_MAX_SOUND_UPLOAD_BYTES";
+const MAX_COVER_BYTES_VAR: &str = "MEDIOSS_MAX_COVER_BYTES";
 
 const DEFAULT_PORT: u16 = 3000;
 // All interfaces, so the container's published port reaches the process.
@@ -38,6 +47,8 @@ const DEFAULT_BIND_HOST: IpAddr = IpAddr::V4(Ipv4Addr::UNSPECIFIED);
 // the container ships its assets elsewhere and overrides MEDIOSS_STATIC_DIR.
 const DEFAULT_STATIC_DIR: &str = "src/apps/web-api/static";
 const DEFAULT_SESSION_TIMEOUT: &str = "7d";
+// A sanity ceiling: uploads are buffered in memory, so a typo must not allow terabytes.
+const UPLOAD_LIMIT_CEILING_BYTES: u64 = 10 * 1024 * 1024 * 1024;
 
 /// Reads configuration from the process environment.
 pub fn from_env() -> Result<Config, ConfigError> {
@@ -66,6 +77,17 @@ pub fn warn_about_weakened_defaults(config: &Config) {
             "{DEV_ORIGIN_VAR}={dev_origin}: this extra origin may make state-changing requests; use for development only"
         );
     }
+}
+
+/// Logs the effective upload caps so operators can confirm their overrides.
+pub fn log_upload_limits(config: &Config) {
+    let limits = &config.upload_limits;
+    tracing::info!(
+        "{MAX_UPLOAD_BYTES_VAR}={} {MAX_SOUND_UPLOAD_BYTES_VAR}={} {MAX_COVER_BYTES_VAR}={}",
+        limits.meditation_audio_bytes,
+        limits.sound_audio_bytes,
+        limits.program_cover_bytes
+    );
 }
 
 /// Pure configuration parsing: no filesystem access, no directory creation.
@@ -119,6 +141,24 @@ pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, Config
         Some(value) => return Err(ConfigError::InvalidSessionCookieSecure { value }),
     };
 
+    let upload_limits = UploadLimits {
+        meditation_audio_bytes: parse_upload_limit(
+            vars,
+            MAX_UPLOAD_BYTES_VAR,
+            DEFAULT_MAX_UPLOAD_BYTES,
+        )?,
+        sound_audio_bytes: parse_upload_limit(
+            vars,
+            MAX_SOUND_UPLOAD_BYTES_VAR,
+            DEFAULT_MAX_SOUND_UPLOAD_BYTES,
+        )?,
+        program_cover_bytes: parse_upload_limit(
+            vars,
+            MAX_COVER_BYTES_VAR,
+            DEFAULT_MAX_COVER_BYTES,
+        )?,
+    };
+
     Ok(Config {
         data_dir: PathBuf::from(data_dir),
         bind_host,
@@ -129,7 +169,28 @@ pub fn from_vars(vars: &dyn Fn(&str) -> Option<String>) -> Result<Config, Config
         medioss_origin,
         dev_origin,
         session_cookie_secure,
+        upload_limits,
     })
+}
+
+fn parse_upload_limit(
+    vars: &dyn Fn(&str) -> Option<String>,
+    variable: &'static str,
+    default: usize,
+) -> Result<usize, ConfigError> {
+    let Some(value) = vars(variable) else {
+        return Ok(default);
+    };
+    let invalid = || ConfigError::InvalidUploadLimit {
+        variable,
+        maximum: UPLOAD_LIMIT_CEILING_BYTES,
+        value: value.clone(),
+    };
+    let bytes: u64 = value.trim().parse().map_err(|_| invalid())?;
+    if bytes == 0 || bytes > UPLOAD_LIMIT_CEILING_BYTES {
+        return Err(invalid());
+    }
+    usize::try_from(bytes).map_err(|_| invalid())
 }
 
 fn parse_duration(value: &str) -> Result<Duration, ConfigError> {

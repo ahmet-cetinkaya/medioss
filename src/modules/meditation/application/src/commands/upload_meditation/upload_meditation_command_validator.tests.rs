@@ -1,6 +1,11 @@
-use super::super::upload_meditation_command::MAX_UPLOAD_BYTES;
 use super::{UploadMeditationCommand, UploadMeditationCommandValidator};
 use crate::ApplicationError;
+
+const CAP: usize = 1024;
+
+fn validator() -> UploadMeditationCommandValidator {
+    UploadMeditationCommandValidator::new(CAP)
+}
 
 fn valid_command() -> UploadMeditationCommand {
     UploadMeditationCommand {
@@ -13,9 +18,7 @@ fn valid_command() -> UploadMeditationCommand {
 
 #[test]
 fn accepts_a_valid_command() {
-    assert!(UploadMeditationCommandValidator
-        .validate(&valid_command())
-        .is_ok());
+    assert!(validator().validate(&valid_command()).is_ok());
 }
 
 #[test]
@@ -26,7 +29,7 @@ fn rejects_a_blank_name() {
     };
 
     assert!(matches!(
-        UploadMeditationCommandValidator.validate(&command),
+        validator().validate(&command),
         Err(ApplicationError::InvalidInput(_))
     ));
 }
@@ -39,7 +42,7 @@ fn rejects_an_overlong_name() {
     };
 
     assert!(matches!(
-        UploadMeditationCommandValidator.validate(&command),
+        validator().validate(&command),
         Err(ApplicationError::InvalidInput(_))
     ));
 }
@@ -52,20 +55,30 @@ fn rejects_an_overlong_description() {
     };
 
     assert_eq!(
-        UploadMeditationCommandValidator.validate(&command),
+        validator().validate(&command),
         Err(ApplicationError::InvalidDescription)
     );
 }
 
 #[test]
+fn accepts_a_payload_exactly_at_the_injected_cap() {
+    let command = UploadMeditationCommand {
+        bytes: vec![0; CAP],
+        ..valid_command()
+    };
+
+    assert!(validator().validate(&command).is_ok());
+}
+
+#[test]
 fn rejects_a_payload_over_the_size_cap() {
     let command = UploadMeditationCommand {
-        bytes: vec![0; MAX_UPLOAD_BYTES + 1],
+        bytes: vec![0; CAP + 1],
         ..valid_command()
     };
 
     assert_eq!(
-        UploadMeditationCommandValidator.validate(&command),
+        validator().validate(&command),
         Err(ApplicationError::PayloadTooLarge)
     );
 }
@@ -78,12 +91,9 @@ fn normalizes_name_and_description_by_trimming() {
         ..valid_command()
     };
 
+    assert_eq!(validator().normalized_name(&command), "Morning");
     assert_eq!(
-        UploadMeditationCommandValidator.normalized_name(&command),
-        "Morning"
-    );
-    assert_eq!(
-        UploadMeditationCommandValidator.normalized_description(&command),
+        validator().normalized_description(&command),
         Ok(Some("calm".to_owned()))
     );
 }

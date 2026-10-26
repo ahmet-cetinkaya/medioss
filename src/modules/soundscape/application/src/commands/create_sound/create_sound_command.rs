@@ -1,5 +1,3 @@
-pub const MAX_UPLOAD_BYTES: usize = 100 * 1024 * 1024;
-
 #[derive(Debug, Clone)]
 pub struct CreateSoundCommand {
     pub name: String,

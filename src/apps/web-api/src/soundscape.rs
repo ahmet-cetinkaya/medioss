@@ -42,6 +42,7 @@ pub fn soundscape_dependencies(
     db: DatabaseConnection,
     data_dir: &std::path::Path,
     medioss_origin: Arc<String>,
+    max_upload_bytes: usize,
 ) -> SharedDependencies {
     use soundscape_application::commands::clear_sound_icon::ClearSoundIconCommandHandler;
     use soundscape_application::commands::create_category::CreateCategoryCommandHandler;
@@ -87,6 +88,7 @@ pub fn soundscape_dependencies(
             Arc::new(FfmpegOpusConverter),
             store.clone(),
             normalizer.clone(),
+            max_upload_bytes,
         )),
         update_sound: Arc::new(UpdateSoundCommandHandler::new(
             categories.clone(),
@@ -120,6 +122,7 @@ pub fn soundscape_dependencies(
         sounds,
         mixes,
         medioss_origin,
+        max_upload_bytes,
     })
 }
 

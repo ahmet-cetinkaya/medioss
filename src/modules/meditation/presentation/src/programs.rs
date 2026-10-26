@@ -127,7 +127,7 @@ pub async fn create_program(
 ) -> Result<(StatusCode, Json<ProgramResponse>), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
 
-    let max_cover = commands::MAX_COVER_BYTES;
+    let max_cover = deps.max_cover_bytes;
     let max_text = commands::MAX_NAME_LENGTH * 4;
     let mut title: Option<String> = None;
     let mut description: Option<String> = None;

@@ -55,8 +55,10 @@ export interface ServerReasonContext {
   selfDisable?: boolean;
 }
 
-// Server-side upload caps in MB (meditation MAX_UPLOAD_BYTES / MAX_COVER_BYTES,
-// soundscape MAX_UPLOAD_BYTES); their 413 bodies are empty.
+// Default server-side upload caps in MB (MEDIOSS_MAX_UPLOAD_BYTES,
+// MEDIOSS_MAX_SOUND_UPLOAD_BYTES, MEDIOSS_MAX_COVER_BYTES); their 413 bodies
+// are empty. An operator override is not reflected here until the API exposes
+// the effective limits.
 const UPLOAD_LIMIT_MB: Partial<Record<ApiAction, number>> = {
   "program.create": 5,
   "program.cover": 5,

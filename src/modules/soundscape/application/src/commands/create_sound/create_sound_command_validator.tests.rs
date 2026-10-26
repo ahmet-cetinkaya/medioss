@@ -1,6 +1,11 @@
 use super::{CreateSoundCommand, CreateSoundCommandValidator};
-use crate::commands::create_sound::MAX_UPLOAD_BYTES;
 use crate::ApplicationError;
+
+const CAP: usize = 1024;
+
+fn validator() -> CreateSoundCommandValidator {
+    CreateSoundCommandValidator::new(CAP)
+}
 
 fn command(name: &str, icon_key: Option<&str>, size: usize) -> CreateSoundCommand {
     CreateSoundCommand {
@@ -14,14 +19,14 @@ fn command(name: &str, icon_key: Option<&str>, size: usize) -> CreateSoundComman
 
 #[test]
 fn accepts_a_valid_name_without_icon_key_at_the_size_limit() {
-    let command = command("Rain", None, MAX_UPLOAD_BYTES);
+    let command = command("Rain", None, CAP);
 
-    assert!(CreateSoundCommandValidator.validate(&command).is_ok());
+    assert!(validator().validate(&command).is_ok());
 }
 
 #[test]
 fn rejects_a_blank_name() {
-    let result = CreateSoundCommandValidator.validate(&command("  ", None, 1));
+    let result = validator().validate(&command("  ", None, 1));
 
     assert!(matches!(
         result,
@@ -31,7 +36,7 @@ fn rejects_a_blank_name() {
 
 #[test]
 fn rejects_a_malformed_icon_key() {
-    let result = CreateSoundCommandValidator.validate(&command("Rain", Some("not a key!"), 1));
+    let result = validator().validate(&command("Rain", Some("not a key!"), 1));
 
     assert!(matches!(
         result,
@@ -41,7 +46,7 @@ fn rejects_a_malformed_icon_key() {
 
 #[test]
 fn rejects_an_upload_over_the_size_limit() {
-    let result = CreateSoundCommandValidator.validate(&command("Rain", None, MAX_UPLOAD_BYTES + 1));
+    let result = validator().validate(&command("Rain", None, CAP + 1));
 
     assert!(matches!(result, Err(ApplicationError::PayloadTooLarge)));
 }
