@@ -8,6 +8,7 @@ use web_api::{
         media_layout::migrate_media_layout,
         migrations::migrate_all,
         report::{fail, with_causes},
+        scratch_dir::use_scratch_dir_as_temp_dir,
     },
     config::{self, Config},
     router::router,
@@ -46,6 +47,7 @@ fn main() {
             std::process::exit(1)
         });
         config::publish_dev_origin(&config);
+        use_scratch_dir_as_temp_dir(&config.data_dir).unwrap_or_else(|err| fail(with_causes(&err)));
         config
     });
     tokio::runtime::Builder::new_multi_thread()

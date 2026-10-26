@@ -20,6 +20,13 @@ pub enum BootstrapError {
         source: std::io::Error,
     },
 
+    #[error("scratch folder `{dir}` under MEDIOSS_DATA_DIR is not usable")]
+    ScratchDirUnusable {
+        dir: String,
+        #[source]
+        source: std::io::Error,
+    },
+
     #[error("database `{}` could not be opened", path.display())]
     DatabaseOpen {
         path: PathBuf,

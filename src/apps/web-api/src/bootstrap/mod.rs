@@ -14,6 +14,7 @@ pub mod logging;
 pub mod media_layout;
 pub mod migrations;
 pub mod report;
+pub mod scratch_dir;
 
 pub use error::BootstrapError;
 

@@ -86,9 +86,11 @@ async fn probe_duration_ms(bytes: &[u8]) -> i64 {
         .suffix(&format!(".{extension}"))
         .tempfile()
     else {
+        tracing::warn!("duration probe skipped: no writable temp file; duration stored as 0");
         return 0;
     };
-    if stage_bytes(file.path(), bytes).await.is_err() {
+    if let Err(error) = stage_bytes(file.path(), bytes).await {
+        tracing::warn!(%error, "duration probe skipped: staging failed; duration stored as 0");
         return 0;
     }
     let output = Command::new(FFPROBE)
@@ -106,17 +108,25 @@ async fn probe_duration_ms(bytes: &[u8]) -> i64 {
     // Keep the temp file alive (and thus on disk) until ffprobe is done
     // reading it; dropping `file` here would delete it mid-read.
     drop(file);
-    let Ok(output) = output else {
-        return 0;
+    let output = match output {
+        Ok(output) if output.status.success() => output,
+        Ok(output) => {
+            tracing::warn!(status = %output.status, "ffprobe failed; duration stored as 0");
+            return 0;
+        }
+        Err(error) => {
+            tracing::warn!(%error, "ffprobe could not run; duration stored as 0");
+            return 0;
+        }
     };
-    if !output.status.success() {
-        return 0;
-    }
     String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<f64>()
         .map(|seconds| (seconds * 1000.0).round() as i64)
-        .unwrap_or(0)
+        .unwrap_or_else(|_| {
+            tracing::warn!("ffprobe reported no duration; duration stored as 0");
+            0
+        })
 }
 
 #[async_trait]
