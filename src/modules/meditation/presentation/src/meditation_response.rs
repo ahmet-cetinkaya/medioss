@@ -29,6 +29,17 @@ pub struct MeditationResponse {
     /// set on the detail response, absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub program: Option<ProgramSummary>,
+    /// Every program the meditation belongs to, earliest membership first;
+    /// set on the favorites list, absent elsewhere.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub programs: Option<Vec<ProgramLabel>>,
+}
+
+/// A program's identity and title, enough to name it on a list card.
+#[derive(Serialize)]
+pub struct ProgramLabel {
+    pub id: i64,
+    pub title: String,
 }
 
 /// The part of a program the Player screen renders: its identity, the title
@@ -55,6 +66,7 @@ pub(crate) fn meditation_response(
         progress_percent: 0,
         favorite: false,
         program_id: None,
+        programs: None,
         program_has_cover: false,
         program: None,
     }

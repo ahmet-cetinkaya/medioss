@@ -8,6 +8,12 @@ export interface ProgramSummary {
   has_cover: boolean;
 }
 
+/** A program a favorite belongs to, named on the favorites list. */
+export interface ProgramLabel {
+  id: number;
+  title: string;
+}
+
 export interface Meditation {
   id: number;
   name: string;
@@ -21,6 +27,8 @@ export interface Meditation {
   program_id?: number;
   program_has_cover?: boolean;
   program?: ProgramSummary | null;
+  /** Every program the meditation belongs to; only the favorites list sends it. */
+  programs?: ProgramLabel[];
   description: string | null;
 }
 

@@ -22,9 +22,9 @@
     reasonOf,
   } from "$lib/api/failure";
   import { contentMessages } from "$lib/components/content/content.messages";
+  import MeditationRow from "$lib/components/content/meditation-row.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { IconButton } from "$lib/components/ui/icon-button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { actionMessages } from "$lib/i18n/common.messages";
@@ -180,37 +180,22 @@
         >
           <ol class="flex flex-col gap-3">
             {#each members as meditation (meditation.id)}
-              <li
-                class="flex w-full min-w-0 items-center gap-2 rounded-thumb border border-rim bg-surface-solid/70 p-3"
-              >
-                <div class="flex min-w-0 flex-1 flex-col gap-1">
-                  <h3 class="text-body-md break-words text-ink-strong">
-                    {meditation.name}
-                  </h3>
-                  <p class="text-meta text-ink-muted">
-                    {[
-                      formatDuration(
-                        meditation.duration_ms,
-                        locale.current,
-                        "short",
-                      ),
-                      meditationProgressLabel(meditation, locale.current),
-                    ].join(" • ")}
-                  </p>
-                  {#if meditation.description}
-                    <p
-                      class="line-clamp-3 text-sm break-words whitespace-pre-line text-ink-body"
-                    >
-                      {meditation.description}
-                    </p>
-                  {/if}
-                </div>
-                <IconButton
-                  label={t(contentMessages.play, { title: meditation.name })}
-                  icon="play"
-                  filled
-                  href={playerHref(meditation.id)}
-                  class="shrink-0 text-accent-strong"
+              <li class="min-w-0">
+                <MeditationRow
+                  title={meditation.name}
+                  meta={[
+                    formatDuration(
+                      meditation.duration_ms,
+                      locale.current,
+                      "short",
+                    ),
+                    meditationProgressLabel(meditation, locale.current),
+                  ].join(" • ")}
+                  description={meditation.description}
+                  playLabel={t(contentMessages.play, {
+                    title: meditation.name,
+                  })}
+                  playHref={playerHref(meditation.id)}
                 />
               </li>
             {/each}

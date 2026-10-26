@@ -1,7 +1,11 @@
+mod favorite_entry;
+mod favorite_program;
 mod list_favorite_meditations_query;
 mod list_favorite_meditations_query_handler;
 mod list_favorite_meditations_query_validator;
 
+pub use favorite_entry::FavoriteEntry;
+pub use favorite_program::FavoriteProgram;
 pub use list_favorite_meditations_query::ListFavoriteMeditationsQuery;
 pub use list_favorite_meditations_query_handler::ListFavoriteMeditationsQueryHandler;
 pub use list_favorite_meditations_query_validator::ListFavoriteMeditationsQueryValidator;
