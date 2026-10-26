@@ -17,12 +17,15 @@ pub fn router(state: AppState) -> Router {
     let static_files = ServeDir::new(&state.config.static_dir);
     let identity = identity_presentation::identity_router().with_state(state.identity.clone());
 
-    let meditation =
-        meditation_presentation::meditation_router().with_state(state.meditation.clone());
+    let meditation = meditation_presentation::meditation_router(
+        state.meditation.max_upload_bytes,
+        state.meditation.max_cover_bytes,
+    )
+    .with_state(state.meditation.clone());
     let mood_tracker =
         mood_tracker_presentation::mood_tracker_router().with_state(state.mood_tracker.clone());
-    let soundscape =
-        soundscape_presentation::soundscape_router().with_state(state.soundscape.clone());
+    let soundscape = soundscape_presentation::soundscape_router(state.soundscape.max_upload_bytes)
+        .with_state(state.soundscape.clone());
     let portability =
         portability_presentation::router::router().with_state(state.portability.clone());
 

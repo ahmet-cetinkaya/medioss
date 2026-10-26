@@ -23,6 +23,11 @@ Open the address you set in `MEDIOSS_ORIGIN` (default `http://localhost:3000`) a
 | `MEDIOSS_ORIGIN` | The exact URL users open. State-changing requests from other origins are rejected. |
 | `SESSION_COOKIE_SECURE` | Defaults to `true`, which needs HTTPS. Set `false` only for plain-HTTP local trials. |
 | `SESSION_TIMEOUT` | Session lifetime, default `7d`. |
+| `MEDIOSS_MAX_UPLOAD_BYTES` | Largest meditation audio upload in bytes, default `104857600` (100 MiB). |
+| `MEDIOSS_MAX_SOUND_UPLOAD_BYTES` | Largest soundscape audio upload in bytes, default `104857600` (100 MiB). |
+| `MEDIOSS_MAX_COVER_BYTES` | Largest program cover in bytes, default `5242880` (5 MiB). |
+
+Each upload limit is a whole number from 1 to 10 GiB (`10737418240`). An invalid value stops the server at startup and the log names the variable. If you run a reverse proxy in front of the container, raise its body limit too (for nginx, `client_max_body_size`), or the proxy answers 413 before MediOSS sees the upload.
 
 See [`.env.example`](../.env.example) for the full list.
 

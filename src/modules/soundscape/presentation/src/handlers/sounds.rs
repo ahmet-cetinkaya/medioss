@@ -85,15 +85,7 @@ async fn upload_sound(
                         .map_err(|_| StatusCode::BAD_REQUEST)?,
                 )
             }
-            Some("file") => {
-                bytes = Some(
-                    read_field(
-                        &mut field,
-                        soundscape_application::commands::create_sound::MAX_UPLOAD_BYTES,
-                    )
-                    .await?,
-                )
-            }
+            Some("file") => bytes = Some(read_field(&mut field, deps.max_upload_bytes).await?),
             Some("icon_key") => {
                 icon_key = Some(
                     String::from_utf8(
@@ -124,12 +116,13 @@ async fn upload_sound(
     Ok((StatusCode::CREATED, Json(sound.into())))
 }
 
-pub(crate) fn register(router: Router<SharedDependencies>) -> Router<SharedDependencies> {
+pub(crate) fn register(
+    router: Router<SharedDependencies>,
+    max_upload_bytes: usize,
+) -> Router<SharedDependencies> {
     router.route("/soundscape/sounds", get(list_sounds)).route(
         "/soundscape/sounds",
-        post(upload_sound).layer(axum::extract::DefaultBodyLimit::max(
-            soundscape_application::commands::create_sound::MAX_UPLOAD_BYTES,
-        )),
+        post(upload_sound).layer(axum::extract::DefaultBodyLimit::max(max_upload_bytes)),
     )
 }
 

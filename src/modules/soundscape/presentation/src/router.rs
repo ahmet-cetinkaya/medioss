@@ -44,13 +44,15 @@ pub struct SoundscapeDependencies {
     pub sounds: Arc<dyn SoundRepository>,
     pub mixes: Arc<dyn MixRepository>,
     pub medioss_origin: Arc<String>,
+    /// Cap on a sound upload's audio field; `soundscape_router` must receive the same value.
+    pub max_upload_bytes: usize,
 }
 pub type SharedDependencies = Arc<SoundscapeDependencies>;
 
-pub fn soundscape_router() -> Router<SharedDependencies> {
+pub fn soundscape_router(max_upload_bytes: usize) -> Router<SharedDependencies> {
     let router = Router::new();
     let router = crate::handlers::categories::register(router);
-    let router = crate::handlers::sounds::register(router);
+    let router = crate::handlers::sounds::register(router, max_upload_bytes);
     let router = crate::handlers::sounds_id::register(router);
     let router = crate::handlers::sounds_icon::register(router);
     let router = crate::handlers::sounds_audio::register(router);

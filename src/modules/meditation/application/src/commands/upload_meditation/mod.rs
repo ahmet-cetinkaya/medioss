@@ -2,6 +2,6 @@ mod upload_meditation_command;
 mod upload_meditation_command_handler;
 mod upload_meditation_command_validator;
 
-pub use upload_meditation_command::{UploadMeditationCommand, MAX_UPLOAD_BYTES};
+pub use upload_meditation_command::UploadMeditationCommand;
 pub use upload_meditation_command_handler::UploadMeditationCommandHandler;
 pub use upload_meditation_command_validator::UploadMeditationCommandValidator;

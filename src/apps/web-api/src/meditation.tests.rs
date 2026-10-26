@@ -129,11 +129,19 @@ fn ffmpeg_available_matches_whether_ffmpeg_answers_on_path() {
     assert_eq!(ffmpeg_available(), command_runs);
 }
 
+const COVER_LIMIT_BYTES: usize = 5 * 1024 * 1024;
+
+fn normalizer() -> CoverNormalizer {
+    CoverNormalizer {
+        maximum_output_bytes: COVER_LIMIT_BYTES,
+    }
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn cover_normalizer_converts_a_valid_png_and_maps_garbage_to_invalid_payload() {
     let _lock = NORMALIZATION_TEST_LOCK.lock().await;
 
-    let normalized = CoverNormalizer
+    let normalized = normalizer()
         .normalize(png_bytes(2_000, 1_000).await)
         .await
         .unwrap();
@@ -142,7 +150,7 @@ async fn cover_normalizer_converts_a_valid_png_and_maps_garbage_to_invalid_paylo
     let decoded = image::load_from_memory(&normalized).unwrap();
     assert!(decoded.width() <= 1_024 && decoded.height() <= 1_024);
 
-    let error = CoverNormalizer
+    let error = normalizer()
         .normalize(b"definitely not an image".to_vec())
         .await
         .unwrap_err();
@@ -158,7 +166,7 @@ async fn cover_normalizer_maps_an_oversized_input_to_invalid_payload() {
 
     // The normalizer refuses dimensions over its decode limit before any
     // resize; the port's only dimensional variant is InvalidPayload.
-    let error = CoverNormalizer
+    let error = normalizer()
         .normalize(png_bytes(9_000, 9_000).await)
         .await
         .unwrap_err();
@@ -177,7 +185,7 @@ async fn cover_normalizer_uses_the_shared_normalize_pipeline() {
 
     let specification = ImageSpec {
         maximum_dimension: 1_024,
-        maximum_output_bytes: meditation_application::commands::MAX_COVER_BYTES,
+        maximum_output_bytes: COVER_LIMIT_BYTES,
         square: false,
     };
     let normalized = normalize(png_bytes(500, 250).await, specification)

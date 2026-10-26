@@ -50,6 +50,9 @@ use meditation_application::test_support::{
 };
 
 use crate::{meditation_router, MeditationDependencies};
+pub(crate) use meditation_application::test_support::{
+    TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES,
+};
 
 pub(crate) fn admin_actor() -> Actor {
     Actor::new(UserId::new(1), Role::Admin)
@@ -113,6 +116,7 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             cover_validator.clone(),
             store_port.clone(),
             clock.clone(),
+            TEST_MAX_COVER_BYTES,
         )),
         update_program: Arc::new(UpdateProgramCommandHandler::new(programs.clone())),
         delete_program: Arc::new(DeleteProgramCommandHandler::new(
@@ -148,6 +152,7 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             converter,
             store_port.clone(),
             clock.clone(),
+            TEST_MAX_UPLOAD_BYTES,
         )),
         delete_meditation: Arc::new(DeleteMeditationCommandHandler::new(
             meditations.clone(),
@@ -225,6 +230,8 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
         cover_validator,
         store: store_port,
         medioss_origin: Arc::new("http://localhost".to_owned()),
+        max_upload_bytes: TEST_MAX_UPLOAD_BYTES,
+        max_cover_bytes: TEST_MAX_COVER_BYTES,
     }
 }
 
@@ -233,7 +240,8 @@ pub(crate) fn app() -> TestApp {
     let store = FakeBlobStore::new();
     let deps = test_dependencies(state.clone(), &store);
     TestApp {
-        router: meditation_router().with_state(Arc::new(deps)),
+        router: meditation_router(TEST_MAX_UPLOAD_BYTES, TEST_MAX_COVER_BYTES)
+            .with_state(Arc::new(deps)),
         state,
         store,
     }

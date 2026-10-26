@@ -20,5 +20,3 @@ pub mod update_program_order;
 pub mod upload_meditation;
 
 pub use crate::services::MAX_NAME_LENGTH;
-pub use create_program::MAX_COVER_BYTES;
-pub use upload_meditation::MAX_UPLOAD_BYTES;

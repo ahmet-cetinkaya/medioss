@@ -1,11 +1,9 @@
 use crate::ports::CommandHandler;
 use std::sync::Arc;
 
-use crate::commands::upload_meditation::{
-    UploadMeditationCommand, UploadMeditationCommandHandler, MAX_UPLOAD_BYTES,
-};
+use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
 use crate::commands::MAX_NAME_LENGTH;
-use crate::test_support::{FakeConverter, FakeValidator, TestDeps};
+use crate::test_support::{FakeConverter, FakeValidator, TestDeps, TEST_MAX_UPLOAD_BYTES};
 use crate::ApplicationError;
 
 fn service(deps: &TestDeps) -> UploadMeditationCommandHandler {
@@ -17,6 +15,7 @@ fn service(deps: &TestDeps) -> UploadMeditationCommandHandler {
         Arc::new(FakeConverter { fail: false }),
         deps.store.clone(),
         deps.clock.clone(),
+        TEST_MAX_UPLOAD_BYTES,
     )
 }
 
@@ -68,7 +67,7 @@ async fn upload_rejects_blank_and_oversized_names_and_garbage_bytes() {
 #[tokio::test]
 async fn upload_rejects_payloads_over_the_cap_before_anything_stored() {
     let deps = TestDeps::new();
-    let mut oversized = vec![0u8; MAX_UPLOAD_BYTES + 1];
+    let mut oversized = vec![0u8; TEST_MAX_UPLOAD_BYTES + 1];
     oversized[0] = 0xFF;
     oversized[1] = 0xFB;
     let result = service(&deps)

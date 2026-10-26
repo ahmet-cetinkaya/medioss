@@ -42,11 +42,13 @@ pub(crate) async fn test_state_with_cookie_secure(
         connection.clone(),
         directory.path(),
         Arc::clone(&origin),
+        config.upload_limits,
     );
     let soundscape = crate::soundscape::soundscape_dependencies(
         connection.clone(),
         directory.path(),
         Arc::clone(&origin),
+        config.upload_limits.sound_audio_bytes,
     );
     let (mood_tracker, mood_tracker_entries) =
         crate::mood_tracker::mood_tracker_dependencies(connection.clone(), Arc::clone(&origin));
@@ -94,5 +96,6 @@ pub(crate) fn test_config(
         medioss_origin: "https://medioss.example".to_owned(),
         dev_origin: None,
         session_cookie_secure,
+        upload_limits: crate::config::UploadLimits::default(),
     }
 }

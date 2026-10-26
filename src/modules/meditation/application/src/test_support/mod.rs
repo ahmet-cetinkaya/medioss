@@ -15,6 +15,7 @@ mod fake_validator;
 mod fixed_clock;
 mod repo_state;
 mod test_deps;
+mod test_limits;
 mod user_ids;
 
 pub use fake_blob_store::FakeBlobStore;
@@ -31,4 +32,5 @@ pub use fake_validator::{sniff_audio, FakeValidator};
 pub use fixed_clock::FixedClock;
 pub use repo_state::RepoState;
 pub use test_deps::TestDeps;
+pub use test_limits::{TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES};
 pub use user_ids::{user_a, user_b};

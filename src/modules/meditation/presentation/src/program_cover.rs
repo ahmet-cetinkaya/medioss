@@ -4,7 +4,6 @@ use axum::{
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
-use meditation_application::commands;
 
 use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommand;
 use meditation_application::queries::get_program_cover::{GetProgramCoverQuery, ProgramCover};
@@ -55,7 +54,7 @@ pub async fn replace_cover(
 ) -> Result<StatusCode, ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
 
-    let max_cover = commands::MAX_COVER_BYTES;
+    let max_cover = deps.max_cover_bytes;
     let mut cover: Option<(Vec<u8>, &'static str)> = None;
     while let Some(mut field) = multipart
         .next_field()

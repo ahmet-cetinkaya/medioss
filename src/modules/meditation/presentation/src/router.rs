@@ -12,7 +12,6 @@ use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-use meditation_application::commands::{MAX_COVER_BYTES, MAX_UPLOAD_BYTES};
 use meditation_application::ports::{
     BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository,
 };
@@ -85,6 +84,10 @@ pub struct MeditationDependencies {
     pub store: Arc<dyn BlobStore>,
     /// The "now" feeding the statistics window.
     pub medioss_origin: Arc<String>,
+    /// Cap on a meditation upload's audio field; `meditation_router` must receive the same value.
+    pub max_upload_bytes: usize,
+    /// Cap on a program cover; `meditation_router` must receive the same value.
+    pub max_cover_bytes: usize,
 }
 
 pub type SharedDependencies = Arc<MeditationDependencies>;
@@ -95,19 +98,22 @@ const MULTIPART_OVERHEAD_BYTES: usize = 1024 * 1024;
 /// The meditation HTTP surface (plan D5). Every route is authenticated;
 /// content-management routes are admin-gated through the
 /// [`AdminActor`] extractor.
-pub fn meditation_router() -> Router<SharedDependencies> {
+pub fn meditation_router(
+    max_upload_bytes: usize,
+    max_cover_bytes: usize,
+) -> Router<SharedDependencies> {
     Router::new()
-        .merge(audio_routes())
+        .merge(audio_routes(max_upload_bytes))
         .merge(category_routes())
-        .merge(program_routes())
+        .merge(program_routes(max_cover_bytes))
         .merge(program_member_routes())
-        .merge(program_cover_routes())
+        .merge(program_cover_routes(max_cover_bytes))
         .merge(meditation_routes())
         .merge(playback_routes())
         .merge(note_routes())
 }
 
-fn audio_routes() -> Router<SharedDependencies> {
+fn audio_routes(max_upload_bytes: usize) -> Router<SharedDependencies> {
     Router::new()
         // The extractor-level default body limit (2MB) would reject large
         // uploads before the handler's own streamed cap ever runs; the
@@ -115,7 +121,7 @@ fn audio_routes() -> Router<SharedDependencies> {
         .route(
             "/meditation/audio",
             post(upload).layer(DefaultBodyLimit::max(
-                MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES,
+                max_upload_bytes + MULTIPART_OVERHEAD_BYTES,
             )),
         )
         .route("/meditation/{id}/audio", get(audio))
@@ -135,14 +141,14 @@ fn category_routes() -> Router<SharedDependencies> {
         .route("/meditation/programs/{id}/category", put(assign_category))
 }
 
-fn program_routes() -> Router<SharedDependencies> {
+fn program_routes(max_cover_bytes: usize) -> Router<SharedDependencies> {
     Router::new()
         .route(
             "/meditation/programs",
             get(programs)
                 .post(create_program)
                 .layer(DefaultBodyLimit::max(
-                    MAX_COVER_BYTES + MULTIPART_OVERHEAD_BYTES,
+                    max_cover_bytes + MULTIPART_OVERHEAD_BYTES,
                 )),
         )
         .route(
@@ -169,11 +175,11 @@ fn program_member_routes() -> Router<SharedDependencies> {
         )
 }
 
-fn program_cover_routes() -> Router<SharedDependencies> {
+fn program_cover_routes(max_cover_bytes: usize) -> Router<SharedDependencies> {
     Router::new().route(
         "/meditation/programs/{id}/cover",
         get(cover).put(replace_cover).layer(DefaultBodyLimit::max(
-            MAX_COVER_BYTES + MULTIPART_OVERHEAD_BYTES,
+            max_cover_bytes + MULTIPART_OVERHEAD_BYTES,
         )),
     )
 }

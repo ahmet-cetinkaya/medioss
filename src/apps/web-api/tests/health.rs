@@ -10,7 +10,11 @@ use axum::{
 };
 use tempfile::TempDir;
 use tower::ServiceExt;
-use web_api::{config, router::router, state::AppState};
+use web_api::{
+    config::{self, UploadLimits},
+    router::router,
+    state::AppState,
+};
 
 /// Returns state pointing at an empty temp static dir; the guard must outlive
 /// the request or the directory is removed mid-test.
@@ -55,11 +59,13 @@ async fn test_state() -> (AppState, TempDir) {
         connection.clone(),
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
+        UploadLimits::default(),
     );
     let soundscape = web_api::soundscape::soundscape_dependencies(
         connection.clone(),
         static_dir.path(),
         Arc::new("http://localhost".to_owned()),
+        UploadLimits::default().sound_audio_bytes,
     );
     let (mood_tracker, mood_tracker_entries) = web_api::mood_tracker::mood_tracker_dependencies(
         connection.clone(),

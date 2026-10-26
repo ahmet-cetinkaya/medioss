@@ -4,7 +4,10 @@ use std::sync::Arc;
 use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
 use crate::commands::delete_program::{DeleteProgramCommand, DeleteProgramCommandHandler};
 use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
-use crate::test_support::{FakeConverter, FakeCoverValidator, FakeValidator, TestDeps};
+use crate::test_support::{
+    FakeConverter, FakeCoverValidator, FakeValidator, TestDeps, TEST_MAX_COVER_BYTES,
+    TEST_MAX_UPLOAD_BYTES,
+};
 
 #[tokio::test]
 async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
@@ -15,6 +18,7 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
         Arc::new(FakeCoverValidator),
         deps.store.clone(),
         deps.clock.clone(),
+        TEST_MAX_COVER_BYTES,
     )
     .handle(CreateProgramCommand {
         title: "Covered".into(),
@@ -34,6 +38,7 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
         Arc::new(FakeConverter { fail: false }),
         deps.store.clone(),
         deps.clock.clone(),
+        TEST_MAX_UPLOAD_BYTES,
     )
     .handle(UploadMeditationCommand {
         name: "Home".into(),

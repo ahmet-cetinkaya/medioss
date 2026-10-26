@@ -7,6 +7,7 @@ use super::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
     FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository, FakePlaybackRepository,
     FakeProgramRepository, FakeSessionRepository, FakeValidator, FixedClock, RepoState,
+    TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES,
 };
 use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
 use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
@@ -47,6 +48,7 @@ impl TestDeps {
             Arc::new(FakeCoverValidator),
             self.store.clone(),
             self.clock.clone(),
+            TEST_MAX_COVER_BYTES,
         )
         .handle(CreateProgramCommand {
             title: title.to_owned(),
@@ -72,6 +74,7 @@ impl TestDeps {
             Arc::new(FakeConverter { fail: false }),
             self.store.clone(),
             self.clock.clone(),
+            TEST_MAX_UPLOAD_BYTES,
         )
         .handle(UploadMeditationCommand {
             name: name.to_owned(),
