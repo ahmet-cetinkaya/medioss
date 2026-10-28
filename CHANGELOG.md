@@ -2,7 +2,31 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
-## [1.0.0] — unreleased
+## [1.0.1] — 2026-10-29
+
+### Added
+
+- **Favorite meditations** (`#85`, `#86`, `#93`): a heart in the Player toggles a favorite; the Library's Favorites chip lists them newest-first as a full-width list naming every program the meditation belongs to. Favorites are per-user and purged with the user or meditation; data export/import does not carry them (known limit, documented in ARCHITECTURE.md).
+- **Env-driven upload limits** (`#83`): `MEDIOSS_MAX_UPLOAD_BYTES`, `MEDIOSS_MAX_SOUND_UPLOAD_BYTES` and `MEDIOSS_MAX_COVER_BYTES` (defaults unchanged), validated at startup; README documents them (`#89`).
+- **Favicon set** (`#81`): SVG/ICO favicons, Apple touch icon, web manifest and robots.txt.
+
+### Fixed
+
+- **Read-only container startup** (`#90`, `#91`): media scratch files now live in `$MEDIOSS_DATA_DIR/tmp` and `TMPDIR` points there, so the read-only-root Compose deployment can transcode and probe durations again (the published 1.0.0 image was broken for MP3/WAV/soundscape uploads); startup errors that occur before logging now print to stderr instead of exiting silently.
+- **Early 413 for uploads** (`#84`): declared-oversize uploads are rejected before buffering, with multipart headroom for sound uploads.
+- **Library search cards** (`#94`): search results keep their tile width instead of collapsing to ~50 px.
+- **Sidebar and icon-rail scrolling** (`#92`, `#95`): in short windows the sidebar and the icon rail scroll on their own, rail tooltips live outside the scroll box (never clipped, no stray horizontal scrollbar) and survive a focus scroll.
+- **Docker publish workflow** (`#78`, `#82`): publishes to ghcr.io with the built-in token; invalid env fixed, strict semver tag filter, `packages:write` scoped to the publish job.
+
+### Performance
+
+- **Duration probe** (`#88`): uploaded audio is staged straight to disk for the probe, removing two full in-memory copies (release-mode peak for a 100 MB upload: 243 MB → 156 MB).
+
+### CI
+
+- Lockfile and dependency guards (`#86`, `#87`): `cargo metadata --locked` check and an rsa-absent guard that fail on a stale lock.
+
+## [1.0.0] — 2026-10-25
 
 First tagged release. Everything below is relative to the pre-tag development history.
 

@@ -15,7 +15,7 @@ default-members = ["src/apps/web-api"]
 [workspace.package]
 edition = "2021"
 license = "AGPL-3.0-or-later"
-version = "1.0.0"
+version = "1.0.1"
 
 [workspace.dependencies]
 axum = "0.8"
