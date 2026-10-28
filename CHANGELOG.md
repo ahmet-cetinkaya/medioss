@@ -2,7 +2,7 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
-## [1.0.1] — 2026-10-29
+## [1.1.0] — 2026-10-29
 
 ### Added
 
