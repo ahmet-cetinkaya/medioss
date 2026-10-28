@@ -3,7 +3,9 @@
   Labeled sidebar for >= 1280 px (DESIGN_SYSTEM §5.2, FR-002). Shown with
   `class="hidden xl:flex"` by AppShell; `display: none` removes it from the
   accessibility tree at other widths. The brand lockup sits on top; groups
-  follow FR-002 order with overline labels; Sign out is the last item.
+  follow FR-002 order with overline labels; Sign out is the last item. The
+  shell clips its overflow, so the sidebar scrolls on its own (overflow-y)
+  when the window is too short for every link.
 
   Props: `screen` (current screen key), `isAdmin` (shows Admin, FR-003),
   `onSignOut(trigger)`, `class`.
@@ -36,7 +38,7 @@
 
 <nav
   aria-label={t(shellMessages.sidebarNav)}
-  class="w-64 shrink-0 flex-col gap-6 px-4 py-8 {className}"
+  class="w-64 shrink-0 flex-col gap-6 overflow-y-auto px-4 py-8 {className}"
 >
   <BrandLockup href="/" class="mb-2 ms-4" />
   {#each NAV_GROUPS as group (group.key)}
