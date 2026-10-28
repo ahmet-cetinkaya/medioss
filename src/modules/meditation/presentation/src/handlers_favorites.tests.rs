@@ -225,3 +225,50 @@ async fn missing_origin_is_forbidden_for_both_verbs() {
     }
     assert!(list_favorites(&app, member_actor()).await.is_empty());
 }
+
+#[tokio::test]
+async fn each_favorite_names_every_program_it_belongs_to() {
+    use meditation_application::ports::{MembershipRepository, ProgramRepository};
+    use meditation_application::test_support::{FakeMembershipRepository, FakeProgramRepository};
+
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let programs = FakeProgramRepository(app.state.clone());
+    let memberships = FakeMembershipRepository(app.state.clone());
+    let now = chrono::Utc::now();
+    for (offset_seconds, title) in [(0, "Calm Mornings"), (5, "Deep Sleep")] {
+        let program = programs.insert(title.to_owned(), None, now).await.unwrap();
+        memberships
+            .add(
+                program.id,
+                meditation.id(),
+                now + chrono::Duration::seconds(offset_seconds),
+            )
+            .await
+            .unwrap();
+    }
+    put_favorite(&app, member_actor(), meditation.id()).await;
+
+    let listed = list_favorites(&app, member_actor()).await;
+
+    assert_eq!(
+        listed[0]["programs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|program| program["title"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        vec!["Calm Mornings", "Deep Sleep"]
+    );
+}
+
+#[tokio::test]
+async fn a_favorite_without_a_program_lists_an_empty_programs_array() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    put_favorite(&app, member_actor(), meditation.id()).await;
+
+    let listed = list_favorites(&app, member_actor()).await;
+
+    assert_eq!(listed[0]["programs"], serde_json::json!([]));
+}

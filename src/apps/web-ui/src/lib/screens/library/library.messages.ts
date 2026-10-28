@@ -18,6 +18,8 @@ export const libraryMessages = defineMessages({
     en: "Tap the heart in the Player to save a meditation here.",
     tr: "Bir meditasyonu buraya kaydetmek için Oynatıcı'daki kalbe dokunun.",
   },
+  favoriteProgram: { en: "Program: {names}", tr: "Program: {names}" },
+  favoritePrograms: { en: "Programs: {names}", tr: "Programlar: {names}" },
   filterEmptyTitle: {
     en: "No programs here",
     tr: "Burada program yok",

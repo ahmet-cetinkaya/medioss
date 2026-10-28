@@ -25,11 +25,13 @@
   import { type ServerReason } from "$lib/api/server-reason";
   import { failureMessage, reasonOf } from "$lib/api/failure";
   import ContentCard from "$lib/components/content/content-card.svelte";
+  import MeditationRow from "$lib/components/content/meditation-row.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import RangeChips from "$lib/components/filters/range-chips.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
+  import { contentMessages } from "$lib/components/content/content.messages";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
@@ -40,6 +42,7 @@
   } from "$lib/meditation/progress-label";
   import { ROUTES, playerHref } from "$lib/navigation/routes";
   import { session } from "$lib/session/session.svelte";
+  import { favoriteProgramNames } from "./favorite-programs";
   import {
     filterGroups,
     groupPrograms,
@@ -174,6 +177,16 @@
       .closest("li")
       ?.scrollIntoView({ inline: "nearest", block: "nearest" });
 
+  const programsLine = (meditation: Meditation) => {
+    const names = favoriteProgramNames(meditation.programs);
+    if (names === null) return null;
+    const message =
+      (meditation.programs?.length ?? 0) > 1
+        ? m.favoritePrograms
+        : m.favoriteProgram;
+    return t(message, { names });
+  };
+
   const programHref = (id: number) => `${ROUTES.program.path}?id=${id}`;
   const adminHref = `/admin/meditations/`;
 </script>
@@ -217,6 +230,27 @@
             </OverflowMenu>
           {/snippet}
         </ContentCard>
+      </li>
+    {/each}
+  </ul>
+{/snippet}
+
+{#snippet favoriteRows(list: Meditation[])}
+  <ul class="flex flex-col gap-3">
+    {#each list as meditation (meditation.id)}
+      <li class="min-w-0">
+        <MeditationRow
+          title={meditation.name}
+          meta={[
+            formatDuration(meditation.duration_ms, locale.current, "short"),
+            meditationProgressLabel(meditation, locale.current),
+          ]
+            .filter((part): part is string => part !== null)
+            .join(" • ")}
+          detail={programsLine(meditation)}
+          playLabel={t(contentMessages.play, { title: meditation.name })}
+          playHref={playerHref(meditation.id)}
+        />
       </li>
     {/each}
   </ul>
@@ -287,7 +321,7 @@
           emptyTitle={t(m.favoritesEmptyTitle)}
           emptyText={t(m.favoritesEmptyText)}
         >
-          {@render meditationCards(favorites ?? [])}
+          {@render favoriteRows(favorites ?? [])}
         </RegionState>
       {:else if visibleGroups.length === 0}
         <p class="text-ink-muted" role="status">

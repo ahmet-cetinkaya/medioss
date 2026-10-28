@@ -234,6 +234,8 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
         list_favorite_meditations: Arc::new(ListFavoriteMeditationsQueryHandler::new(
             meditations.clone(),
             favorites.clone(),
+            memberships.clone(),
+            programs.clone(),
         )),
         list_favorite_ids: Arc::new(ListFavoriteIdsQueryHandler::new(favorites)),
         list_notes: Arc::new(ListNotesQueryHandler::new(meditations, notes)),
