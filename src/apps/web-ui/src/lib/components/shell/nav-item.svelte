@@ -62,15 +62,11 @@
     filled={current}
     class={current ? "shrink-0 text-accent-strong" : "shrink-0"}
   />
-  {#if variant === "rail"}
-    <span
-      class="glass-solid elevation-1 pointer-events-none absolute start-full top-1/2 z-40 ms-3 -translate-y-1/2 rounded-full px-3 py-1.5 text-sm whitespace-nowrap text-ink-strong opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 motion-safe:transition-opacity motion-safe:duration-(--duration-fast)"
-    >
-      {label}
-    </span>
-  {:else}
-    <!-- The bar's labels are single short words: keep them whole (shrink, never
-         split mid-word); the other variants may wrap at spaces only. -->
+  {#if variant !== "rail"}
+    <!-- The rail's label lives in the rail's tooltip layer (icon-rail.svelte);
+         here it would be clipped by the rail's scroll box. The bar's labels
+         are single short words: keep them whole (shrink, never split
+         mid-word); the sidebar may wrap at spaces only. -->
     <span
       class={variant === "bar"
         ? "min-w-0 text-[0.625rem] tracking-tight"
@@ -85,6 +81,8 @@
     {href}
     class={classes}
     aria-current={current ? "page" : undefined}
+    aria-label={variant === "rail" ? label : undefined}
+    data-tip={variant === "rail" ? label : undefined}
   >
     {@render body()}
   </a>
@@ -95,6 +93,8 @@
     class={classes}
     aria-current={current ? "page" : undefined}
     {onclick}
+    aria-label={variant === "rail" ? label : undefined}
+    data-tip={variant === "rail" ? label : undefined}
   >
     {@render body()}
   </button>

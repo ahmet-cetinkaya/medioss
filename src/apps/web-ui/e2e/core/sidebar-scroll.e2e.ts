@@ -61,11 +61,76 @@ test.describe("icon rail in a short window", () => {
   }) => {
     await page.goto("/");
     const rail = page.getByRole("navigation", { name: "Compact navigation" });
-    const lastItem = rail.getByRole("button", { name: "Sign out" });
+    // About is the last group after Account (Sign out); a member sees no
+    // Admin item.
+    const lastItem = rail.getByRole("link", { name: "About" });
 
     await expect(lastItem).not.toBeInViewport();
 
-    await rail.evaluate((nav) => nav.scrollTo({ top: nav.scrollHeight }));
+    await rail
+      .locator("[data-rail-scroll]")
+      .evaluate((box) => box.scrollTo({ top: box.scrollHeight }));
     await expect(lastItem).toBeInViewport();
+  });
+});
+
+// The rail's own scroll box must not clip the labels: the tooltip lives
+// outside it, positioned against the nav.
+const TALL_NARROW_DESKTOP = { width: 1000, height: 800 };
+
+test.describe("icon rail tooltips", () => {
+  test.use({
+    storageState: storageStatePath("member"),
+    viewport: TALL_NARROW_DESKTOP,
+  });
+
+  test("rail never overflows horizontally at a tall size", async ({ page }) => {
+    await page.goto("/");
+    const rail = page.getByRole("navigation", { name: "Compact navigation" });
+    await expect(
+      rail.evaluate((nav) => nav.scrollWidth <= nav.clientWidth),
+    ).resolves.toBe(true);
+  });
+
+  test("a focused item's tooltip is fully visible and unclipped", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const rail = page.getByRole("navigation", { name: "Compact navigation" });
+    await rail.locator("[data-tip]").first().focus();
+
+    const tooltip = rail.locator("[data-rail-tooltip]");
+    await expect(tooltip).toBeVisible();
+
+    const tipBox = await tooltip.boundingBox();
+    expect(tipBox).not.toBeNull();
+    expect(tipBox!.width).toBeGreaterThan(0);
+    // Fully inside the viewport (nothing there clips it)...
+    expect(tipBox!.x).toBeGreaterThanOrEqual(0);
+    expect(tipBox!.x + tipBox!.width).toBeLessThanOrEqual(
+      page.viewportSize()!.width,
+    );
+    expect(tipBox!.y).toBeGreaterThanOrEqual(0);
+    expect(tipBox!.y + tipBox!.height).toBeLessThanOrEqual(
+      page.viewportSize()!.height,
+    );
+    // ...reaching past the rail's right edge (not hidden inside it)...
+    const railBox = await rail.boundingBox();
+    expect(tipBox!.x + tipBox!.width).toBeGreaterThan(
+      railBox!.x + railBox!.width,
+    );
+    // ...and not clipped by any ancestor between the tooltip and the document.
+    const clipped = await tooltip.evaluate((el) => {
+      for (let a = el.parentElement; a; a = a.parentElement) {
+        const style = getComputedStyle(a);
+        if (style.overflow !== "visible") {
+          const box = a.getBoundingClientRect();
+          const r = el.getBoundingClientRect();
+          if (r.right > box.right + 1 || r.left < box.left - 1) return true;
+        }
+      }
+      return false;
+    });
+    expect(clipped).toBe(false);
   });
 });
