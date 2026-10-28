@@ -41,25 +41,36 @@
 
   let navBox: HTMLElement;
   let tip = $state<{ label: string; top: number; left: number } | null>(null);
+  // The item the tooltip is anchored to; focus scrolls fire the scroll
+  // handler before focusin, so the scroll re-anchors instead of hiding.
+  let tipOwner: HTMLElement | null = null;
 
-  // The item's rect against the nav's: the tooltip is a child of the nav, so
-  // its coordinates are nav-relative.
+  // Re-anchors the open tooltip to its item's current position; the tooltip
+  // is fixed, so a focus scroll would otherwise leave it floating elsewhere.
+  function repositionTip() {
+    if (!tipOwner || !navBox || !tipOwner.isConnected) {
+      tip = null;
+      tipOwner = null;
+      return;
+    }
+    const itemRect = tipOwner.getBoundingClientRect();
+    const navRect = navBox.getBoundingClientRect();
+    const offsetFromNav = itemRect.right - navRect.left + 12;
+    const maxByWindow = window.innerWidth - TIP_WIDTH_PX - VIEWPORT_MARGIN_PX;
+    tip = {
+      label: tipOwner.dataset.tip ?? "",
+      top: itemRect.top + itemRect.height / 2,
+      left: Math.min(offsetFromNav, Math.max(0, maxByWindow)),
+    };
+  }
+
   function showTip(event: Event) {
     const item = (event.target as HTMLElement).closest<HTMLElement>(
       "[data-tip]",
     );
     if (!item || !navBox) return;
-    const itemRect = item.getBoundingClientRect();
-    const navRect = navBox.getBoundingClientRect();
-    // Anchor just right of the item, then clamp into the viewport: a long
-    // label beside the left rail would otherwise overflow the window.
-    const offsetFromNav = itemRect.right - navRect.left + 12;
-    const maxByWindow = window.innerWidth - TIP_WIDTH_PX - VIEWPORT_MARGIN_PX;
-    tip = {
-      label: item.dataset.tip ?? "",
-      top: itemRect.top + itemRect.height / 2,
-      left: Math.min(offsetFromNav, Math.max(0, maxByWindow)),
-    };
+    tipOwner = item;
+    repositionTip();
   }
 
   // Leaving an item (pointer or focus) hides its tooltip unless the pointer
@@ -70,6 +81,7 @@
     const to = event_.relatedTarget as HTMLElement | null;
     if (to && from.contains(to)) return;
     tip = null;
+    tipOwner = null;
   }
 </script>
 
@@ -89,7 +101,7 @@
     onpointerout={hideTip}
     onfocusin={showTip}
     onfocusout={hideTip}
-    onscroll={() => (tip = null)}
+    onscroll={() => repositionTip()}
   >
     {#each NAV_GROUPS as group, index (group.key)}
       <ul

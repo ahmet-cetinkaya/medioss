@@ -84,53 +84,92 @@ test.describe("icon rail tooltips", () => {
     viewport: TALL_NARROW_DESKTOP,
   });
 
-  test("rail never overflows horizontally at a tall size", async ({ page }) => {
-    await page.goto("/");
-    const rail = page.getByRole("navigation", { name: "Compact navigation" });
-    await expect(
-      rail.evaluate((nav) => nav.scrollWidth <= nav.clientWidth),
-    ).resolves.toBe(true);
-  });
+  test.describe("in a short window", () => {
+    test.use({ viewport: SHORT_NARROW_DESKTOP });
 
-  test("a focused item's tooltip is fully visible and unclipped", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    const rail = page.getByRole("navigation", { name: "Compact navigation" });
-    await rail.locator("[data-tip]").first().focus();
-
-    const tooltip = rail.locator("[data-rail-tooltip]");
-    await expect(tooltip).toBeVisible();
-
-    const tipBox = await tooltip.boundingBox();
-    expect(tipBox).not.toBeNull();
-    expect(tipBox!.width).toBeGreaterThan(0);
-    // Fully inside the viewport (nothing there clips it)...
-    expect(tipBox!.x).toBeGreaterThanOrEqual(0);
-    expect(tipBox!.x + tipBox!.width).toBeLessThanOrEqual(
-      page.viewportSize()!.width,
-    );
-    expect(tipBox!.y).toBeGreaterThanOrEqual(0);
-    expect(tipBox!.y + tipBox!.height).toBeLessThanOrEqual(
-      page.viewportSize()!.height,
-    );
-    // ...reaching past the rail's right edge (not hidden inside it)...
-    const railBox = await rail.boundingBox();
-    expect(tipBox!.x + tipBox!.width).toBeGreaterThan(
-      railBox!.x + railBox!.width,
-    );
-    // ...and not clipped by any ancestor between the tooltip and the document.
-    const clipped = await tooltip.evaluate((el) => {
-      for (let a = el.parentElement; a; a = a.parentElement) {
-        const style = getComputedStyle(a);
-        if (style.overflow !== "visible") {
-          const box = a.getBoundingClientRect();
-          const r = el.getBoundingClientRect();
-          if (r.right > box.right + 1 || r.left < box.left - 1) return true;
-        }
-      }
-      return false;
+    test("rail never overflows horizontally", async ({ page }) => {
+      await page.goto("/");
+      const rail = page.getByRole("navigation", { name: "Compact navigation" });
+      await expect(
+        rail.evaluate((nav) => nav.scrollWidth <= nav.clientWidth),
+      ).resolves.toBe(true);
     });
-    expect(clipped).toBe(false);
+
+    test("a focused item's tooltip is fully visible and unclipped", async ({
+      page,
+    }) => {
+      await page.goto("/");
+      const rail = page.getByRole("navigation", { name: "Compact navigation" });
+      await rail.locator("[data-tip]").first().focus();
+
+      const tooltip = rail.locator("[data-rail-tooltip]");
+      await expect(tooltip).toBeVisible();
+
+      const tipBox = await tooltip.boundingBox();
+      expect(tipBox).not.toBeNull();
+      expect(tipBox!.width).toBeGreaterThan(0);
+      // Fully inside the viewport (nothing there clips it)...
+      expect(tipBox!.x).toBeGreaterThanOrEqual(0);
+      expect(tipBox!.x + tipBox!.width).toBeLessThanOrEqual(
+        page.viewportSize()!.width,
+      );
+      expect(tipBox!.y).toBeGreaterThanOrEqual(0);
+      expect(tipBox!.y + tipBox!.height).toBeLessThanOrEqual(
+        page.viewportSize()!.height,
+      );
+      // ...reaching past the rail's right edge (not hidden inside it)...
+      const railBox = await rail.boundingBox();
+      expect(tipBox!.x + tipBox!.width).toBeGreaterThan(
+        railBox!.x + railBox!.width,
+      );
+      // ...and not clipped by any ancestor between the tooltip and the document.
+      const clipped = await tooltip.evaluate((el) => {
+        for (let a = el.parentElement; a; a = a.parentElement) {
+          const style = getComputedStyle(a);
+          if (style.overflow !== "visible") {
+            const box = a.getBoundingClientRect();
+            const r = el.getBoundingClientRect();
+            if (r.right > box.right + 1 || r.left < box.left - 1) return true;
+          }
+        }
+        return false;
+      });
+      expect(clipped).toBe(false);
+    });
+
+    test("Tab-focusing an out-of-view item shows its tooltip", async ({
+      page,
+    }) => {
+      await page.goto("/");
+      const rail = page.getByRole("navigation", { name: "Compact navigation" });
+      // Focusing an out-of-view item: focusin sets the tip, then the browser's
+      // focus scroll fires onscroll, which used to clear it (tip = null).
+      const items = rail.locator("[data-tip]");
+      const beforeLast = items.nth((await items.count()) - 2);
+      await beforeLast.focus();
+      await expect(beforeLast).toBeFocused();
+
+      const tooltip = rail.locator("[data-rail-tooltip]");
+      // Wait until the focus scroll has actually happened; clearing the tip is
+      // exactly its job, so the assertion below is only meaningful after it.
+      const box = rail.locator("[data-rail-scroll]");
+      await expect(box.evaluate((el) => el.scrollTop > 0)).resolves.toBe(true);
+      // The tip must have survived that scroll, re-anchored to the item.
+      await expect(tooltip).toHaveText(
+        await beforeLast.getAttribute("aria-label"),
+      );
+
+      await page.keyboard.press("Tab");
+      const lastItem = items.last();
+      await expect(lastItem).toBeFocused();
+      await expect(tooltip).toHaveText(
+        await lastItem.getAttribute("aria-label"),
+      );
+      const tipBox = await tooltip.boundingBox();
+      expect(tipBox!.y).toBeGreaterThanOrEqual(0);
+      expect(tipBox!.y + tipBox!.height).toBeLessThanOrEqual(
+        page.viewportSize()!.height,
+      );
+    });
   });
 });
