@@ -169,6 +169,9 @@
   const rowClass =
     "-mx-2 flex scroll-px-2 snap-x snap-proximity gap-4 overflow-x-auto px-2 py-2";
   const itemClass = "w-48 shrink-0 snap-start";
+  // A flex-wrap item has no width of its own, so without one the card shrinks
+  // to its minimum content width; the cards are designed for the w-48 tile.
+  const resultItemClass = "w-48 min-w-0";
 
   // Browsers skip scrolling a partly visible focus target, so a Tab into a
   // half-clipped card would leave it half-clipped. Bring it fully into view.
@@ -194,7 +197,7 @@
 {#snippet meditationCards(list: Meditation[])}
   <ul class="flex flex-wrap gap-4">
     {#each list as meditation (meditation.id)}
-      <li class="min-w-0">
+      <li class={resultItemClass}>
         <ContentCard
           compact
           aspect="3/4"
