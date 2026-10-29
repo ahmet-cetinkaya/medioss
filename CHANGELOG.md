@@ -2,6 +2,12 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
+## [Unreleased]
+
+### Changed
+
+- **Streamed audio uploads** (`#98`): meditation and soundscape audio is streamed to a scratch file under `$MEDIOSS_DATA_DIR/tmp` and validated, converted and probed from disk, so memory no longer grows with the file (release-mode peak RSS stays at about 40 MB for 20, 100 and 200 MB uploads; it was 77, 131 and 133 MB). Free space is checked up front and an upload is refused with `507` when it is below the configured limit; the `413` answer is unchanged. Keep free disk of at least twice the largest upload (staged input plus converted copy).
+
 ## [1.1.0] — 2026-10-29
 
 ### Added

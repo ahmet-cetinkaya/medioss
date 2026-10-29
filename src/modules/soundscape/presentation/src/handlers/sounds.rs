@@ -127,6 +127,8 @@ async fn read_upload_form(
                 )
             }
             Some("file") => {
+                // A repeated file field replaces the earlier one.
+                discard_staged(deps, form.media.as_ref()).await;
                 form.media = Some(
                     stage_field(&mut field, deps.staging.as_ref(), deps.max_upload_bytes).await?,
                 )
