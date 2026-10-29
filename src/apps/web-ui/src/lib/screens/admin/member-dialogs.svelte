@@ -1,6 +1,7 @@
 <!-- @component Edit-description and remove-from-program dialogs for a program's meditations. -->
 <script lang="ts">
   import {
+    deleteMeditation,
     removeMember,
     updateMeditationDescription,
     type Meditation,
@@ -66,6 +67,21 @@
     say(m.removed, { name: removing.name });
     await onChanged();
   }
+
+  let deleteOpen = $state(false);
+
+  export function askDelete(meditation: Meditation) {
+    target = meditation;
+    deleteOpen = true;
+  }
+
+  async function runDelete() {
+    const deleting = target;
+    if (!deleting) return;
+    await deleteMeditation(deleting.id);
+    say(m.meditationDeleted, { name: deleting.name });
+    await onChanged();
+  }
 </script>
 
 <FormDialog
@@ -102,5 +118,16 @@
   confirmLabel={t(m.removeConfirm)}
   destructive
   onConfirm={runRemove}
+  {fallbackFocus}
+/>
+
+<ConfirmDialog
+  bind:open={deleteOpen}
+  title={t(m.deleteMeditationTitle)}
+  itemName={target?.name}
+  consequence={t(m.deleteMeditationConsequence)}
+  confirmLabel={t(m.deleteMeditationItem)}
+  destructive
+  onConfirm={runDelete}
   {fallbackFocus}
 />

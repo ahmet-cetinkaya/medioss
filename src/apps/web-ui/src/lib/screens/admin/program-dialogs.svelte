@@ -3,11 +3,13 @@
   import {
     assignCategory,
     createProgram,
+    deleteProgram,
     replaceProgramCover,
     updateProgram,
     type Category,
     type Program,
   } from "$lib/api/meditation";
+  import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
   import FormDialog from "$lib/components/dialogs/form-dialog.svelte";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
@@ -25,12 +27,15 @@
     categories,
     onChanged,
     onCoverReplaced,
+    onDeleting,
   }: {
     id: string;
     categories: Category[];
     /** Reload after a change; `programId` names the program that changed. */
     onChanged: (programId?: number) => Promise<void>;
     onCoverReplaced: (programId: number) => void;
+    /** Called just before a program is deleted, so the screen can leave it. */
+    onDeleting: (program: Program) => void;
   } = $props();
 
   let addOpen = $state(false);
@@ -90,6 +95,25 @@
     }
     say(m.programSaved, { title: editTitle.trim() });
     await onChanged(program.id);
+  }
+
+  // Its meditations stay in the library.
+  let deleteOpen = $state(false);
+  let deleteTarget = $state<Program | null>(null);
+
+  export function askDelete(program: Program) {
+    deleteTarget = program;
+    deleteOpen = true;
+  }
+
+  async function runDelete() {
+    const program = deleteTarget;
+    if (!program) return;
+    onDeleting(program);
+    await deleteProgram(program.id);
+    say(m.programDeleted, { title: program.title });
+    deleteTarget = null;
+    await onChanged();
   }
 </script>
 
@@ -164,3 +188,13 @@
     </p>
   </div>
 </FormDialog>
+
+<ConfirmDialog
+  bind:open={deleteOpen}
+  title={t(m.deleteProgramDialogTitle)}
+  itemName={deleteTarget?.title}
+  consequence={t(m.deleteProgramDialogText)}
+  confirmLabel={t(m.deleteProgramItem)}
+  destructive
+  onConfirm={runDelete}
+/>

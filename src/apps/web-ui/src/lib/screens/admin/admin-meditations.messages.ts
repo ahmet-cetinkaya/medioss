@@ -186,6 +186,32 @@ export const meditationAdminMessages = defineMessages({
     en: "Program “{title}” was saved.",
     tr: "“{title}” programı kaydedildi.",
   },
+  deleteMeditationItem: { en: "Delete meditation", tr: "Meditasyonu sil" },
+  deleteMeditationTitle: {
+    en: "Delete this meditation?",
+    tr: "Bu meditasyon silinsin mi?",
+  },
+  deleteMeditationConsequence: {
+    en: "It leaves every program, and its audio, notes and favorites are removed. This cannot be undone.",
+    tr: "Tüm programlardan çıkar; sesi, notları ve favorileri silinir. Bu işlem geri alınamaz.",
+  },
+  meditationDeleted: {
+    en: "Meditation “{name}” was deleted.",
+    tr: "“{name}” meditasyonu silindi.",
+  },
+  deleteProgramItem: { en: "Delete program", tr: "Programı sil" },
+  deleteProgramDialogTitle: {
+    en: "Delete this program?",
+    tr: "Bu program silinsin mi?",
+  },
+  deleteProgramDialogText: {
+    en: "Its meditations stay in the library. The program and its cover are removed. This cannot be undone.",
+    tr: "Meditasyonları kütüphanede kalır. Program ve kapağı silinir. Bu işlem geri alınamaz.",
+  },
+  programDeleted: {
+    en: "Program “{title}” was deleted.",
+    tr: "“{title}” programı silindi.",
+  },
   uploadItem: { en: "Upload audio", tr: "Ses yükle" },
   uploadTitle: { en: "Upload meditation audio", tr: "Meditasyon sesi yükle" },
   backToPrograms: { en: "Back to programs", tr: "Programlara dön" },

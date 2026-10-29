@@ -91,6 +91,14 @@ export async function replaceProgramCover(
   );
 }
 
+export async function deleteProgram(id: number): Promise<void> {
+  await request(
+    `/api/meditation/programs/${id}`,
+    { method: "DELETE" },
+    { action: "program.delete" },
+  );
+}
+
 export async function assignCategory(
   programId: number,
   categoryId: number | null,

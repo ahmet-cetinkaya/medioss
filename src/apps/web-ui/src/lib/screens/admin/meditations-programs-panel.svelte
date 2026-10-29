@@ -24,6 +24,7 @@
     onEdit,
     onAddMeditation,
     onUpload,
+    onDelete,
   }: {
     id: string;
     groups: ReturnType<typeof groupPrograms>;
@@ -37,6 +38,7 @@
     onEdit: (program: Program) => void;
     onAddMeditation: (program: Program) => void;
     onUpload: (program: Program) => void;
+    onDelete: (program: Program) => void;
   } = $props();
 </script>
 
@@ -107,6 +109,12 @@
                       label={t(m.uploadItem)}
                       icon="upload-simple"
                       onclick={() => onUpload(program)}
+                    />
+                    <OverflowItem
+                      label={t(m.deleteProgramItem)}
+                      icon="trash"
+                      destructive
+                      onclick={() => onDelete(program)}
                     />
                   </OverflowMenu>
                 </div>
