@@ -289,6 +289,7 @@
               addMeditationDialogs?.askAssign(meditation)}
             onEditDescription={(meditation) =>
               memberDialogs?.askEditDescription(meditation)}
+            onRename={(meditation) => memberDialogs?.askRename(meditation)}
             onDelete={(meditation) => memberDialogs?.askDelete(meditation)}
           />
         </div>
@@ -317,6 +318,7 @@
           onEditDescription={(meditation) =>
             memberDialogs?.askEditDescription(meditation)}
           onRemove={(meditation) => memberDialogs?.askRemove(meditation)}
+          onRename={(meditation) => memberDialogs?.askRename(meditation)}
           onDeleteMeditation={(meditation) =>
             memberDialogs?.askDelete(meditation)}
         />

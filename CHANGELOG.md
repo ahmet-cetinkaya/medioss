@@ -4,6 +4,10 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+
+- **Rename a meditation** from the admin UI (`PUT /api/meditation/meditations/{id}/name`, admin only). The menu entry sits next to "Edit description", both for meditations in a program and for those without one.
+
 ### Fixed
 
 - **Meditations without a program** can now be deleted and edited from the admin menu; 1.1.2 only offered play and "Add to a program" there.

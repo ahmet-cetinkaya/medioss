@@ -139,6 +139,16 @@ export const meditationAdminMessages = defineMessages({
     en: "Leave empty to remove the description.",
     tr: "Açıklamayı kaldırmak için boş bırakın.",
   },
+  renameMeditationItem: { en: "Rename", tr: "Yeniden adlandır" },
+  renameMeditationTitle: {
+    en: "Rename meditation",
+    tr: "Meditasyonu yeniden adlandır",
+  },
+  meditationName: { en: "Name", tr: "Ad" },
+  meditationRenamed: {
+    en: "Meditation renamed to “{name}”.",
+    tr: "Meditasyon “{name}” olarak yeniden adlandırıldı.",
+  },
   descriptionUpdated: {
     en: "Description of “{name}” was saved.",
     tr: "“{name}” açıklaması kaydedildi.",

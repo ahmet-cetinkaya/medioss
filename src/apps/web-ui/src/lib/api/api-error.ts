@@ -49,6 +49,7 @@ export type ApiAction =
   | "playback.completion"
   | "meditation.completed"
   | "meditation.delete"
+  | "meditation.rename"
   | "notes.load"
   | "note.create"
   | "note.update"

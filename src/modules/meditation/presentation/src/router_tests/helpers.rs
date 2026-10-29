@@ -23,6 +23,7 @@ use meditation_application::commands::record_completion::RecordCompletionCommand
 use meditation_application::commands::record_position::RecordPositionCommandHandler;
 use meditation_application::commands::remove_member::RemoveMemberCommandHandler;
 use meditation_application::commands::rename_category::RenameCategoryCommandHandler;
+use meditation_application::commands::rename_meditation::RenameMeditationCommandHandler;
 use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommandHandler;
 use meditation_application::commands::set_completed::SetCompletedCommandHandler;
 use meditation_application::commands::set_program_category::SetProgramCategoryCommandHandler;
@@ -171,6 +172,7 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             favorites.clone(),
             store_port.clone(),
         )),
+        rename_meditation: Arc::new(RenameMeditationCommandHandler::new(meditations.clone())),
         update_meditation_description: Arc::new(UpdateMeditationDescriptionCommandHandler::new(
             meditations.clone(),
         )),

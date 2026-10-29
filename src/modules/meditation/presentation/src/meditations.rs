@@ -7,6 +7,7 @@ use axum::{
     Json,
 };
 use meditation_application::commands::delete_meditation::DeleteMeditationCommand;
+use meditation_application::commands::rename_meditation::RenameMeditationCommand;
 use meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommand;
 use meditation_application::queries::get_daily_suggestion::GetDailySuggestionQuery;
 use meditation_application::queries::get_meditation_detail::GetMeditationDetailQuery;
@@ -69,6 +70,31 @@ pub async fn update_description(
         .await
         .map_err(ApiError::Application)?;
     Ok(Json(meditation_response(&updated)))
+}
+
+#[derive(serde::Deserialize)]
+pub struct RenameRequest {
+    pub name: String,
+}
+
+/// `PUT /meditation/meditations/{id}/name` — admin rename.
+pub async fn rename_meditation(
+    AdminActor(_actor): AdminActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+    Json(request): Json<RenameRequest>,
+) -> Result<Json<MeditationResponse>, ApiError> {
+    ensure_browser_origin(&headers, &deps.medioss_origin)?;
+    let renamed = deps
+        .rename_meditation
+        .handle(RenameMeditationCommand {
+            meditation_id: id,
+            name: request.name,
+        })
+        .await
+        .map_err(ApiError::Application)?;
+    Ok(Json(meditation_response(&renamed)))
 }
 
 /// `GET /meditation/library` — the shared library, newest first.

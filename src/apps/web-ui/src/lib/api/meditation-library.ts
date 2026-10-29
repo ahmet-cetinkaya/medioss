@@ -52,6 +52,17 @@ export async function deleteMeditation(id: number): Promise<void> {
   );
 }
 
+export async function renameMeditation(
+  id: number,
+  name: string,
+): Promise<Meditation> {
+  return request(
+    `/api/meditation/meditations/${id}/name`,
+    { method: "PUT", body: JSON.stringify({ name }) },
+    { action: "meditation.rename" },
+  );
+}
+
 export async function updateMeditationDescription(
   id: number,
   description: string | null,

@@ -42,6 +42,7 @@
     onEditDescription,
     onRemove,
     onDeleteMeditation,
+    onRename,
   }: {
     id: string;
     selected: Program | null;
@@ -63,6 +64,7 @@
     onEditDescription: (meditation: Meditation) => void;
     onRemove: (meditation: Meditation) => void;
     onDeleteMeditation: (meditation: Meditation) => void;
+    onRename: (meditation: Meditation) => void;
   } = $props();
 </script>
 
@@ -209,7 +211,12 @@
                     (window.location.href = playerHref(meditation.id))}
                 />
                 <OverflowItem
-                  label={t(actionMessages.edit)}
+                  label={t(m.renameMeditationItem)}
+                  icon="pencil-simple"
+                  onclick={() => onRename(meditation)}
+                />
+                <OverflowItem
+                  label={t(m.editDescriptionTitle)}
                   icon="pencil-simple"
                   onclick={() => onEditDescription(meditation)}
                 />

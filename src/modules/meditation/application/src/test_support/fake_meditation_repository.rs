@@ -79,6 +79,18 @@ impl crate::ports::MeditationRepository for FakeMeditationRepository {
             .collect())
     }
 
+    async fn set_name(&self, id: i64, name: &str) -> Result<bool, String> {
+        let mut rows = self.0.meditations.lock().unwrap();
+        let Some(row) = rows.iter_mut().find(|meditation| meditation.id() == id) else {
+            return Ok(false);
+        };
+        *row = row
+            .clone()
+            .with_name(name)
+            .map_err(|error| error.to_string())?;
+        Ok(true)
+    }
+
     async fn set_description(&self, id: i64, description: Option<&str>) -> Result<bool, String> {
         let mut rows = self.0.meditations.lock().unwrap();
         let Some(row) = rows.iter_mut().find(|meditation| meditation.id() == id) else {

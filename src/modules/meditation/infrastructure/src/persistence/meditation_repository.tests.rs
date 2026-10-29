@@ -212,3 +212,16 @@ async fn delete_reports_whether_a_row_was_removed() {
     assert!(!repository.delete(id).await.unwrap());
     assert!(repository.list_all().await.unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn set_name_replaces_the_name_and_reports_missing() {
+    let repository = SeaOrmMeditationRepository::new(open().await);
+    let id = add(&repository, "A", "k", Utc::now()).await;
+
+    assert!(repository.set_name(id, "Renamed").await.unwrap());
+    assert_eq!(
+        repository.find_by_id(id).await.unwrap().unwrap().name(),
+        "Renamed"
+    );
+    assert!(!repository.set_name(999, "x").await.unwrap());
+}
