@@ -351,24 +351,22 @@ async fn missing_name_deletes_the_staged_file() {
 async fn a_repeated_file_field_keeps_the_last_one_and_discards_the_first() {
     let app = app();
     let program = make_program(&app).await.to_string();
+    let first: &[u8] = b"OggS....OpusHead-first-part";
+    let second: &[u8] = b"OggS....OpusHead-second-part";
     let (status, _) = upload(
         &app,
         Some(admin_actor()),
         &[
             ("name", "", b"Breath"),
             ("program_id", "", program.as_bytes()),
-            ("file", "first.ogg", OPUS_BYTES),
-            ("file", "second.ogg", OPUS_BYTES),
+            ("file", "first.ogg", first),
+            ("file", "second.ogg", second),
         ],
     )
     .await;
 
     assert_eq!(status, StatusCode::CREATED);
-    assert_eq!(app.store.len(), 1, "only the last file is stored");
+    assert_eq!(app.store.stored_contents(), vec![second.to_vec()]);
+    assert_eq!(app.store.staging.discarded_contents(), vec![first.to_vec()]);
     assert_eq!(app.store.staging.file_count(), 0, "nothing stays staged");
-    assert_eq!(
-        app.store.staging.deleted_count(),
-        1,
-        "the first was discarded"
-    );
 }

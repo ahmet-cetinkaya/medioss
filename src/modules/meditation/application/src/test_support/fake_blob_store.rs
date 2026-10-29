@@ -30,6 +30,11 @@ impl FakeBlobStore {
     }
 
     /// Whether a blob exists at this exact key.
+    /// Contents of every stored blob, in no particular order.
+    pub fn stored_contents(&self) -> Vec<Vec<u8>> {
+        self.state.lock().unwrap().values().cloned().collect()
+    }
+
     pub fn contains_key(&self, key: &str) -> bool {
         self.state.lock().unwrap().contains_key(key)
     }
