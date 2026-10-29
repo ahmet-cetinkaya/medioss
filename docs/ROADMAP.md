@@ -2,7 +2,7 @@
 
 This roadmap turns the [PRD's implementation phases](./PRD.md#implementation-phases) into ordered, verifiable milestones aligned with the [module-first architecture](./ARCHITECTURE.md). Each milestone lists its deliverables and an explicit exit criterion; a milestone is done when its exit criterion passes, not when its code merges.
 
-Business modules were created on demand, milestone by milestone, following the `src/modules/<module>/{domain,application,infrastructure,presentation}` pattern. Five exist as of v1.1.0: `identity`, `meditation`, `mood-tracker`, `portability` and `soundscape` (see [ARCHITECTURE.md](./ARCHITECTURE.md)). Milestones M0-M9 are delivered, v1.1.0 is the current release, and Phase 3 is open.
+Business modules were created on demand, milestone by milestone, following the `src/modules/<module>/{domain,application,infrastructure,presentation}` pattern. Five exist as of v1.1.1: `identity`, `meditation`, `mood-tracker`, `portability` and `soundscape` (see [ARCHITECTURE.md](./ARCHITECTURE.md)). Milestones M0-M9 are delivered, v1.1.1 is the current release, and Phase 3 is open.
 
 ```text
 M0 ── M1 ── M2 ── M3 ── M4                  Phase 1: MVP
