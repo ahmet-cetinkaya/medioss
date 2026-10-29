@@ -2,17 +2,15 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
-## [Unreleased]
+## [1.1.2] — 2026-10-29
 
 ### Added
 
-- **Delete programs and meditations from the admin UI**: the overflow menu and detail view of a program get "Delete program", and each meditation in a program gets "Delete meditation". Both ask for confirmation first; deleting a program keeps its meditations in the library. The endpoints already existed.
+- **Delete programs and meditations from the admin UI** (`#106`): the overflow menu and detail view of a program get "Delete program", and each meditation in a program gets "Delete meditation". Both ask for confirmation first; deleting a program keeps its meditations in the library. The endpoints already existed.
 
 ### Fixed
 
 - **Deep link to a program** (`/admin/meditations/<id>/`) no longer sticks on "Loading…": the meditations list loads on first open.
-
-## [1.1.2] — 2026-10-29
 
 ### Security
 
