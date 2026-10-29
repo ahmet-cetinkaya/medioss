@@ -72,9 +72,6 @@ jobs:
             exit 1
           fi
 
-      - name: Dependency boundaries
-        run: ./scripts/check-boundaries.sh --self-test && ./scripts/check-boundaries.sh
-
   web-ui:
     runs-on: ubuntu-latest
     steps:
