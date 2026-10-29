@@ -1,4 +1,4 @@
-<!-- @component Meditations that belong to no program, with play / assign actions. -->
+<!-- @component Meditations that belong to no program, with play / edit / assign / delete actions. -->
 <script lang="ts">
   import type { Meditation } from "$lib/api/meditation";
   import OverflowItem from "$lib/components/ui/menu/overflow-item.svelte";
@@ -14,10 +14,14 @@
     id,
     meditations,
     onAssign,
+    onEditDescription,
+    onDelete,
   }: {
     id: string;
     meditations: Meditation[];
     onAssign: (meditation: Meditation) => void;
+    onEditDescription: (meditation: Meditation) => void;
+    onDelete: (meditation: Meditation) => void;
   } = $props();
 </script>
 
@@ -50,6 +54,17 @@
             label={t(m.assignToProgram)}
             icon="plus"
             onclick={() => onAssign(meditation)}
+          />
+          <OverflowItem
+            label={t(actionMessages.edit)}
+            icon="pencil-simple"
+            onclick={() => onEditDescription(meditation)}
+          />
+          <OverflowItem
+            label={t(m.deleteMeditationItem)}
+            icon="trash"
+            destructive
+            onclick={() => onDelete(meditation)}
           />
         </OverflowMenu>
       </li>

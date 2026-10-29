@@ -2,6 +2,12 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
+## [Unreleased]
+
+### Fixed
+
+- **Meditations without a program** can now be deleted and edited from the admin menu; 1.1.2 only offered play and "Add to a program" there.
+
 ## [1.1.2] — 2026-10-29
 
 ### Added
