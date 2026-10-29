@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   deleteMeditation,
   deleteProgram,
+  removeProgramCover,
   renameMeditation,
 } from "./meditation";
 import { setRequestDependenciesForTests } from "./request";
@@ -48,5 +49,12 @@ describe("meditation programs client", () => {
     expect(calls[0].init?.method).toBe("PUT");
     expect(calls[0].init?.body).toBe(JSON.stringify({ name: "New" }));
     expect(renamed.name).toBe("New");
+  });
+
+  test("removeProgramCover sends DELETE to the cover resource", async () => {
+    const calls = stubFetch(new Response(null, { status: 204 }));
+    await removeProgramCover(12);
+    expect(calls[0].path).toBe("/api/meditation/programs/12/cover");
+    expect(calls[0].init?.method).toBe("DELETE");
   });
 });

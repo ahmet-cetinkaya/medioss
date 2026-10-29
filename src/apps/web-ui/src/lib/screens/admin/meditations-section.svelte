@@ -44,6 +44,7 @@
   import {
     matchesFilter,
     parseProgramId,
+    programToOpen,
     swapped,
     type CategoryFilter,
     type MeditationsData,
@@ -89,8 +90,20 @@
     }
   }
 
-  // A deep link (/admin/meditations/<id>/) opens with a program selected.
-  onMount(() => void load().then(() => loadMembers()));
+  // A deep link (/admin/meditations/<id>/) opens with a program selected; a
+  // link to a program that is gone falls back to the list.
+  async function openDeepLink() {
+    await load();
+    // A failed load keeps the link so the retry action can still open it.
+    if (!data) return;
+    selectedId = programToOpen(selectedId, data.programs);
+    if (selectedId === null) {
+      history.replaceState(history.state, "", "/admin/meditations/");
+      return;
+    }
+    await loadMembers();
+  }
+  onMount(() => void openDeepLink());
 
   // Selection: category filter ("all" | "none" | category id) and program.
   // The selected program lives in the address (/admin/meditations/<id>/),
@@ -342,7 +355,7 @@
   categories={data?.categories ?? []}
   onChanged={refresh}
   onCoverReplaced={bumpCoverVersion}
-  onDeleting={(program) => {
+  onDeleted={(program) => {
     if (selectedId === program.id) void backToPrograms();
   }}
 />

@@ -4,6 +4,7 @@ import {
   descriptionLength,
   matchesFilter,
   parseProgramId,
+  programToOpen,
   swapped,
 } from "./meditations-logic";
 
@@ -40,5 +41,21 @@ describe("swapped", () => {
 describe("descriptionLength", () => {
   test("counts code points", () => {
     expect(descriptionLength("a😀")).toBe(2);
+  });
+});
+
+describe("programToOpen", () => {
+  const programs = [{ id: 3 }, { id: 8 }] as Program[];
+
+  test("opens the program a deep link names when it exists", () => {
+    expect(programToOpen(8, programs)).toBe(8);
+  });
+
+  test("falls back to the list for a program that no longer exists", () => {
+    expect(programToOpen(99, programs)).toBeNull();
+  });
+
+  test("stays on the list when the link names no program", () => {
+    expect(programToOpen(null, programs)).toBeNull();
   });
 });

@@ -217,3 +217,28 @@ async fn clear_category_nulls_only_matching_programs() {
         Some(5)
     );
 }
+
+#[tokio::test]
+async fn clear_cover_key_removes_the_key_or_reports_missing() {
+    let repository = SeaOrmProgramRepository::new(open().await);
+    let program = repository
+        .insert("P".to_owned(), None, Utc::now())
+        .await
+        .unwrap();
+    repository
+        .set_cover_key(program.id, "covers/p")
+        .await
+        .unwrap();
+
+    assert!(repository.clear_cover_key(program.id).await.unwrap());
+    assert!(!repository.clear_cover_key(999).await.unwrap());
+    assert_eq!(
+        repository
+            .find_by_id(program.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .cover_storage_key,
+        None
+    );
+}

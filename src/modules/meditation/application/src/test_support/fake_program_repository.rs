@@ -37,6 +37,15 @@ impl ProgramRepository for FakeProgramRepository {
         Ok(program)
     }
 
+    async fn clear_cover_key(&self, id: i64) -> Result<bool, String> {
+        let mut rows = self.0.programs.lock().unwrap();
+        let Some(program) = rows.iter_mut().find(|program| program.id == id) else {
+            return Ok(false);
+        };
+        program.cover_storage_key = None;
+        Ok(true)
+    }
+
     async fn set_cover_key(&self, id: i64, key: &str) -> Result<bool, String> {
         let mut rows = self.0.programs.lock().unwrap();
         let Some(program) = rows.iter_mut().find(|program| program.id == id) else {

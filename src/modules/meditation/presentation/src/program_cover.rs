@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
+use meditation_application::commands::remove_program_cover::RemoveProgramCoverCommand;
 use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommand;
 use meditation_application::queries::get_program_cover::{GetProgramCoverQuery, ProgramCover};
 
@@ -84,6 +85,22 @@ pub async fn replace_cover(
             program_id: id,
             bytes,
         })
+        .await
+        .map_err(ApiError::Application)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// `DELETE /meditation/programs/{id}/cover` — removes the cover image.
+/// Idempotent: a program without a cover answers 204 as well.
+pub async fn remove_cover(
+    AdminActor(_actor): AdminActor,
+    State(deps): State<SharedDependencies>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+) -> Result<StatusCode, ApiError> {
+    ensure_browser_origin(&headers, &deps.medioss_origin)?;
+    deps.remove_program_cover
+        .handle(RemoveProgramCoverCommand { program_id: id })
         .await
         .map_err(ApiError::Application)?;
     Ok(StatusCode::NO_CONTENT)

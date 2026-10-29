@@ -10,6 +10,7 @@ pub mod favorite_meditation;
 pub mod record_completion;
 pub mod record_position;
 pub mod remove_member;
+pub mod remove_program_cover;
 pub mod rename_category;
 pub mod rename_meditation;
 pub mod replace_program_cover;

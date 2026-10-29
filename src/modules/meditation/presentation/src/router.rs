@@ -31,7 +31,7 @@ use crate::meditations::{
     daily_suggestion, delete_meditation, library, meditation, rename_meditation, update_description,
 };
 use crate::program_activity::{continue_program, recent_programs};
-use crate::program_cover::{cover, replace_cover};
+use crate::program_cover::{cover, remove_cover, replace_cover};
 use crate::program_members::{add_member, program_members, remove_member, update_order};
 use crate::programs::{create_program, delete_program, program, programs, update_program};
 
@@ -66,6 +66,7 @@ pub struct MeditationDependencies {
     pub list_library: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::list_library::ListLibraryQuery, Output = Vec<meditation_application::queries::list_library::LibraryEntry>>>,
     pub get_playback_state: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_playback_state::GetPlaybackStateQuery, Output = meditation_application::ports::PlaybackState>>,
     pub get_program_cover: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_program_cover::GetProgramCoverQuery, Output = Option<meditation_application::queries::get_program_cover::ProgramCover>>>,
+    pub remove_program_cover: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::remove_program_cover::RemoveProgramCoverCommand, Output = ()>>,
     pub replace_program_cover: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommand, Output = ()>>,
     pub record_position: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::record_position::RecordPositionCommand, Output = ()>>,
     pub record_completion: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::record_completion::RecordCompletionCommand, Output = meditation_application::ports::MeditationSession>>,
@@ -196,6 +197,7 @@ fn program_cover_routes(max_cover_bytes: usize) -> Router<SharedDependencies> {
         "/meditation/programs/{id}/cover",
         get(cover)
             .put(replace_cover)
+            .delete(remove_cover)
             .layer(upload_body_limit(max_cover_bytes)),
     )
 }

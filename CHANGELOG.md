@@ -8,8 +8,12 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 - **Rename a meditation** from the admin UI (`PUT /api/meditation/meditations/{id}/name`, admin only). The menu entry sits next to "Edit description", both for meditations in a program and for those without one.
 
+- **Remove a program's cover** (`DELETE /api/meditation/programs/{id}/cover`, admin only, idempotent): the program edit dialog shows "Remove the cover" while a cover is set.
+
 ### Fixed
 
+- **Deleting a program** leaves its detail view only after the delete succeeded; a failed delete no longer navigates away.
+- **A deep link to a program that no longer exists** falls back to the programs list instead of loading nothing.
 - **Meditations without a program** can now be deleted and edited from the admin menu; 1.1.2 only offered play and "Add to a program" there.
 
 ## [1.1.2] — 2026-10-29

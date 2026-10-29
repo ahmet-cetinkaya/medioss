@@ -1,0 +1,7 @@
+mod remove_program_cover_command;
+mod remove_program_cover_command_handler;
+mod remove_program_cover_command_validator;
+
+pub use remove_program_cover_command::RemoveProgramCoverCommand;
+pub use remove_program_cover_command_handler::RemoveProgramCoverCommandHandler;
+pub use remove_program_cover_command_validator::RemoveProgramCoverCommandValidator;

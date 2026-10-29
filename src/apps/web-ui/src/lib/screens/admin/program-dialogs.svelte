@@ -4,12 +4,14 @@
     assignCategory,
     createProgram,
     deleteProgram,
+    removeProgramCover,
     replaceProgramCover,
     updateProgram,
     type Category,
     type Program,
   } from "$lib/api/meditation";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import FormDialog from "$lib/components/dialogs/form-dialog.svelte";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
@@ -27,15 +29,15 @@
     categories,
     onChanged,
     onCoverReplaced,
-    onDeleting,
+    onDeleted,
   }: {
     id: string;
     categories: Category[];
     /** Reload after a change; `programId` names the program that changed. */
     onChanged: (programId?: number) => Promise<void>;
     onCoverReplaced: (programId: number) => void;
-    /** Called just before a program is deleted, so the screen can leave it. */
-    onDeleting: (program: Program) => void;
+    /** Called once a program is deleted, so the screen can leave it. */
+    onDeleted: (program: Program) => void;
   } = $props();
 
   let addOpen = $state(false);
@@ -67,6 +69,7 @@
   let editDescription = $state("");
   let editCategory = $state("");
   let editCover = $state<File | null>(null);
+  let editRemoveCover = $state(false);
 
   export function askEdit(program: Program) {
     editTarget = program;
@@ -75,6 +78,7 @@
     editCategory =
       program.category_id === null ? "" : String(program.category_id);
     editCover = null;
+    editRemoveCover = false;
     editOpen = true;
   }
 
@@ -91,6 +95,9 @@
       await assignCategory(program.id, categoryId);
     if (editCover) {
       await replaceProgramCover(program.id, editCover);
+      onCoverReplaced(program.id);
+    } else if (editRemoveCover && program.has_cover) {
+      await removeProgramCover(program.id);
       onCoverReplaced(program.id);
     }
     say(m.programSaved, { title: editTitle.trim() });
@@ -109,10 +116,10 @@
   async function runDelete() {
     const program = deleteTarget;
     if (!program) return;
-    onDeleting(program);
     await deleteProgram(program.id);
     say(m.programDeleted, { title: program.title });
     deleteTarget = null;
+    onDeleted(program);
     await onChanged();
   }
 </script>
@@ -186,6 +193,9 @@
     <p id="{id}-edit-cover-hint" class="text-sm text-ink-muted">
       {t(m.editProgramHint)}
     </p>
+    {#if editTarget?.has_cover && !editCover}
+      <Checkbox bind:checked={editRemoveCover} label={t(m.removeCover)} />
+    {/if}
   </div>
 </FormDialog>
 
