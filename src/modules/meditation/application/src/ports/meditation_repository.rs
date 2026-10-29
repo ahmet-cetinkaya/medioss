@@ -33,6 +33,9 @@ pub trait MeditationRepository: Send + Sync {
     /// Deletes a meditation row; `false` when the identifier is unknown.
     async fn delete(&self, id: i64) -> Result<bool, String>;
 
+    /// Replaces the stored name; `false` when the identifier is unknown.
+    async fn set_name(&self, id: i64, name: &str) -> Result<bool, String>;
+
     /// Replaces the description (`None` clears it); `false` when unknown.
     async fn set_description(&self, id: i64, description: Option<&str>) -> Result<bool, String>;
 

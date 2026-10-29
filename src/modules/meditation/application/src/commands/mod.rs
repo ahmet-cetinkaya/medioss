@@ -11,6 +11,7 @@ pub mod record_completion;
 pub mod record_position;
 pub mod remove_member;
 pub mod rename_category;
+pub mod rename_meditation;
 pub mod replace_program_cover;
 pub mod set_completed;
 pub mod set_program_category;

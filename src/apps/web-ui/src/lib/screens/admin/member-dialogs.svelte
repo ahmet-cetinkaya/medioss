@@ -3,10 +3,12 @@
   import {
     deleteMeditation,
     removeMember,
+    renameMeditation,
     updateMeditationDescription,
     type Meditation,
   } from "$lib/api/meditation";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
+  import RenameDialog from "$lib/components/dialogs/rename-dialog.svelte";
   import FormDialog from "$lib/components/dialogs/form-dialog.svelte";
   import { Label } from "$lib/components/ui/label/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
@@ -65,6 +67,20 @@
     if (!removing || selectedId === null) return;
     await removeMember(selectedId, removing.id);
     say(m.removed, { name: removing.name });
+    await onChanged();
+  }
+
+  let renameOpen = $state(false);
+
+  export function askRename(meditation: Meditation) {
+    target = meditation;
+    renameOpen = true;
+  }
+
+  async function runRename(name: string) {
+    if (!target) return;
+    const renamed = await renameMeditation(target.id, name);
+    say(m.meditationRenamed, { name: renamed.name });
     await onChanged();
   }
 
@@ -129,5 +145,14 @@
   confirmLabel={t(m.deleteMeditationItem)}
   destructive
   onConfirm={runDelete}
+  {fallbackFocus}
+/>
+
+<RenameDialog
+  bind:open={renameOpen}
+  title={t(m.renameMeditationTitle)}
+  currentName={target?.name ?? ""}
+  label={t(m.meditationName)}
+  onSave={runRename}
   {fallbackFocus}
 />

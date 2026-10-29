@@ -122,3 +122,17 @@ fn description_is_trimmed_cleared_when_blank_and_length_limited() {
         Err(MeditationError::InvalidDescription)
     );
 }
+
+#[test]
+fn with_name_trims_and_replaces_the_name() {
+    let renamed = valid().unwrap().with_name("  Evening calm ").unwrap();
+    assert_eq!(renamed.name(), "Evening calm");
+}
+
+#[test]
+fn with_name_rejects_blank_and_overlong_names() {
+    let blank = valid().unwrap().with_name("   ");
+    assert!(matches!(blank, Err(MeditationError::InvalidName)));
+    let too_long = valid().unwrap().with_name(&"a".repeat(MAX_NAME_LENGTH + 1));
+    assert!(matches!(too_long, Err(MeditationError::InvalidName)));
+}

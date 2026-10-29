@@ -88,6 +88,16 @@ impl Meditation {
 
     /// Returns the meditation with its description replaced. Blank text
     /// clears it (`None`); text over the limit is rejected.
+    /// Returns the meditation under a new name (trimmed, 1..=MAX_NAME_LENGTH).
+    pub fn with_name(mut self, name: &str) -> Result<Self, MeditationError> {
+        let name = name.trim();
+        if name.is_empty() || name.chars().count() > MAX_NAME_LENGTH {
+            return Err(MeditationError::InvalidName);
+        }
+        self.name = name.to_owned();
+        Ok(self)
+    }
+
     pub fn with_description(mut self, description: Option<&str>) -> Result<Self, MeditationError> {
         let description = description.map(str::trim).filter(|text| !text.is_empty());
         if description.is_some_and(|text| text.chars().count() > MAX_DESCRIPTION_LENGTH) {

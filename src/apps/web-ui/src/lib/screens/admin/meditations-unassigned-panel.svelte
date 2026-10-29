@@ -15,12 +15,14 @@
     meditations,
     onAssign,
     onEditDescription,
+    onRename,
     onDelete,
   }: {
     id: string;
     meditations: Meditation[];
     onAssign: (meditation: Meditation) => void;
     onEditDescription: (meditation: Meditation) => void;
+    onRename: (meditation: Meditation) => void;
     onDelete: (meditation: Meditation) => void;
   } = $props();
 </script>
@@ -56,7 +58,12 @@
             onclick={() => onAssign(meditation)}
           />
           <OverflowItem
-            label={t(actionMessages.edit)}
+            label={t(m.renameMeditationItem)}
+            icon="pencil-simple"
+            onclick={() => onRename(meditation)}
+          />
+          <OverflowItem
+            label={t(m.editDescriptionTitle)}
             icon="pencil-simple"
             onclick={() => onEditDescription(meditation)}
           />

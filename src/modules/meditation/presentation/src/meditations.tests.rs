@@ -176,3 +176,81 @@ async fn description_update_rejects_foreign_origin() {
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 }
+
+async fn put_name(
+    app: &TestApp,
+    actor: Option<kernel::Actor>,
+    id: i64,
+    body: &str,
+) -> (StatusCode, serde_json::Value) {
+    let (status, _, body) = json_body(
+        app,
+        actor,
+        "PUT",
+        &format!("/meditation/meditations/{id}/name"),
+        body,
+    )
+    .await;
+    (status, serde_json::from_slice(&body).unwrap_or_default())
+}
+
+#[tokio::test]
+async fn rename_returns_the_meditation_and_validates() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+
+    let (status, json) = put_name(
+        &app,
+        Some(admin_actor()),
+        meditation.id(),
+        r#"{"name":"  Evening calm "}"#,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["name"], "Evening calm");
+
+    let (status, _) = put_name(
+        &app,
+        Some(admin_actor()),
+        meditation.id(),
+        r#"{"name":"   "}"#,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn rename_is_admin_only_and_unknown_ids_are_404() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let (status, _) = put_name(
+        &app,
+        Some(member_actor()),
+        meditation.id(),
+        r#"{"name":"x"}"#,
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _) = put_name(&app, None, meditation.id(), r#"{"name":"x"}"#).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _) = put_name(&app, Some(admin_actor()), 999, r#"{"name":"x"}"#).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn rename_rejects_foreign_origin() {
+    let app = app();
+    let (status, _, _) = call(
+        &app,
+        Some(admin_actor()),
+        "PUT",
+        "/meditation/meditations/1/name",
+        vec![
+            ("origin", "http://evil.test"),
+            ("content-type", "application/json"),
+        ],
+        axum::body::Body::from(r#"{"name":"x"}"#),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}

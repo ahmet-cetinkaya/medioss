@@ -28,7 +28,7 @@ use crate::handlers_notes::{create_note, delete_note, notes, update_note};
 use crate::handlers_playback::{completion, playback_state, position, set_completed};
 use crate::handlers_statistics::statistics;
 use crate::meditations::{
-    daily_suggestion, delete_meditation, library, meditation, update_description,
+    daily_suggestion, delete_meditation, library, meditation, rename_meditation, update_description,
 };
 use crate::program_activity::{continue_program, recent_programs};
 use crate::program_cover::{cover, replace_cover};
@@ -58,6 +58,7 @@ pub struct MeditationDependencies {
     pub update_program_order: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_program_order::UpdateProgramOrderCommand, Output = ()>>,
     pub upload_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::upload_meditation::UploadMeditationCommand, Output = meditation_domain::Meditation>>,
     pub delete_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::delete_meditation::DeleteMeditationCommand, Output = ()>>,
+    pub rename_meditation: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::rename_meditation::RenameMeditationCommand, Output = meditation_domain::Meditation>>,
     pub update_meditation_description: Arc<dyn meditation_application::ports::CommandHandler<meditation_application::commands::update_meditation_description::UpdateMeditationDescriptionCommand, Output = meditation_domain::Meditation>>,
     pub get_meditation: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_meditation::GetMeditationQuery, Output = meditation_domain::Meditation>>,
     pub get_meditation_detail: Arc<dyn meditation_application::ports::QueryHandler<meditation_application::queries::get_meditation_detail::GetMeditationDetailQuery, Output = meditation_application::queries::get_meditation_detail::MeditationDetail>>,
@@ -205,6 +206,7 @@ fn meditation_routes() -> Router<SharedDependencies> {
         .route("/meditation/statistics", get(statistics))
         .route("/meditation/daily-suggestion", get(daily_suggestion))
         .route("/meditation/meditations/{id}", put(update_description))
+        .route("/meditation/meditations/{id}/name", put(rename_meditation))
         .route(
             "/meditation/{id}",
             get(meditation).delete(delete_meditation),
