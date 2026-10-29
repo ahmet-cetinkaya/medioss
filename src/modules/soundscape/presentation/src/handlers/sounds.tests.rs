@@ -239,3 +239,29 @@ async fn later_validation_failures_delete_the_staged_file() {
         assert_eq!(app.state.staging.file_count(), 0);
     }
 }
+
+#[tokio::test]
+async fn a_repeated_file_field_keeps_the_last_one_and_discards_the_first() {
+    let app = app();
+    let body = format!(
+        "{}--XB--\r\n",
+        [
+            part("name", "Wind"),
+            part("category_id", "1"),
+            file_part("first-part"),
+            file_part("second-part"),
+        ]
+        .concat()
+    );
+
+    let (status, _) = raw_upload(&app, body).await;
+
+    assert_eq!(status, StatusCode::CREATED);
+    let stored: Vec<Vec<u8>> = app.state.store.lock().unwrap().values().cloned().collect();
+    assert_eq!(stored, vec![b"second-part".to_vec()]);
+    assert_eq!(
+        app.state.staging.discarded_contents(),
+        vec![b"first-part".to_vec()]
+    );
+    assert_eq!(app.state.staging.file_count(), 0, "nothing stays staged");
+}

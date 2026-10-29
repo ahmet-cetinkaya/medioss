@@ -10,6 +10,7 @@ const UNLIMITED_FREE_BYTES: u64 = u64::MAX;
 struct StagingState {
     files: HashMap<String, Vec<u8>>,
     deleted: Vec<String>,
+    discarded_contents: Vec<Vec<u8>>,
     next_id: u64,
 }
 
@@ -61,6 +62,12 @@ impl FakeUploadStaging {
         self.state.lock().unwrap().deleted.len()
     }
 
+    /// Contents of every file removed by a dropped sink or `discard`, in order,
+    /// so tests can tell which upload was thrown away.
+    pub fn discarded_contents(&self) -> Vec<Vec<u8>> {
+        self.state.lock().unwrap().discarded_contents.clone()
+    }
+
     /// Removes a staged file without counting it as deleted: it was moved
     /// into the blob store.
     pub fn take(&self, media: &StagedMedia) -> Option<Vec<u8>> {
@@ -107,8 +114,9 @@ impl Drop for FakeSink {
             return;
         }
         let mut state = self.state.lock().unwrap();
-        if state.files.remove(&self.address).is_some() {
+        if let Some(contents) = state.files.remove(&self.address) {
             state.deleted.push(self.address.clone());
+            state.discarded_contents.push(contents);
         }
     }
 }
@@ -148,8 +156,9 @@ impl UploadStaging for FakeUploadStaging {
 
     async fn discard(&self, media: &StagedMedia) -> Result<(), StagingError> {
         let mut state = self.state.lock().unwrap();
-        if state.files.remove(&media.address).is_some() {
+        if let Some(contents) = state.files.remove(&media.address) {
             state.deleted.push(media.address.clone());
+            state.discarded_contents.push(contents);
         }
         Ok(())
     }
