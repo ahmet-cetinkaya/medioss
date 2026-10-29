@@ -16,7 +16,6 @@
   } from "$lib/components/icons/icon-name";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { soundIconUrl } from "$lib/api/soundscape";
   import { t } from "$lib/i18n/translate";
@@ -130,14 +129,16 @@
     </button>
   </div>
   <div class="grid gap-2">
-    <Input
+    <!-- A plain input: the styled Input's width and height classes override
+         sr-only and left a dialog-wide invisible box that scrolled sideways. -->
+    <input
       id="{idPrefix}-icon-file"
       type="file"
-      bind:ref={input}
+      bind:this={input}
       accept="image/png,image/jpeg,image/webp"
       onchange={choose}
       class="sr-only"
-      tabindex={-1}
+      tabindex="-1"
       aria-label={t(m.uploadTile)}
     />
     <p class="text-sm text-ink-muted">{t(m.imageHint)}</p>
