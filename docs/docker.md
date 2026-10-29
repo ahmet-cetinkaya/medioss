@@ -59,7 +59,7 @@ The health check calls `GET /api/health`. For HTTPS, put a reverse proxy in fron
 
 ## Publishing the image
 
-`.github/workflows/docker-publish.yml` builds the image for `linux/amd64` and `linux/arm64`. It runs only on tags: CI's `docker-smoke` job already builds and starts the amd64 image on every pull request and push to `main`, so branches are not built a second time here (the arm64 half is first built on the release tag). Only stable semver tags (`vX.Y.Z`, no prerelease suffix) publish `X.Y.Z`, `X.Y`, `X` and move `latest`, in one atomic push — `latest` always points at the last stable release, and prerelease tags like `v1.0.0-rc.1` never touch the registry.
+`.github/workflows/docker-publish.yml` builds `linux/amd64` and `linux/arm64` on a runner of each architecture (no emulation), then joins the two digests into one multi-arch manifest. It runs only on tags: CI's `docker-smoke` job already builds and starts the amd64 image on every pull request and push to `main`, so branches are not built a second time here (the arm64 half is first built on the release tag; a manual run of the workflow from a branch builds both without publishing a tag). Only stable semver tags (`vX.Y.Z`, no prerelease suffix) publish `X.Y.Z`, `X.Y`, `X` and move `latest`, in one atomic push — `latest` always points at the last stable release, and prerelease tags like `v1.0.0-rc.1` never touch the registry.
 
 The image is published to GitHub Container Registry as `ghcr.io/ahmet-cetinkaya/medioss`. The workflow logs in with the built-in `GITHUB_TOKEN`, so no secrets or variables are needed. After the first publish, set the package to public (package settings, Change visibility) and connect it to the repository so anyone can pull it.
 
