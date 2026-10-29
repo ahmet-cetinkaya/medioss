@@ -9,6 +9,7 @@ chrono.workspace = true
 meditation-application = { path = "../application" }
 meditation-domain = { path = "../domain" }
 kernel = { path = "../../../kernel" }
+libc = "0.2"
 media-store = { path = "../../../shared/media-store" }
 sea-orm.workspace = true
 sea-orm-migration.workspace = true

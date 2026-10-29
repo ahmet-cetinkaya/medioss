@@ -14,6 +14,7 @@ mod playback_state_repository;
 mod program_repository;
 mod query_handler;
 mod session_repository;
+mod staged_upload;
 
 pub use audio_validator::{AudioFormat, AudioValidator, SniffError};
 pub use blob_store::{BlobStore, StoredBlob};
@@ -30,3 +31,4 @@ pub use playback_state_repository::{PlaybackState, PlaybackStateRepository};
 pub use program_repository::{Program, ProgramRepository};
 pub use query_handler::QueryHandler;
 pub use session_repository::{MeditationSession, SessionRepository};
+pub use staged_upload::{StagedMedia, StagedSink, StagingError, UploadStaging};

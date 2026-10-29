@@ -1,4 +1,16 @@
 use super::*;
+use crate::media::TempFileStaging;
+use soundscape_application::ports::staged_upload::UploadStaging;
+
+async fn stage(staging: &TempFileStaging, bytes: &[u8]) -> StagedMedia {
+    let mut sink = staging.open().await.unwrap();
+    sink.append(bytes).await.unwrap();
+    sink.keep().await.unwrap()
+}
+
+fn read_staged(root: &Path, media: &StagedMedia) -> Vec<u8> {
+    std::fs::read(root.join(&media.address)).unwrap()
+}
 
 #[tokio::test]
 async fn wav_converts_to_lossless_flac_with_positive_duration() {
@@ -15,10 +27,15 @@ async fn wav_converts_to_lossless_flac_with_positive_duration() {
         .output()
         .expect("ffmpeg runs")
         .stdout;
-    let (flac, duration, stored) = FfmpegOpusConverter
-        .convert(wav.clone(), AudioFormat::Wav)
+    let root = tempfile::tempdir().unwrap();
+    let staging = TempFileStaging::new(root.path().to_path_buf());
+    let converter = FfmpegOpusConverter::new(root.path().to_path_buf());
+    let (converted, duration, stored) = converter
+        .convert(stage(&staging, &wav).await, AudioFormat::Wav)
         .await
         .expect("convert wav");
+    let flac = read_staged(root.path(), &converted);
+    assert_eq!(converted.size_bytes, flac.len() as u64);
     assert!(flac.starts_with(b"fLaC"));
     assert!(duration > 0);
     assert_eq!(stored.extension, "flac");
@@ -50,14 +67,32 @@ async fn mp3_passes_through_byte_identical() {
         .output()
         .expect("ffmpeg runs")
         .stdout;
-    let (stored_bytes, duration, stored) = FfmpegOpusConverter
-        .convert(mp3.clone(), AudioFormat::Mp3)
+    let root = tempfile::tempdir().unwrap();
+    let staging = TempFileStaging::new(root.path().to_path_buf());
+    let converter = FfmpegOpusConverter::new(root.path().to_path_buf());
+    let input = stage(&staging, &mp3).await;
+    let (converted, duration, stored) = converter
+        .convert(input.clone(), AudioFormat::Mp3)
         .await
         .expect("convert mp3");
-    assert_eq!(stored_bytes, mp3);
+    assert_eq!(converted.address, input.address);
+    assert_eq!(read_staged(root.path(), &converted), mp3);
     assert!(duration > 0);
     assert_eq!(stored.extension, "mp3");
     assert_eq!(stored.content_type, "audio/mpeg");
+}
+
+#[tokio::test]
+async fn undecodable_pcm_fails_and_leaves_no_converted_file() {
+    let root = tempfile::tempdir().unwrap();
+    let staging = TempFileStaging::new(root.path().to_path_buf());
+    let converter = FfmpegOpusConverter::new(root.path().to_path_buf());
+    let input = stage(&staging, b"RIFF\x04\0\0\0WAVEgarbage").await;
+
+    let result = converter.convert(input, AudioFormat::Wav).await;
+
+    assert!(result.is_err());
+    assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 1);
 }
 
 fn md5_of_pcm(bytes: &[u8]) -> String {

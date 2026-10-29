@@ -27,13 +27,14 @@ async fn description_is_stored_on_upload_and_updatable() {
         Arc::new(FakeValidator),
         Arc::new(FakeConverter { fail: false }),
         deps.store.clone(),
+        deps.staging.clone(),
         deps.clock.clone(),
         crate::test_support::TEST_MAX_UPLOAD_BYTES,
     )
     .handle(UploadMeditationCommand {
         name: "Described".into(),
         program_id,
-        bytes: b"OggS....OpusHead".to_vec(),
+        media: deps.staging.stage(b"OggS....OpusHead"),
         description: Some(" hello ".into()),
     })
     .await

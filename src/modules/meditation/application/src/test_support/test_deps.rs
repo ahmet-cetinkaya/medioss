@@ -6,8 +6,8 @@ use chrono::Utc;
 use super::{
     FakeBlobStore, FakeCategoryRepository, FakeConverter, FakeCoverValidator,
     FakeFavoriteRepository, FakeMeditationRepository, FakeMembershipRepository, FakeNoteRepository,
-    FakePlaybackRepository, FakeProgramRepository, FakeSessionRepository, FakeValidator,
-    FixedClock, RepoState, TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES,
+    FakePlaybackRepository, FakeProgramRepository, FakeSessionRepository, FakeUploadStaging,
+    FakeValidator, FixedClock, RepoState, TEST_MAX_COVER_BYTES, TEST_MAX_UPLOAD_BYTES,
 };
 use crate::commands::create_program::{CreateProgramCommand, CreateProgramCommandHandler};
 use crate::commands::upload_meditation::{UploadMeditationCommand, UploadMeditationCommandHandler};
@@ -24,11 +24,13 @@ pub struct TestDeps {
     pub playback: Arc<FakePlaybackRepository>,
     pub favorites: Arc<FakeFavoriteRepository>,
     pub store: Arc<FakeBlobStore>,
+    pub staging: Arc<FakeUploadStaging>,
     pub clock: Arc<FixedClock>,
 }
 
 impl TestDeps {
     pub fn new() -> Self {
+        let store = Arc::new(FakeBlobStore::new());
         Self {
             meditations: Arc::new(FakeMeditationRepository(RepoState::new())),
             programs: Arc::new(FakeProgramRepository(RepoState::new())),
@@ -38,7 +40,8 @@ impl TestDeps {
             notes: Arc::new(FakeNoteRepository(RepoState::new())),
             playback: Arc::new(FakePlaybackRepository(RepoState::new())),
             favorites: Arc::new(FakeFavoriteRepository(RepoState::new())),
-            store: Arc::new(FakeBlobStore::new()),
+            store: store.clone(),
+            staging: Arc::new(store.staging.clone()),
             clock: Arc::new(FixedClock(Utc::now())),
         }
     }
@@ -75,13 +78,14 @@ impl TestDeps {
             Arc::new(FakeValidator),
             Arc::new(FakeConverter { fail: false }),
             self.store.clone(),
+            self.staging.clone(),
             self.clock.clone(),
             TEST_MAX_UPLOAD_BYTES,
         )
         .handle(UploadMeditationCommand {
             name: name.to_owned(),
             program_id,
-            bytes: b"OggS....OpusHead".to_vec(),
+            media: self.staging.stage(b"OggS....OpusHead"),
             description: None,
         })
         .await

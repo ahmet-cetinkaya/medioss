@@ -1,7 +1,7 @@
 use sea_orm::DatabaseConnection;
 use soundscape_domain::MAX_ICON_BYTES;
 use soundscape_infrastructure::media::{
-    FfmpegAudioValidator, FfmpegOpusConverter, MediaStoreBlobs,
+    FfmpegAudioValidator, FfmpegOpusConverter, MediaStoreBlobs, TempFileStaging,
 };
 use soundscape_presentation::{SharedDependencies, SoundscapeDependencies};
 use std::sync::Arc;
@@ -68,9 +68,14 @@ pub fn soundscape_dependencies(
         Arc::new(SeaOrmSoundRepository::new(db.clone()));
     let mixes: Arc<dyn soundscape_application::ports::MixRepository> =
         Arc::new(SeaOrmMixRepository::new(db.clone()));
-    let store: Arc<dyn soundscape_application::ports::media::BlobStore> = Arc::new(
-        MediaStoreBlobs(media_store::MediaStore::new(data_dir.join("media"))),
-    );
+    let staging_root = data_dir.join(crate::bootstrap::scratch_dir::SCRATCH_DIR_NAME);
+    let staging: Arc<dyn soundscape_application::ports::staged_upload::UploadStaging> =
+        Arc::new(TempFileStaging::new(staging_root.clone()));
+    let store: Arc<dyn soundscape_application::ports::media::BlobStore> =
+        Arc::new(MediaStoreBlobs::new(
+            media_store::MediaStore::new(data_dir.join("media")),
+            staging_root.clone(),
+        ));
     let normalizer: Arc<dyn soundscape_application::ports::media::ImageNormalizer> =
         Arc::new(IconNormalizer);
 
@@ -85,8 +90,9 @@ pub fn soundscape_dependencies(
             categories.clone(),
             sounds.clone(),
             Arc::new(FfmpegAudioValidator),
-            Arc::new(FfmpegOpusConverter),
+            Arc::new(FfmpegOpusConverter::new(staging_root)),
             store.clone(),
+            staging.clone(),
             normalizer.clone(),
             max_upload_bytes,
         )),
@@ -122,6 +128,7 @@ pub fn soundscape_dependencies(
         sounds,
         mixes,
         medioss_origin,
+        staging,
         max_upload_bytes,
     })
 }

@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use futures_io::AsyncRead;
 
+use super::staged_upload::StagedMedia;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AudioFormat {
     Mp3,
@@ -24,9 +26,9 @@ pub trait AudioValidator: Send + Sync {
 pub trait OpusConverter: Send + Sync {
     async fn convert(
         &self,
-        bytes: Vec<u8>,
+        media: StagedMedia,
         format: AudioFormat,
-    ) -> Result<(Vec<u8>, i64, StoredAudio), String>;
+    ) -> Result<(StagedMedia, i64, StoredAudio), String>;
 }
 pub struct BlobReader(pub Box<dyn AsyncRead + Send + Unpin>);
 
@@ -57,6 +59,14 @@ pub trait BlobStore: Send + Sync {
         stem: &str,
         ext: &str,
         bytes: &[u8],
+    ) -> Result<String, String>;
+    /// Moves a staged file into the store without reading it into memory.
+    async fn put_staged(
+        &self,
+        media: StagedMedia,
+        folder: &str,
+        stem: &str,
+        ext: &str,
     ) -> Result<String, String>;
     async fn open_range(
         &self,

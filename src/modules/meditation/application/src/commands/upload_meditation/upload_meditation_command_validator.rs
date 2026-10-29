@@ -17,7 +17,7 @@ impl UploadMeditationCommandValidator {
     pub fn validate(&self, command: &UploadMeditationCommand) -> Result<(), ApplicationError> {
         validate_name(&command.name)?;
         self.normalized_description(command)?;
-        if command.bytes.len() > self.max_upload_bytes {
+        if command.media.size_bytes > self.max_upload_bytes as u64 {
             return Err(ApplicationError::PayloadTooLarge);
         }
         Ok(())

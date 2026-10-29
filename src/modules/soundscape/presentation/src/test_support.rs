@@ -11,8 +11,10 @@ use soundscape_application::ports::{
         AudioFormat, AudioValidator, BlobReader, BlobStore, ImageNormalizationError,
         ImageNormalizer, OpusConverter, StoredAudio,
     },
+    staged_upload::StagedMedia,
     CategoryDelete, CategoryRepository, Clock, MixRepository, NewMix, NewSound, SoundRepository,
 };
+use soundscape_application::test_support::FakeUploadStaging;
 use soundscape_domain::{Mix, Sound, SoundCategory, SoundIcon};
 use tower::ServiceExt;
 
@@ -43,6 +45,7 @@ pub(super) struct FakeState {
     pub(super) normalization_count: std::sync::Mutex<usize>,
     pub(super) normalization_error: std::sync::Mutex<Option<ImageNormalizationError>>,
     pub(super) open_error: std::sync::Mutex<Option<String>>,
+    pub(super) staging: FakeUploadStaging,
 }
 
 pub(super) struct FakeCategories(pub(super) Arc<FakeState>);
@@ -268,11 +271,11 @@ pub(super) struct FakeConverter;
 impl OpusConverter for FakeConverter {
     async fn convert(
         &self,
-        bytes: Vec<u8>,
+        media: StagedMedia,
         _format: AudioFormat,
-    ) -> Result<(Vec<u8>, i64, StoredAudio), String> {
+    ) -> Result<(StagedMedia, i64, StoredAudio), String> {
         Ok((
-            bytes,
+            media,
             60_000,
             StoredAudio {
                 extension: "opus",
@@ -320,6 +323,16 @@ impl BlobStore for FakeStore {
             .insert(key.clone(), bytes.to_vec());
         Ok(key)
     }
+    async fn put_staged(
+        &self,
+        media: StagedMedia,
+        _folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<String, String> {
+        let bytes = self.0.staging.take(&media).ok_or("staged file missing")?;
+        self.put("soundscape", stem, ext, &bytes).await
+    }
     async fn open_range(
         &self,
         key: &str,
@@ -364,11 +377,15 @@ impl Clock for FixedClock {
 
 pub(super) struct TestApp {
     pub(super) router: Router,
-    #[allow(dead_code)] // kept for future assertions that inspect fake state
     pub(super) state: Arc<FakeState>,
 }
 
 pub(super) fn app() -> TestApp {
+    app_with_cap(TEST_MAX_UPLOAD_BYTES)
+}
+
+/// An app whose upload cap is `max_upload_bytes`, so a short body can overflow it.
+pub(super) fn app_with_cap(max_upload_bytes: usize) -> TestApp {
     let state = Arc::new(FakeState::default());
     state.categories.lock().unwrap().push(SoundCategory {
         id: 1,
@@ -430,8 +447,9 @@ pub(super) fn app() -> TestApp {
                 Arc::new(FakeValidator),
                 Arc::new(FakeConverter),
                 store.clone(),
+                Arc::new(state.staging.clone()),
                 Arc::new(FakeImageNormalizer(state.clone())),
-                TEST_MAX_UPLOAD_BYTES,
+                max_upload_bytes,
             ),
         ),
         update_sound: Arc::new(
@@ -482,10 +500,11 @@ pub(super) fn app() -> TestApp {
         sounds,
         mixes,
         medioss_origin: Arc::new("http://localhost".into()),
-        max_upload_bytes: TEST_MAX_UPLOAD_BYTES,
+        staging: Arc::new(state.staging.clone()),
+        max_upload_bytes,
     };
     TestApp {
-        router: soundscape_router(TEST_MAX_UPLOAD_BYTES).with_state(Arc::new(deps)),
+        router: soundscape_router(max_upload_bytes).with_state(Arc::new(deps)),
         state,
     }
 }

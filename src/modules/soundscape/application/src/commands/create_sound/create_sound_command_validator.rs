@@ -17,7 +17,7 @@ impl CreateSoundCommandValidator {
     pub fn validate(&self, command: &CreateSoundCommand) -> Result<(), ApplicationError> {
         valid_name(&command.name).map_err(|_| ApplicationError::InvalidInput("sound name"))?;
         parse_icon_key(command.icon_key.as_deref())?;
-        if command.bytes.len() > self.max_upload_bytes {
+        if command.media.size_bytes > self.max_upload_bytes as u64 {
             return Err(ApplicationError::PayloadTooLarge);
         }
         Ok(())

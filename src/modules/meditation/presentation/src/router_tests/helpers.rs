@@ -98,6 +98,8 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
     let converter: Arc<dyn meditation_application::ports::OpusConverter> =
         Arc::new(FakeConverter { fail: false });
     let store_port: Arc<dyn meditation_application::ports::BlobStore> = Arc::new(store.clone());
+    let staging: Arc<dyn meditation_application::ports::UploadStaging> =
+        Arc::new(store.staging.clone());
     let clock: Arc<dyn meditation_application::ports::Clock> =
         Arc::new(FixedClock(chrono::Utc::now()));
     MeditationDependencies {
@@ -158,6 +160,7 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
             validator,
             converter,
             store_port.clone(),
+            staging.clone(),
             clock.clone(),
             TEST_MAX_UPLOAD_BYTES,
         )),
@@ -253,6 +256,7 @@ pub(crate) fn test_dependencies(state: RepoState, store: &FakeBlobStore) -> Medi
         playback,
         cover_validator,
         store: store_port,
+        staging,
         medioss_origin: Arc::new("http://localhost".to_owned()),
         max_upload_bytes: TEST_MAX_UPLOAD_BYTES,
         max_cover_bytes: TEST_MAX_COVER_BYTES,

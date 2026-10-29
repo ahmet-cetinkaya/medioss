@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::io::AsyncReadExt;
 
 use crate::storage::{error::MediaStoreError, media_stream::MediaStream, storage_key::StorageKey};
@@ -42,6 +42,18 @@ fn slugify(input: &str, max_len: usize) -> String {
         slug.pop();
     }
     slug
+}
+
+/// Renames `from` over `to`, copying and deleting when the two paths sit on
+/// different devices.
+async fn move_file(from: &Path, to: &Path) -> std::io::Result<()> {
+    match tokio::fs::rename(from, to).await {
+        Err(error) if error.kind() == std::io::ErrorKind::CrossesDevices => {
+            tokio::fs::copy(from, to).await?;
+            tokio::fs::remove_file(from).await
+        }
+        other => other,
+    }
 }
 
 /// A filesystem blob store: writes, opens, moves, and deletes files under
@@ -151,6 +163,77 @@ impl MediaStore {
                         path: temp_path.display().to_string(),
                         source,
                     });
+                }
+            }
+        }
+    }
+
+    /// Moves the file at `from` into the store under a fresh
+    /// `folder/{slug}-{suffix}.{ext}` key, consuming it without reading it
+    /// into memory. Uses a rename and falls back to copy-then-delete when
+    /// `from` lives on another device. Naming and key validation match
+    /// [`MediaStore::put`].
+    pub async fn move_in(
+        &self,
+        from: &Path,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<StorageKey, MediaStoreError> {
+        let (key, target) = self.claim_new_key(folder, stem, ext).await?;
+        if let Err(source) = move_file(from, &target).await {
+            let _ = tokio::fs::remove_file(&target).await;
+            return Err(MediaStoreError::Io {
+                path: from.display().to_string(),
+                source,
+            });
+        }
+        Ok(key)
+    }
+
+    /// Reserves an unused key by creating its empty file, so a concurrent
+    /// writer cannot take the same name before the data lands.
+    async fn claim_new_key(
+        &self,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<(StorageKey, PathBuf), MediaStoreError> {
+        let folder = slugify(folder, 48);
+        let stem = slugify(stem, 48);
+        let ext: String = ext
+            .chars()
+            .filter(|character| character.is_ascii_alphanumeric())
+            .collect();
+        let dir = self.root.join(&folder);
+        tokio::fs::create_dir_all(&dir)
+            .await
+            .map_err(|source| MediaStoreError::Io {
+                path: dir.display().to_string(),
+                source,
+            })?;
+        loop {
+            let suffix = Self::random_suffix();
+            let name = if stem.is_empty() {
+                "file"
+            } else {
+                stem.as_str()
+            };
+            let key = StorageKey::parse_with_separator(format!("{folder}/{name}-{suffix}.{ext}"))?;
+            let path = self.blob_path(&key);
+            match tokio::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .await
+            {
+                Ok(_) => return Ok((key, path)),
+                Err(source) if source.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(source) => {
+                    return Err(MediaStoreError::Io {
+                        path: path.display().to_string(),
+                        source,
+                    })
                 }
             }
         }

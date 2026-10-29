@@ -37,13 +37,14 @@ async fn deleting_a_program_keeps_meditations_and_cleans_cover_and_members() {
         Arc::new(FakeValidator),
         Arc::new(FakeConverter { fail: false }),
         deps.store.clone(),
+        deps.staging.clone(),
         deps.clock.clone(),
         TEST_MAX_UPLOAD_BYTES,
     )
     .handle(UploadMeditationCommand {
         name: "Home".into(),
         program_id: program.id,
-        bytes: b"OggS....OpusHead".to_vec(),
+        media: deps.staging.stage(b"OggS....OpusHead"),
         description: None,
     })
     .await

@@ -4,6 +4,7 @@
 mod fake_audio_validator;
 mod fake_image_normalizer;
 mod fake_opus_converter;
+mod fake_upload_staging;
 mod fixed_clock;
 mod in_memory_categories;
 mod in_memory_mixes;
@@ -14,6 +15,7 @@ mod sample_sound;
 pub use fake_audio_validator::FakeAudioValidator;
 pub use fake_image_normalizer::FakeImageNormalizer;
 pub use fake_opus_converter::FakeOpusConverter;
+pub use fake_upload_staging::FakeUploadStaging;
 pub use fixed_clock::FixedClock;
 pub use in_memory_categories::InMemoryCategories;
 pub use in_memory_mixes::InMemoryMixes;

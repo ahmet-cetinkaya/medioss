@@ -15,7 +15,7 @@ use axum::{
 use tower_http::limit::RequestBodyLimitLayer;
 
 use meditation_application::ports::{
-    BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository,
+    BlobStore, CoverValidator, PlaybackStateRepository, ProgramRepository, UploadStaging,
 };
 
 use crate::audio_stream::{audio, download};
@@ -89,6 +89,8 @@ pub struct MeditationDependencies {
     pub cover_validator: Arc<dyn CoverValidator>,
     /// Blob reads and writes behind covers and audio streaming.
     pub store: Arc<dyn BlobStore>,
+    /// Disk staging that audio uploads stream into instead of memory.
+    pub staging: Arc<dyn UploadStaging>,
     /// The "now" feeding the statistics window.
     pub medioss_origin: Arc<String>,
     /// Cap on a meditation upload's audio field; `meditation_router` must receive the same value.

@@ -1,4 +1,5 @@
 pub mod media;
+pub mod staged_upload;
 
 mod command_handler;
 mod query_handler;
