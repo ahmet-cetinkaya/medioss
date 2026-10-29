@@ -18,6 +18,7 @@ use meditation_application::commands::favorite_meditation::FavoriteMeditationCom
 use meditation_application::commands::record_completion::RecordCompletionCommandHandler;
 use meditation_application::commands::record_position::RecordPositionCommandHandler;
 use meditation_application::commands::remove_member::RemoveMemberCommandHandler;
+use meditation_application::commands::remove_program_cover::RemoveProgramCoverCommandHandler;
 use meditation_application::commands::rename_category::RenameCategoryCommandHandler;
 use meditation_application::commands::rename_meditation::RenameMeditationCommandHandler;
 use meditation_application::commands::replace_program_cover::ReplaceProgramCoverCommandHandler;
@@ -364,6 +365,10 @@ fn meditation_dependencies_with_ports(
             categories,
         )),
         get_program_cover: Arc::new(GetProgramCoverQueryHandler::new(
+            programs.clone(),
+            store.clone(),
+        )),
+        remove_program_cover: Arc::new(RemoveProgramCoverCommandHandler::new(
             programs.clone(),
             store.clone(),
         )),

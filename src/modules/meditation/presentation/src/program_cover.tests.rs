@@ -203,3 +203,87 @@ async fn replace_rejects_foreign_origin() {
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 }
+
+async fn delete_cover(
+    app: &TestApp,
+    actor: Option<kernel::Actor>,
+    id: i64,
+    headers: Vec<(&str, &str)>,
+) -> StatusCode {
+    call(
+        app,
+        actor,
+        "DELETE",
+        &format!("/meditation/programs/{id}/cover"),
+        headers,
+        Body::empty(),
+    )
+    .await
+    .0
+}
+
+async fn cover_status(app: &TestApp, id: i64) -> StatusCode {
+    call(
+        app,
+        Some(member_actor()),
+        "GET",
+        &format!("/meditation/programs/{id}/cover"),
+        vec![],
+        Body::empty(),
+    )
+    .await
+    .0
+}
+
+#[tokio::test]
+async fn remove_deletes_the_cover_with_204_and_is_idempotent() {
+    let app = app();
+    let program = make_program(&app, Some(PNG)).await;
+    assert_eq!(cover_status(&app, program).await, StatusCode::OK);
+
+    assert_eq!(
+        delete_cover(&app, Some(admin_actor()), program, vec![]).await,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(cover_status(&app, program).await, StatusCode::NOT_FOUND);
+    assert_eq!(
+        delete_cover(&app, Some(admin_actor()), program, vec![]).await,
+        StatusCode::NO_CONTENT
+    );
+}
+
+#[tokio::test]
+async fn remove_is_admin_only_and_unknown_programs_are_404() {
+    let app = app();
+    let program = make_program(&app, Some(PNG)).await;
+    assert_eq!(
+        delete_cover(&app, Some(member_actor()), program, vec![]).await,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        delete_cover(&app, None, program, vec![]).await,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        delete_cover(&app, Some(admin_actor()), 999, vec![]).await,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(cover_status(&app, program).await, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn remove_rejects_a_foreign_origin() {
+    let app = app();
+    let program = make_program(&app, Some(PNG)).await;
+    assert_eq!(
+        delete_cover(
+            &app,
+            Some(admin_actor()),
+            program,
+            vec![("origin", "http://evil.test")]
+        )
+        .await,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(cover_status(&app, program).await, StatusCode::OK);
+}

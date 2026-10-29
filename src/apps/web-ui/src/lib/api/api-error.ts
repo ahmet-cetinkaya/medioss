@@ -37,6 +37,7 @@ export type ApiAction =
   | "program.update"
   | "program.delete"
   | "program.cover"
+  | "program.cover.remove"
   | "continue.load"
   | "suggestion.load"
   | "recentPrograms.load"

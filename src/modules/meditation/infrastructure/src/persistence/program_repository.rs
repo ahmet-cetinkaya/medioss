@@ -54,6 +54,20 @@ impl ProgramRepository for SeaOrmProgramRepository {
         to_domain(model)
     }
 
+    async fn clear_cover_key(&self, id: i64) -> Result<bool, String> {
+        let Some(model) = table::Entity::find_by_id(id)
+            .one(&self.db)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(false);
+        };
+        let mut row: table::ActiveModel = model.into();
+        row.cover_storage_key = Set(None);
+        row.update(&self.db).await.map_err(|e| e.to_string())?;
+        Ok(true)
+    }
+
     async fn set_cover_key(&self, id: i64, key: &str) -> Result<bool, String> {
         let Some(model) = table::Entity::find_by_id(id)
             .one(&self.db)

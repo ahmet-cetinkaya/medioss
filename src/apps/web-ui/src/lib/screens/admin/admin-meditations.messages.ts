@@ -209,6 +209,11 @@ export const meditationAdminMessages = defineMessages({
     en: "Meditation “{name}” was deleted.",
     tr: "“{name}” meditasyonu silindi.",
   },
+  removeCover: { en: "Remove the cover", tr: "Kapağı kaldır" },
+  coverRemoved: {
+    en: "Cover of “{title}” was removed.",
+    tr: "“{title}” kapağı kaldırıldı.",
+  },
   deleteProgramItem: { en: "Delete program", tr: "Programı sil" },
   deleteProgramDialogTitle: {
     en: "Delete this program?",

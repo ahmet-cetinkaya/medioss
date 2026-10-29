@@ -19,6 +19,20 @@ export function parseProgramId(pathname: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * The program a deep link may open: `null` when the link names no program or
+ * one that no longer exists, so a stale URL falls back to the programs list.
+ */
+export function programToOpen(
+  requestedId: number | null,
+  programs: readonly Program[],
+): number | null {
+  if (requestedId === null) return null;
+  return programs.some((program) => program.id === requestedId)
+    ? requestedId
+    : null;
+}
+
 export function matchesFilter(
   program: Program,
   filter: CategoryFilter,

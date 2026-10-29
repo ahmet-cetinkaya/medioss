@@ -27,6 +27,9 @@ pub trait ProgramRepository: Send + Sync {
     ) -> Result<Program, String>;
 
     /// Records the stored cover location; `false` when the program is unknown.
+    /// Clears the cover key; `false` when the identifier is unknown.
+    async fn clear_cover_key(&self, id: i64) -> Result<bool, String>;
+
     async fn set_cover_key(&self, id: i64, key: &str) -> Result<bool, String>;
 
     /// Finds a program by identifier.
