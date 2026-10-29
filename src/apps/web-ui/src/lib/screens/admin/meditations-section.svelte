@@ -287,6 +287,9 @@
             meditations={unassigned}
             onAssign={(meditation) =>
               addMeditationDialogs?.askAssign(meditation)}
+            onEditDescription={(meditation) =>
+              memberDialogs?.askEditDescription(meditation)}
+            onDelete={(meditation) => memberDialogs?.askDelete(meditation)}
           />
         </div>
       {/if}
@@ -364,5 +367,5 @@
   {id}
   {selectedId}
   onChanged={() => refresh(selectedId ?? undefined)}
-  fallbackFocus={() => detailHeading}
+  fallbackFocus={() => (selectedId === null ? programsHeading : detailHeading)}
 />
