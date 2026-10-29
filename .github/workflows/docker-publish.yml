@@ -1,7 +1,11 @@
 name: Docker image
 
-# Builds the Dockerfile. Pull requests and pushes to main only build (job
-# `build`: read-only token, no registry login, no push). Only a tag that
+# Builds the Dockerfile. Pushes to main only build (job `build`: read-only
+# token, no registry login, no push, both architectures). Pull requests are
+# not built here: CI's `docker-smoke` job already builds the same Dockerfile
+# for amd64 and starts it, so a second build per PR push is pure duplicate.
+# Docs-only pushes to main skip the build; path filters are not evaluated for
+# tag pushes, so a release tag always publishes. Only a tag that
 # matches the strict semver filter below (vX.Y.Z) starts job `publish`, which
 # alone gets `packages: write`, pushes to GitHub Container Registry and moves
 # `latest`. The tag filter is a glob, not a regex, but `[0-9]+` makes it
@@ -14,7 +18,9 @@ on:
   push:
     branches: [main]
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
-  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
 
 concurrency:
   group: docker-${{ github.workflow }}-${{ github.ref }}
@@ -44,9 +50,9 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          # PRs prove the Dockerfile builds on one arch only; main also
-          # proves arm64.
-          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # main proves both published architectures (amd64 is also covered
+          # for PRs by CI's docker-smoke).
+          platforms: linux/amd64,linux/arm64
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
