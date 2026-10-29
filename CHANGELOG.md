@@ -2,6 +2,12 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
+## [Unreleased]
+
+### Security
+
+- **Dependency advisories** (`#102`): `rustls-webpki` 0.103.16 (RUSTSEC-2026-0382, distrusted intermediates could be accepted) and `webpki-roots` 1.0.11 (RUSTSEC-2026-0381, emSign intermediates); the lockfile of 1.1.1 still pinned the vulnerable versions.
+
 ## [1.1.1] — 2026-10-29
 
 ### Changed
