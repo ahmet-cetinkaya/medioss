@@ -44,6 +44,14 @@ export async function uploadAudio(
   );
 }
 
+export async function deleteMeditation(id: number): Promise<void> {
+  await request(
+    `/api/meditation/${id}`,
+    { method: "DELETE" },
+    { action: "meditation.delete" },
+  );
+}
+
 export async function updateMeditationDescription(
   id: number,
   description: string | null,

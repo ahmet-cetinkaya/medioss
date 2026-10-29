@@ -89,7 +89,8 @@
     }
   }
 
-  onMount(() => void load());
+  // A deep link (/admin/meditations/<id>/) opens with a program selected.
+  onMount(() => void load().then(() => loadMembers()));
 
   // Selection: category filter ("all" | "none" | category id) and program.
   // The selected program lives in the address (/admin/meditations/<id>/),
@@ -262,6 +263,7 @@
           onAddMeditation={(program) =>
             void addMeditationDialogs?.askAdd(program)}
           onUpload={(program) => uploadDialog?.ask(program)}
+          onDelete={(program) => programDialogs?.askDelete(program)}
         />
       </div>
 
@@ -304,6 +306,7 @@
           onBack={() => void backToPrograms()}
           onEdit={(program) => programDialogs?.askEdit(program)}
           onUpload={(program) => uploadDialog?.ask(program)}
+          onDelete={(program) => programDialogs?.askDelete(program)}
           onAddMeditation={(program) =>
             void addMeditationDialogs?.askAdd(program)}
           onRetryMembers={() => void loadMembers()}
@@ -311,6 +314,8 @@
           onEditDescription={(meditation) =>
             memberDialogs?.askEditDescription(meditation)}
           onRemove={(meditation) => memberDialogs?.askRemove(meditation)}
+          onDeleteMeditation={(meditation) =>
+            memberDialogs?.askDelete(meditation)}
         />
       </div>
     </div>
@@ -332,6 +337,9 @@
   categories={data?.categories ?? []}
   onChanged={refresh}
   onCoverReplaced={bumpCoverVersion}
+  onDeleting={(program) => {
+    if (selectedId === program.id) void backToPrograms();
+  }}
 />
 
 <AddMeditationDialogs
@@ -355,6 +363,6 @@
   bind:this={memberDialogs}
   {id}
   {selectedId}
-  onChanged={() => loadMembers(false)}
+  onChanged={() => refresh(selectedId ?? undefined)}
   fallbackFocus={() => detailHeading}
 />

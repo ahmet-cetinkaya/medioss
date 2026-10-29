@@ -36,10 +36,12 @@
     onEdit,
     onUpload,
     onAddMeditation,
+    onDelete,
     onRetryMembers,
     onMove,
     onEditDescription,
     onRemove,
+    onDeleteMeditation,
   }: {
     id: string;
     selected: Program | null;
@@ -55,10 +57,12 @@
     onEdit: (program: Program) => void;
     onUpload: (program: Program) => void;
     onAddMeditation: (program: Program) => void;
+    onDelete: (program: Program) => void;
     onRetryMembers: () => void;
     onMove: (index: number, delta: -1 | 1) => void;
     onEditDescription: (meditation: Meditation) => void;
     onRemove: (meditation: Meditation) => void;
+    onDeleteMeditation: (meditation: Meditation) => void;
   } = $props();
 </script>
 
@@ -102,6 +106,10 @@
       <Button variant="secondary" onclick={() => onAddMeditation(selected)}>
         <AppIcon name="plus" size={20} />
         {t(m.addMeditationItem)}
+      </Button>
+      <Button variant="secondary" onclick={() => onDelete(selected)}>
+        <AppIcon name="trash" size={20} />
+        {t(m.deleteProgramItem)}
       </Button>
     </div>
     <div class="mb-4 flex flex-wrap gap-4 rounded-tile bg-surface-solid/50 p-4">
@@ -218,6 +226,12 @@
                   icon="trash"
                   destructive
                   onclick={() => onRemove(meditation)}
+                />
+                <OverflowItem
+                  label={t(m.deleteMeditationItem)}
+                  icon="trash"
+                  destructive
+                  onclick={() => onDeleteMeditation(meditation)}
                 />
               </OverflowMenu>
             </div>
