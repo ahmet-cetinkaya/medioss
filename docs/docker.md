@@ -40,11 +40,11 @@ All state lives in the `app_data` volume mounted at `/data` (SQLite database and
 The published image supports `linux/amd64` and `linux/arm64`:
 
 ```bash
-docker pull ghcr.io/ahmet-cetinkaya/medioss:1.1.0   # a pinned release
+docker pull ghcr.io/ahmet-cetinkaya/medioss:1.1.1   # a pinned release
 docker pull ghcr.io/ahmet-cetinkaya/medioss:latest  # the newest stable release
 ```
 
-`docker-compose.yml` uses `latest` by default. Pin a release by setting `MEDIOSS_VERSION=1.1.0` in `.env`, then run `docker compose pull && docker compose up -d`.
+`docker-compose.yml` uses `latest` by default. Pin a release by setting `MEDIOSS_VERSION=1.1.1` in `.env`, then run `docker compose pull && docker compose up -d`.
 
 ## Operate
 
