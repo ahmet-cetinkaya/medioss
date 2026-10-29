@@ -1,14 +1,12 @@
 name: Docker image
 
-# Builds the Dockerfile. Pushes to main only build (job `build`: read-only
-# token, no registry login, no push, both architectures). Pull requests are
-# not built here: CI's `docker-smoke` job already builds the same Dockerfile
-# for amd64 and starts it, so a second build per PR push is pure duplicate.
-# Docs-only pushes to main skip the build; path filters are not evaluated for
-# tag pushes, so a release tag always publishes. Only a tag that
-# matches the strict semver filter below (vX.Y.Z) starts job `publish`, which
-# alone gets `packages: write`, pushes to GitHub Container Registry and moves
-# `latest`. The tag filter is a glob, not a regex, but `[0-9]+` makes it
+# Publishes the image, and only on a release tag. Branch pushes and pull
+# requests are not built here: CI's `docker-smoke` job already builds the same
+# Dockerfile for amd64 and starts it, so a second multi-arch build (about 90
+# minutes under QEMU emulation for arm64) per push would be pure duplicate.
+# Only a tag that matches the strict semver filter below (vX.Y.Z) starts job
+# `publish`, which gets `packages: write`, pushes to GitHub Container
+# Registry and moves `latest`. The tag filter is a glob, not a regex, but `[0-9]+` makes it
 # reject prerelease tags such as v1.0.0-rc.1 and names such as v-foo, so
 # those never reach the registry (23-F1). `publish` pushes in one step:
 # build-push applies the semver tags and `latest` atomically in a single
@@ -16,11 +14,7 @@ name: Docker image
 # Logs in with the built-in GITHUB_TOKEN, so no repository secrets are needed.
 on:
   push:
-    branches: [main]
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
-    paths-ignore:
-      - "docs/**"
-      - "**.md"
 
 concurrency:
   group: docker-${{ github.workflow }}-${{ github.ref }}
@@ -34,31 +28,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    if: github.ref_type != 'tag'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - name: Build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          # main proves both published architectures (amd64 is also covered
-          # for PRs by CI's docker-smoke).
-          platforms: linux/amd64,linux/arm64
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   publish:
-    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: read
