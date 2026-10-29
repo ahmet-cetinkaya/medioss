@@ -12,6 +12,7 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ### Fixed
 
+- **Sound upload dialog** no longer scrolls sideways: the hidden icon file input was dialog-wide because the styled input's width overrode `sr-only`.
 - **Deleting a program** leaves its detail view only after the delete succeeded; a failed delete no longer navigates away.
 - **A deep link to a program that no longer exists** falls back to the programs list instead of loading nothing.
 - **Meditations without a program** can now be deleted and edited from the admin menu; 1.1.2 only offered play and "Add to a program" there.
