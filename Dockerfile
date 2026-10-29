@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Stage 1: Build the Astro + Svelte frontend (bun, matching local and CI tooling)
-FROM oven/bun:1.4-slim@sha256:debbe76858f2e398d2937c1eceeb82c571ac1fcd78aadf00e9634578ac2b5ef7 AS frontend
+# Pin the multi-arch index digest, not a per-platform manifest: a single-platform digest runs the wrong architecture on the other native runner (exec format error).
+FROM oven/bun:1.4-slim@sha256:1846adf22496bd711036aae8be147e57bdebbaea2e5264e3e0b5af1db187d9a4 AS frontend
 # Repo-relative layout: the About page imports NOTICE via `$repo`.
 WORKDIR /repo/src/apps/web-ui
 COPY NOTICE /repo/NOTICE
