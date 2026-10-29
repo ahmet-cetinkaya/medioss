@@ -6,13 +6,14 @@ use axum::{
 };
 use serde::Serialize;
 use soundscape_application::commands::create_sound::CreateSoundCommand;
+use soundscape_application::ports::staged_upload::StagedMedia;
 use soundscape_application::queries::list_sounds::ListSoundsQuery;
 use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::extractors::{admin, AdminActor, CurrentActor};
 use crate::router::SharedDependencies;
 use crate::support::error_mapping::status_for;
-use crate::support::multipart_field::read_field;
+use crate::support::multipart_field::{read_field, stage_field};
 use crate::support::origin_guard::origin;
 
 #[derive(Serialize)]
@@ -56,28 +57,67 @@ async fn list_sounds(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
+/// The multipart fields of a sound upload, before validation.
+#[derive(Default)]
+struct UploadForm {
+    name: Option<String>,
+    category_id: Option<i64>,
+    media: Option<StagedMedia>,
+    icon_key: Option<String>,
+    icon: Option<Vec<u8>>,
+}
+
 async fn upload_sound(
     State(deps): State<SharedDependencies>,
     headers: HeaderMap,
     AdminActor(actor): AdminActor,
-    mut multipart: Multipart,
+    multipart: Multipart,
 ) -> Result<(StatusCode, Json<SoundDto>), StatusCode> {
     admin(&actor)?;
     origin(headers, &deps.medioss_origin)?;
-    let mut name = None;
-    let mut category_id = None;
-    let mut bytes = None;
-    let mut icon_key = None;
-    let mut icon = None;
+    let mut form = UploadForm::default();
+    let staged = match read_upload_form(multipart, &deps, &mut form).await {
+        Ok(()) => form.media.clone(),
+        Err(status) => {
+            discard_staged(&deps, form.media.as_ref()).await;
+            return Err(status);
+        }
+    };
+    match create_sound(&deps, form).await {
+        Ok(sound) => Ok((StatusCode::CREATED, Json(sound.into()))),
+        Err(status) => {
+            discard_staged(&deps, staged.as_ref()).await;
+            Err(status)
+        }
+    }
+}
+
+/// Removes a staged upload that will not reach the use case. Idempotent, and
+/// a failed delete only leaves scratch space for the next startup to clear.
+async fn discard_staged(deps: &SharedDependencies, media: Option<&StagedMedia>) {
+    if let Some(media) = media {
+        let _ = deps.staging.discard(media).await;
+    }
+}
+
+/// Reads every multipart field into `form`. The form is filled in place, so a
+/// failure part-way still exposes the file already staged for cleanup.
+async fn read_upload_form(
+    mut multipart: Multipart,
+    deps: &SharedDependencies,
+    form: &mut UploadForm,
+) -> Result<(), StatusCode> {
     while let Some(mut field) = multipart
         .next_field()
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?
     {
         match field.name() {
-            Some("name") => name = Some(field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?),
+            Some("name") => {
+                form.name = Some(field.text().await.map_err(|_| StatusCode::BAD_REQUEST)?)
+            }
             Some("category_id") => {
-                category_id = Some(
+                form.category_id = Some(
                     field
                         .text()
                         .await
@@ -86,9 +126,13 @@ async fn upload_sound(
                         .map_err(|_| StatusCode::BAD_REQUEST)?,
                 )
             }
-            Some("file") => bytes = Some(read_field(&mut field, deps.max_upload_bytes).await?),
+            Some("file") => {
+                form.media = Some(
+                    stage_field(&mut field, deps.staging.as_ref(), deps.max_upload_bytes).await?,
+                )
+            }
             Some("icon_key") => {
-                icon_key = Some(
+                form.icon_key = Some(
                     String::from_utf8(
                         read_field(&mut field, 256)
                             .await
@@ -98,23 +142,28 @@ async fn upload_sound(
                 )
             }
             Some("icon") => {
-                icon = Some(read_field(&mut field, soundscape_domain::MAX_ICON_BYTES).await?)
+                form.icon = Some(read_field(&mut field, soundscape_domain::MAX_ICON_BYTES).await?)
             }
             _ => {}
         }
     }
-    let sound = deps
-        .create_sound
+    Ok(())
+}
+
+async fn create_sound(
+    deps: &SharedDependencies,
+    form: UploadForm,
+) -> Result<soundscape_domain::Sound, StatusCode> {
+    deps.create_sound
         .handle(CreateSoundCommand {
-            name: name.ok_or(StatusCode::BAD_REQUEST)?,
-            category_id: category_id.ok_or(StatusCode::BAD_REQUEST)?,
-            bytes: bytes.ok_or(StatusCode::BAD_REQUEST)?,
-            icon_key,
-            icon,
+            name: form.name.ok_or(StatusCode::BAD_REQUEST)?,
+            category_id: form.category_id.ok_or(StatusCode::BAD_REQUEST)?,
+            media: form.media.ok_or(StatusCode::BAD_REQUEST)?,
+            icon_key: form.icon_key,
+            icon: form.icon,
         })
         .await
-        .map_err(status_for)?;
-    Ok((StatusCode::CREATED, Json(sound.into())))
+        .map_err(status_for)
 }
 
 /// Room for the multipart envelope (boundaries, part headers, the name field)

@@ -1,6 +1,6 @@
 use std::process::Stdio;
 
-use meditation_application::ports::{AudioFormat, OpusConverter};
+use meditation_application::ports::{AudioFormat, OpusConverter, StagedMedia};
 
 use super::FfmpegOpusConverter;
 
@@ -11,6 +11,39 @@ fn ffmpeg_available() -> bool {
         .stderr(Stdio::null())
         .status()
         .is_ok_and(|status| status.success())
+}
+
+/// A staging directory plus a converter rooted in it.
+struct Fixture {
+    root: tempfile::TempDir,
+    converter: FfmpegOpusConverter,
+}
+
+impl Fixture {
+    fn new() -> Self {
+        let root = tempfile::tempdir().expect("staging root");
+        let converter = FfmpegOpusConverter::new(root.path().to_path_buf());
+        Self { root, converter }
+    }
+
+    fn stage(&self, bytes: &[u8]) -> StagedMedia {
+        let address = format!("upload-{}", self.file_count());
+        std::fs::write(self.root.path().join(&address), bytes).expect("stage input");
+        StagedMedia {
+            address,
+            size_bytes: bytes.len() as u64,
+        }
+    }
+
+    fn read(&self, media: &StagedMedia) -> Vec<u8> {
+        std::fs::read(self.root.path().join(&media.address)).expect("read staged file")
+    }
+
+    fn file_count(&self) -> usize {
+        std::fs::read_dir(self.root.path())
+            .expect("list root")
+            .count()
+    }
 }
 
 async fn ffmpeg_generate(args: &[&str]) -> Vec<u8> {
@@ -44,10 +77,14 @@ async fn wav_converts_to_lossless_flac() {
         "-",
     ])
     .await;
-    let (flac, duration_ms, stored) = FfmpegOpusConverter
-        .convert(wav.clone(), AudioFormat::Wav)
+    let fixture = Fixture::new();
+    let (converted, duration_ms, stored) = fixture
+        .converter
+        .convert(fixture.stage(&wav), AudioFormat::Wav)
         .await
         .expect("conversion");
+    let flac = fixture.read(&converted);
+    assert_eq!(converted.size_bytes, flac.len() as u64);
     assert!(flac.starts_with(b"fLaC"), "output must be a FLAC stream");
     assert_eq!(stored.extension, "flac");
     assert_eq!(stored.content_type, "audio/flac");
@@ -105,11 +142,20 @@ async fn already_opus_passes_through_byte_identical() {
         "-",
     ])
     .await;
-    let (stored, _duration_ms, stored_format) = FfmpegOpusConverter
-        .convert(opus.clone(), AudioFormat::OggOpus)
+    let fixture = Fixture::new();
+    let input = fixture.stage(&opus);
+    let (stored, duration_ms, stored_format) = fixture
+        .converter
+        .convert(input.clone(), AudioFormat::OggOpus)
         .await
         .expect("passthrough");
-    assert_eq!(stored, opus, "no re-encode, no byte drift");
+    assert_eq!(stored, input, "the staged handle is reused");
+    assert_eq!(fixture.read(&stored), opus, "no re-encode, no byte drift");
+    assert_eq!(fixture.file_count(), 1, "no extra file is written");
+    assert!(
+        (800..1_200).contains(&duration_ms),
+        "a 1s fixture must probe close to 1000ms from its path, got {duration_ms}"
+    );
     assert_eq!(stored_format.extension, "opus");
     assert_eq!(stored_format.content_type, "audio/ogg");
 }
@@ -127,16 +173,26 @@ async fn corrupt_mid_stream_input_fails_the_decode_gate() {
     // input that cannot be decoded at all.
     let mut junk = b"ID3\x04\x00\x00\x00\x00\x00\x00".to_vec();
     junk.extend(std::iter::repeat_n(0xEE, 5000));
-    let result = FfmpegOpusConverter
-        .convert(junk.clone(), AudioFormat::Wav)
+    let fixture = Fixture::new();
+    let result = fixture
+        .converter
+        .convert(fixture.stage(&junk), AudioFormat::Wav)
         .await;
     assert!(result.is_err(), "an undecodable stream must not be stored");
+    assert_eq!(
+        fixture.file_count(),
+        1,
+        "the failed encode leaves no output file"
+    );
     // MP3 uploads are stored byte-identical, so the sniffed format alone
     // must not reach storage without a decode gate: a corrupt MP3 still
     // has to fail somewhere. The upload pipeline keeps the sniffer's
     // magic gate (sync bytes) and ffprobe duration check: junk with no
     // MPEG frames probes to no duration, which upload_meditation rejects.
-    let mp3_result = FfmpegOpusConverter.convert(junk, AudioFormat::Mp3).await;
+    let mp3_result = fixture
+        .converter
+        .convert(fixture.stage(&junk), AudioFormat::Mp3)
+        .await;
     let (_, duration_ms, _) = mp3_result.expect("mp3 bytes are passed through");
     assert_eq!(
         duration_ms, 0,

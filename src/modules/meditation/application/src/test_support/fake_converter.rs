@@ -1,7 +1,7 @@
-use crate::ports::AudioFormat;
+use crate::ports::{AudioFormat, StagedMedia};
 
-/// Passes Ogg Opus through unchanged; rewrites other formats to a fake
-/// "encoded" payload so tests can observe the conversion call.
+/// Reports the stored form for each format and reuses the staged file as the
+/// converted output.
 #[derive(Clone)]
 pub struct FakeConverter {
     /// When set, every conversion fails (simulates a decode error).
@@ -12,15 +12,15 @@ pub struct FakeConverter {
 impl crate::ports::OpusConverter for FakeConverter {
     async fn convert(
         &self,
-        bytes: Vec<u8>,
+        media: StagedMedia,
         format: AudioFormat,
-    ) -> Result<(Vec<u8>, i64, crate::ports::StoredAudio), crate::ports::ConvertError> {
+    ) -> Result<(StagedMedia, i64, crate::ports::StoredAudio), crate::ports::ConvertError> {
         if self.fail {
             return Err(crate::ports::ConvertError::Decode);
         }
         if matches!(format, AudioFormat::OggOpus | AudioFormat::Mp3) {
             return Ok((
-                bytes,
+                media,
                 60_000,
                 crate::ports::StoredAudio {
                     extension: if format == AudioFormat::Mp3 {
@@ -36,10 +36,8 @@ impl crate::ports::OpusConverter for FakeConverter {
                 },
             ));
         }
-        let mut encoded = b"fLaC".to_vec();
-        encoded.extend_from_slice(b"fake-flac-payload");
         Ok((
-            encoded,
+            media,
             60_000,
             crate::ports::StoredAudio {
                 extension: "flac",

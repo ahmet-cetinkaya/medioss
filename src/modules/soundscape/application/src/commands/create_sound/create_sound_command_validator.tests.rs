@@ -1,4 +1,5 @@
 use super::{CreateSoundCommand, CreateSoundCommandValidator};
+use crate::ports::staged_upload::StagedMedia;
 use crate::ApplicationError;
 
 const CAP: usize = 1024;
@@ -11,7 +12,10 @@ fn command(name: &str, icon_key: Option<&str>, size: usize) -> CreateSoundComman
     CreateSoundCommand {
         name: name.to_owned(),
         category_id: 1,
-        bytes: vec![0; size],
+        media: StagedMedia {
+            address: "staged-1".to_owned(),
+            size_bytes: size as u64,
+        },
         icon_key: icon_key.map(str::to_owned),
         icon: None,
     }

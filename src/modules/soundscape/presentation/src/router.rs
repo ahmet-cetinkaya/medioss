@@ -9,6 +9,7 @@ use soundscape_application::commands::rename_category::RenameCategoryCommand;
 use soundscape_application::commands::set_sound_icon::SetSoundIconCommand;
 use soundscape_application::commands::update_mix::UpdateMixCommand;
 use soundscape_application::commands::update_sound::UpdateSoundCommand;
+use soundscape_application::ports::staged_upload::UploadStaging;
 use soundscape_application::ports::{CommandHandler, QueryHandler};
 use soundscape_application::queries::find_sound_icon::FindSoundIconQuery;
 use soundscape_application::queries::list_categories::ListCategoriesQuery;
@@ -44,6 +45,8 @@ pub struct SoundscapeDependencies {
     pub sounds: Arc<dyn SoundRepository>,
     pub mixes: Arc<dyn MixRepository>,
     pub medioss_origin: Arc<String>,
+    /// Disk staging the sound upload's audio field streams into.
+    pub staging: Arc<dyn UploadStaging>,
     /// Cap on a sound upload's audio field; `soundscape_router` must receive the same value.
     pub max_upload_bytes: usize,
 }

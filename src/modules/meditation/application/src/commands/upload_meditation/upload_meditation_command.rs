@@ -1,7 +1,9 @@
+use crate::ports::StagedMedia;
+
 #[derive(Debug, Clone)]
 pub struct UploadMeditationCommand {
     pub name: String,
     pub program_id: i64,
-    pub bytes: Vec<u8>,
+    pub media: StagedMedia,
     pub description: Option<String>,
 }

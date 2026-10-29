@@ -1,98 +1,110 @@
-//! ffmpeg subprocess Opus conversion. The command line is fixed argv —
-//! media bytes flow through pipes, never through arguments.
+//! ffmpeg subprocess conversion. The command line is fixed argv; media is
+//! handed to ffmpeg and ffprobe as staged file paths, never through memory.
+use std::path::{Path, PathBuf};
+
 use async_trait::async_trait;
-use meditation_application::ports::{AudioFormat, ConvertError, OpusConverter, StoredAudio};
-use tokio::{
-    io::AsyncWriteExt,
-    process::{Child, Command},
+use meditation_application::ports::{
+    AudioFormat, ConvertError, OpusConverter, StagedMedia, StoredAudio,
 };
+use tokio::process::Command;
+
+use super::staged_upload::resolve_staged_path;
 
 /// Converts accepted uploads to their stored form: compressed inputs
 /// (MP3, Ogg Opus) pass through byte-identical and PCM inputs (WAV,
 /// Ogg Vorbis) are compressed losslessly to FLAC.
-#[derive(Clone, Copy, Default)]
-pub struct FfmpegOpusConverter;
+#[derive(Debug, Clone)]
+pub struct FfmpegOpusConverter {
+    staging_root: PathBuf,
+}
 
 const FFMPEG: &str = "ffmpeg";
 const FFPROBE: &str = "ffprobe";
+const FLAC_MAGIC: &[u8] = b"fLaC";
+const CONVERTED_FILE_PREFIX: &str = "converted-";
 
-fn encode_command() -> Command {
-    let mut command = Command::new(FFMPEG);
-    command
-        .arg("-hide_banner")
-        .arg("-loglevel")
-        .arg("error")
-        .arg("-y")
-        .arg("-i")
-        .arg("pipe:0")
-        .arg("-c:a")
-        .arg("flac")
-        .arg("-compression_level")
-        .arg("8")
-        // FLAC stream durations are only written when the muxer sees a
-        // seekable output, so the encode targets a temp file and the bytes
-        // are read back afterwards.
-        .arg("-f")
-        .arg("flac");
-    command
-}
-
-async fn run_encode(mut child: Child, bytes: Vec<u8>) -> Result<(), ConvertError> {
-    let mut stdin = child.stdin.take().ok_or(ConvertError::Unavailable)?;
-    let input = tokio::task::spawn(async move {
-        // Writing large inputs can block until ffmpeg drains them; feed it
-        // from a task so stderr does not deadlock the pipeline.
-        let _ = stdin.write_all(&bytes).await;
-        let _ = stdin.shutdown().await;
-    });
-
-    let output = child.wait_with_output().await;
-    input.await.map_err(|_| ConvertError::Unavailable)?;
-
-    let output = output.map_err(|_| ConvertError::Unavailable)?;
-    if !output.status.success() {
-        // The full decode gate: a file whose magic passed but whose stream
-        // breaks fails here, so nothing is stored (spec FR-004).
-        return Err(ConvertError::Decode);
+impl FfmpegOpusConverter {
+    /// `staging_root` is the directory the upload staging writes into, so
+    /// converted output lands beside its input.
+    pub fn new(staging_root: PathBuf) -> Self {
+        Self { staging_root }
     }
-    Ok(())
-}
 
-/// Stages `bytes` at `path` without duplicating them: `tokio::fs::write` copies
-/// the whole slice into an owned buffer first, doubling the memory of a large
-/// upload, while `write_all` on a file copies through a small bounded buffer.
-async fn stage_bytes(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
-    let mut file = tokio::fs::File::create(path).await?;
-    file.write_all(bytes).await?;
-    file.flush().await
-}
-
-/// Probes the stored bytes for their duration; a probe failure is not
-/// fatal to the upload, it just leaves progress unknown (`0`). ffprobe
-/// cannot size a container from a pipe (`format=duration` reports `N/A`),
-/// so the bytes are staged to a temp file first. MP3 and Opus sniff their
-/// extension from the magic bytes.
-async fn probe_duration_ms(bytes: &[u8]) -> i64 {
-    let extension = if bytes.starts_with(b"fLaC") {
-        "flac"
-    } else if bytes.starts_with(b"OggS") {
-        "ogg"
-    } else if bytes.starts_with(b"ID3") || bytes.first().is_some_and(|b| *b == 0xFF) {
-        "mp3"
-    } else {
-        "bin"
-    };
-    let Ok(file) = tempfile::Builder::new()
-        .suffix(&format!(".{extension}"))
-        .tempfile()
-    else {
-        tracing::warn!("duration probe skipped: no writable temp file; duration stored as 0");
-        return 0;
-    };
-    if let Err(error) = stage_bytes(file.path(), bytes).await {
-        tracing::warn!(%error, "duration probe skipped: staging failed; duration stored as 0");
-        return 0;
+    /// Compresses the staged PCM file to FLAC in a new staged file. The
+    /// output is deleted again on any failure.
+    async fn encode_to_flac(&self, input: &Path) -> Result<StagedMedia, ConvertError> {
+        let output = tempfile::Builder::new()
+            .prefix(CONVERTED_FILE_PREFIX)
+            .suffix(".flac")
+            .tempfile_in(&self.staging_root)
+            .map_err(|_| ConvertError::Unavailable)?
+            .into_temp_path();
+        let encoded = Command::new(FFMPEG)
+            .arg("-hide_banner")
+            .arg("-loglevel")
+            .arg("error")
+            .arg("-y")
+            .arg("-i")
+            .arg(input)
+            .arg("-c:a")
+            .arg("flac")
+            .arg("-compression_level")
+            .arg("8")
+            // FLAC stream durations are only written when the muxer sees a
+            // seekable output, which a file is and a pipe is not.
+            .arg("-f")
+            .arg("flac")
+            .arg(&output)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::piped())
+            .output()
+            .await
+            // A missing encoder is an operator problem, not bad media; the
+            // API maps it to 503 later.
+            .map_err(|_| ConvertError::Unavailable)?;
+        if !encoded.status.success() {
+            // The full decode gate: a file whose magic passed but whose stream
+            // breaks fails here, so nothing is stored (spec FR-004).
+            return Err(ConvertError::Decode);
+        }
+        if !starts_with_flac_magic(&output).await {
+            return Err(ConvertError::Decode);
+        }
+        let size_bytes = tokio::fs::metadata(&output)
+            .await
+            .map_err(|_| ConvertError::Unavailable)?
+            .len();
+        let kept = output.keep().map_err(|_| ConvertError::Unavailable)?;
+        let address = kept
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .ok_or(ConvertError::Unavailable)?;
+        Ok(StagedMedia {
+            address,
+            size_bytes,
+        })
     }
+
+    fn path_of(&self, media: &StagedMedia) -> Result<PathBuf, ConvertError> {
+        resolve_staged_path(&self.staging_root, &media.address)
+            .map_err(|_| ConvertError::Unavailable)
+    }
+}
+
+async fn starts_with_flac_magic(path: &Path) -> bool {
+    use tokio::io::AsyncReadExt;
+    let Ok(mut file) = tokio::fs::File::open(path).await else {
+        return false;
+    };
+    let mut magic = [0u8; FLAC_MAGIC.len()];
+    file.read_exact(&mut magic).await.is_ok() && magic == FLAC_MAGIC
+}
+
+/// Probes the staged file for its duration; a probe failure is not fatal to
+/// the upload, it just leaves progress unknown (`0`). `container` names the
+/// ffprobe demuxer because staged files carry no extension to sniff from.
+async fn probe_duration_ms(path: &Path, container: &str) -> i64 {
     let output = Command::new(FFPROBE)
         .arg("-hide_banner")
         .arg("-loglevel")
@@ -101,13 +113,12 @@ async fn probe_duration_ms(bytes: &[u8]) -> i64 {
         .arg("format=duration")
         .arg("-of")
         .arg("default=noprint_wrappers=1:nokey=1")
+        .arg("-f")
+        .arg(container)
         .arg("-i")
-        .arg(file.path())
+        .arg(path)
         .output()
         .await;
-    // Keep the temp file alive (and thus on disk) until ffprobe is done
-    // reading it; dropping `file` here would delete it mid-read.
-    drop(file);
     let output = match output {
         Ok(output) if output.status.success() => output,
         Ok(output) => {
@@ -133,50 +144,39 @@ async fn probe_duration_ms(bytes: &[u8]) -> i64 {
 impl OpusConverter for FfmpegOpusConverter {
     async fn convert(
         &self,
-        bytes: Vec<u8>,
+        media: StagedMedia,
         format: AudioFormat,
-    ) -> Result<(Vec<u8>, i64, StoredAudio), ConvertError> {
-        let stored = match format {
-            AudioFormat::OggOpus => StoredAudio {
-                extension: "opus",
-                content_type: "audio/ogg",
-            },
-            AudioFormat::Mp3 => StoredAudio {
-                extension: "mp3",
-                content_type: "audio/mpeg",
-            },
-            _ => StoredAudio {
-                extension: "flac",
-                content_type: "audio/flac",
-            },
+    ) -> Result<(StagedMedia, i64, StoredAudio), ConvertError> {
+        let input = self.path_of(&media)?;
+        let (stored, container, converted) = match format {
+            AudioFormat::OggOpus => (
+                StoredAudio {
+                    extension: "opus",
+                    content_type: "audio/ogg",
+                },
+                "ogg",
+                media,
+            ),
+            AudioFormat::Mp3 => (
+                StoredAudio {
+                    extension: "mp3",
+                    content_type: "audio/mpeg",
+                },
+                "mp3",
+                media,
+            ),
+            _ => (
+                StoredAudio {
+                    extension: "flac",
+                    content_type: "audio/flac",
+                },
+                "flac",
+                self.encode_to_flac(&input).await?,
+            ),
         };
-        let opus_bytes = match format {
-            AudioFormat::OggOpus | AudioFormat::Mp3 => bytes,
-            _ => {
-                let Ok(out) = tempfile::Builder::new().suffix(".flac").tempfile() else {
-                    return Err(ConvertError::Unavailable);
-                };
-                let out_path = out.path().to_owned();
-                let mut command = encode_command();
-                command.arg(&out_path);
-                command.stdin(std::process::Stdio::piped());
-                command.stdout(std::process::Stdio::null());
-                command.stderr(std::process::Stdio::piped());
-                let child = match command.spawn() {
-                    Ok(child) => child,
-                    // A missing encoder is an operator problem, not bad media; the
-                    // API maps it to 503 later.
-                    Err(_) => return Err(ConvertError::Unavailable),
-                };
-                run_encode(child, bytes).await?;
-                match tokio::fs::read(&out_path).await {
-                    Ok(bytes) if bytes.starts_with(b"fLaC") => bytes,
-                    _ => return Err(ConvertError::Decode),
-                }
-            }
-        };
-        let duration_ms = probe_duration_ms(&opus_bytes).await;
-        Ok((opus_bytes, duration_ms, stored))
+        let converted_path = self.path_of(&converted)?;
+        let duration_ms = probe_duration_ms(&converted_path, container).await;
+        Ok((converted, duration_ms, stored))
     }
 }
 

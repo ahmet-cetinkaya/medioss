@@ -4,11 +4,14 @@ use super::upload_meditation_command::UploadMeditationCommand;
 use super::upload_meditation_command_validator::UploadMeditationCommandValidator;
 use crate::ports::{
     AudioValidator, BlobStore, Clock, CommandHandler, MeditationRepository, MembershipRepository,
-    OpusConverter, ProgramRepository,
+    OpusConverter, ProgramRepository, StagedMedia, UploadStaging,
 };
 use crate::ports::{ConvertError, StoredAudio};
 use crate::ApplicationError;
 use meditation_domain::Meditation;
+
+/// How much of the staged file the format sniffer gets to see.
+const SNIFF_PREFIX_BYTES: usize = 64 * 1024;
 
 pub struct UploadMeditationCommandHandler {
     meditations: Arc<dyn MeditationRepository>,
@@ -17,6 +20,7 @@ pub struct UploadMeditationCommandHandler {
     validator: Arc<dyn AudioValidator>,
     converter: Arc<dyn OpusConverter>,
     store: Arc<dyn BlobStore>,
+    staging: Arc<dyn UploadStaging>,
     clock: Arc<dyn Clock>,
     input_validator: UploadMeditationCommandValidator,
 }
@@ -30,6 +34,7 @@ impl UploadMeditationCommandHandler {
         validator: Arc<dyn AudioValidator>,
         converter: Arc<dyn OpusConverter>,
         store: Arc<dyn BlobStore>,
+        staging: Arc<dyn UploadStaging>,
         clock: Arc<dyn Clock>,
         max_upload_bytes: usize,
     ) -> Self {
@@ -40,6 +45,7 @@ impl UploadMeditationCommandHandler {
             validator,
             converter,
             store,
+            staging,
             clock,
             input_validator: UploadMeditationCommandValidator::new(max_upload_bytes),
         }
@@ -54,6 +60,21 @@ impl CommandHandler<UploadMeditationCommand> for UploadMeditationCommandHandler 
         &self,
         command: UploadMeditationCommand,
     ) -> Result<Meditation, ApplicationError> {
+        let staged = command.media.clone();
+        let result = self.upload(command).await;
+        if result.is_err() {
+            // Idempotent: a file already moved or converted away is absent.
+            let _ = self.staging.discard(&staged).await;
+        }
+        result
+    }
+}
+
+impl UploadMeditationCommandHandler {
+    async fn upload(
+        &self,
+        command: UploadMeditationCommand,
+    ) -> Result<Meditation, ApplicationError> {
         self.input_validator.validate(&command)?;
 
         // Garbage bytes, oversized payloads, and conversion failures leave
@@ -63,7 +84,7 @@ impl CommandHandler<UploadMeditationCommand> for UploadMeditationCommandHandler 
         let UploadMeditationCommand {
             name: raw_name,
             program_id,
-            bytes,
+            media,
             ..
         } = command;
         let program = self
@@ -72,12 +93,24 @@ impl CommandHandler<UploadMeditationCommand> for UploadMeditationCommandHandler 
             .await
             .map_err(ApplicationError::Repository)?
             .ok_or(ApplicationError::NotFound)?;
-        let (stored_bytes, duration_ms, stored) = self.sniff_and_convert(bytes).await?;
-        let blob = self
+        let (stored_media, duration_ms, stored) = self.sniff_and_convert(media).await?;
+        let blob = match self
             .store
-            .put(&program.folder, &raw_name, stored.extension, &stored_bytes)
+            .put_staged(
+                stored_media.clone(),
+                &program.folder,
+                &raw_name,
+                stored.extension,
+            )
             .await
-            .map_err(ApplicationError::Storage)?;
+        {
+            Ok(blob) => blob,
+            Err(error) => {
+                // The converted output may be a different file than the upload.
+                let _ = self.staging.discard(&stored_media).await;
+                return Err(ApplicationError::Storage(error));
+            }
+        };
         let meditation = match self
             .meditations
             .insert(
@@ -103,22 +136,31 @@ impl CommandHandler<UploadMeditationCommand> for UploadMeditationCommandHandler 
             .await?;
         Ok(meditation)
     }
-}
 
-impl UploadMeditationCommandHandler {
     async fn sniff_and_convert(
         &self,
-        bytes: Vec<u8>,
-    ) -> Result<(Vec<u8>, i64, StoredAudio), ApplicationError> {
+        media: StagedMedia,
+    ) -> Result<(StagedMedia, i64, StoredAudio), ApplicationError> {
+        let prefix = self
+            .staging
+            .read_prefix(&media, SNIFF_PREFIX_BYTES)
+            .await
+            .map_err(|error| ApplicationError::Storage(error.to_string()))?;
         let format = self
             .validator
-            .sniff(&bytes)
+            .sniff(&prefix)
             .await
             .map_err(|_| ApplicationError::UnsupportedMedia)?;
-        self.converter
-            .convert(bytes, format)
+        let input = media.clone();
+        let (converted, duration_ms, stored) = self
+            .converter
+            .convert(media, format)
             .await
-            .map_err(map_convert_error)
+            .map_err(map_convert_error)?;
+        if converted.address != input.address {
+            let _ = self.staging.discard(&input).await;
+        }
+        Ok((converted, duration_ms, stored))
     }
 
     async fn add_membership_or_roll_back(

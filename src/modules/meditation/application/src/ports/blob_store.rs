@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 
+use super::staged_upload::StagedMedia;
+
 /// A stored blob's location handle.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredBlob {
@@ -20,6 +22,15 @@ pub trait BlobStore: Send + Sync {
         stem: &str,
         ext: &str,
         bytes: &[u8],
+    ) -> Result<StoredBlob, String>;
+    /// Moves a staged file into the store at `{folder}/{stem}-{suffix}.{ext}`,
+    /// consuming it, without reading it into memory.
+    async fn put_staged(
+        &self,
+        media: StagedMedia,
+        folder: &str,
+        stem: &str,
+        ext: &str,
     ) -> Result<StoredBlob, String>;
     /// Removes the blob at `key`; an absent key is not an error.
     async fn delete(&self, key: &str) -> Result<(), String>;

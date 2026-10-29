@@ -15,7 +15,9 @@ fn parts_with(actor: Option<Actor>) -> axum::http::request::Parts {
 fn status_of(error: ApiError) -> axum::http::StatusCode {
     match error {
         ApiError::StatusCode(status) => status,
-        ApiError::Application(_) => panic!("extractors only reject with a bare status"),
+        ApiError::Application(_) | ApiError::InsufficientStorage => {
+            panic!("extractors only reject with a bare status")
+        }
     }
 }
 

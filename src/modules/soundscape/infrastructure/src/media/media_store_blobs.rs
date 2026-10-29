@@ -1,5 +1,8 @@
 use async_trait::async_trait;
 use soundscape_application::ports::media::{BlobReader, BlobStore};
+use soundscape_application::ports::staged_upload::StagedMedia;
+
+use super::staged_upload::resolve_staged_path;
 
 /// keeps the original upload format, so the answer follows the file.
 fn content_type_for(key: &str) -> &'static str {
@@ -15,7 +18,22 @@ fn content_type_for(key: &str) -> &'static str {
     }
 }
 
-pub struct MediaStoreBlobs(pub media_store::MediaStore);
+pub struct MediaStoreBlobs {
+    store: media_store::MediaStore,
+    staging_root: std::path::PathBuf,
+}
+
+impl MediaStoreBlobs {
+    /// Builds an adapter over the media root; staged files named by
+    /// `put_staged` live in `staging_root`.
+    pub fn new(store: media_store::MediaStore, staging_root: std::path::PathBuf) -> Self {
+        Self {
+            store,
+            staging_root,
+        }
+    }
+}
+
 #[async_trait]
 impl BlobStore for MediaStoreBlobs {
     async fn put(
@@ -25,11 +43,26 @@ impl BlobStore for MediaStoreBlobs {
         ext: &str,
         bytes: &[u8],
     ) -> Result<String, String> {
-        self.0
+        self.store
             .put(folder, stem, ext, bytes)
             .await
             .map(|x| x.as_str().to_owned())
             .map_err(|e| e.to_string())
+    }
+    async fn put_staged(
+        &self,
+        media: StagedMedia,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<String, String> {
+        let staged_path = resolve_staged_path(&self.staging_root, &media.address)
+            .map_err(|error| error.to_string())?;
+        self.store
+            .move_in(&staged_path, folder, stem, ext)
+            .await
+            .map(|key| key.as_str().to_owned())
+            .map_err(|error| error.to_string())
     }
     async fn open_range(
         &self,
@@ -38,9 +71,9 @@ impl BlobStore for MediaStoreBlobs {
         length: u64,
     ) -> Result<(BlobReader, String, u64), String> {
         let key = media_store::StorageKey::parse_with_separator(key).map_err(|e| e.to_string())?;
-        let size = self.0.size(&key).await.map_err(|e| e.to_string())?;
+        let size = self.store.size(&key).await.map_err(|e| e.to_string())?;
         let stream = self
-            .0
+            .store
             .open_range(&key, start, length)
             .await
             .map_err(|e| e.to_string())?;
@@ -54,7 +87,7 @@ impl BlobStore for MediaStoreBlobs {
     }
     async fn delete(&self, key: &str) -> Result<(), String> {
         let key = media_store::StorageKey::parse_with_separator(key).map_err(|e| e.to_string())?;
-        self.0.delete(&key).await.map_err(|e| e.to_string())
+        self.store.delete(&key).await.map_err(|e| e.to_string())
     }
 }
 

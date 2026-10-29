@@ -5,8 +5,10 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 fn blobs() -> (tempfile::TempDir, MediaStoreBlobs) {
     let directory = tempfile::tempdir().unwrap();
-    let store = media_store::MediaStore::new(directory.path().to_path_buf());
-    (directory, MediaStoreBlobs(store))
+    let store = media_store::MediaStore::new(directory.path().join("media"));
+    let staging_root = directory.path().join("staging");
+    std::fs::create_dir_all(&staging_root).unwrap();
+    (directory, MediaStoreBlobs::new(store, staging_root))
 }
 
 #[test]
@@ -57,4 +59,42 @@ async fn delete_removes_the_blob_so_it_can_no_longer_be_opened() {
 async fn opening_an_invalid_key_is_an_error() {
     let (_directory, blobs) = blobs();
     assert!(blobs.open_range("../escape.mp3", 0, 1).await.is_err());
+}
+
+#[tokio::test]
+async fn put_staged_moves_the_staged_file_into_the_store() {
+    use soundscape_application::ports::staged_upload::StagedMedia;
+    let (directory, blobs) = blobs();
+    let staged_path = directory.path().join("staging").join("upload-1");
+    std::fs::write(&staged_path, b"0123456789").unwrap();
+    let media = StagedMedia {
+        address: "upload-1".to_owned(),
+        size_bytes: 10,
+    };
+
+    let key = blobs
+        .put_staged(media, "soundscape", "rain", "mp3")
+        .await
+        .unwrap();
+
+    assert!(!staged_path.exists());
+    let (reader, _, total) = blobs.open_range(&key, 0, 10).await.unwrap();
+    let mut stored = Vec::new();
+    reader.0.compat().read_to_end(&mut stored).await.unwrap();
+    assert_eq!(stored, b"0123456789");
+    assert_eq!(total, 10);
+}
+
+#[tokio::test]
+async fn put_staged_refuses_an_address_with_a_path_component() {
+    use soundscape_application::ports::staged_upload::StagedMedia;
+    let (_directory, blobs) = blobs();
+    let media = StagedMedia {
+        address: "../escape".to_owned(),
+        size_bytes: 1,
+    };
+    assert!(blobs
+        .put_staged(media, "soundscape", "x", "mp3")
+        .await
+        .is_err());
 }

@@ -6,6 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use meditation_application::ports::{StagedMedia, StagingError, UploadStaging};
 use meditation_application::ApplicationError;
 
 /// Reads one multipart field's bytes, rejecting it once it exceeds `cap`
@@ -27,9 +28,61 @@ pub async fn read_field_capped(field: &mut Field<'_>, cap: usize) -> Result<Vec<
     }
 }
 
+/// Streams one multipart file field to disk through `staging`, so the upload
+/// never sits in memory. Mirrors [`read_field_capped`]: `413` once the field
+/// exceeds `cap`, `400` for a mid-stream read error. The staged file is
+/// deleted on every error path. `507` answers before any byte is read when the
+/// staging volume cannot hold `cap` bytes.
+pub async fn stage_field_capped(
+    field: &mut Field<'_>,
+    staging: &dyn UploadStaging,
+    cap: usize,
+) -> Result<StagedMedia, ApiError> {
+    ensure_free_space(staging, cap).await?;
+    let mut sink = staging.open().await.map_err(staging_failure)?;
+    let mut received = 0usize;
+    loop {
+        match field.chunk().await {
+            Ok(Some(chunk)) => {
+                received += chunk.len();
+                if received > cap {
+                    return Err(ApiError::StatusCode(StatusCode::PAYLOAD_TOO_LARGE));
+                }
+                sink.append(&chunk).await.map_err(staging_failure)?;
+            }
+            Ok(None) => return sink.keep().await.map_err(staging_failure),
+            Err(_) => return Err(ApiError::StatusCode(StatusCode::BAD_REQUEST)),
+        }
+    }
+}
+
+async fn ensure_free_space(staging: &dyn UploadStaging, cap: usize) -> Result<(), ApiError> {
+    match staging.free_bytes().await {
+        Ok(free) if free < cap as u64 => Err(ApiError::InsufficientStorage),
+        Ok(_) => Ok(()),
+        Err(StagingError::Unsupported) => {
+            static WARN_ONCE: std::sync::Once = std::sync::Once::new();
+            WARN_ONCE.call_once(|| {
+                tracing::warn!(
+                    "free disk space cannot be measured here; uploads are not preflighted"
+                );
+            });
+            Ok(())
+        }
+        Err(error) => Err(staging_failure(error)),
+    }
+}
+
+fn staging_failure(error: StagingError) -> ApiError {
+    tracing::error!(%error, "upload staging failed");
+    ApiError::StatusCode(StatusCode::INTERNAL_SERVER_ERROR)
+}
+
 /// Typed handler error.
 pub enum ApiError {
     StatusCode(StatusCode),
+    /// The staging volume cannot hold an upload of the configured cap (`507`).
+    InsufficientStorage,
     Application(ApplicationError),
 }
 
@@ -78,6 +131,11 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         match self {
             Self::StatusCode(status) => (status, "").into_response(),
+            Self::InsufficientStorage => (
+                StatusCode::INSUFFICIENT_STORAGE,
+                Json(serde_json::json!({ "error": "insufficient storage for upload" })),
+            )
+                .into_response(),
             Self::Application(error) => application_error_response(error),
         }
     }

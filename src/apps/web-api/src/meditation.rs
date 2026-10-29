@@ -46,7 +46,9 @@ use meditation_application::queries::list_notes::ListNotesQueryHandler;
 use meditation_application::queries::list_program_members::ListProgramMembersQueryHandler;
 use meditation_application::queries::list_programs::ListProgramsQueryHandler;
 use meditation_application::queries::list_recent_programs::ListRecentProgramsQueryHandler;
-use meditation_infrastructure::media::{FfmpegAudioValidator, FfmpegOpusConverter};
+use meditation_infrastructure::media::{
+    FfmpegAudioValidator, FfmpegOpusConverter, TempFileStaging,
+};
 use meditation_infrastructure::persistence::{
     SeaOrmCategoryRepository, SeaOrmFavoriteRepository, SeaOrmMeditationRepository,
     SeaOrmMembershipRepository, SeaOrmNoteRepository, SeaOrmPlaybackRepository,
@@ -59,12 +61,17 @@ use sea_orm::DatabaseConnection;
 /// crate. Keys are folder/file relative paths owned by the store.
 pub struct MediaStoreBlobs {
     store: media_store::MediaStore,
+    staging_root: std::path::PathBuf,
 }
 
 impl MediaStoreBlobs {
-    /// Builds an adapter over the media root.
-    pub fn new(store: media_store::MediaStore) -> Self {
-        Self { store }
+    /// Builds an adapter over the media root; staged files named by
+    /// `put_staged` live in `staging_root`.
+    pub fn new(store: media_store::MediaStore, staging_root: std::path::PathBuf) -> Self {
+        Self {
+            store,
+            staging_root,
+        }
     }
 }
 
@@ -85,6 +92,29 @@ impl meditation_application::ports::BlobStore for MediaStoreBlobs {
         Ok(meditation_application::ports::StoredBlob {
             storage_key: key.as_str().to_owned(),
             size_bytes: bytes.len() as i64,
+        })
+    }
+
+    async fn put_staged(
+        &self,
+        media: meditation_application::ports::StagedMedia,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<meditation_application::ports::StoredBlob, String> {
+        let staged_path = meditation_infrastructure::media::resolve_staged_path(
+            &self.staging_root,
+            &media.address,
+        )
+        .map_err(|error| error.to_string())?;
+        let key = self
+            .store
+            .move_in(&staged_path, folder, stem, ext)
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok(meditation_application::ports::StoredBlob {
+            storage_key: key.as_str().to_owned(),
+            size_bytes: media.size_bytes as i64,
         })
     }
 
@@ -176,6 +206,7 @@ pub fn meditation_dependencies(
         );
     }
     let media_root = data_dir.join("media").join("meditation");
+    let staging_root = data_dir.join(crate::bootstrap::scratch_dir::SCRATCH_DIR_NAME);
     let notes: Arc<dyn NoteRepository> = Arc::new(SeaOrmNoteRepository::new(connection.clone()));
     let favorites: Arc<dyn FavoriteRepository> =
         Arc::new(SeaOrmFavoriteRepository::new(connection.clone()));
@@ -196,10 +227,12 @@ pub fn meditation_dependencies(
         Arc::new(CoverNormalizer {
             maximum_output_bytes: upload_limits.program_cover_bytes,
         }),
-        Arc::new(FfmpegOpusConverter),
-        Arc::new(MediaStoreBlobs::new(media_store::MediaStore::new(
-            media_root,
-        ))),
+        Arc::new(FfmpegOpusConverter::new(staging_root.clone())),
+        Arc::new(MediaStoreBlobs::new(
+            media_store::MediaStore::new(media_root),
+            staging_root.clone(),
+        )),
+        Arc::new(TempFileStaging::new(staging_root)),
         Arc::new(MeditationClock),
         medioss_origin,
         upload_limits.meditation_audio_bytes,
@@ -232,6 +265,7 @@ fn meditation_dependencies_with_ports(
     cover_validator: Arc<dyn meditation_application::ports::CoverValidator>,
     converter: Arc<dyn meditation_application::ports::OpusConverter>,
     store: Arc<dyn meditation_application::ports::BlobStore>,
+    staging: Arc<dyn meditation_application::ports::UploadStaging>,
     clock: Arc<dyn meditation_application::ports::Clock>,
     medioss_origin: Arc<String>,
     max_upload_bytes: usize,
@@ -295,6 +329,7 @@ fn meditation_dependencies_with_ports(
             validator,
             converter,
             store.clone(),
+            staging.clone(),
             clock.clone(),
             max_upload_bytes,
         )),
@@ -393,6 +428,7 @@ fn meditation_dependencies_with_ports(
         playback,
         cover_validator,
         store,
+        staging,
         medioss_origin,
         max_upload_bytes,
         max_cover_bytes,

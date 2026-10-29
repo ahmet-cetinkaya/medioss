@@ -114,3 +114,128 @@ async fn members_cannot_upload() {
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 }
+
+const SMALL_CAP: usize = 32;
+
+async fn raw_upload(app: &TestApp, body: String) -> (StatusCode, Vec<u8>) {
+    let (status, _, body) = call(
+        app,
+        Some(admin_actor()),
+        "POST",
+        "/soundscape/sounds",
+        vec![("content-type", MULTIPART)],
+        Body::from(body),
+    )
+    .await;
+    (status, body)
+}
+
+fn complete_upload(file: &str) -> String {
+    format!(
+        "{}--XB--\r\n",
+        [
+            part("name", "Wind"),
+            part("category_id", "1"),
+            file_part(file)
+        ]
+        .concat()
+    )
+}
+
+#[tokio::test]
+async fn successful_upload_moves_the_staged_file_out_of_staging() {
+    let app = app();
+
+    let (status, _) = raw_upload(&app, complete_upload("audio")).await;
+
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(app.state.staging.file_count(), 0);
+    assert_eq!(app.state.staging.deleted_count(), 0);
+}
+
+#[tokio::test]
+async fn file_over_the_cap_is_413_with_no_body_and_deletes_the_staged_file() {
+    let app = app_with_cap(SMALL_CAP);
+
+    let (status, body) = raw_upload(&app, complete_upload(&"O".repeat(SMALL_CAP + 1))).await;
+
+    assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+    assert!(body.is_empty(), "the 413 body stays empty");
+    assert_eq!(app.state.staging.file_count(), 0);
+    assert_eq!(app.state.staging.deleted_count(), 1);
+    assert!(app.state.store.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn staging_volume_smaller_than_the_cap_is_507_before_any_byte_is_staged() {
+    let app = app_with_cap(SMALL_CAP);
+    app.state.staging.set_free_bytes(Some(SMALL_CAP as u64 - 1));
+
+    let (status, _) = raw_upload(&app, complete_upload("audio")).await;
+
+    assert_eq!(status, StatusCode::INSUFFICIENT_STORAGE);
+    assert_eq!(app.state.staging.file_count(), 0);
+}
+
+#[tokio::test]
+async fn truncated_stream_is_400_and_deletes_the_staged_file() {
+    let app = app_with_cap(SMALL_CAP);
+    let mut body = complete_upload("OggS....OpusHead");
+    // Cut the body inside the file part, before its closing boundary.
+    body.truncate(body.len() - 20);
+
+    let (status, _) = raw_upload(&app, body).await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(app.state.staging.file_count(), 0);
+}
+
+#[tokio::test]
+async fn later_validation_failures_delete_the_staged_file() {
+    let missing_name = format!(
+        "{}--XB--\r\n",
+        [part("category_id", "1"), file_part("audio")].concat()
+    );
+    let unknown_category = format!(
+        "{}--XB--\r\n",
+        [
+            part("name", "Wind"),
+            part("category_id", "99"),
+            file_part("audio")
+        ]
+        .concat()
+    );
+    let bad_icon_key = format!(
+        "{}--XB--\r\n",
+        [
+            part("name", "Wind"),
+            part("category_id", "1"),
+            part("icon_key", "Bad Key!"),
+            file_part("audio")
+        ]
+        .concat()
+    );
+    let non_numeric_category = format!(
+        "{}--XB--\r\n",
+        [
+            part("name", "Wind"),
+            file_part("audio"),
+            part("category_id", "abc")
+        ]
+        .concat()
+    );
+
+    for body in [
+        missing_name,
+        unknown_category,
+        bad_icon_key,
+        non_numeric_category,
+    ] {
+        let app = app();
+
+        let (status, _) = raw_upload(&app, body).await;
+
+        assert!(status.is_client_error(), "got {status}");
+        assert_eq!(app.state.staging.file_count(), 0);
+    }
+}

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 
 use super::audio_validator::AudioFormat;
+use super::staged_upload::StagedMedia;
 /// Why a conversion failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum ConvertError {
@@ -23,14 +24,14 @@ pub struct StoredAudio {
 /// lossless FLAC.
 #[async_trait]
 pub trait OpusConverter: Send + Sync {
-    /// Converts `bytes` to its stored form and reports that form plus the
+    /// Converts the staged `media` to its stored form and reports that form plus the
     /// decoded duration, so per-meditation progress can be shown as a
     /// percentage instead of raw position. A missing encoder surfaces as
     /// [`ConvertError::Unavailable`] so the API can answer 503 instead of
     /// blaming the media (plan D2).
     async fn convert(
         &self,
-        bytes: Vec<u8>,
+        media: StagedMedia,
         format: AudioFormat,
-    ) -> Result<(Vec<u8>, i64, StoredAudio), ConvertError>;
+    ) -> Result<(StagedMedia, i64, StoredAudio), ConvertError>;
 }

@@ -8,7 +8,10 @@ use meditation_application::ports::BlobStore as _;
 use meditation_application::ports::CoverValidator as _;
 
 fn store(root: &std::path::Path) -> MediaStoreBlobs {
-    MediaStoreBlobs::new(media_store::MediaStore::new(root.to_path_buf()))
+    MediaStoreBlobs::new(
+        media_store::MediaStore::new(root.to_path_buf()),
+        root.join("staging"),
+    )
 }
 
 async fn png_bytes(width: u32, height: u32) -> Vec<u8> {
@@ -195,4 +198,57 @@ async fn cover_normalizer_uses_the_shared_normalize_pipeline() {
         image::guess_format(&normalized).unwrap(),
         image::ImageFormat::WebP
     );
+}
+
+#[tokio::test]
+async fn put_staged_moves_the_staged_file_into_the_store() {
+    use meditation_application::ports::StagedMedia;
+
+    let directory = tempfile::tempdir().unwrap();
+    let blobs = store(directory.path());
+    std::fs::create_dir_all(directory.path().join("staging")).unwrap();
+    std::fs::write(directory.path().join("staging/upload-1"), b"staged-bytes").unwrap();
+
+    let stored = blobs
+        .put_staged(
+            StagedMedia {
+                address: "upload-1".to_owned(),
+                size_bytes: 12,
+            },
+            "covers",
+            "evening calm",
+            "opus",
+        )
+        .await
+        .unwrap();
+
+    assert!(stored.storage_key.starts_with("covers/evening-calm-"));
+    assert_eq!(stored.size_bytes, 12);
+    assert_eq!(
+        blobs.read(&stored.storage_key).await.unwrap(),
+        b"staged-bytes"
+    );
+    assert!(!directory.path().join("staging/upload-1").exists());
+}
+
+#[tokio::test]
+async fn put_staged_refuses_an_address_that_escapes_the_staging_root() {
+    use meditation_application::ports::StagedMedia;
+
+    let directory = tempfile::tempdir().unwrap();
+    let blobs = store(directory.path());
+
+    let result = blobs
+        .put_staged(
+            StagedMedia {
+                address: "../escape".to_owned(),
+                size_bytes: 1,
+            },
+            "covers",
+            "x",
+            "opus",
+        )
+        .await;
+
+    assert!(result.is_err());
 }

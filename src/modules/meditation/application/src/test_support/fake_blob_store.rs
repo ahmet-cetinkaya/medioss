@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use crate::ports::{BlobStore, StoredBlob};
+use super::FakeUploadStaging;
+use crate::ports::{BlobStore, StagedMedia, StoredBlob};
 
 /// In-memory blob store recording every put and delete.
 #[derive(Clone, Default)]
@@ -8,6 +9,8 @@ pub struct FakeBlobStore {
     state: Arc<Mutex<std::collections::HashMap<String, Vec<u8>>>>,
     counter: Arc<Mutex<u64>>,
     pub failures: Arc<Mutex<bool>>,
+    /// The staging area `put_staged` moves files out of.
+    pub staging: FakeUploadStaging,
 }
 
 impl FakeBlobStore {
@@ -61,6 +64,23 @@ impl BlobStore for FakeBlobStore {
             storage_key: key,
             size_bytes: bytes.len() as i64,
         })
+    }
+
+    async fn put_staged(
+        &self,
+        media: StagedMedia,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<StoredBlob, String> {
+        if *self.failures.lock().unwrap() {
+            return Err("store down".to_owned());
+        }
+        let bytes = self
+            .staging
+            .take(&media)
+            .ok_or_else(|| "no such staged file".to_owned())?;
+        self.put(folder, stem, ext, &bytes).await
     }
 
     async fn delete(&self, key: &str) -> Result<(), String> {

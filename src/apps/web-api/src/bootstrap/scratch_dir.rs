@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 
 use super::BootstrapError;
 
-const SCRATCH_DIR_NAME: &str = "tmp";
+/// Folder under the data dir that holds scratch and staged upload files.
+pub const SCRATCH_DIR_NAME: &str = "tmp";
 const TEMP_DIR_VAR: &str = "TMPDIR";
 const WRITE_CHECK_FILE: &str = ".scratch-write-check";
 

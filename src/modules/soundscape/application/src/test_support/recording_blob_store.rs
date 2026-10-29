@@ -2,7 +2,9 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 
+use super::FakeUploadStaging;
 use crate::ports::media::{BlobReader, BlobStore};
+use crate::ports::staged_upload::StagedMedia;
 
 /// Records every put/delete so tests can assert on blob side effects.
 #[derive(Default)]
@@ -11,6 +13,8 @@ pub struct RecordingBlobStore {
     pub deletes: Mutex<Vec<String>>,
     pub fail_put: bool,
     pub fail_delete: bool,
+    /// The staging area `put_staged` moves files out of.
+    pub staging: FakeUploadStaging,
 }
 
 impl RecordingBlobStore {
@@ -39,6 +43,20 @@ impl BlobStore for RecordingBlobStore {
         let key = format!("{folder}/{stem}-{}.{ext}", puts.len());
         puts.push(key.clone());
         Ok(key)
+    }
+
+    async fn put_staged(
+        &self,
+        media: StagedMedia,
+        folder: &str,
+        stem: &str,
+        ext: &str,
+    ) -> Result<String, String> {
+        if self.fail_put {
+            return Err("put failed".into());
+        }
+        self.staging.take(&media);
+        self.put(folder, stem, ext, &[]).await
     }
 
     async fn open_range(

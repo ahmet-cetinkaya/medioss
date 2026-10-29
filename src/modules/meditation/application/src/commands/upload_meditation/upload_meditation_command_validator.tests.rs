@@ -1,4 +1,5 @@
 use super::{UploadMeditationCommand, UploadMeditationCommandValidator};
+use crate::ports::StagedMedia;
 use crate::ApplicationError;
 
 const CAP: usize = 1024;
@@ -7,11 +8,18 @@ fn validator() -> UploadMeditationCommandValidator {
     UploadMeditationCommandValidator::new(CAP)
 }
 
+fn media_of(size_bytes: usize) -> StagedMedia {
+    StagedMedia {
+        address: "staged".to_owned(),
+        size_bytes: size_bytes as u64,
+    }
+}
+
 fn valid_command() -> UploadMeditationCommand {
     UploadMeditationCommand {
         name: "Morning".to_owned(),
         program_id: 1,
-        bytes: vec![0; 4],
+        media: media_of(4),
         description: None,
     }
 }
@@ -63,7 +71,7 @@ fn rejects_an_overlong_description() {
 #[test]
 fn accepts_a_payload_exactly_at_the_injected_cap() {
     let command = UploadMeditationCommand {
-        bytes: vec![0; CAP],
+        media: media_of(CAP),
         ..valid_command()
     };
 
@@ -73,7 +81,7 @@ fn accepts_a_payload_exactly_at_the_injected_cap() {
 #[test]
 fn rejects_a_payload_over_the_size_cap() {
     let command = UploadMeditationCommand {
-        bytes: vec![0; CAP + 1],
+        media: media_of(CAP + 1),
         ..valid_command()
     };
 

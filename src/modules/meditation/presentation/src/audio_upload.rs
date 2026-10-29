@@ -6,9 +6,10 @@ use axum::{
 };
 use meditation_application::commands;
 use meditation_application::commands::upload_meditation::UploadMeditationCommand;
+use meditation_application::ports::StagedMedia;
 
 use crate::meditation_response::{meditation_response, MeditationResponse};
-use crate::response::read_field_capped;
+use crate::response::{read_field_capped, stage_field_capped};
 use crate::{ensure_browser_origin, AdminActor, ApiError, SharedDependencies};
 
 /// Longest accepted `program_id` text field: an `i64` fits in 20 characters.
@@ -19,7 +20,7 @@ const MAX_PROGRAM_ID_FIELD_BYTES: usize = 32;
 struct UploadForm {
     name: Option<String>,
     program_id: Option<i64>,
-    bytes: Option<Vec<u8>>,
+    media: Option<StagedMedia>,
     description: Option<String>,
 }
 
@@ -27,7 +28,7 @@ struct UploadForm {
 struct ValidUpload {
     name: String,
     program_id: i64,
-    bytes: Vec<u8>,
+    media: StagedMedia,
     description: Option<String>,
 }
 
@@ -44,24 +45,46 @@ pub async fn upload(
     multipart: Multipart,
 ) -> Result<(StatusCode, Json<MeditationResponse>), ApiError> {
     ensure_browser_origin(&headers, &deps.medioss_origin)?;
-    let form = parse_upload_form(multipart, deps.max_upload_bytes).await?;
-    let upload = validate_upload_form(form)?;
-    let meditation = persist_upload(&deps, upload).await?;
-    Ok((StatusCode::CREATED, Json(meditation_response(&meditation))))
+    let mut form = UploadForm::default();
+    if let Err(error) = read_upload_form(multipart, &deps, &mut form).await {
+        discard_staged(&deps, form.media.as_ref()).await;
+        return Err(error);
+    }
+    let staged = form.media.clone();
+    let outcome = match validate_upload_form(form) {
+        Ok(upload) => persist_upload(&deps, upload).await,
+        Err(error) => Err(error),
+    };
+    match outcome {
+        Ok(meditation) => Ok((StatusCode::CREATED, Json(meditation_response(&meditation)))),
+        Err(error) => {
+            discard_staged(&deps, staged.as_ref()).await;
+            Err(error)
+        }
+    }
 }
 
-async fn parse_upload_form(
+/// Removes a staged upload that will not reach the use case. Idempotent, and
+/// a failed delete only leaves scratch space for the next startup to clear.
+async fn discard_staged(deps: &SharedDependencies, media: Option<&StagedMedia>) {
+    if let Some(media) = media {
+        let _ = deps.staging.discard(media).await;
+    }
+}
+
+/// Reads every multipart field into `form`. The form is filled in place, so a
+/// failure part-way still exposes the file already staged for cleanup.
+async fn read_upload_form(
     mut multipart: Multipart,
-    max_upload_bytes: usize,
-) -> Result<UploadForm, ApiError> {
+    deps: &SharedDependencies,
+    form: &mut UploadForm,
+) -> Result<(), ApiError> {
     // Text fields are bounded the same way: a streaming field cannot grow
     // past the name limit in memory.
     let max_text = commands::MAX_NAME_LENGTH * 4;
     // Cap above the 2000-char limit (4 bytes/char) so an over-long value
     // reaches the command and gets the 400.
     let max_description = meditation_domain::MAX_DESCRIPTION_LENGTH * 4 + 4;
-    let mut form = UploadForm::default();
-
     while let Some(mut field) = multipart
         .next_field()
         .await
@@ -85,14 +108,19 @@ async fn parse_upload_form(
                 form.description = Some(String::from_utf8_lossy(&text).into_owned());
             }
             Some("file") => {
-                form.bytes = Some(read_field_capped(&mut field, max_upload_bytes).await?);
+                // A repeated file field replaces the earlier one.
+                discard_staged(deps, form.media.as_ref()).await;
+                form.media = Some(
+                    stage_field_capped(&mut field, deps.staging.as_ref(), deps.max_upload_bytes)
+                        .await?,
+                );
             }
             _ => {
                 let _ = field.bytes().await;
             }
         }
     }
-    Ok(form)
+    Ok(())
 }
 
 fn validate_upload_form(form: UploadForm) -> Result<ValidUpload, ApiError> {
@@ -100,7 +128,7 @@ fn validate_upload_form(form: UploadForm) -> Result<ValidUpload, ApiError> {
     Ok(ValidUpload {
         name: form.name.ok_or_else(missing)?,
         program_id: form.program_id.ok_or_else(missing)?,
-        bytes: form.bytes.ok_or_else(missing)?,
+        media: form.media.ok_or_else(missing)?,
         description: form.description,
     })
 }
@@ -113,7 +141,7 @@ async fn persist_upload(
         .handle(UploadMeditationCommand {
             name: upload.name,
             program_id: upload.program_id,
-            bytes: upload.bytes,
+            media: upload.media,
             description: upload.description,
         })
         .await
