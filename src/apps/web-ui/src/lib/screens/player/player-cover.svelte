@@ -25,7 +25,7 @@
     $props();
 
   const inlineCoverClass =
-    "relative block aspect-video w-full overflow-hidden lg:aspect-auto lg:h-72 lg:max-h-72 rounded-tile bg-surface-solid/50";
+    "relative block aspect-video w-full [@media(max-height:700px)]:aspect-21/9 overflow-hidden lg:aspect-auto lg:h-72 lg:max-h-72 rounded-tile bg-surface-solid/50";
 </script>
 
 {#snippet artwork(wash: boolean)}
