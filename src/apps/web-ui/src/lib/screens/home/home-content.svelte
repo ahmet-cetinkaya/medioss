@@ -135,7 +135,7 @@
       emptyAction={hasStartAction() ? startAction : undefined}
     >
       {#if recent}
-        <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <ul class="grid grid-cols-[repeat(auto-fill,minmax(0,12rem))] gap-4">
           {#each recent as entry (entry.program.id)}
             <li class="min-w-0">
               <ContentCard
