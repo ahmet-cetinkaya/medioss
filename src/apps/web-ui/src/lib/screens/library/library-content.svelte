@@ -28,13 +28,13 @@
   import MeditationRow from "$lib/components/content/meditation-row.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
-  import RangeChips from "$lib/components/filters/range-chips.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { contentMessages } from "$lib/components/content/content.messages";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { locale, t } from "$lib/i18n/locale.svelte";
+  import { libraryFilter } from "./library-filter.svelte";
   import { libraryQuery } from "$lib/library/library-query.svelte";
   import {
     meditationProgressLabel,
@@ -53,7 +53,7 @@
   let programs = $state<Program[] | null>(null);
   let categories = $state<Category[]>([]);
   let groupsFailure = $state<ServerReason | null>(null);
-  let filter = $state<LibraryFilter>("all");
+  const filter = $derived(libraryFilter.value);
 
   let favorites = $state<Meditation[] | null>(null);
   let favoritesFailure = $state<ServerReason | null>(null);
@@ -68,13 +68,6 @@
   const visibleGroups = $derived(
     filter === "favorites" ? [] : filterGroups(groups, filter),
   );
-  const chips = $derived([
-    { value: "all" as const, label: t(m.all) },
-    { value: "completed" as const, label: t(m.filterCompleted) },
-    { value: "in-progress" as const, label: t(m.filterInProgress) },
-    { value: "not-started" as const, label: t(m.filterNotStarted) },
-    { value: "favorites" as const, label: t(m.filterFavorites) },
-  ]);
 
   const favoritesStatus = $derived(
     favoritesFailure
@@ -155,6 +148,9 @@
   });
 
   onMount(() => {
+    // Like the other pages, every visit starts on "All"; the shared store
+    // would otherwise keep the last choice across navigations.
+    libraryFilter.value = "all";
     void loadGroups();
     return libraryQuery.connect();
   });
@@ -309,12 +305,6 @@
     emptyAction={session.isAdmin ? adminLink : undefined}
   >
     <div class="flex flex-col gap-8">
-      <RangeChips
-        options={chips}
-        bind:value={filter}
-        name="library-filter"
-        legend={t(m.filterLegend)}
-      />
       {#if filter === "favorites"}
         <RegionState
           status={favoritesStatus}

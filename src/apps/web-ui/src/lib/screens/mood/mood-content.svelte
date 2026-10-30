@@ -26,7 +26,7 @@
     type Failure,
   } from "$lib/components/dialogs/form-dialog.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
-  import RangeChips from "$lib/components/filters/range-chips.svelte";
+  import FilterSelect from "$lib/components/filters/filter-select.svelte";
   import { type MoodScore } from "$lib/components/mood/score-selector.svelte";
   import { t } from "$lib/i18n/locale.svelte";
   import MoodEntriesPanel from "./mood-entries-panel.svelte";
@@ -208,12 +208,7 @@
     onCancel={cancelEdit}
   />
 
-  <RangeChips
-    options={ranges}
-    bind:value={range}
-    name="mood-range"
-    legend={t(m.rangeLegend)}
-  />
+  <FilterSelect options={ranges} bind:value={range} legend={t(m.rangeLegend)} />
 
   <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
     <MoodEntriesPanel

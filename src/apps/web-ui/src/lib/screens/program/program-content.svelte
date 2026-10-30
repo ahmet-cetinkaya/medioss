@@ -118,10 +118,12 @@
   {/snippet}
   {#if data && action}
     {@const { program, members } = data}
-    <div class="flex flex-col gap-6">
+    <div
+      class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start"
+    >
       <section
         aria-labelledby="program-title"
-        class="flex min-w-0 flex-col gap-4"
+        class="glass-panel flex min-w-0 flex-col gap-4 rounded-panel p-4 sm:p-6 lg:col-start-2 lg:row-start-1"
       >
         <ProgramHero
           {program}
@@ -131,7 +133,7 @@
             locale.current,
           ) ?? ""}
         />
-        <div class="flex min-w-0 flex-wrap items-start gap-4">
+        <div class="flex min-w-0 flex-col items-start gap-4">
           <div class="flex min-w-0 flex-1 flex-col gap-2">
             {#if program.description}
               <p
@@ -149,7 +151,7 @@
               </p>
             {/if}
           </div>
-          <div class="self-center">
+          <div>
             {#if action.kind === "unavailable"}
               <Button disabled aria-describedby="program-action-reason">
                 {t(actionLabel)}
@@ -163,7 +165,10 @@
         </div>
       </section>
 
-      <Panel aria-labelledby="program-sessions-heading">
+      <Panel
+        aria-labelledby="program-sessions-heading"
+        class="lg:col-start-1 lg:row-start-1"
+      >
         {#snippet heading()}
           <h2
             id="program-sessions-heading"

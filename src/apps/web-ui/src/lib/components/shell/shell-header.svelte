@@ -6,18 +6,24 @@
   with the compact brand lockup, and the search moves to its own row beneath it.
 
   Props: `title` (translated screen name or runtime override; `null` renders no
-  h1, only a spacer, for a screen whose content carries its own h1), `search`.
+  h1, only a spacer, for a screen whose content carries its own h1), `search`,
+  `actions?` (a snippet of controls, e.g. Library's filter dropdown, shown on
+  the header row next to the search from md up; below that it joins the stacked
+  search row). The snippet is rendered in both places and the CSS shows one,
+  so the controls inside must not rely on a fixed id.
 -->
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import BrandLockup from "$lib/components/content/brand-lockup.svelte";
   import HeaderSearch from "./header-search.svelte";
 
   type Props = {
     title: string | null;
     search?: boolean;
+    actions?: Snippet;
   };
 
-  let { title, search = false }: Props = $props();
+  let { title, search = false, actions }: Props = $props();
 </script>
 
 <header
@@ -36,9 +42,15 @@
   {#if search}
     <HeaderSearch class="hidden w-72 md:block lg:w-80" />
   {/if}
+  {#if actions}
+    <div class="hidden md:block">{@render actions()}</div>
+  {/if}
 </header>
-{#if search}
-  <div class="px-4 pt-4 md:hidden">
-    <HeaderSearch class="w-full" />
+{#if search || actions}
+  <div class="flex items-center gap-3 px-4 pt-4 md:hidden">
+    {#if search}
+      <HeaderSearch class="w-full" />
+    {/if}
+    {@render actions?.()}
   </div>
 {/if}

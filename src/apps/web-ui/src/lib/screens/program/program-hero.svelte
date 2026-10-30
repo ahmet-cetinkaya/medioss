@@ -1,6 +1,6 @@
 <!--
   @component
-  Program detail hero: a wide 16:9 cover with the program title on the shared
+  Program detail hero: a 16:9 cover with the program title on the shared
   image-first scrim (CoverOverlay, the Library card treatment) and the
   progress as a fill bar at its bottom edge. The description and the primary
   action live below the hero, not on the image. Falls back to generated
@@ -30,7 +30,7 @@
 
 <div
   data-elevation="featured"
-  class="elevation-3 relative block aspect-video w-full overflow-hidden rounded-tile bg-surface-solid/50 lg:aspect-21/9"
+  class="elevation-3 relative block aspect-video w-full overflow-hidden rounded-tile bg-surface-solid/50"
 >
   {#if showCover}
     <img
