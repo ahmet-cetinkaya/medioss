@@ -13,6 +13,8 @@
   import { formatCalendarDay } from "$lib/i18n/formatting/date-time-format";
   import { type ServerReason } from "$lib/api/server-reason";
   import { failureMessage, reasonOf } from "$lib/api/failure";
+  import MoodFace from "$lib/components/mood/mood-face.svelte";
+  import Orb from "$lib/components/content/orb.svelte";
   import FeedItem from "$lib/components/content/feed-item.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
@@ -173,7 +175,15 @@
                 source={describe(event)}
                 meta={formatDateTime(event.recorded_at, locale.current)}
                 body={event.note ?? undefined}
-              />
+              >
+                {#snippet avatar()}
+                  {#if event.kind === "Mood" && event.score}
+                    <MoodFace score={event.score} size="sm" />
+                  {:else}
+                    <Orb size="inline" variant="brand" />
+                  {/if}
+                {/snippet}
+              </FeedItem>
             </li>
           {/each}
         </ul>

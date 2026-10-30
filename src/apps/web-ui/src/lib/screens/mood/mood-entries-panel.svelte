@@ -4,11 +4,7 @@
   import type { Failure } from "$lib/components/dialogs/form-dialog.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
-  import AppIcon from "$lib/components/icons/app-icon.svelte";
-  import {
-    MOOD_FACE,
-    type MoodScore,
-  } from "$lib/components/mood/score-selector.svelte";
+  import MoodFace from "$lib/components/mood/mood-face.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import OverflowItem from "$lib/components/ui/menu/overflow-item.svelte";
   import OverflowMenu from "$lib/components/ui/menu/overflow-menu.svelte";
@@ -46,14 +42,6 @@
     onEdit: (entry: MoodEntry, trigger: HTMLElement | null) => void;
     onDelete: (entry: MoodEntry) => void;
   } = $props();
-
-  const MOOD_BG: Record<MoodScore, string> = {
-    1: "bg-mood-1",
-    2: "bg-mood-2",
-    3: "bg-mood-3",
-    4: "bg-mood-4",
-    5: "bg-mood-5",
-  };
 
   const days = $derived(groupByDay(entries ?? []));
 
@@ -100,17 +88,7 @@
               <li
                 class="relative flex items-start gap-3 rounded-panel border border-rim bg-panel-tint/40 p-3"
               >
-                <span
-                  data-mood-dot={entry.score}
-                  aria-hidden="true"
-                  class={`grid size-10 shrink-0 place-items-center rounded-full text-primary-foreground ${MOOD_BG[entry.score as MoodScore]}`}
-                >
-                  <AppIcon
-                    name={MOOD_FACE[entry.score as MoodScore]}
-                    size={22}
-                    filled
-                  />
-                </span>
+                <MoodFace score={entry.score} />
                 <div class="flex min-w-0 flex-1 flex-col gap-1">
                   <p class="font-semibold break-words text-ink-strong">
                     {entrySource(entry)}
