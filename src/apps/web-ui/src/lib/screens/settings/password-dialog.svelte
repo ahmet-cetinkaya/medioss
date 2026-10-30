@@ -6,8 +6,8 @@
   Settings) and closes the dialog; the form announces the success itself.
 
   Props: `open` (bindable). While the change request runs, Escape and
-  outside clicks do not close the dialog (the form reports `busy`), matching
-  FormDialog.
+  outside clicks do not close the dialog and the X button is hidden (the form
+  reports `busy`), matching FormDialog.
 -->
 <script lang="ts">
   import PasswordChangeForm from "$lib/components/account/password-change-form.svelte";
@@ -24,6 +24,7 @@
 
 <Dialog.Root bind:open>
   <Dialog.Content
+    showCloseButton={!busy}
     escapeKeydownBehavior={busy ? "ignore" : "close"}
     interactOutsideBehavior={busy ? "ignore" : "close"}
   >

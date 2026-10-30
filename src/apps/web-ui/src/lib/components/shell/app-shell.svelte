@@ -220,9 +220,7 @@
       <div
         class="flex min-w-0 flex-1 flex-col pb-[calc(5.5rem+var(--safe-area-bottom))] md:min-h-0 md:pb-0"
       >
-        <ShellHeader title={headerTitle} {search}>
-          {#snippet actions()}{@render headerActions?.()}{/snippet}
-        </ShellHeader>
+        <ShellHeader title={headerTitle} {search} actions={headerActions} />
         <div
           bind:this={contentRef}
           class={aside
