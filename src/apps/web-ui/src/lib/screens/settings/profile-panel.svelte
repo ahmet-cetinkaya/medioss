@@ -36,7 +36,11 @@
   import type { SessionUser } from "$lib/session/gate-decision";
   import { session } from "$lib/session/session.svelte";
   import { AVATAR_TYPES, avatarFileProblem } from "./avatar-file";
-  import { profileMessages as m } from "./settings.messages";
+  import PasswordDialog from "./password-dialog.svelte";
+  import {
+    passwordPanelMessages,
+    profileMessages as m,
+  } from "./settings.messages";
 
   type Props = { user: SessionUser };
 
@@ -46,6 +50,7 @@
   const DISPLAY_NAME_MAX = 64;
 
   let displayName = $state(session.user?.display_name ?? "");
+  let passwordOpen = $state(false);
   let nameBusy = $state(false);
   let nameSaved = $state(false);
   let nameFailure = $state<ReturnType<typeof reasonOf> | null>(null);
@@ -219,12 +224,18 @@
       {:else if nameSaved}
         <InlineMessage tone="success">{t(m.nameSaved)}</InlineMessage>
       {/if}
-      <div class="mt-2">
+      <div class="mt-2 flex flex-wrap gap-2">
         <Button type="submit" busy={nameBusy}>{t(m.saveName)}</Button>
+        <Button variant="secondary" onclick={() => (passwordOpen = true)}>
+          <AppIcon name="shield-check" />
+          {t(passwordPanelMessages.change)}
+        </Button>
       </div>
     </form>
   </div>
 </Panel>
+
+<PasswordDialog bind:open={passwordOpen} />
 
 <ConfirmDialog
   bind:open={removeOpen}

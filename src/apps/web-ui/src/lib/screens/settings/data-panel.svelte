@@ -4,9 +4,11 @@
 
   - Exports are real same-origin `<a href download>` links styled as buttons:
     JSON (all data) and CSV (mood entries only).
-  - Import sends the chosen JSON or CSV file once per activation; success
-    shows all five counts the server returns, a refusal shows the specific
-    reason (never server text) and no report.
+  - Import is a button that opens a FormDialog with the file field; it
+    sends the chosen JSON or CSV file once per activation. Success closes the
+    dialog and shows all five counts the server returns in the panel; a
+    refusal stays in the dialog with the specific reason (never server text)
+    and no report.
 -->
 <script lang="ts">
   import { failureMessage, reasonOf } from "$lib/api/failure";
@@ -16,8 +18,8 @@
     importData,
     type ImportReport,
   } from "$lib/api/portability";
+  import FormDialog from "$lib/components/dialogs/form-dialog.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
-  import InlineMessage from "$lib/components/feedback/inline-message.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
@@ -29,9 +31,8 @@
   const id = $props.id();
 
   let file = $state<File | null>(null);
-  let busy = $state(false);
+  let importOpen = $state(false);
   let report = $state<ImportReport | null>(null);
-  let failure = $state<ReturnType<typeof reasonOf> | null>(null);
 
   const counts = $derived(
     report
@@ -48,20 +49,16 @@
       : [],
   );
 
-  async function runImport(event: SubmitEvent) {
-    event.preventDefault();
-    if (!file || busy) return;
-    busy = true;
+  function askImport() {
+    file = null;
+    importOpen = true;
+  }
+
+  async function runImport() {
+    if (!file) return;
     report = null;
-    failure = null;
-    try {
-      report = await importData(file);
-      announce(t(m.imported));
-    } catch (error) {
-      failure = reasonOf(error);
-    } finally {
-      busy = false;
-    }
+    report = await importData(file);
+    announce(t(m.imported));
   }
 </script>
 
@@ -93,33 +90,11 @@
         <AppIcon name="download-simple" size={18} />
         {t(m.exportCsv)}
       </Button>
+      <Button variant="secondary" onclick={askImport}>
+        <AppIcon name="upload-simple" size={18} />
+        {t(m.importAction)}
+      </Button>
     </div>
-
-    <form class="flex flex-col gap-2" novalidate onsubmit={runImport}>
-      <label for="{id}-file" class="text-sm font-medium text-ink-strong">
-        {t(m.importLabel)}
-      </label>
-      <Input
-        id="{id}-file"
-        type="file"
-        accept=".json,.csv,application/json,text/csv"
-        onchange={(event) => {
-          file = event.currentTarget.files?.[0] ?? null;
-          failure = null;
-        }}
-      />
-      {#if failure}
-        <InlineMessage tone="error" role="alert">
-          {t(failureMessage(failure, m.importFailed).message)}
-        </InlineMessage>
-      {/if}
-      <div class="mt-2">
-        <Button type="submit" {busy} disabled={!file}>
-          <AppIcon name="upload-simple" size={18} />
-          {t(m.importAction)}
-        </Button>
-      </div>
-    </form>
 
     {#if report}
       <section aria-labelledby="{id}-report" class="flex flex-col gap-3">
@@ -142,3 +117,23 @@
     {/if}
   </div>
 </Panel>
+
+<FormDialog
+  bind:open={importOpen}
+  title={t(m.importLabel)}
+  submitLabel={t(m.importAction)}
+  canSubmit={file !== null}
+  onSubmit={runImport}
+  errorMessage={(error) =>
+    failureMessage(reasonOf(error), m.importFailed).message}
+>
+  <label for="{id}-file" class="sr-only">{t(m.importLabel)}</label>
+  <Input
+    id="{id}-file"
+    type="file"
+    accept=".json,.csv,application/json,text/csv"
+    onchange={(event) => {
+      file = event.currentTarget.files?.[0] ?? null;
+    }}
+  />
+</FormDialog>

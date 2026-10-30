@@ -12,6 +12,9 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 - **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing). On screens up to 700 px tall the cover is wider and shorter, so every control fits above the bottom bar (checked at 360x640 and 390x700).
 
+- **Admin: Users is the last tab**, and **Create user** is a dialog opened from a button at the top of the user list. The one-time temporary password still shows above the list.
+- **Settings: no always-open forms.** Changing the password is a dialog opened from a **Change password** button in the profile section. Importing data is a dialog opened from an **Import** button, and deleting the account is a dialog (email confirmation inside) opened from a **Delete account** button.
+
 ## [1.1.4] — 2026-10-30
 
 ### Added

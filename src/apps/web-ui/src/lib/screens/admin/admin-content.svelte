@@ -30,9 +30,9 @@
   });
 
   const options = $derived([
-    { value: "users" as const, label: t(m.sectionUsers) },
     { value: "meditations" as const, label: t(m.sectionMeditations) },
     { value: "soundscape" as const, label: t(m.sectionSoundscape) },
+    { value: "users" as const, label: t(m.sectionUsers) },
   ]);
 
   $effect(() => {

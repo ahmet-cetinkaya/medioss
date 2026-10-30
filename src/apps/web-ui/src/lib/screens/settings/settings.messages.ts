@@ -73,6 +73,7 @@ export const languagePanelMessages = defineMessages({
 
 export const passwordPanelMessages = defineMessages({
   heading: { en: "Password", tr: "Parola" },
+  change: { en: "Change password", tr: "Parolayı değiştir" },
   intro: {
     en: "You stay signed in here; your other sessions are signed out.",
     tr: "Burada oturumunuz açık kalır; diğer oturumlarınız kapatılır.",

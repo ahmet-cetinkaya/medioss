@@ -5,7 +5,8 @@
 
   Props: `open` (bindable), `title`, `description?`, `submitLabel`,
   `onSubmit: () => Promise<void>`, `canSubmit` (default true; false disables
-  submit), `children` (field snippet), `returnFocusTo?` (focus target on
+  submit), `destructive` (default false: the submit button uses the destructive
+  variant), `children` (field snippet), `returnFocusTo?` (focus target on
   close; default: the element focused when the dialog opened),
   `fallbackFocus?` (element or getter used when that target was removed),
   `reasonContext?` (passed to serverReason), `errorMessage?` (returns a
@@ -60,6 +61,7 @@
     title: string;
     description?: string;
     submitLabel: string;
+    destructive?: boolean;
     onSubmit: () => Promise<void>;
     canSubmit?: boolean;
     children: Snippet;
@@ -74,6 +76,7 @@
     title,
     description,
     submitLabel,
+    destructive = false,
     onSubmit,
     canSubmit = true,
     children,
@@ -142,7 +145,12 @@
         >
           {t(actionMessages.cancel)}
         </Button>
-        <Button type="submit" busy={submitting} disabled={!canSubmit}>
+        <Button
+          type="submit"
+          variant={destructive ? "destructive" : "primary"}
+          busy={submitting}
+          disabled={!canSubmit}
+        >
           {submitLabel}
         </Button>
       </Dialog.Footer>

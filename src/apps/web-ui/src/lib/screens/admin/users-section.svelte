@@ -1,7 +1,7 @@
 <!--
   @component
-  Admin Users section (FR-073–FR-076, PB-13, PB-17). A create form that keeps
-  its values on refusal; the created user's temporary password shown once in
+  Admin Users section (FR-073–FR-076, PB-13, PB-17). A create-user dialog
+  (button beside the list heading) that keeps its values on refusal; the created user's temporary password shown once in
   a read-only field with Copy (component state only: gone after a reload);
   and the user list (avatar, name, email, role, status as text) with
   Disable (confirm: immediate sign-out), Enable (no confirm), and Delete
@@ -25,7 +25,7 @@
     reasonOf,
   } from "$lib/api/failure";
   import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
-  import {
+  import FormDialog, {
     describeFailure,
     type Failure,
   } from "$lib/components/dialogs/form-dialog.svelte";
@@ -86,31 +86,23 @@
   // Create user. The temporary password lives only in `created` (PB-13).
   let email = $state("");
   let password = $state("");
-  let creating = $state(false);
-  let createFailure = $state<Failure | null>(null);
+  let createOpen = $state(false);
   let created = $state<{ email: string; password: string } | null>(null);
   let copyState = $state<"copied" | "selected" | null>(null);
   let passwordField = $state<HTMLInputElement | null>(null);
 
-  async function submitCreate(event: SubmitEvent) {
-    event.preventDefault();
-    if (creating || !email.trim() || !password) return;
-    creating = true;
-    createFailure = null;
-    created = null;
+  function askCreate() {
+    email = "";
+    password = "";
+    createOpen = true;
+  }
+
+  async function submitCreate() {
+    const user = await createUser(email.trim(), password);
+    created = { email: user.email, password };
     copyState = null;
-    try {
-      const user = await createUser(email.trim(), password);
-      created = { email: user.email, password };
-      email = "";
-      password = "";
-      announce(t(m.created, { email: user.email }));
-      void load(false);
-    } catch (error) {
-      createFailure = describeFailure(error);
-    } finally {
-      creating = false;
-    }
+    announce(t(m.created, { email: user.email }));
+    void load(false);
   }
 
   async function copyPassword() {
@@ -194,61 +186,26 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <Panel aria-labelledby="{id}-create-heading">
+  <Panel aria-labelledby="{id}-list-heading">
     {#snippet heading()}
-      <h2 id="{id}-create-heading" class="text-heading text-ink-strong">
-        {t(m.createHeading)}
-      </h2>
-    {/snippet}
-    <form
-      class="grid grid-cols-1 min-w-0 gap-4 md:max-w-xl"
-      onsubmit={submitCreate}
-      novalidate
-    >
-      <div class="grid grid-cols-1 gap-2">
-        <Label for="{id}-email">{t(m.email)}</Label>
-        <Input
-          id="{id}-email"
-          type="email"
-          bind:value={email}
-          autocomplete="off"
-          spellcheck="false"
-          required
-        />
-      </div>
-      <div class="grid grid-cols-1 gap-2">
-        <Label for="{id}-password">{t(m.temporaryPassword)}</Label>
-        <Input
-          id="{id}-password"
-          bind:value={password}
-          autocomplete="off"
-          spellcheck="false"
-          required
-          aria-describedby="{id}-password-hint"
-        />
-        <p id="{id}-password-hint" class="text-sm text-ink-muted">
-          {t(m.temporaryPasswordHint)}
-        </p>
-      </div>
-      {#if createFailure}
-        <InlineMessage tone="error" role="alert">
-          {t(createFailure.message, createFailure.params)}
-        </InlineMessage>
-      {/if}
-      <div>
-        <Button
-          type="submit"
-          busy={creating}
-          disabled={!email.trim() || !password}
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2
+          id="{id}-list-heading"
+          bind:this={listHeading}
+          tabindex="-1"
+          class="text-heading text-ink-strong outline-none"
         >
+          {t(m.listHeading)}
+        </h2>
+        <Button onclick={askCreate}>
+          <AppIcon name="plus" />
           {t(m.create)}
         </Button>
       </div>
-    </form>
-
+    {/snippet}
     {#if created}
       <div
-        class="mt-6 grid grid-cols-1 gap-3 rounded-tile bg-surface-solid/50 p-4 md:max-w-xl"
+        class="mb-4 grid grid-cols-1 gap-3 rounded-tile bg-surface-solid/50 p-4 md:max-w-xl"
         data-testid="created-user"
       >
         <InlineMessage tone="success">
@@ -281,19 +238,6 @@
         {/if}
       </div>
     {/if}
-  </Panel>
-
-  <Panel aria-labelledby="{id}-list-heading">
-    {#snippet heading()}
-      <h2
-        id="{id}-list-heading"
-        bind:this={listHeading}
-        tabindex="-1"
-        class="text-heading text-ink-strong outline-none"
-      >
-        {t(m.listHeading)}
-      </h2>
-    {/snippet}
     {#if rowFailure}
       <InlineMessage tone="error" role="alert" class="mb-4">
         {t(rowFailure.message, rowFailure.params)}
@@ -382,6 +326,41 @@
     </RegionState>
   </Panel>
 </div>
+
+<FormDialog
+  bind:open={createOpen}
+  title={t(m.createHeading)}
+  submitLabel={t(m.create)}
+  canSubmit={Boolean(email.trim() && password)}
+  onSubmit={submitCreate}
+  fallbackFocus={() => listHeading}
+>
+  <div class="grid grid-cols-1 gap-2">
+    <Label for="{id}-email">{t(m.email)}</Label>
+    <Input
+      id="{id}-email"
+      type="email"
+      bind:value={email}
+      autocomplete="off"
+      spellcheck="false"
+      required
+    />
+  </div>
+  <div class="grid grid-cols-1 gap-2">
+    <Label for="{id}-password">{t(m.temporaryPassword)}</Label>
+    <Input
+      id="{id}-password"
+      bind:value={password}
+      autocomplete="off"
+      spellcheck="false"
+      required
+      aria-describedby="{id}-password-hint"
+    />
+    <p id="{id}-password-hint" class="text-sm text-ink-muted">
+      {t(m.temporaryPasswordHint)}
+    </p>
+  </div>
+</FormDialog>
 
 <ConfirmDialog
   bind:open={disableOpen}
