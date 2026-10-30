@@ -6,7 +6,7 @@ mod list_library_query_validator;
 mod matches;
 mod search_index;
 
-pub use library_entry::LibraryEntry;
+pub use library_entry::{LibraryEntry, LibraryProgram};
 pub use list_library_query::ListLibraryQuery;
 pub use list_library_query_handler::ListLibraryQueryHandler;
 pub use list_library_query_validator::ListLibraryQueryValidator;

@@ -259,6 +259,39 @@ export const meditationAdminMessages = defineMessages({
     en: "Add meditation to a program",
     tr: "Meditasyonu bir programa ekle",
   },
+  addToAnotherProgram: {
+    en: "Add to another program",
+    tr: "Başka bir programa ekle",
+  },
+  searchMeditationsLabel: {
+    en: "Search by meditation or program name",
+    tr: "Meditasyon veya program adına göre ara",
+  },
+  searchProgramsLabel: {
+    en: "Search programs",
+    tr: "Programlarda ara",
+  },
+  pickerNoMatches: {
+    en: "No meditations match your search.",
+    tr: "Aramanızla eşleşen meditasyon yok.",
+  },
+  assignNoMatches: {
+    en: "No programs match your search.",
+    tr: "Aramanızla eşleşen program yok.",
+  },
+  assignInEveryProgram: {
+    en: "This meditation is already in every program.",
+    tr: "Bu meditasyon zaten tüm programlarda.",
+  },
+  pickerNoProgram: { en: "No program", tr: "Programsız" },
+  alreadyInProgram: {
+    en: "Already in this program",
+    tr: "Zaten bu programda",
+  },
+  addFromLibraryHint: {
+    en: "Click a meditation to add it to the program.",
+    tr: "Eklemek için bir meditasyona tıklayın.",
+  },
   removeFromProgram: { en: "Remove from program", tr: "Programdan çıkar" },
   removeTitle: {
     en: "Remove from this program?",

@@ -330,6 +330,8 @@
           onMove={(index, delta) => void move(index, delta)}
           onEditDescription={(meditation) =>
             memberDialogs?.askEditDescription(meditation)}
+          onAssignToProgram={(meditation) =>
+            addMeditationDialogs?.askAssign(meditation)}
           onRemove={(meditation) => memberDialogs?.askRemove(meditation)}
           onRename={(meditation) => memberDialogs?.askRename(meditation)}
           onDeleteMeditation={(meditation) =>

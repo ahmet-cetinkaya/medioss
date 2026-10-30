@@ -93,6 +93,30 @@ async fn library_attaches_the_callers_completion_state() {
 }
 
 #[tokio::test]
+async fn library_names_every_program_the_meditation_belongs_to() {
+    let app = app();
+    let meditation = seed_meditation(&app).await;
+    let program = seed_ordered_program(&app).await;
+    // seed_ordered_program adds meditations 1..3 to program P; the seeded
+    // meditation is a later id, so add it explicitly.
+    use meditation_application::ports::MembershipRepository;
+    use meditation_application::test_support::FakeMembershipRepository;
+    FakeMembershipRepository(app.state.clone())
+        .add(program, meditation.id(), chrono::Utc::now())
+        .await
+        .unwrap();
+    let listed = library_q(&app, "").await;
+    let entry = listed
+        .iter()
+        .find(|row| row["id"] == meditation.id())
+        .expect("seeded meditation in the library");
+    assert_eq!(
+        entry["programs"],
+        serde_json::json!([{ "id": program, "title": "P" }]),
+    );
+}
+
+#[tokio::test]
 async fn detail_returns_metadata_and_unknown_id_is_404() {
     let app = app();
     let meditation = seed_meditation(&app).await;

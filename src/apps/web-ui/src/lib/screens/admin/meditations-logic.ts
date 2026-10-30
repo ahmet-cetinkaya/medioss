@@ -11,6 +11,30 @@ export type CategoryFilter = "all" | "none" | number;
 
 export const DESCRIPTION_MAX = 2000;
 
+/** Lowercases and strips diacritics (and Turkish dotless i) so a search
+ * ignores case and accents, like the server-side library search. */
+export function foldForSearch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/ı/g, "i")
+    .toLowerCase();
+}
+
+/** Whether a meditation's name or any of its program titles contains the search text. */
+export function meditationMatchesSearch(
+  meditation: Pick<Meditation, "name" | "programs">,
+  search: string,
+): boolean {
+  const needle = foldForSearch(search.trim());
+  if (needle === "") return true;
+  const haystack = [
+    meditation.name,
+    ...(meditation.programs ?? []).map((p) => p.title),
+  ];
+  return haystack.some((text) => foldForSearch(text).includes(needle));
+}
+
 export const descriptionLength = (text: string) => [...text].length;
 
 // `/admin/meditations/` → null; `/admin/meditations/12/` → 12.

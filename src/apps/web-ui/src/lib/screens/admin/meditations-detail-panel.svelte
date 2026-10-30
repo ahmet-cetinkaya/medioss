@@ -40,6 +40,7 @@
     onRetryMembers,
     onMove,
     onEditDescription,
+    onAssignToProgram,
     onRemove,
     onDeleteMeditation,
     onRename,
@@ -62,6 +63,7 @@
     onRetryMembers: () => void;
     onMove: (index: number, delta: -1 | 1) => void;
     onEditDescription: (meditation: Meditation) => void;
+    onAssignToProgram: (meditation: Meditation) => void;
     onRemove: (meditation: Meditation) => void;
     onDeleteMeditation: (meditation: Meditation) => void;
     onRename: (meditation: Meditation) => void;
@@ -227,6 +229,11 @@
                     (window.location.href = meditationDownloadUrl(
                       meditation.id,
                     ))}
+                />
+                <OverflowItem
+                  label={t(m.addToAnotherProgram)}
+                  icon="plus"
+                  onclick={() => onAssignToProgram(meditation)}
                 />
                 <OverflowItem
                   label={t(m.removeFromProgram)}

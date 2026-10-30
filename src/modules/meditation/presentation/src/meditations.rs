@@ -14,7 +14,8 @@ use meditation_application::queries::get_meditation_detail::GetMeditationDetailQ
 use meditation_application::queries::list_library::ListLibraryQuery;
 
 use crate::meditation_response::{
-    caller_favorite_ids, meditation_response, with_playback, MeditationResponse, ProgramSummary,
+    caller_favorite_ids, meditation_response, with_playback, MeditationResponse, ProgramLabel,
+    ProgramSummary,
 };
 use crate::{ensure_browser_origin, AdminActor, ApiError, CurrentActor, SharedDependencies};
 
@@ -133,6 +134,16 @@ pub async fn library(
         .await;
         response.program_id = entry.program_id;
         response.program_has_cover = entry.program_has_cover;
+        response.programs = Some(
+            entry
+                .programs
+                .iter()
+                .map(|program| ProgramLabel {
+                    id: program.id,
+                    title: program.title.clone(),
+                })
+                .collect(),
+        );
         responses.push(response);
     }
     Ok(Json(responses))
