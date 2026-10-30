@@ -63,6 +63,8 @@
   type Props = {
     screen: ScreenKey;
     title?: string | null;
+    /** Extra controls on the header row next to the search (Library's filter). */
+    headerActions?: Snippet;
     documentTitle?: string;
     requires?: GateRequirement;
     search?: boolean;
@@ -76,6 +78,7 @@
     documentTitle,
     requires = "user",
     search = false,
+    headerActions,
     aside,
     children,
   }: Props = $props();
@@ -217,7 +220,9 @@
       <div
         class="flex min-w-0 flex-1 flex-col pb-[calc(5.5rem+var(--safe-area-bottom))] md:min-h-0 md:pb-0"
       >
-        <ShellHeader title={headerTitle} {search} />
+        <ShellHeader title={headerTitle} {search}>
+          {#snippet actions()}{@render headerActions?.()}{/snippet}
+        </ShellHeader>
         <div
           bind:this={contentRef}
           class={aside
