@@ -15,7 +15,9 @@
     through the page announcer, and calls `onSuccess(user)`.
   - Passwords live only in this component's state; nothing is stored.
 
-  Props: `onSuccess?(user)`.
+  Props: `onSuccess?(user)`, `busy?: boolean` (bindable, default the form's
+  own state): lets a wrapping dialog ignore Escape and outside clicks while
+  the request runs, like FormDialog does.
 -->
 <script lang="ts">
   import { ApiError } from "$lib/api/api-error";
@@ -34,9 +36,12 @@
     validateNewPassword,
   } from "./password-rules";
 
-  type Props = { onSuccess?: (user: MeProfile) => void | Promise<void> };
+  type Props = {
+    onSuccess?: (user: MeProfile) => void | Promise<void>;
+    busy?: boolean;
+  };
 
-  let { onSuccess }: Props = $props();
+  let { onSuccess, busy = $bindable(false) }: Props = $props();
 
   const id = $props.id();
   const min = PASSWORD_MIN_LENGTH;
@@ -45,7 +50,6 @@
   let confirm = $state("");
   let violation = $state<PasswordRuleViolation | null>(null);
   let refusal = $state<ServerReason | null>(null);
-  let busy = $state(false);
   let passwordRef = $state<HTMLInputElement | null>(null);
   let confirmRef = $state<HTMLInputElement | null>(null);
 
