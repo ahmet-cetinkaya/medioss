@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { Program } from "$lib/api/meditation";
 import {
   descriptionLength,
+  foldForSearch,
+  meditationMatchesSearch,
   matchesFilter,
   parseProgramId,
   programToOpen,
@@ -57,5 +59,41 @@ describe("programToOpen", () => {
 
   test("stays on the list when the link names no program", () => {
     expect(programToOpen(null, programs)).toBeNull();
+  });
+});
+
+describe("foldForSearch", () => {
+  test("ignores case, diacritics and Turkish dotless i", () => {
+    expect(foldForSearch("AKŞAM")).toBe("aksam");
+    expect(foldForSearch("Işık")).toBe("isik");
+    expect(foldForSearch("İç Huzur")).toBe("ic huzur");
+  });
+});
+
+describe("meditationMatchesSearch", () => {
+  const meditation = {
+    name: "Derin Nefes",
+    programs: [{ id: 1, title: "Sabah Rutini" }],
+  };
+
+  test("a blank search matches everything", () => {
+    expect(meditationMatchesSearch(meditation, "  ")).toBe(true);
+  });
+
+  test("matches the meditation name", () => {
+    expect(meditationMatchesSearch(meditation, "nefes")).toBe(true);
+  });
+
+  test("matches any program title", () => {
+    expect(meditationMatchesSearch(meditation, "SABAH")).toBe(true);
+  });
+
+  test("does not match unrelated text", () => {
+    expect(meditationMatchesSearch(meditation, "uyku")).toBe(false);
+  });
+
+  test("a meditation without programs matches by name only", () => {
+    expect(meditationMatchesSearch({ name: "Odak" }, "odak")).toBe(true);
+    expect(meditationMatchesSearch({ name: "Odak" }, "sabah")).toBe(false);
   });
 });

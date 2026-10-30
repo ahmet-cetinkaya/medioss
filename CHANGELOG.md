@@ -2,6 +2,18 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
+## [Unreleased]
+
+### Added
+
+- **Searchable meditation picker.** "Add existing meditation" now opens a search box (by meditation or program name, ignoring case and accents) over a card list that shows each meditation's duration and every program it belongs to. Clicking a card adds it.
+
+- **Add to another program.** The meditation menu in a program has a new "Add to another program" entry that opens a searchable program list. The "Add to a program" dialog for meditations without a program uses the same list.
+
+### Changed
+
+- `GET /api/meditation/library` now returns `programs` (every program a meditation belongs to) on each meditation.
+
 ## [1.1.3] — 2026-10-30
 
 ### Added

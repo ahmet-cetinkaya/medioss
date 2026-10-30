@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::library_entry::LibraryEntry;
+use super::library_entry::{LibraryEntry, LibraryProgram};
 use super::list_library_query::ListLibraryQuery;
 use super::list_library_query_validator::ListLibraryQueryValidator;
 use super::matches::matches;
@@ -68,6 +69,9 @@ impl QueryHandler<ListLibraryQuery> for ListLibraryQueryHandler {
             .home_programs()
             .await
             .map_err(ApplicationError::Repository)?;
+        // Every program each meditation belongs to, for list cards that name
+        // all memberships.
+        let programs_by_meditation = self.programs_by_meditation().await?;
         Ok(library
             .into_iter()
             .map(|meditation| {
@@ -75,10 +79,51 @@ impl QueryHandler<ListLibraryQuery> for ListLibraryQueryHandler {
                 LibraryEntry {
                     program_id: home.map(|(id, _)| id),
                     program_has_cover: home.map(|(_, has_cover)| has_cover).unwrap_or(false),
+                    programs: programs_by_meditation
+                        .get(&meditation.id())
+                        .cloned()
+                        .unwrap_or_default(),
                     meditation,
                 }
             })
             .collect())
+    }
+}
+
+impl ListLibraryQueryHandler {
+    /// Meditation id -> the programs it belongs to, earliest membership first.
+    async fn programs_by_meditation(
+        &self,
+    ) -> Result<HashMap<i64, Vec<LibraryProgram>>, ApplicationError> {
+        let mut joined = Vec::new();
+        for program in self
+            .programs
+            .list_all()
+            .await
+            .map_err(ApplicationError::Repository)?
+        {
+            let members = self
+                .memberships
+                .list_by_program(program.id)
+                .await
+                .map_err(ApplicationError::Repository)?;
+            for membership in members {
+                joined.push((
+                    membership.added_at,
+                    membership.meditation_id,
+                    LibraryProgram {
+                        id: program.id,
+                        title: program.title.clone(),
+                    },
+                ));
+            }
+        }
+        joined.sort_by_key(|(added_at, _, label)| (*added_at, label.id));
+        let mut grouped: HashMap<i64, Vec<LibraryProgram>> = HashMap::new();
+        for (_, meditation_id, label) in joined {
+            grouped.entry(meditation_id).or_default().push(label);
+        }
+        Ok(grouped)
     }
 }
 

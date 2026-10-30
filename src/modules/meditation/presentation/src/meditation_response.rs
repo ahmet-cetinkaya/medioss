@@ -30,7 +30,7 @@ pub struct MeditationResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub program: Option<ProgramSummary>,
     /// Every program the meditation belongs to, earliest membership first;
-    /// set on the favorites list, absent elsewhere.
+    /// set on the favorites list and the library, absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub programs: Option<Vec<ProgramLabel>>,
 }
