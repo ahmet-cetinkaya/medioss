@@ -19,12 +19,23 @@
   actions such as "focus the score selector" (FR-059); use `bind:this`.
 -->
 <script lang="ts" module>
+  import type { IconName } from "$lib/components/icons/icon-name";
+
   export type MoodScore = 1 | 2 | 3 | 4 | 5;
+
+  /* Each score shows its own expression, so the face carries meaning and
+     never color alone (FR-092). */
+  export const MOOD_FACE: Record<MoodScore, IconName> = {
+    1: "smiley-sad",
+    2: "smiley-nervous",
+    3: "smiley-meh",
+    4: "smiley",
+    5: "smiley-wink",
+  };
 </script>
 
 <script lang="ts">
   import AppIcon from "$lib/components/icons/app-icon.svelte";
-  import type { IconName } from "$lib/components/icons/icon-name";
   import { t } from "$lib/i18n/translate";
   import { cn } from "$lib/utils.js";
   import { moodScoreMessages } from "./mood-score.messages";
@@ -66,15 +77,6 @@
     3: "text-mood-3",
     4: "text-mood-4",
     5: "text-mood-5",
-  };
-  /* Each score shows its own expression, so the face carries meaning and
-     never color alone (FR-092). */
-  const MOOD_FACE: Record<MoodScore, IconName> = {
-    1: "smiley-sad",
-    2: "smiley-nervous",
-    3: "smiley-meh",
-    4: "smiley",
-    5: "smiley-wink",
   };
 
   let fieldset: HTMLFieldSetElement | undefined = $state();

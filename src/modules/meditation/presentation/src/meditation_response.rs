@@ -26,7 +26,7 @@ pub struct MeditationResponse {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub program_has_cover: bool,
     /// The home program as the Player needs it (cover borrowing, link label);
-    /// set on the detail response, absent elsewhere.
+    /// set on the detail and daily-suggestion responses, absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub program: Option<ProgramSummary>,
     /// Every program the meditation belongs to, earliest membership first;
