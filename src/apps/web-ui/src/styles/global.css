@@ -25,6 +25,13 @@
  * - --accent-soft is a text background only over --surface-solid.
  */
 :root {
+  /* Space the fixed bottom bar and sheets keep clear of a system gesture bar.
+     The page does not set viewport-fit=cover, so compliant browsers report a
+     0 inset anyway; Firefox Android reports the dynamic toolbar height there,
+     which left a gap under the bottom bar while the toolbar was shown. Set
+     this to env(safe-area-inset-bottom) only together with viewport-fit=cover. */
+  --safe-area-bottom: 0px;
+
   /* Text */
   --text-strong: #2a2a2a;
   --text-body: #4a4a4a;

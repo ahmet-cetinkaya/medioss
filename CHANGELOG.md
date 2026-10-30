@@ -2,6 +2,16 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
+## [Unreleased]
+
+### Fixed
+
+- **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
+
+### Changed
+
+- **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing).
+
 ## [1.1.4] — 2026-10-30
 
 ### Added

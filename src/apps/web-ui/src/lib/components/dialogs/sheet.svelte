@@ -56,7 +56,7 @@
     <DialogPrimitive.Content
       data-slot="sheet-content"
       class={cn(
-        "glass-solid elevation-2 fixed inset-x-0 bottom-0 z-50 grid max-h-[85dvh] gap-4 overflow-y-auto rounded-t-panel px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-ink-body motion-safe:duration-(--duration-slow) motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=open]:slide-in-from-bottom motion-safe:data-[state=closed]:slide-out-to-bottom",
+        "glass-solid elevation-2 fixed inset-x-0 bottom-0 z-50 grid max-h-[85dvh] gap-4 overflow-y-auto rounded-t-panel px-6 pt-6 pb-[max(1.5rem,var(--safe-area-bottom))] text-ink-body motion-safe:duration-(--duration-slow) motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=open]:slide-in-from-bottom motion-safe:data-[state=closed]:slide-out-to-bottom",
         className,
       )}
       onOpenAutoFocus={() => {

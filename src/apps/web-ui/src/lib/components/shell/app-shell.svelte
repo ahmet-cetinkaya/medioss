@@ -215,7 +215,7 @@
         onSignOut={startSignOut}
       />
       <div
-        class="flex min-w-0 flex-1 flex-col pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:min-h-0 md:pb-0"
+        class="flex min-w-0 flex-1 flex-col pb-[calc(5.5rem+var(--safe-area-bottom))] md:min-h-0 md:pb-0"
       >
         <ShellHeader title={headerTitle} {search} />
         <div

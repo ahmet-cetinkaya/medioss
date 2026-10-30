@@ -1,10 +1,9 @@
 <!--
   @component
-  The transport controls: seek slider with elapsed and total time, restart,
-  play/pause, ±10 s, the speed button and the Soundscape toggle.
+  The transport controls: seek slider with elapsed and total time, play/pause and ±10 s on the first row; restart, the speed button and the
+  icon-only Soundscape button on the second.
 -->
 <script lang="ts">
-  import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { IconButton } from "$lib/components/ui/icon-button/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
@@ -88,60 +87,61 @@
   </div>
 </div>
 
-<div class="flex flex-wrap items-center justify-center gap-4">
-  <IconButton
-    label={t(m.restart)}
-    icon="skip-back"
-    disabled={playbackError}
-    onclick={onRestart}
-  />
-  <div class="relative">
+<div class="flex flex-col items-center gap-4">
+  <div class="flex items-center justify-center gap-4">
+    <div class="relative">
+      <IconButton
+        label={t(m.skipBack)}
+        icon="arrow-counter-clockwise"
+        disabled={playbackError}
+        onclick={() => onSkip(-SKIP_SECONDS)}
+      />
+      {@render skipHint()}
+    </div>
     <IconButton
-      label={t(m.skipBack)}
-      icon="arrow-counter-clockwise"
+      label={t(playing ? actionMessages.pause : actionMessages.play)}
+      icon={playing ? "pause" : "play"}
+      filled
       disabled={playbackError}
-      onclick={() => onSkip(-SKIP_SECONDS)}
+      class="size-16 [&_svg]:size-7"
+      onclick={onTogglePlay}
     />
-    {@render skipHint()}
+    <div class="relative">
+      <IconButton
+        label={t(m.skipForward)}
+        icon="arrow-clockwise"
+        disabled={playbackError}
+        onclick={() => onSkip(SKIP_SECONDS)}
+      />
+      {@render skipHint()}
+    </div>
   </div>
-  <IconButton
-    label={t(playing ? actionMessages.pause : actionMessages.play)}
-    icon={playing ? "pause" : "play"}
-    filled
-    disabled={playbackError}
-    class="size-16 [&_svg]:size-7"
-    onclick={onTogglePlay}
-  />
-  <div class="relative">
+  <div class="flex items-center justify-center gap-4">
     <IconButton
-      label={t(m.skipForward)}
-      icon="arrow-clockwise"
+      label={t(m.restart)}
+      icon="skip-back"
       disabled={playbackError}
-      onclick={() => onSkip(SKIP_SECONDS)}
+      onclick={onRestart}
     />
-    {@render skipHint()}
+    <Button
+      variant="secondary"
+      aria-label={t(m.speedButton, { value: speedText })}
+      onclick={onCycleSpeed}
+    >
+      {speedText}
+    </Button>
+    <!-- The button opens the mixer dialog, so it is not a toggle (no
+         aria-pressed). While a soundscape plays it shows the active look and
+         the accessible name says so; the icon is decorative. -->
+    <IconButton
+      label={mixPlaying
+        ? `${t(m.mixToggle)} ${t(m.mixPlaying)}`
+        : t(m.mixToggle)}
+      icon="speaker-high"
+      class={mixPlaying
+        ? "border-accent-fill bg-accent-soft text-accent-strong hover:bg-accent-soft"
+        : undefined}
+      onclick={onOpenMix}
+    />
   </div>
-  <Button
-    variant="secondary"
-    aria-label={t(m.speedButton, { value: speedText })}
-    onclick={onCycleSpeed}
-  >
-    {speedText}
-  </Button>
-  <!-- The button opens the mixer dialog, so it is not a toggle (no
-       aria-pressed). While a soundscape plays it shows the active look and
-       says so in text; the sound-wave icon is decorative. -->
-  <Button
-    variant="secondary"
-    class={mixPlaying
-      ? "border-accent-fill bg-accent-soft text-accent-strong hover:bg-accent-soft"
-      : undefined}
-    onclick={onOpenMix}
-  >
-    <AppIcon name="speaker-high" size={20} />
-    {t(m.mixToggle)}
-    {#if mixPlaying}
-      <span class="sr-only">{t(m.mixPlaying)}</span>
-    {/if}
-  </Button>
 </div>
