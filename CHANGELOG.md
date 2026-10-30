@@ -6,7 +6,7 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ### Fixed
 
-- **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
+- **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android; the cause is suspected, not yet confirmed on a device). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
 
 ### Changed
 
