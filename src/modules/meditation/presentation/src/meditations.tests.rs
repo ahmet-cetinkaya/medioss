@@ -37,6 +37,24 @@ async fn daily_suggestion_returns_a_meditation_with_progress() {
 }
 
 #[tokio::test]
+async fn daily_suggestion_names_its_program() {
+    let app = app();
+    let program = seed_ordered_program(&app).await;
+    let (status, _, body) = json_body(
+        &app,
+        Some(member_actor()),
+        "GET",
+        "/meditation/daily-suggestion",
+        "",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["program"]["id"], program);
+    assert_eq!(json["program"]["title"], "P");
+}
+
+#[tokio::test]
 async fn daily_suggestion_requires_a_session() {
     let app = app();
     let (status, _, _) = json_body(&app, None, "GET", "/meditation/daily-suggestion", "").await;

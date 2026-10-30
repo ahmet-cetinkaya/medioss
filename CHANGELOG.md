@@ -15,6 +15,10 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 - **Admin: Users is the last tab**, and **Create user** is a dialog opened from a button at the top of the user list. The one-time temporary password still shows above the list.
 - **Settings: no always-open forms.** Changing the password is a dialog opened from a **Change password** button in the profile section. Importing data is a dialog opened from an **Import** button, and deleting the account is a dialog (email confirmation inside) opened from a **Delete account** button.
 
+- **Program meditation cards open the meditation.** The whole row is the link, like the Home cards, not just the play button.
+- **Today's suggestion shows its program** instead of the duration (a meditation without a program still shows the duration). `GET /api/meditation/daily-suggestion` now returns `program` (id, title, has_cover) when the meditation has one.
+- **Mood history cards show the score's face**, the same one used when picking the score.
+
 ## [1.1.4] — 2026-10-30
 
 ### Added

@@ -95,7 +95,10 @@
     {#if suggestion}
       <NowPlayingPill
         title={suggestion.name}
-        meta={[formatDuration(suggestion.duration_ms, locale.current)]}
+        meta={[
+          suggestion.program?.title ??
+            formatDuration(suggestion.duration_ms, locale.current),
+        ]}
         thumbnailUrl={suggestion.program_has_cover && suggestion.program_id
           ? programCoverUrl(suggestion.program_id)
           : null}

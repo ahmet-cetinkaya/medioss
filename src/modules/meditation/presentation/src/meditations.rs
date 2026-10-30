@@ -44,6 +44,11 @@ pub async fn daily_suggestion(
     if let Some(program) = &found.program {
         response.program_id = Some(program.id);
         response.program_has_cover = program.cover_storage_key.is_some();
+        response.program = Some(ProgramSummary {
+            id: program.id,
+            title: program.title.clone(),
+            has_cover: response.program_has_cover,
+        });
     }
     Ok(Json(response).into_response())
 }
