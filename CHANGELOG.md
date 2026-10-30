@@ -2,25 +2,21 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
-## [Unreleased]
+## [1.1.5] — 2026-10-30
 
 ### Fixed
 
 - **The change-password dialog no longer closes on Escape or an outside click while the request runs**, matching the other form dialogs.
-
 - **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android; the cause is suspected, not yet confirmed on a device). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
 
 ### Changed
 
 - **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing). On screens up to 700 px tall the cover is wider and shorter, so every control fits above the bottom bar (checked at 360x640 and 390x700).
-
 - **Admin: Users is the last tab**, and **Create user** is a dialog opened from a button at the top of the user list. The one-time temporary password still shows above the list.
 - **Settings: no always-open forms.** Changing the password is a dialog opened from a **Change password** button in the profile section. Importing data is a dialog opened from an **Import** button, and deleting the account is a dialog (email confirmation inside) opened from a **Delete account** button.
-
 - **Program meditation cards open the meditation.** The whole row is the link, like the Home cards, not just the play button.
 - **Today's suggestion shows its program** instead of the duration (a meditation without a program still shows the duration). `GET /api/meditation/daily-suggestion` now returns `program` (id, title, has_cover) when the meditation has one.
 - **Mood history cards show the score's face**, the same one used when picking the score.
-
 - **Filters are one row.** Library, Mood and Soundscape use a dropdown instead of wrapping chips; on Library the dropdown sits in the header next to the search box (one row on desktop, one stacked row on mobile). History puts its date range and "Notes only" behind one filter button.
 - **Program page, desktop:** the session list is on the left; cover, description and progress are in a glass section on the right. On mobile the order is unchanged and the start button sits under the description.
 

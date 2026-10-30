@@ -31,10 +31,10 @@ docker compose up -d
 open http://localhost:3000
 ```
 
-`docker-compose.yml` pulls the prebuilt multi-arch image (`linux/amd64`, `linux/arm64`) from `ghcr.io/ahmet-cetinkaya/medioss`, `latest` by default. Pin a release with `MEDIOSS_VERSION=1.1.4` in `.env`. You can also pull it by hand:
+`docker-compose.yml` pulls the prebuilt multi-arch image (`linux/amd64`, `linux/arm64`) from `ghcr.io/ahmet-cetinkaya/medioss`, `latest` by default. Pin a release with `MEDIOSS_VERSION=1.1.5` in `.env`. You can also pull it by hand:
 
 ```bash
-docker pull ghcr.io/ahmet-cetinkaya/medioss:1.1.4   # a pinned release
+docker pull ghcr.io/ahmet-cetinkaya/medioss:1.1.5   # a pinned release
 docker pull ghcr.io/ahmet-cetinkaya/medioss:latest  # the newest stable release
 ```
 
