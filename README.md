@@ -39,7 +39,7 @@ cp .env.example .env
 docker compose up -d   # pulls ghcr.io/ahmet-cetinkaya/medioss:latest
 ```
 
-Pin a release with `MEDIOSS_VERSION=1.1.4` in `.env`. To build from source instead, run `make docker-up`. See [docs/docker.md](docs/docker.md).
+Pin a release with `MEDIOSS_VERSION=1.1.5` in `.env`. To build from source instead, run `make docker-up`. See [docs/docker.md](docs/docker.md).
 
 Open `http://localhost:3000` (or your `MEDIOSS_ORIGIN`) and register the first admin.
 
