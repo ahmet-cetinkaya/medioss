@@ -4,7 +4,6 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ## [Unreleased]
 
-<<<<<<< HEAD
 ### Fixed
 
 - **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
@@ -12,12 +11,9 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 ### Changed
 
 - **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing).
-=======
-### Changed
 
 - **Admin: Users is the last tab**, and **Create user** is a dialog opened from a button at the top of the user list. The one-time temporary password still shows above the list.
-- **Settings: changing the password is a dialog**, opened from a **Change password** button in the profile section.
->>>>>>> d76f8a7 (feat(web-ui): users tab last, create-user and change-password dialogs)
+- **Settings: no always-open forms.** Changing the password is a dialog opened from a **Change password** button in the profile section. Importing data is a dialog opened from an **Import** button, and deleting the account is a dialog (email confirmation inside) opened from a **Delete account** button.
 
 ## [1.1.4] — 2026-10-30
 

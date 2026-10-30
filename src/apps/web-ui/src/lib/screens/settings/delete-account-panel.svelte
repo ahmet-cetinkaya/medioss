@@ -2,10 +2,10 @@
   @component
   Settings "Delete account" panel (FR-070, PB-12), set apart as destructive.
 
-  The Delete button stays disabled until the exact account email is typed;
-  it then asks in the shared ConfirmDialog. Success goes to Login with no
-  `next`. The last-active-admin refusal closes the dialog and shows its
-  message in this panel; the user stays signed in. Other refusals stay in
+  The panel holds one destructive button. It opens a dialog where the exact
+  account email must be typed before Delete is enabled. Success goes to Login
+  with no `next`. The last-active-admin refusal closes the dialog and shows
+  its message in this panel; the user stays signed in. Other refusals stay in
   the dialog with their reason.
 
   Props: `user` (the signed-in user).
@@ -13,7 +13,7 @@
 <script lang="ts">
   import { failureMessage, reasonOf } from "$lib/api/failure";
   import { deleteOwnAccount } from "$lib/api/identity";
-  import ConfirmDialog from "$lib/components/dialogs/confirm-dialog.svelte";
+  import FormDialog from "$lib/components/dialogs/form-dialog.svelte";
   import InlineMessage from "$lib/components/feedback/inline-message.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -35,6 +35,12 @@
   let failure = $state<ReturnType<typeof reasonOf> | null>(null);
 
   const matches = $derived(typedEmail === user.email);
+
+  function askDelete() {
+    typedEmail = "";
+    failure = null;
+    open = true;
+  }
 
   async function runDelete() {
     failure = null;
@@ -59,16 +65,6 @@
   {/snippet}
 
   <div class="flex flex-col gap-2">
-    <label for="{id}-email" class="text-sm font-medium text-ink-strong">
-      {t(m.typeEmail, { email: user.email })}
-    </label>
-    <Input
-      id="{id}-email"
-      inputmode="email"
-      bind:value={typedEmail}
-      autocomplete="off"
-      spellcheck={false}
-    />
     {#if failure}
       <InlineMessage tone="error" role="alert">
         {t(
@@ -78,12 +74,8 @@
         )}
       </InlineMessage>
     {/if}
-    <div class="mt-2">
-      <Button
-        variant="destructive"
-        disabled={!matches}
-        onclick={() => (open = true)}
-      >
+    <div>
+      <Button variant="destructive" onclick={askDelete}>
         <AppIcon name="trash" size={18} />
         {t(m.action)}
       </Button>
@@ -91,13 +83,24 @@
   </div>
 </Panel>
 
-<ConfirmDialog
+<FormDialog
   bind:open
   title={t(m.dialogTitle)}
-  itemName={user.email}
-  consequence={t(m.consequence)}
-  confirmLabel={t(m.action)}
+  description={t(m.consequence)}
+  submitLabel={t(m.action)}
   destructive
-  onConfirm={runDelete}
+  canSubmit={matches}
+  onSubmit={runDelete}
   errorMessage={(error) => failureMessage(reasonOf(error), m.failed).message}
-/>
+>
+  <label for="{id}-email" class="text-sm font-medium text-ink-strong">
+    {t(m.typeEmail, { email: user.email })}
+  </label>
+  <Input
+    id="{id}-email"
+    inputmode="email"
+    bind:value={typedEmail}
+    autocomplete="off"
+    spellcheck={false}
+  />
+</FormDialog>
