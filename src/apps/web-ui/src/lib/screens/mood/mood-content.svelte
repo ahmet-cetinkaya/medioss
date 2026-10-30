@@ -208,12 +208,7 @@
     onCancel={cancelEdit}
   />
 
-  <FilterSelect
-    options={ranges}
-    bind:value={range}
-    name="mood-range"
-    legend={t(m.rangeLegend)}
-  />
+  <FilterSelect options={ranges} bind:value={range} legend={t(m.rangeLegend)} />
 
   <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
     <MoodEntriesPanel

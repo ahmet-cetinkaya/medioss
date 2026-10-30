@@ -8,8 +8,9 @@
   Props: `title` (translated screen name or runtime override; `null` renders no
   h1, only a spacer, for a screen whose content carries its own h1), `search`,
   `actions?` (a snippet of controls, e.g. Library's filter dropdown, shown on
-  the header row next to the search from md up, and above the stacked mobile
-  search row below that).
+  the header row next to the search from md up; below that it joins the stacked
+  search row). The snippet is rendered in both places and the CSS shows one,
+  so the controls inside must not rely on a fixed id.
 -->
 <script lang="ts">
   import type { Snippet } from "svelte";
@@ -47,7 +48,9 @@
 </header>
 {#if search || actions}
   <div class="flex items-center gap-3 px-4 pt-4 md:hidden">
-    <HeaderSearch class="w-full" />
+    {#if search}
+      <HeaderSearch class="w-full" />
+    {/if}
     {@render actions?.()}
   </div>
 {/if}

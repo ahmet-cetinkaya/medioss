@@ -148,6 +148,9 @@
   });
 
   onMount(() => {
+    // Like the other pages, every visit starts on "All"; the shared store
+    // would otherwise keep the last choice across navigations.
+    libraryFilter.value = "all";
     void loadGroups();
     return libraryQuery.connect();
   });

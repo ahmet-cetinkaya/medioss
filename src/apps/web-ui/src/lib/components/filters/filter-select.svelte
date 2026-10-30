@@ -6,17 +6,19 @@
 
   Props: `options` ({ value, label }[] with translated labels), `bind:value`,
   `legend` (translated name; the select's accessible label, visually hidden),
-  `name` (unique per page, ties the label to the select), `class`.
+  `class`. The label id is generated per instance, so a control rendered twice
+  (header slot) never shares an id.
 -->
 <script lang="ts" generics="T extends string">
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { cn } from "$lib/utils.js";
 
+  const id = $props.id();
+
   type Props = {
     options: readonly { value: T; label: string }[];
     value?: T;
     legend: string;
-    name: string;
     class?: string;
   };
 
@@ -24,15 +26,14 @@
     options,
     value = $bindable(),
     legend,
-    name,
     class: className,
   }: Props = $props();
 </script>
 
 <div class={cn("relative w-full sm:max-w-xs", className)}>
-  <label for="filter-{name}" class="sr-only">{legend}</label>
+  <label for="{id}-filter" class="sr-only">{legend}</label>
   <select
-    id="filter-{name}"
+    id="{id}-filter"
     bind:value
     class="glass-control focus-ring h-12 w-full min-w-0 appearance-none rounded-full ps-5 pe-11 text-base text-ink-strong"
   >

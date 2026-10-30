@@ -98,7 +98,6 @@
       <FilterSelect
         {options}
         bind:value={selected}
-        name="soundscape-category"
         legend={t(m.categoryLegend)}
       />
       {#each visible as group (group.category.id)}

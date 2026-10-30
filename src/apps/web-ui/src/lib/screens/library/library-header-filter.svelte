@@ -9,18 +9,17 @@
   import { libraryMessages as m } from "./library.messages";
   import { libraryFilter } from "./library-filter.svelte";
 
-  const options = [
+  const options = $derived([
     { value: "all" as const, label: t(m.all) },
     { value: "completed" as const, label: t(m.filterCompleted) },
     { value: "in-progress" as const, label: t(m.filterInProgress) },
     { value: "not-started" as const, label: t(m.filterNotStarted) },
     { value: "favorites" as const, label: t(m.filterFavorites) },
-  ];
+  ]);
 </script>
 
 <FilterSelect
   {options}
   bind:value={libraryFilter.value}
-  name="library-filter"
   legend={t(m.filterLegend)}
 />
