@@ -10,7 +10,7 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ### Changed
 
-- **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing).
+- **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing). On screens up to 700 px tall the cover is wider and shorter, so every control fits above the bottom bar (checked at 360x640 and 390x700).
 
 ## [1.1.4] — 2026-10-30
 
