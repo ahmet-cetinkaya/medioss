@@ -20,7 +20,8 @@
   import NowPlayingPill from "$lib/components/content/now-playing-pill.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
   import { Panel } from "$lib/components/ui/panel/index.js";
-  import { t } from "$lib/i18n/locale.svelte";
+  import { formatDuration } from "$lib/i18n/formatting/duration-format";
+  import { locale, t } from "$lib/i18n/locale.svelte";
   import { playerHref } from "$lib/navigation/routes";
   import { cn } from "$lib/utils.js";
   import { homeLibrary } from "./home-library.svelte";
@@ -94,7 +95,10 @@
     {#if suggestion}
       <NowPlayingPill
         title={suggestion.name}
-        meta={suggestion.program ? [suggestion.program.title] : []}
+        meta={[
+          suggestion.program?.title ??
+            formatDuration(suggestion.duration_ms, locale.current),
+        ]}
         thumbnailUrl={suggestion.program_has_cover && suggestion.program_id
           ? programCoverUrl(suggestion.program_id)
           : null}
