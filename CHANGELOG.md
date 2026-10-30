@@ -21,6 +21,9 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 - **Today's suggestion shows its program** instead of the duration (a meditation without a program still shows the duration). `GET /api/meditation/daily-suggestion` now returns `program` (id, title, has_cover) when the meditation has one.
 - **Mood history cards show the score's face**, the same one used when picking the score.
 
+- **Filters are one row.** Library, Mood and Soundscape use a dropdown instead of wrapping chips; on Library the dropdown sits next to the search box in the header. History puts its date range and "Notes only" behind one filter button.
+- **Program page, desktop:** the session list is on the left; cover, description and progress are in a glass section on the right. On mobile the order is unchanged and the start button sits under the description.
+
 ## [1.1.4] — 2026-10-30
 
 ### Added

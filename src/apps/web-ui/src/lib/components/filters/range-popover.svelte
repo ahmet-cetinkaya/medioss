@@ -13,10 +13,14 @@
 
   Props: `options` ({ value, label }[] translated presets), `bind:value`,
   `name` (radio group name, unique per page), `legend` (translated name of
-  the control), `class`.
+  the control), `class`. A screen with more filter fields (History) passes
+  `icon="funnel"`, the extra `fields` snippet (shown below the range in the
+  panel) and `summary` (translated text for the extra fields' active state,
+  appended to the trigger label), so one button holds every filter.
 -->
 <script lang="ts" generics="Preset extends string">
   import { Popover } from "bits-ui";
+  import type { Snippet } from "svelte";
   import {
     MAX_CUSTOM_RANGE_DAYS,
     isCustomRange,
@@ -24,6 +28,7 @@
     type DateRangeValue,
   } from "$lib/api/date-range";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
+  import type { IconName } from "$lib/components/icons/icon-name";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { formatCalendarDay } from "$lib/i18n/formatting/date-time-format";
@@ -38,6 +43,9 @@
     value: DateRangeValue<Preset>;
     name: string;
     legend: string;
+    icon?: IconName;
+    fields?: Snippet;
+    summary?: string;
     class?: string;
   };
 
@@ -46,6 +54,9 @@
     value = $bindable(),
     name,
     legend,
+    icon = "calendar-blank",
+    fields,
+    summary = "",
     class: className,
   }: Props = $props();
 
@@ -64,13 +75,16 @@
           ? t(m.errorOrder)
           : t(m.errorTooLong, { days: MAX_CUSTOM_RANGE_DAYS }),
   );
-  const currentLabel = $derived(
+  const rangeLabel = $derived(
     isCustomRange(value)
       ? t(m.customLabel, {
           from: formatCalendarDay(value.from, locale.current),
           to: formatCalendarDay(value.to, locale.current),
         })
       : (options.find((option) => option.value === value)?.label ?? ""),
+  );
+  const currentLabel = $derived(
+    summary ? `${rangeLabel} · ${summary}` : rangeLabel,
   );
 
   // Opening the popover starts the custom fields from the active range.
@@ -97,13 +111,15 @@
 
 <Popover.Root bind:open>
   <Popover.Trigger
-    aria-label={t(m.triggerLabel, { range: currentLabel })}
+    aria-label={t(fields ? m.filtersTriggerLabel : m.triggerLabel, {
+      range: currentLabel,
+    })}
     class={cn(
       "glass-control focus-ring inline-flex min-h-11 max-w-full items-center gap-2 rounded-full px-4.5 py-1 text-sm font-medium text-ink-strong motion-safe:transition-colors motion-safe:duration-(--duration-fast)",
       className,
     )}
   >
-    <AppIcon name="calendar-blank" size={20} />
+    <AppIcon name={icon} size={20} />
     <span class="min-w-0 break-words">{currentLabel}</span>
     <AppIcon name="caret-down" size={16} />
   </Popover.Trigger>
@@ -160,6 +176,7 @@
           </p>
           <Button onclick={applyCustom}>{t(m.apply)}</Button>
         </fieldset>
+        {@render fields?.()}
       </Popover.Content>
     </div>
   </Popover.Portal>

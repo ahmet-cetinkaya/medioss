@@ -121,14 +121,19 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+  <div>
     <RangePopover
       options={ranges}
       bind:value={range}
       name="history-range"
-      legend={t(m.rangeLegend)}
-    />
-    <Checkbox bind:checked={notesOnly} label={t(m.notesOnly)} />
+      legend={t(m.filtersLegend)}
+      icon="funnel"
+      summary={notesOnly ? t(m.notesOnly) : ""}
+    >
+      {#snippet fields()}
+        <Checkbox bind:checked={notesOnly} label={t(m.notesOnly)} />
+      {/snippet}
+    </RangePopover>
   </div>
 
   <Panel aria-labelledby="history-timeline-heading">

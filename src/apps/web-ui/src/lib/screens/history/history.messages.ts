@@ -3,7 +3,7 @@
 import { defineMessages } from "../../i18n/message";
 
 export const historyMessages = defineMessages({
-  rangeLegend: { en: "History range", tr: "Geçmiş aralığı" },
+  filtersLegend: { en: "History filters", tr: "Geçmiş filtreleri" },
   rangeToday: { en: "Today", tr: "Bugün" },
   rangeLast7: { en: "Last 7 days", tr: "Son 7 gün" },
   rangeLast30: { en: "Last 30 days", tr: "Son 30 gün" },

@@ -8,6 +8,7 @@
   import BooksIcon from "phosphor-svelte/lib/BooksIcon";
   import CalendarBlankIcon from "phosphor-svelte/lib/CalendarBlankIcon";
   import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
+  import FunnelIcon from "phosphor-svelte/lib/FunnelIcon";
   import ChartBarIcon from "phosphor-svelte/lib/ChartBarIcon";
   import CheckCircleIcon from "phosphor-svelte/lib/CheckCircleIcon";
   import CheckIcon from "phosphor-svelte/lib/CheckIcon";
@@ -104,6 +105,7 @@
     plus: PlusIcon,
     "dots-three": DotsThreeIcon,
     "caret-down": CaretDownIcon,
+    funnel: FunnelIcon,
     "calendar-blank": CalendarBlankIcon,
     timer: TimerIcon,
     "skip-back": SkipBackIcon,

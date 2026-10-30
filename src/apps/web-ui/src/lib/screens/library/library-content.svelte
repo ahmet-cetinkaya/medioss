@@ -28,7 +28,7 @@
   import MeditationRow from "$lib/components/content/meditation-row.svelte";
   import { announce } from "$lib/components/feedback/announcer.svelte";
   import RegionState from "$lib/components/feedback/region-state.svelte";
-  import RangeChips from "$lib/components/filters/range-chips.svelte";
+  import FilterSelect from "$lib/components/filters/filter-select.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { contentMessages } from "$lib/components/content/content.messages";
@@ -309,7 +309,7 @@
     emptyAction={session.isAdmin ? adminLink : undefined}
   >
     <div class="flex flex-col gap-8">
-      <RangeChips
+      <FilterSelect
         options={chips}
         bind:value={filter}
         name="library-filter"

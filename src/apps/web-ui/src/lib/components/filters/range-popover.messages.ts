@@ -5,6 +5,7 @@ import { defineMessages } from "../../i18n/message";
 export const rangePopoverMessages = defineMessages({
   /** Trigger accessible name: the control, then the current choice. */
   triggerLabel: { en: "Date range: {range}", tr: "Tarih aralığı: {range}" },
+  filtersTriggerLabel: { en: "Filters: {range}", tr: "Filtreler: {range}" },
   presetsLegend: { en: "Quick ranges", tr: "Hızlı aralıklar" },
   customHeading: { en: "Custom range", tr: "Özel aralık" },
   from: { en: "From", tr: "Başlangıç" },

@@ -18,7 +18,7 @@
   import SoundIcon from "$lib/components/icons/sound-icon.svelte";
   import AppIcon from "$lib/components/icons/app-icon.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { ChipGroup } from "$lib/components/ui/chip-group/index.js";
+  import FilterSelect from "$lib/components/filters/filter-select.svelte";
   import { IconButton } from "$lib/components/ui/icon-button/index.js";
   import { Panel } from "$lib/components/ui/panel/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
@@ -95,12 +95,11 @@
     emptyAction={session.isAdmin ? adminLink : undefined}
   >
     <div class="flex flex-col gap-6">
-      <ChipGroup
+      <FilterSelect
         {options}
         bind:value={selected}
         name="soundscape-category"
         legend={t(m.categoryLegend)}
-        legendHidden
       />
       {#each visible as group (group.category.id)}
         <section
