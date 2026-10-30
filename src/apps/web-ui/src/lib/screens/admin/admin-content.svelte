@@ -1,7 +1,7 @@
 <!--
   @component
   Admin content (FR-072): section chips (Users, Meditations, Soundscape),
-  each with its own address — /admin/, /admin/meditations/, /admin/soundscape/
+  each with its own address — /admin/ (meditations), /admin/soundscape/, /admin/users/
   (plan D10). Selecting a chip navigates (pushState), so the browser Back
   moves between sections. Mounted only for admins by the AppShell gate
   (FR-071).
