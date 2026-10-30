@@ -345,7 +345,7 @@
   <Panel
     aria-labelledby="player-controls-heading"
     data-elevation="featured"
-    class="elevation-3 flex flex-col gap-6 {focused
+    class="elevation-3 flex flex-col gap-6 [@media(max-height:700px)]:gap-4 {focused
       ? 'overlay-floating'
       : ''} {focused && (idle || !playing)
       ? 'pointer-events-none opacity-0'

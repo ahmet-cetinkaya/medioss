@@ -6,11 +6,11 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ### Fixed
 
-- **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
+- **Mobile bottom bar had extra space under it while the browser's top bar was shown** (Firefox on Android; the cause is suspected, not yet confirmed on a device). The bar now ignores `env(safe-area-inset-bottom)`, which that browser fills with its toolbar height although the page does not opt in to edge-to-edge drawing.
 
 ### Changed
 
-- **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing).
+- **Mobile player controls fit on two rows.** Row 1: back 10 s, play/pause, forward 10 s. Row 2: restart, speed, and an icon-only Soundscape button (its name still says when a soundscape is playing). On screens up to 700 px tall the cover is wider and shorter, so every control fits above the bottom bar (checked at 360x640 and 390x700).
 
 ## [1.1.4] — 2026-10-30
 
