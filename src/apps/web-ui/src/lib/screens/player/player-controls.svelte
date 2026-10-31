@@ -283,9 +283,11 @@
 
   // Idle auto-hide: after IDLE_MS without input while playing, the panel
   // fades out and only the big elapsed clock remains. Any input restores it.
+  // It never starts while the mixer dialog is open: the clock would sit on top
+  // of the dialog.
   let idle = $state(false);
   $effect(() => {
-    if (!focused) {
+    if (!focused || mixOpen) {
       idle = false;
       return;
     }
