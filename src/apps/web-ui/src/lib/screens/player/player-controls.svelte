@@ -231,17 +231,19 @@
 
   function onPause() {
     // Browsers fire `pause` just before `ended`; keep the overlay up then.
-    if (audio?.ended) ended = true;
+    // The mix keeps playing past the end (a soft exit); leaving the player
+    // disposes it.
+    const reachedEnd = audio?.ended ?? false;
+    if (reachedEnd) ended = true;
     playing = false;
     reporter.pause();
     syncSessionState(audio);
-    mix.pause();
+    if (!reachedEnd) mix.pause();
   }
 
   function onEnded() {
     ended = true;
     playing = false;
-    mix.pause();
     tracker.ended(duration * 1000);
   }
 

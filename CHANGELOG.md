@@ -2,6 +2,19 @@
 
 All notable changes to MediOSS are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning is semantic (`MAJOR.MINOR.PATCH`), and only stable tags publish a Docker image (`latest` tracks the last stable release).
 
+## [Unreleased]
+
+### Changed
+
+- **The player no longer shows a round program cover while playing.** The cover is already the background.
+- **The background mix keeps playing when the meditation ends**, through the completion dialog, so the session ends softly. It stops when you leave the player.
+
+### Fixed
+
+- **The player no longer goes idle (big clock) while the Soundscape dialog is open**, so the clock does not cover the dialog.
+- **History shows the score's face on mood entries; Home's recent programs sit side by side without wide gaps.**
+- **Admin opens Meditations first**; Users moved to `/admin/users/`.
+
 ## [1.1.5] — 2026-10-30
 
 ### Fixed
