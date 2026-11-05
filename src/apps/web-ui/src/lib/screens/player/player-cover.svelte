@@ -2,7 +2,8 @@
   @component
   Inline: a wide cover with the name on the shared image-first scrim
   (CoverOverlay, same treatment as the Library cards). Floating (while
-  playing): a static centered circular cover with the name below.
+  playing): the name and description only; the cover is already the
+  backdrop.
 -->
 <script lang="ts">
   import type { Meditation, ProgramSummary } from "$lib/api/meditation";
@@ -48,21 +49,6 @@
 
 {#if playing}
   <div class="flex flex-col items-center gap-4">
-    {#if program}
-      <a
-        href={`${ROUTES.program.path}?id=${program.id}`}
-        aria-label={t(m.programLink, { name: program.title })}
-        class="focus-ring relative block size-40 overflow-hidden rounded-full bg-surface-solid/50"
-      >
-        {@render artwork(true)}
-      </a>
-    {:else}
-      <div
-        class="relative block size-40 overflow-hidden rounded-full bg-surface-solid/50"
-      >
-        {@render artwork(true)}
-      </div>
-    {/if}
     <div class="flex min-w-0 flex-col items-center gap-2">
       <h1 class="min-w-0 text-title-lg text-center break-words text-ink-strong">
         {meditation.name}
