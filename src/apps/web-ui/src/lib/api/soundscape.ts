@@ -2,13 +2,19 @@ import { request } from "./request";
 
 export interface SoundscapeCategory {
   id: number;
+  /** The stored name; edit forms use this one. */
   name: string;
+  /** The name to show for the requested language (`lang`). */
+  title: string;
   slug: string;
 }
 
 export interface SoundscapeSound {
   id: number;
+  /** The stored name; edit forms use this one. */
   name: string;
+  /** The name to show for the requested language (`lang`). */
+  title: string;
   category_id: number;
   content_type: string;
   size_bytes: number;
@@ -36,10 +42,16 @@ export interface SoundscapeMix {
   unavailable_sounds?: string[];
 }
 
-export const fetchSoundscapeCategories = () =>
-  request<SoundscapeCategory[]>("/api/soundscape/categories", undefined, {
-    action: "soundscape.categories.load",
-  });
+/** `lang` asks the server for built-in titles in that interface language. */
+export const withLang = (path: string, lang?: string) =>
+  lang ? `${path}?lang=${encodeURIComponent(lang)}` : path;
+
+export const fetchSoundscapeCategories = (lang?: string) =>
+  request<SoundscapeCategory[]>(
+    withLang("/api/soundscape/categories", lang),
+    undefined,
+    { action: "soundscape.categories.load" },
+  );
 export const createSoundscapeCategory = (name: string) =>
   request<SoundscapeCategory>(
     "/api/soundscape/categories",
@@ -59,10 +71,12 @@ export const deleteSoundscapeCategory = (id: number) =>
     { action: "soundscape.category.delete" },
   );
 
-export const fetchSounds = () =>
-  request<SoundscapeSound[]>("/api/soundscape/sounds", undefined, {
-    action: "soundscape.sounds.load",
-  });
+export const fetchSounds = (lang?: string) =>
+  request<SoundscapeSound[]>(
+    withLang("/api/soundscape/sounds", lang),
+    undefined,
+    { action: "soundscape.sounds.load" },
+  );
 export const soundAudioUrl = (id: number) =>
   `/api/soundscape/sounds/${id}/audio`;
 export const soundDownloadUrl = (id: number) =>

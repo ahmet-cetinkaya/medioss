@@ -5,6 +5,7 @@
 #![allow(clippy::module_inception)]
 
 pub mod error;
+pub mod locale;
 pub mod mix;
 pub mod name;
 pub mod sound;
@@ -12,6 +13,7 @@ pub mod sound_category;
 pub mod sound_icon;
 
 pub use error::DomainError;
+pub use locale::Locale;
 pub use mix::{Mix, MixItem, MAX_MIX_SOUNDS};
 pub use name::{valid_name, MAX_NAME_LENGTH};
 pub use sound::{valid_content_type, Sound, STORED_CONTENT_TYPE};

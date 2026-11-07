@@ -328,3 +328,55 @@ async fn concurrent_creates_return_their_own_rows() {
     assert_eq!(a.storage_key, "soundscape/rain.opus");
     assert_eq!(b.storage_key, "soundscape/wind.opus");
 }
+
+async fn give_turkish_title(database: &TestDatabase, id: i64, title: &str) {
+    database
+        .connection
+        .execute(sea_orm::Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::Sqlite,
+            "UPDATE soundscape_sounds SET name_tr = ? WHERE id = ?",
+            vec![title.into(), id.into()],
+        ))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn an_update_that_keeps_the_name_keeps_the_turkish_title() {
+    let database = TestDatabase::open().await;
+    let sounds = SeaOrmSoundRepository::new(database.connection.clone());
+    let created = sounds
+        .create(sound("Heavy Rain", "soundscape/rain.opus"))
+        .await
+        .unwrap();
+    give_turkish_title(&database, created.id, "Şiddetli Yağmur").await;
+
+    let updated = sounds
+        .update(created.id, "Heavy Rain", 1, Some("rain"))
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(updated.name, "Heavy Rain");
+    assert_eq!(updated.name_tr.as_deref(), Some("Şiddetli Yağmur"));
+}
+
+#[tokio::test]
+async fn renaming_a_sound_drops_its_turkish_title() {
+    let database = TestDatabase::open().await;
+    let sounds = SeaOrmSoundRepository::new(database.connection.clone());
+    let created = sounds
+        .create(sound("Heavy Rain", "soundscape/rain.opus"))
+        .await
+        .unwrap();
+    give_turkish_title(&database, created.id, "Şiddetli Yağmur").await;
+
+    let renamed = sounds
+        .update(created.id, "My storm", 1, None)
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(renamed.name, "My storm");
+    assert_eq!(renamed.name_tr, None);
+}

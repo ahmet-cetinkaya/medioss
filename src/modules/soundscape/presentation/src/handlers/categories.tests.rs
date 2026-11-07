@@ -21,7 +21,7 @@ async fn list_returns_categories_for_any_signed_in_actor() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         parse(&body),
-        serde_json::json!([{"id": 1, "name": "Nature", "slug": "nature"}])
+        serde_json::json!([{"id": 1, "name": "Nature", "title": "Nature", "slug": "nature"}])
     );
 }
 
@@ -175,4 +175,38 @@ async fn members_cannot_mutate_categories() {
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+async fn first_category(app: &TestApp, query: &str) -> serde_json::Value {
+    let (status, _, body) = call(
+        app,
+        Some(member_actor()),
+        "GET",
+        &format!("/soundscape/categories{query}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    parse(&body)[0].clone()
+}
+
+#[tokio::test]
+async fn lang_tr_titles_the_category_in_turkish_and_keeps_the_stored_name() {
+    let app = app();
+    let category = first_category(&app, "?lang=tr").await;
+    assert_eq!(category["title"], "Doğa");
+    assert_eq!(category["name"], "Nature");
+}
+
+#[tokio::test]
+async fn lang_en_missing_and_unknown_titles_fall_back_to_the_stored_name() {
+    let app = app();
+    for query in ["?lang=en", "", "?lang=de", "?lang="] {
+        assert_eq!(
+            first_category(&app, query).await["title"],
+            "Nature",
+            "{query}"
+        );
+    }
 }

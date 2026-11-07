@@ -120,7 +120,7 @@
             />
             <div class="min-w-0 flex-1">
               <p class="pt-1 text-sm font-medium break-words text-ink-strong">
-                {entry.sound.name}
+                {entry.sound.title}
                 <span class="font-normal text-ink-muted" aria-hidden="true"
                   >· {entry.volume}</span
                 >
@@ -132,13 +132,13 @@
                     entry.sound.id,
                     event.currentTarget.valueAsNumber,
                   )}
-                label={t(m.volumeLabel, { name: entry.sound.name })}
+                label={t(m.volumeLabel, { name: entry.sound.title })}
                 valueText={t(m.volumeValue, { value: entry.volume })}
               />
             </div>
             <IconButton
               icon="x"
-              label={t(m.removeFromMix, { name: entry.sound.name })}
+              label={t(m.removeFromMix, { name: entry.sound.title })}
               onclick={() => mix.remove(entry.sound.id)}
             />
           </li>

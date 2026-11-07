@@ -13,14 +13,18 @@ impl SeaOrmCategoryRepository {
     }
 }
 fn row(row: &sea_orm::QueryResult) -> Result<SoundCategory, String> {
-    SoundCategory::new(
+    let mut category = SoundCategory::new(
         row.try_get("", "id").map_err(|e| e.to_string())?,
         &row.try_get::<String>("", "name")
             .map_err(|e| e.to_string())?,
         &row.try_get::<String>("", "slug")
             .map_err(|e| e.to_string())?,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    category.name_tr = row
+        .try_get::<Option<String>>("", "name_tr")
+        .map_err(|e| e.to_string())?;
+    Ok(category)
 }
 #[async_trait]
 impl CategoryRepository for SeaOrmCategoryRepository {
@@ -28,7 +32,7 @@ impl CategoryRepository for SeaOrmCategoryRepository {
         self.db
             .query_all(Statement::from_string(
                 sea_orm::DatabaseBackend::Sqlite,
-                "SELECT id,name,slug FROM soundscape_categories ORDER BY name COLLATE NOCASE,id"
+                "SELECT id,name,name_tr,slug FROM soundscape_categories ORDER BY name COLLATE NOCASE,id"
                     .to_owned(),
             ))
             .await
@@ -42,7 +46,7 @@ impl CategoryRepository for SeaOrmCategoryRepository {
             .db
             .query_one(Statement::from_sql_and_values(
                 sea_orm::DatabaseBackend::Sqlite,
-                "SELECT id,name,slug FROM soundscape_categories WHERE id=?",
+                "SELECT id,name,name_tr,slug FROM soundscape_categories WHERE id=?",
                 [id.into()],
             ))
             .await
@@ -56,7 +60,7 @@ impl CategoryRepository for SeaOrmCategoryRepository {
         self.db
             .query_one(Statement::from_sql_and_values(
                 sea_orm::DatabaseBackend::Sqlite,
-                "INSERT INTO soundscape_categories(slug,name) VALUES(?,?) RETURNING id,name,slug",
+                "INSERT INTO soundscape_categories(slug,name) VALUES(?,?) RETURNING id,name,name_tr,slug",
                 [slug.into(), name.trim().into()],
             ))
             .await
@@ -72,7 +76,7 @@ impl CategoryRepository for SeaOrmCategoryRepository {
             .db
             .execute(Statement::from_sql_and_values(
                 sea_orm::DatabaseBackend::Sqlite,
-                "UPDATE soundscape_categories SET slug=?,name=? WHERE id=?",
+                "UPDATE soundscape_categories SET name_tr=CASE WHEN name=?2 THEN name_tr ELSE NULL END,slug=?1,name=?2 WHERE id=?3",
                 [slug.into(), name.trim().into(), id.into()],
             ))
             .await

@@ -19,6 +19,7 @@
     type SoundscapeMix,
     type SoundscapeSound,
   } from "$lib/api/soundscape";
+  import { locale } from "$lib/i18n/locale.svelte";
   import { t } from "$lib/i18n/translate";
   import MixPanel from "./mix-panel.svelte";
   import { MixState } from "./mix-state.svelte";
@@ -38,16 +39,18 @@
   let libraryRequest = 0;
   let mixesRequest = 0;
 
-  async function loadLibrary() {
+  async function loadLibrary(lang: string) {
     const id = ++libraryRequest;
     library = null;
     libraryFailure = null;
     try {
       const [categories, sounds] = await Promise.all([
-        fetchSoundscapeCategories(),
-        fetchSounds(),
+        fetchSoundscapeCategories(lang),
+        fetchSounds(lang),
       ]);
-      if (id === libraryRequest) library = { categories, sounds };
+      if (id !== libraryRequest) return;
+      library = { categories, sounds };
+      mix.retitle(sounds);
     } catch (error) {
       if (id === libraryRequest) libraryFailure = reasonOf(error);
     }
@@ -65,8 +68,13 @@
     }
   }
 
+  // Built-in titles come from the server in the interface language, so a
+  // language change loads the library again.
   $effect(() => {
-    void loadLibrary();
+    void loadLibrary(locale.current);
+  });
+
+  $effect(() => {
     void loadMixes();
     return () => mix.dispose();
   });
@@ -122,7 +130,7 @@
             }).message,
           )
         : undefined}
-      onRetry={() => void loadLibrary()}
+      onRetry={() => void loadLibrary(locale.current)}
     />
   </div>
 </div>
