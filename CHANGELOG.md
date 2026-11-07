@@ -7,7 +7,7 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 ### Changed
 
 - **The player no longer shows a round program cover while playing.** The cover is already the background.
-- **The background mix keeps playing when the meditation ends**, through the completion dialog, so the session ends softly. It stops when you leave the player.
+- **The background mix keeps playing when the meditation ends**, through the completion dialog, so the session ends softly. It stops when that dialog closes (Continue, X, Escape or a click outside), and when you leave the player.
 
 ### Fixed
 
