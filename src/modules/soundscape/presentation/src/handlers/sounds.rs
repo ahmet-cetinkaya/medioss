@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Multipart, State},
+    extract::{Multipart, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{get, post},
     Json, Router,
@@ -13,13 +13,18 @@ use tower_http::limit::RequestBodyLimitLayer;
 use crate::extractors::{admin, AdminActor, CurrentActor};
 use crate::router::SharedDependencies;
 use crate::support::error_mapping::status_for;
+use crate::support::lang_query::LangQuery;
 use crate::support::multipart_field::{read_field, stage_field};
 use crate::support::origin_guard::origin;
 
 #[derive(Serialize)]
 pub(crate) struct SoundDto {
     id: i64,
+    /// The stored name. Edit forms send this back, so it is never localized.
     name: String,
+    /// The name to display for the requested language (`?lang=`): the
+    /// built-in's translated title when it has one, else `name`.
+    title: String,
     category_id: i64,
     content_type: String,
     size_bytes: i64,
@@ -29,10 +34,20 @@ pub(crate) struct SoundDto {
     icon_key: Option<String>,
     has_icon: bool,
 }
+impl SoundDto {
+    fn localized(value: soundscape_domain::Sound, locale: soundscape_domain::Locale) -> Self {
+        let title = value.title(locale).to_owned();
+        Self {
+            title,
+            ..Self::from(value)
+        }
+    }
+}
 impl From<soundscape_domain::Sound> for SoundDto {
     fn from(value: soundscape_domain::Sound) -> Self {
         Self {
             id: value.id,
+            title: value.name.clone(),
             name: value.name,
             category_id: value.category_id,
             content_type: value.content_type,
@@ -49,11 +64,20 @@ impl From<soundscape_domain::Sound> for SoundDto {
 async fn list_sounds(
     CurrentActor(_actor): CurrentActor,
     State(deps): State<SharedDependencies>,
+    Query(lang): Query<LangQuery>,
 ) -> Result<Json<Vec<SoundDto>>, StatusCode> {
+    let locale = lang.locale();
     deps.list_sounds
         .handle(ListSoundsQuery {})
         .await
-        .map(|items| Json(items.into_iter().map(Into::into).collect()))
+        .map(|items| {
+            Json(
+                items
+                    .into_iter()
+                    .map(|sound| SoundDto::localized(sound, locale))
+                    .collect(),
+            )
+        })
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 

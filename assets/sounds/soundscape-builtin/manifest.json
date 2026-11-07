@@ -2,7 +2,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "beehive",
+    "name_tr": "Arı Kovanı",
     "file": "animals/beehive.opus",
     "duration_ms": 45161,
     "size": 823257,
@@ -12,7 +14,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "birds",
+    "name_tr": "Kuşlar",
     "file": "animals/birds.opus",
     "duration_ms": 115126,
     "size": 2400875,
@@ -22,7 +26,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "cat-purring",
+    "name_tr": "Kedi Mırıltısı",
     "file": "animals/cat-purring.opus",
     "duration_ms": 38669,
     "size": 586412,
@@ -32,7 +38,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "chickens",
+    "name_tr": "Tavuklar",
     "file": "animals/chickens.opus",
     "duration_ms": 202083,
     "size": 3801942,
@@ -42,7 +50,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "cows",
+    "name_tr": "İnekler",
     "file": "animals/cows.opus",
     "duration_ms": 59705,
     "size": 1128285,
@@ -52,7 +62,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "crickets",
+    "name_tr": "Cırcır Böcekleri",
     "file": "animals/crickets.opus",
     "duration_ms": 172544,
     "size": 4430498,
@@ -62,7 +74,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "crows",
+    "name_tr": "Kargalar",
     "file": "animals/crows.opus",
     "duration_ms": 58084,
     "size": 838611,
@@ -72,7 +86,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "dog-barking",
+    "name_tr": "Köpek Havlaması",
     "file": "animals/dog-barking.opus",
     "duration_ms": 16186,
     "size": 327339,
@@ -82,7 +98,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "frog",
+    "name_tr": "Kurbağa",
     "file": "animals/frog.opus",
     "duration_ms": 78655,
     "size": 1853010,
@@ -92,7 +110,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "horse-gallop",
+    "name_tr": "At Dörtnalı",
     "file": "animals/horse-gallop.opus",
     "duration_ms": 9149,
     "size": 248314,
@@ -102,7 +122,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "owl",
+    "name_tr": "Baykuş",
     "file": "animals/owl.opus",
     "duration_ms": 12949,
     "size": 103794,
@@ -112,7 +134,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "seagulls",
+    "name_tr": "Martılar",
     "file": "animals/seagulls.opus",
     "duration_ms": 43481,
     "size": 554780,
@@ -122,7 +146,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "sheep",
+    "name_tr": "Koyunlar",
     "file": "animals/sheep.opus",
     "duration_ms": 31201,
     "size": 614839,
@@ -132,7 +158,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "whale",
+    "name_tr": "Balina",
     "file": "animals/whale.opus",
     "duration_ms": 30013,
     "size": 686979,
@@ -142,7 +170,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "wolf",
+    "name_tr": "Kurt",
     "file": "animals/wolf.opus",
     "duration_ms": 55378,
     "size": 802048,
@@ -152,7 +182,9 @@
   {
     "category": "animals",
     "category_name": "Animals",
+    "category_name_tr": "Hayvanlar",
     "name": "woodpecker",
+    "name_tr": "Ağaçkakan",
     "file": "animals/woodpecker.opus",
     "duration_ms": 15326,
     "size": 275245,
@@ -162,7 +194,9 @@
   {
     "category": "binaural",
     "category_name": "Binaural",
+    "category_name_tr": "Binaural",
     "name": "binaural-alpha",
+    "name_tr": "Binaural Alfa",
     "file": "binaural/binaural-alpha.flac",
     "duration_ms": 15000,
     "size": 596109,
@@ -172,7 +206,9 @@
   {
     "category": "binaural",
     "category_name": "Binaural",
+    "category_name_tr": "Binaural",
     "name": "binaural-beta",
+    "name_tr": "Binaural Beta",
     "file": "binaural/binaural-beta.flac",
     "duration_ms": 15000,
     "size": 600049,
@@ -182,7 +218,9 @@
   {
     "category": "binaural",
     "category_name": "Binaural",
+    "category_name_tr": "Binaural",
     "name": "binaural-delta",
+    "name_tr": "Binaural Delta",
     "file": "binaural/binaural-delta.flac",
     "duration_ms": 15000,
     "size": 584367,
@@ -192,7 +230,9 @@
   {
     "category": "binaural",
     "category_name": "Binaural",
+    "category_name_tr": "Binaural",
     "name": "binaural-gamma",
+    "name_tr": "Binaural Gama",
     "file": "binaural/binaural-gamma.flac",
     "duration_ms": 15000,
     "size": 603745,
@@ -202,7 +242,9 @@
   {
     "category": "binaural",
     "category_name": "Binaural",
+    "category_name_tr": "Binaural",
     "name": "binaural-theta",
+    "name_tr": "Binaural Teta",
     "file": "binaural/binaural-theta.flac",
     "duration_ms": 15000,
     "size": 586923,
@@ -212,7 +254,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "campfire",
+    "name_tr": "Kamp Ateşi",
     "file": "nature/campfire.opus",
     "duration_ms": 125412,
     "size": 2647503,
@@ -222,7 +266,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "droplets",
+    "name_tr": "Su Damlaları",
     "file": "nature/droplets.opus",
     "duration_ms": 51759,
     "size": 1208424,
@@ -232,7 +278,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "howling-wind",
+    "name_tr": "Uğuldayan Rüzgâr",
     "file": "nature/howling-wind.opus",
     "duration_ms": 55951,
     "size": 994506,
@@ -242,7 +290,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "jungle",
+    "name_tr": "Orman",
     "file": "nature/jungle.opus",
     "duration_ms": 266703,
     "size": 5242931,
@@ -252,7 +302,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "river",
+    "name_tr": "Nehir",
     "file": "nature/river.opus",
     "duration_ms": 113434,
     "size": 2641285,
@@ -262,7 +314,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "walk-in-snow",
+    "name_tr": "Karda Yürüyüş",
     "file": "nature/walk-in-snow.opus",
     "duration_ms": 36674,
     "size": 712093,
@@ -272,7 +326,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "walk-on-gravel",
+    "name_tr": "Çakılda Yürüyüş",
     "file": "nature/walk-on-gravel.opus",
     "duration_ms": 70835,
     "size": 1559368,
@@ -282,7 +338,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "walk-on-leaves",
+    "name_tr": "Yapraklarda Yürüyüş",
     "file": "nature/walk-on-leaves.opus",
     "duration_ms": 20579,
     "size": 403667,
@@ -292,7 +350,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "waterfall",
+    "name_tr": "Şelale",
     "file": "nature/waterfall.opus",
     "duration_ms": 23492,
     "size": 429827,
@@ -302,7 +362,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "waves",
+    "name_tr": "Dalgalar",
     "file": "nature/waves.opus",
     "duration_ms": 98668,
     "size": 1819919,
@@ -312,7 +374,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "wind-in-trees",
+    "name_tr": "Ağaçlarda Rüzgâr",
     "file": "nature/wind-in-trees.opus",
     "duration_ms": 57562,
     "size": 1057591,
@@ -322,7 +386,9 @@
   {
     "category": "nature",
     "category_name": "Nature",
+    "category_name_tr": "Doğa",
     "name": "wind",
+    "name_tr": "Rüzgâr",
     "file": "nature/wind.opus",
     "duration_ms": 73430,
     "size": 1307699,
@@ -332,7 +398,9 @@
   {
     "category": "noise",
     "category_name": "Noise",
+    "category_name_tr": "Gürültü",
     "name": "brown-noise",
+    "name_tr": "Kahverengi Gürültü",
     "file": "noise/brown-noise.flac",
     "duration_ms": 9510,
     "size": 569468,
@@ -342,7 +410,9 @@
   {
     "category": "noise",
     "category_name": "Noise",
+    "category_name_tr": "Gürültü",
     "name": "pink-noise",
+    "name_tr": "Pembe Gürültü",
     "file": "noise/pink-noise.flac",
     "duration_ms": 9506,
     "size": 818305,
@@ -352,7 +422,9 @@
   {
     "category": "noise",
     "category_name": "Noise",
+    "category_name_tr": "Gürültü",
     "name": "white-noise",
+    "name_tr": "Beyaz Gürültü",
     "file": "noise/white-noise.flac",
     "duration_ms": 9502,
     "size": 808256,
@@ -362,7 +434,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "airport",
+    "name_tr": "Havalimanı",
     "file": "places/airport.opus",
     "duration_ms": 311616,
     "size": 6291566,
@@ -372,7 +446,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "cafe",
+    "name_tr": "Kafe",
     "file": "places/cafe.opus",
     "duration_ms": 199101,
     "size": 3684985,
@@ -382,7 +458,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "carousel",
+    "name_tr": "Atlıkarınca",
     "file": "places/carousel.opus",
     "duration_ms": 160771,
     "size": 3156518,
@@ -392,7 +470,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "church",
+    "name_tr": "Kilise",
     "file": "places/church.opus",
     "duration_ms": 70485,
     "size": 904696,
@@ -402,7 +482,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "construction-site",
+    "name_tr": "İnşaat Alanı",
     "file": "places/construction-site.opus",
     "duration_ms": 125055,
     "size": 2766612,
@@ -412,7 +494,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "crowded-bar",
+    "name_tr": "Kalabalık Bar",
     "file": "places/crowded-bar.opus",
     "duration_ms": 58741,
     "size": 1131063,
@@ -422,7 +506,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "laboratory",
+    "name_tr": "Laboratuvar",
     "file": "places/laboratory.opus",
     "duration_ms": 21241,
     "size": 451337,
@@ -432,7 +518,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "laundry-room",
+    "name_tr": "Çamaşır Odası",
     "file": "places/laundry-room.opus",
     "duration_ms": 32490,
     "size": 591382,
@@ -442,7 +530,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "library",
+    "name_tr": "Kütüphane",
     "file": "places/library.opus",
     "duration_ms": 176535,
     "size": 3086290,
@@ -452,7 +542,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "night-village",
+    "name_tr": "Gece Köyü",
     "file": "places/night-village.opus",
     "duration_ms": 106424,
     "size": 1930042,
@@ -462,7 +554,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "office",
+    "name_tr": "Ofis",
     "file": "places/office.opus",
     "duration_ms": 139734,
     "size": 2736647,
@@ -472,7 +566,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "restaurant",
+    "name_tr": "Restoran",
     "file": "places/restaurant.opus",
     "duration_ms": 170893,
     "size": 3257214,
@@ -482,7 +578,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "subway-station",
+    "name_tr": "Metro İstasyonu",
     "file": "places/subway-station.opus",
     "duration_ms": 171037,
     "size": 3373546,
@@ -492,7 +590,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "supermarket",
+    "name_tr": "Süpermarket",
     "file": "places/supermarket.opus",
     "duration_ms": 175100,
     "size": 3555434,
@@ -502,7 +602,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "temple",
+    "name_tr": "Tapınak",
     "file": "places/temple.opus",
     "duration_ms": 91624,
     "size": 2333448,
@@ -512,7 +614,9 @@
   {
     "category": "places",
     "category_name": "Places",
+    "category_name_tr": "Mekânlar",
     "name": "underwater",
+    "name_tr": "Su Altı",
     "file": "places/underwater.opus",
     "duration_ms": 43255,
     "size": 1104304,
@@ -522,7 +626,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "heavy-rain",
+    "name_tr": "Şiddetli Yağmur",
     "file": "rain/heavy-rain.opus",
     "duration_ms": 21795,
     "size": 402691,
@@ -532,7 +638,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "light-rain",
+    "name_tr": "Hafif Yağmur",
     "file": "rain/light-rain.opus",
     "duration_ms": 149872,
     "size": 2754955,
@@ -542,7 +650,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "rain-on-car-roof",
+    "name_tr": "Araba Çatısında Yağmur",
     "file": "rain/rain-on-car-roof.opus",
     "duration_ms": 10022,
     "size": 191831,
@@ -552,7 +662,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "rain-on-leaves",
+    "name_tr": "Yapraklarda Yağmur",
     "file": "rain/rain-on-leaves.opus",
     "duration_ms": 42226,
     "size": 879561,
@@ -562,7 +674,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "rain-on-tent",
+    "name_tr": "Çadırda Yağmur",
     "file": "rain/rain-on-tent.opus",
     "duration_ms": 82577,
     "size": 2165712,
@@ -572,7 +686,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "rain-on-umbrella",
+    "name_tr": "Şemsiyede Yağmur",
     "file": "rain/rain-on-umbrella.opus",
     "duration_ms": 26561,
     "size": 742929,
@@ -582,7 +698,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "rain-on-window",
+    "name_tr": "Camda Yağmur",
     "file": "rain/rain-on-window.opus",
     "duration_ms": 33149,
     "size": 653910,
@@ -592,7 +710,9 @@
   {
     "category": "rain",
     "category_name": "Rain",
+    "category_name_tr": "Yağmur",
     "name": "thunder",
+    "name_tr": "Gök Gürültüsü",
     "file": "rain/thunder.opus",
     "duration_ms": 68552,
     "size": 1179116,
@@ -602,7 +722,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "boiling-water",
+    "name_tr": "Kaynayan Su",
     "file": "things/boiling-water.opus",
     "duration_ms": 18505,
     "size": 363068,
@@ -612,7 +734,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "bubbles",
+    "name_tr": "Baloncuklar",
     "file": "things/bubbles.opus",
     "duration_ms": 6396,
     "size": 144795,
@@ -622,7 +746,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "ceiling-fan",
+    "name_tr": "Tavan Vantilatörü",
     "file": "things/ceiling-fan.opus",
     "duration_ms": 15599,
     "size": 199918,
@@ -632,7 +758,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "clock",
+    "name_tr": "Saat",
     "file": "things/clock.opus",
     "duration_ms": 15946,
     "size": 218304,
@@ -642,7 +770,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "dryer",
+    "name_tr": "Kurutma Makinesi",
     "file": "things/dryer.opus",
     "duration_ms": 28032,
     "size": 426003,
@@ -652,7 +782,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "keyboard",
+    "name_tr": "Klavye",
     "file": "things/keyboard.opus",
     "duration_ms": 12153,
     "size": 269929,
@@ -662,7 +794,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "morse-code",
+    "name_tr": "Mors Kodu",
     "file": "things/morse-code.opus",
     "duration_ms": 75394,
     "size": 1053211,
@@ -672,7 +806,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "paper",
+    "name_tr": "Kâğıt",
     "file": "things/paper.opus",
     "duration_ms": 17216,
     "size": 280254,
@@ -682,7 +818,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "singing-bowl",
+    "name_tr": "Şarkı Söyleyen Kase",
     "file": "things/singing-bowl.opus",
     "duration_ms": 49089,
     "size": 970125,
@@ -692,7 +830,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "slide-projector",
+    "name_tr": "Slayt Projektörü",
     "file": "things/slide-projector.opus",
     "duration_ms": 142890,
     "size": 2732980,
@@ -702,7 +842,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "tuning-radio",
+    "name_tr": "Radyo Ayarı",
     "file": "things/tuning-radio.opus",
     "duration_ms": 70237,
     "size": 1046727,
@@ -712,7 +854,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "typewriter",
+    "name_tr": "Daktilo",
     "file": "things/typewriter.opus",
     "duration_ms": 21787,
     "size": 480053,
@@ -722,7 +866,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "vinyl-effect",
+    "name_tr": "Plak Cızırtısı",
     "file": "things/vinyl-effect.opus",
     "duration_ms": 65907,
     "size": 1501624,
@@ -732,7 +878,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "washing-machine",
+    "name_tr": "Çamaşır Makinesi",
     "file": "things/washing-machine.opus",
     "duration_ms": 22537,
     "size": 396279,
@@ -742,7 +890,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "wind-chimes",
+    "name_tr": "Rüzgâr Çanları",
     "file": "things/wind-chimes.opus",
     "duration_ms": 83016,
     "size": 2086382,
@@ -752,7 +902,9 @@
   {
     "category": "things",
     "category_name": "Things",
+    "category_name_tr": "Nesneler",
     "name": "windshield-wipers",
+    "name_tr": "Silecekler",
     "file": "things/windshield-wipers.opus",
     "duration_ms": 15131,
     "size": 371029,
@@ -762,7 +914,9 @@
   {
     "category": "transport",
     "category_name": "Transport",
+    "category_name_tr": "Ulaşım",
     "name": "airplane",
+    "name_tr": "Uçak",
     "file": "transport/airplane.opus",
     "duration_ms": 60038,
     "size": 1569333,
@@ -772,7 +926,9 @@
   {
     "category": "transport",
     "category_name": "Transport",
+    "category_name_tr": "Ulaşım",
     "name": "inside-a-train",
+    "name_tr": "Trenin İçi",
     "file": "transport/inside-a-train.opus",
     "duration_ms": 66510,
     "size": 1206692,
@@ -782,7 +938,9 @@
   {
     "category": "transport",
     "category_name": "Transport",
+    "category_name_tr": "Ulaşım",
     "name": "rowing-boat",
+    "name_tr": "Kürek Teknesi",
     "file": "transport/rowing-boat.opus",
     "duration_ms": 25541,
     "size": 471048,
@@ -792,7 +950,9 @@
   {
     "category": "transport",
     "category_name": "Transport",
+    "category_name_tr": "Ulaşım",
     "name": "sailboat",
+    "name_tr": "Yelkenli",
     "file": "transport/sailboat.opus",
     "duration_ms": 160527,
     "size": 3128439,
@@ -802,7 +962,9 @@
   {
     "category": "transport",
     "category_name": "Transport",
+    "category_name_tr": "Ulaşım",
     "name": "submarine",
+    "name_tr": "Denizaltı",
     "file": "transport/submarine.opus",
     "duration_ms": 46039,
     "size": 984153,
@@ -812,7 +974,9 @@
   {
     "category": "transport",
     "category_name": "Transport",
+    "category_name_tr": "Ulaşım",
     "name": "train",
+    "name_tr": "Tren",
     "file": "transport/train.opus",
     "duration_ms": 61070,
     "size": 1078919,
@@ -822,7 +986,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "ambulance-siren",
+    "name_tr": "Ambulans Sireni",
     "file": "urban/ambulance-siren.opus",
     "duration_ms": 22596,
     "size": 463314,
@@ -832,7 +998,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "busy-street",
+    "name_tr": "Kalabalık Sokak",
     "file": "urban/busy-street.opus",
     "duration_ms": 175362,
     "size": 3407020,
@@ -842,7 +1010,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "crowd",
+    "name_tr": "Kalabalık",
     "file": "urban/crowd.opus",
     "duration_ms": 72570,
     "size": 1185288,
@@ -852,7 +1022,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "fireworks",
+    "name_tr": "Havai Fişek",
     "file": "urban/fireworks.opus",
     "duration_ms": 34501,
     "size": 718026,
@@ -862,7 +1034,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "highway",
+    "name_tr": "Otoyol",
     "file": "urban/highway.opus",
     "duration_ms": 132510,
     "size": 2449801,
@@ -872,7 +1046,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "road",
+    "name_tr": "Yol",
     "file": "urban/road.opus",
     "duration_ms": 102359,
     "size": 1924012,
@@ -882,7 +1058,9 @@
   {
     "category": "urban",
     "category_name": "Urban",
+    "category_name_tr": "Şehir",
     "name": "traffic",
+    "name_tr": "Trafik",
     "file": "urban/traffic.opus",
     "duration_ms": 39896,
     "size": 508817,

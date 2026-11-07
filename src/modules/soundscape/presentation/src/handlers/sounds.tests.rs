@@ -265,3 +265,74 @@ async fn a_repeated_file_field_keeps_the_last_one_and_discards_the_first() {
     );
     assert_eq!(app.state.staging.file_count(), 0, "nothing stays staged");
 }
+
+async fn list_sounds(app: &TestApp, query: &str) -> serde_json::Value {
+    let (status, _, body) = call(
+        app,
+        Some(member_actor()),
+        "GET",
+        &format!("/soundscape/sounds{query}"),
+        vec![],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    serde_json::from_slice(&body).unwrap()
+}
+
+#[tokio::test]
+async fn lang_tr_titles_a_builtin_in_turkish_and_keeps_the_stored_name() {
+    let app = app();
+    let sounds = list_sounds(&app, "?lang=tr").await;
+    assert_eq!(sounds[0]["title"], "Yağmur");
+    assert_eq!(sounds[0]["name"], "Rain");
+}
+
+#[tokio::test]
+async fn lang_en_missing_and_unknown_fall_back_to_the_stored_name() {
+    let app = app();
+    for query in ["?lang=en", "", "?lang=de", "?lang=tr-TR&x=1"] {
+        let sounds = list_sounds(&app, query).await;
+        let expected = if query.starts_with("?lang=tr") {
+            "Yağmur"
+        } else {
+            "Rain"
+        };
+        assert_eq!(sounds[0]["title"], expected, "{query}");
+    }
+}
+
+#[tokio::test]
+async fn a_sound_without_a_turkish_title_is_shown_as_stored_in_turkish_too() {
+    let app = app();
+    app.state.sounds.lock().unwrap()[0].name_tr = None;
+    let sounds = list_sounds(&app, "?lang=tr").await;
+    assert_eq!(sounds[0]["title"], "Rain");
+}
+
+#[tokio::test]
+async fn saving_what_a_turkish_read_returned_never_stores_the_turkish_title() {
+    let app = app();
+    let read = list_sounds(&app, "?lang=tr").await;
+    let body = serde_json::json!({
+        "name": read[0]["name"],
+        "category_id": read[0]["category_id"],
+    })
+    .to_string();
+    let (headers, body) = json(&body);
+
+    let (status, _, _) = call(
+        &app,
+        Some(admin_actor()),
+        "PUT",
+        "/soundscape/sounds/1",
+        headers,
+        body,
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let after = list_sounds(&app, "?lang=en").await;
+    assert_eq!(after[0]["name"], "Rain");
+    assert_eq!(after[0]["title"], "Rain");
+}

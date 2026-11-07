@@ -1,4 +1,5 @@
 use crate::error::DomainError;
+use crate::locale::Locale;
 use crate::name::valid_name;
 use crate::sound::valid_content_type;
 use crate::sound_icon::SoundIcon;
@@ -10,6 +11,9 @@ pub const STORED_CONTENT_TYPE: &str = "audio/ogg";
 pub struct Sound {
     pub id: i64,
     pub name: String,
+    /// Turkish title of a built-in sound; `None` for user sounds and for
+    /// built-ins an admin renamed. Never written back into `name`.
+    pub name_tr: Option<String>,
     pub category_id: i64,
     pub content_type: String,
     pub size_bytes: i64,
@@ -47,6 +51,7 @@ impl Sound {
         Ok(Self {
             id,
             name: valid_name(name)?,
+            name_tr: None,
             category_id,
             content_type: content_type.to_owned(),
             size_bytes,
@@ -57,6 +62,12 @@ impl Sound {
             icon_key: None,
             icon: None,
         })
+    }
+
+    /// The name to show for `locale`: the Turkish title when it exists,
+    /// otherwise the stored name.
+    pub fn title(&self, locale: Locale) -> &str {
+        locale.pick(&self.name, self.name_tr.as_deref())
     }
 }
 

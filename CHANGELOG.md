@@ -4,6 +4,10 @@ All notable changes to MediOSS are documented here. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+
+- **Built-in sounds and their categories have Turkish titles.** They are stored on the server (new `name_tr` column, migration with a down step; the shipped manifest carries Turkish titles for all 89 sounds and 9 categories) and shown when the interface is Turkish. `GET /api/soundscape/sounds` and `/categories` take `?lang=tr|en` and add a `title` field (Turkish title, else the stored name); `name` stays the stored name, so edit forms never save a translation. Sounds you upload and names you change are never translated. Existing installs get the titles at the next start. The admin screen still lists the stored names.
+
 ### Changed
 
 - **The player no longer shows a round program cover while playing.** The cover is already the background.
