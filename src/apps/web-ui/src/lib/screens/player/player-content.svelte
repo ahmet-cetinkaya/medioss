@@ -7,7 +7,7 @@
   playback panel and the notes panel load and fail independently.
 -->
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import {
     fetchMeditation,
     fetchPlaybackState,
@@ -26,6 +26,7 @@
   import { actionMessages } from "$lib/i18n/common.messages";
   import { t } from "$lib/i18n/locale.svelte";
   import { ROUTES } from "$lib/navigation/routes";
+  import { createDialogCloseWatcher } from "./end-dialog-mix";
   import { PlayerMix } from "./player-mix.svelte";
   import PlayerCompletionDialog from "./player-completion-dialog.svelte";
   import { parseMeditationId } from "./meditation-id";
@@ -46,6 +47,11 @@
   // One background mix (one MixEngine) per screen mount.
   const mix = new PlayerMix();
   let doneOpen = $state(false);
+  const watchDoneDialog = createDialogCloseWatcher(() => mix.state.stop());
+  $effect(() => {
+    const open = doneOpen;
+    untrack(() => watchDoneDialog(open));
+  });
   let notesVersion = $state(0);
 
   const status = $derived(
