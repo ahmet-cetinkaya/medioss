@@ -3,7 +3,6 @@ use sea_orm_migration::prelude::*;
 
 mod m20260927_000001_soundscape_create_schema;
 mod m20261008_000001_soundscape_v1_additions;
-mod m20261107_000001_soundscape_builtin_titles;
 pub use m20260927_000001_soundscape_create_schema::Migration;
 
 /// Runs pending migrations inside one SQLite transaction, so schema changes,
@@ -20,7 +19,6 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(Migration),
             Box::new(m20261008_000001_soundscape_v1_additions::Migration),
-            Box::new(m20261107_000001_soundscape_builtin_titles::Migration),
         ]
     }
     fn migration_table_name() -> DynIden {

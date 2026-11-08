@@ -67,7 +67,7 @@ async fn up_is_idempotent_across_restarts() {
     let database = TestDatabase::open().await;
     migrate(&database.connection).await.unwrap();
     migrate(&database.connection).await.unwrap();
-    assert_eq!(ledger_rows(&database.pool).await, 3);
+    assert_eq!(ledger_rows(&database.pool).await, 2);
     assert_eq!(icon_column_count(&database.pool).await, 3);
 }
 
@@ -107,31 +107,6 @@ async fn a_failing_migration_rolls_back_and_the_same_database_recovers() {
         .await
         .unwrap();
     migrate(&database.connection).await.unwrap();
-    assert_eq!(ledger_rows(&database.pool).await, 3);
-    assert_eq!(icon_column_count(&database.pool).await, 3);
-}
-
-async fn title_column_count(pool: &SqlitePool) -> i64 {
-    sqlx::query_scalar(
-        "SELECT (SELECT COUNT(*) FROM pragma_table_info('soundscape_sounds') WHERE name='name_tr') + (SELECT COUNT(*) FROM pragma_table_info('soundscape_categories') WHERE name='name_tr')",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap()
-}
-
-#[tokio::test]
-async fn the_title_migration_adds_both_columns_and_its_down_step_removes_them() {
-    use sea_orm_migration::MigratorTrait;
-
-    let database = TestDatabase::open().await;
-    migrate(&database.connection).await.unwrap();
-    assert_eq!(title_column_count(&database.pool).await, 2);
-
-    super::Migrator::down(&database.connection, Some(1))
-        .await
-        .unwrap();
-
-    assert_eq!(title_column_count(&database.pool).await, 0);
     assert_eq!(ledger_rows(&database.pool).await, 2);
+    assert_eq!(icon_column_count(&database.pool).await, 3);
 }
