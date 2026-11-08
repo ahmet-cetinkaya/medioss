@@ -9,7 +9,6 @@ fn builds_a_category_with_trimmed_name_and_slug() {
         SoundCategory {
             id: 7,
             name: "Nature".to_owned(),
-            name_tr: None,
             slug: "nature".to_owned(),
         }
     );

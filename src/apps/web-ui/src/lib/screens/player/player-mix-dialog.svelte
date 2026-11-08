@@ -17,6 +17,7 @@
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { actionMessages } from "$lib/i18n/common.messages";
   import { t } from "$lib/i18n/translate";
+  import { categoryTitle, soundTitle } from "../soundscape/builtin-titles";
   import MasterVolumeControl from "../soundscape/master-volume-control.svelte";
   import { groupAddableSounds } from "./mix-add-groups";
   import type { PlayerMix } from "./player-mix.svelte";
@@ -98,7 +99,7 @@
               />
               <div class="min-w-0 flex-1">
                 <p class="pt-1 text-sm font-medium break-words text-ink-strong">
-                  {entry.sound.title}
+                  {soundTitle(entry.sound)}
                 </p>
                 <Slider
                   value={entry.volume}
@@ -107,13 +108,15 @@
                       entry.sound.id,
                       event.currentTarget.valueAsNumber,
                     )}
-                  label={t(m.volumeLabel, { name: entry.sound.title })}
+                  label={t(m.volumeLabel, {
+                    name: soundTitle(entry.sound),
+                  })}
                   valueText={t(m.volumeValue, { value: entry.volume })}
                 />
               </div>
               <IconButton
                 icon="x"
-                label={t(m.removeSound, { name: entry.sound.title })}
+                label={t(m.removeSound, { name: soundTitle(entry.sound) })}
                 onclick={() => state.remove(entry.sound.id)}
               />
             </li>
@@ -161,14 +164,18 @@
                 id="player-mix-{group.key}"
                 class="text-sm font-semibold text-ink-strong"
               >
-                {group.category?.name ?? t(m.uncategorized)}
+                {group.category
+                  ? categoryTitle(group.category.name)
+                  : t(m.uncategorized)}
               </h4>
               <ul class="flex flex-wrap gap-2">
                 {#each group.sounds as sound (sound.id)}
                   <li>
                     <Button
                       variant="secondary"
-                      aria-label={t(m.addSound, { name: sound.title })}
+                      aria-label={t(m.addSound, {
+                        name: soundTitle(sound),
+                      })}
                       onclick={() => state.toggle(sound)}
                     >
                       <SoundIcon
@@ -176,7 +183,7 @@
                         categorySlug={slug(sound.category_id)}
                         size={24}
                       />
-                      {sound.title}
+                      {soundTitle(sound)}
                     </Button>
                   </li>
                 {/each}

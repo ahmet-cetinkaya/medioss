@@ -30,6 +30,7 @@
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { formatClock } from "$lib/i18n/formatting/clock-format";
   import { t } from "$lib/i18n/translate";
+  import { soundTitle } from "./builtin-titles";
   import MasterVolumeControl from "./master-volume-control.svelte";
   import type { MixState } from "./mix-state.svelte";
   import { soundscapeMessages as m } from "./soundscape.messages";
@@ -120,7 +121,7 @@
             />
             <div class="min-w-0 flex-1">
               <p class="pt-1 text-sm font-medium break-words text-ink-strong">
-                {entry.sound.title}
+                {soundTitle(entry.sound)}
                 <span class="font-normal text-ink-muted" aria-hidden="true"
                   >· {entry.volume}</span
                 >
@@ -132,13 +133,13 @@
                     entry.sound.id,
                     event.currentTarget.valueAsNumber,
                   )}
-                label={t(m.volumeLabel, { name: entry.sound.title })}
+                label={t(m.volumeLabel, { name: soundTitle(entry.sound) })}
                 valueText={t(m.volumeValue, { value: entry.volume })}
               />
             </div>
             <IconButton
               icon="x"
-              label={t(m.removeFromMix, { name: entry.sound.title })}
+              label={t(m.removeFromMix, { name: soundTitle(entry.sound) })}
               onclick={() => mix.remove(entry.sound.id)}
             />
           </li>

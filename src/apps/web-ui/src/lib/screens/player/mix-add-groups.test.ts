@@ -5,7 +5,6 @@ import { groupAddableSounds, UNCATEGORIZED } from "./mix-add-groups";
 const sound = (id: number, category_id: number): SoundscapeSound => ({
   id,
   name: `Sound ${id}`,
-  title: `Sound ${id}`,
   category_id,
   content_type: "audio/ogg",
   size_bytes: 1,
@@ -17,9 +16,9 @@ const sound = (id: number, category_id: number): SoundscapeSound => ({
 });
 
 const categories: SoundscapeCategory[] = [
-  { id: 2, name: "Weather", title: "Weather", slug: "weather" },
-  { id: 1, name: "Studio", title: "Studio", slug: "studio" },
-  { id: 3, name: "Empty", title: "Empty", slug: "empty" },
+  { id: 2, name: "Weather", slug: "weather" },
+  { id: 1, name: "Studio", slug: "studio" },
+  { id: 3, name: "Empty", slug: "empty" },
 ];
 
 describe("groupAddableSounds", () => {

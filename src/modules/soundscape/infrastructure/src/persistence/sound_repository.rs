@@ -34,9 +34,6 @@ fn to_sound(row: &QueryResult) -> Result<Sound, String> {
         created_at,
     )
     .map_err(|e| e.to_string())?;
-    sound.name_tr = row
-        .try_get::<Option<String>>("", "name_tr")
-        .map_err(|e| e.to_string())?;
     sound.builtin = row
         .try_get::<Option<String>>("", "builtin_id")
         .map_err(|e| e.to_string())?
@@ -61,10 +58,10 @@ fn to_sound(row: &QueryResult) -> Result<Sound, String> {
 #[async_trait]
 impl SoundRepository for SeaOrmSoundRepository {
     async fn list(&self) -> Result<Vec<Sound>, String> {
-        self.db.query_all(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,name_tr,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds ORDER BY category_id,name COLLATE NOCASE,id".to_owned())).await.map_err(|e|e.to_string())?.iter().map(to_sound).collect()
+        self.db.query_all(Statement::from_string(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds ORDER BY category_id,name COLLATE NOCASE,id".to_owned())).await.map_err(|e|e.to_string())?.iter().map(to_sound).collect()
     }
     async fn find(&self, id: i64) -> Result<Option<Sound>, String> {
-        let row=self.db.query_one(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"SELECT id,name,name_tr,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds WHERE id=?",[id.into()])).await.map_err(|e|e.to_string())?;
+        let row=self.db.query_one(Statement::from_sql_and_values(DatabaseBackend::Sqlite,"SELECT id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type FROM soundscape_sounds WHERE id=?",[id.into()])).await.map_err(|e|e.to_string())?;
         row.as_ref().map(to_sound).transpose()
     }
     async fn create(&self, s: NewSound) -> Result<Sound, String> {
@@ -74,7 +71,7 @@ impl SoundRepository for SeaOrmSoundRepository {
             .db
             .query_one(Statement::from_sql_and_values(
                 DatabaseBackend::Sqlite,
-                "INSERT INTO soundscape_sounds(name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,icon_key) VALUES(?,?,?,?,?,?,?,?) RETURNING id,name,name_tr,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type",
+                "INSERT INTO soundscape_sounds(name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,icon_key) VALUES(?,?,?,?,?,?,?,?) RETURNING id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type",
                 [s.name.into(), s.category_id.into(), s.content_type.into(), s.size_bytes.into(), s.storage_key.into(), s.duration_ms.into(), s.created_at.to_rfc3339().into(), s.icon_key.into()],
             ))
             .await
@@ -95,7 +92,7 @@ impl SoundRepository for SeaOrmSoundRepository {
             .db
             .execute(Statement::from_sql_and_values(
                 DatabaseBackend::Sqlite,
-                "UPDATE soundscape_sounds SET name_tr=CASE WHEN name=?1 THEN name_tr ELSE NULL END,name=?1,category_id=?2,icon_key=?3 WHERE id=?4",
+                "UPDATE soundscape_sounds SET name=?,category_id=?,icon_key=? WHERE id=?",
                 [
                     name.trim().into(),
                     category_id.into(),
@@ -122,7 +119,7 @@ impl SoundRepository for SeaOrmSoundRepository {
             .db
             .query_one(Statement::from_sql_and_values(
                 DatabaseBackend::Sqlite,
-                "UPDATE soundscape_sounds SET icon_storage_key=?,icon_content_type=? WHERE id=? RETURNING id,name,name_tr,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type",
+                "UPDATE soundscape_sounds SET icon_storage_key=?,icon_content_type=? WHERE id=? RETURNING id,name,category_id,content_type,size_bytes,storage_key,duration_ms,created_at,builtin_id,icon_key,icon_storage_key,icon_content_type",
                 [key.into(), content_type.into(), id.into()],
             ))
             .await

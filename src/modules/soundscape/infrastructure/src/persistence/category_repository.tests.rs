@@ -155,26 +155,3 @@ async fn delete_empty_distinguishes_deleted_missing_and_in_use() {
     );
     assert!(categories.find(used.id).await.unwrap().is_some());
 }
-
-#[tokio::test]
-async fn renaming_a_category_drops_its_turkish_title_but_keeping_the_name_keeps_it() {
-    let (_dir, db) = open().await;
-    let repo = SeaOrmCategoryRepository::new(db.clone());
-    let created = repo.create("Rain").await.unwrap();
-    sea_orm::ConnectionTrait::execute_unprepared(
-        &db,
-        &format!(
-            "UPDATE soundscape_categories SET name_tr = 'Yağmur' WHERE id = {}",
-            created.id
-        ),
-    )
-    .await
-    .unwrap();
-
-    let same = repo.rename(created.id, "Rain").await.unwrap().unwrap();
-    assert_eq!(same.name_tr.as_deref(), Some("Yağmur"));
-
-    let renamed = repo.rename(created.id, "Storms").await.unwrap().unwrap();
-    assert_eq!(renamed.name, "Storms");
-    assert_eq!(renamed.name_tr, None);
-}
