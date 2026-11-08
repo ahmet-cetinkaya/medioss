@@ -99,7 +99,7 @@
               />
               <div class="min-w-0 flex-1">
                 <p class="pt-1 text-sm font-medium break-words text-ink-strong">
-                  {soundTitle(entry.sound.name)}
+                  {soundTitle(entry.sound)}
                 </p>
                 <Slider
                   value={entry.volume}
@@ -109,14 +109,14 @@
                       event.currentTarget.valueAsNumber,
                     )}
                   label={t(m.volumeLabel, {
-                    name: soundTitle(entry.sound.name),
+                    name: soundTitle(entry.sound),
                   })}
                   valueText={t(m.volumeValue, { value: entry.volume })}
                 />
               </div>
               <IconButton
                 icon="x"
-                label={t(m.removeSound, { name: soundTitle(entry.sound.name) })}
+                label={t(m.removeSound, { name: soundTitle(entry.sound) })}
                 onclick={() => state.remove(entry.sound.id)}
               />
             </li>
@@ -174,7 +174,7 @@
                     <Button
                       variant="secondary"
                       aria-label={t(m.addSound, {
-                        name: soundTitle(sound.name),
+                        name: soundTitle(sound),
                       })}
                       onclick={() => state.toggle(sound)}
                     >
@@ -183,7 +183,7 @@
                         categorySlug={slug(sound.category_id)}
                         size={24}
                       />
-                      {soundTitle(sound.name)}
+                      {soundTitle(sound)}
                     </Button>
                   </li>
                 {/each}

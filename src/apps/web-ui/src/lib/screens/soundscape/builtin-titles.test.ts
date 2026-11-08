@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { translate } from "$lib/i18n/translate";
+import { soundTitle } from "./builtin-titles";
+import { registerLocaleGetter, translate } from "$lib/i18n/translate";
 import {
   builtinCategoryTitles,
   builtinSoundTitles,
@@ -58,5 +59,12 @@ describe("built-in titles", () => {
     expect(Object.keys(builtinCategoryTitles).sort()).toEqual(
       [...new Set(manifest.map((e) => e.category_name))].sort(),
     );
+  });
+
+  test("a sound you uploaded keeps its name, even one a built-in also has", () => {
+    registerLocaleGetter(() => "tr");
+    expect(soundTitle({ name: "Beehive", builtin: true })).toBe("Arı Kovanı");
+    expect(soundTitle({ name: "Beehive", builtin: false })).toBe("Beehive");
+    expect(soundTitle({ name: "My storm", builtin: true })).toBe("My storm");
   });
 });

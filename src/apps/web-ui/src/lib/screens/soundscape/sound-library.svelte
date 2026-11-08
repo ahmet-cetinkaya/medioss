@@ -125,7 +125,7 @@
                   <SoundIcon {sound} categorySlug={group.category.slug} />
                   <div class="min-w-0 flex-1">
                     <p class="font-medium break-words text-ink-strong">
-                      {soundTitle(sound.name)}
+                      {soundTitle(sound)}
                     </p>
                     <p class="text-sm text-ink-muted">
                       {formatDuration(sound.duration_ms, locale.current)}
@@ -145,7 +145,7 @@
                     variant={inMix ? "secondary" : "ghost"}
                     size="sm"
                     aria-label={t(inMix ? m.removeFromMix : m.addToMix, {
-                      name: soundTitle(sound.name),
+                      name: soundTitle(sound),
                     })}
                     onclick={() => mix.toggle(sound)}
                   >
@@ -154,13 +154,13 @@
                   </Button>
                   <OverflowMenu
                     label={t(m.moreActionsFor, {
-                      name: soundTitle(sound.name),
+                      name: soundTitle(sound),
                     })}
                   >
                     <OverflowItem
                       icon="download-simple"
                       label={t(m.downloadSound, {
-                        name: soundTitle(sound.name),
+                        name: soundTitle(sound),
                       })}
                       onclick={() => downloadFile(soundDownloadUrl(sound.id))}
                     />
