@@ -10,7 +10,6 @@ import {
 const sound = (id: number, name: string): SoundscapeSound => ({
   id,
   name,
-  title: name,
   category_id: 1,
   content_type: "audio/ogg",
   size_bytes: 1,

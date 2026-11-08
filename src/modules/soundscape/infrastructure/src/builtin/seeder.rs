@@ -9,13 +9,7 @@ use std::path::Path;
 struct ManifestEntry {
     category: String,
     category_name: String,
-    /// Turkish category title; optional so an older manifest still seeds.
-    #[serde(default)]
-    category_name_tr: Option<String>,
     name: String,
-    /// Turkish sound title; optional so an older manifest still seeds.
-    #[serde(default)]
-    name_tr: Option<String>,
     file: String,
     duration_ms: i64,
     size: i64,
@@ -64,7 +58,6 @@ async fn seed(
             Some(id) => id,
             None => insert_category(db, &slug, &entry.category_name).await?,
         };
-        fill_titles(db, &entry, &slug, &builtin_id).await?;
         if !needs_seeding(db, &builtin_id).await? {
             continue;
         }
@@ -136,11 +129,10 @@ async fn insert_builtin_sound(
     now: &str,
 ) -> Result<(), SeedError> {
     let name = display_name(&entry.name);
-    let name_tr = entry.name_tr.clone();
     let icon_key = crate::icon_defaults::default_icon_key(slug, &name).map(str::to_owned);
     db.execute(Statement::from_sql_and_values(
         sea_orm::DatabaseBackend::Sqlite,
-        "INSERT INTO soundscape_sounds (name, category_id, content_type, size_bytes, storage_key, duration_ms, created_at, builtin_id, icon_key, name_tr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO soundscape_sounds (name, category_id, content_type, size_bytes, storage_key, duration_ms, created_at, builtin_id, icon_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         vec![
             name.into(),
             category_id.into(),
@@ -151,60 +143,7 @@ async fn insert_builtin_sound(
             now.into(),
             builtin_id.into(),
             icon_key.into(),
-            name_tr.into(),
         ],
-    ))
-    .await
-    .map_err(|e| SeedError::Db(e.to_string()))?;
-    Ok(())
-}
-
-/// Writes the manifest's Turkish titles onto rows that already exist, so a
-/// database seeded before the titles shipped gets them too. A row whose name
-/// no longer matches the seeded English name was renamed by an admin and is
-/// left alone: the user's name always wins.
-async fn fill_titles(
-    db: &DatabaseConnection,
-    entry: &ManifestEntry,
-    slug: &str,
-    builtin_id: &str,
-) -> Result<(), SeedError> {
-    if let Some(title) = &entry.name_tr {
-        execute(
-            db,
-            "UPDATE soundscape_sounds SET name_tr = ? WHERE builtin_id = ? AND name = ?",
-            vec![
-                title.clone().into(),
-                builtin_id.into(),
-                display_name(&entry.name).into(),
-            ],
-        )
-        .await?;
-    }
-    if let Some(title) = &entry.category_name_tr {
-        execute(
-            db,
-            "UPDATE soundscape_categories SET name_tr = ? WHERE slug = ? AND name = ?",
-            vec![
-                title.clone().into(),
-                slug.into(),
-                entry.category_name.clone().into(),
-            ],
-        )
-        .await?;
-    }
-    Ok(())
-}
-
-async fn execute(
-    db: &DatabaseConnection,
-    sql: &str,
-    values: Vec<sea_orm::Value>,
-) -> Result<(), SeedError> {
-    db.execute(Statement::from_sql_and_values(
-        sea_orm::DatabaseBackend::Sqlite,
-        sql,
-        values,
     ))
     .await
     .map_err(|e| SeedError::Db(e.to_string()))?;

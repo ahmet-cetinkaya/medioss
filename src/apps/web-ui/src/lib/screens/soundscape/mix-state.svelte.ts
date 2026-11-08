@@ -48,13 +48,6 @@ export class MixState {
 
   has = (soundId: number): boolean => this.engine.has(soundId);
 
-  /** Swaps in freshly loaded copies of the mixed sounds (new titles after a
-   *  language change); the mix, its volumes and playback are untouched. */
-  retitle = (library: readonly SoundscapeSound[]): void => {
-    const byId = new Map(library.map((sound) => [sound.id, sound]));
-    this.sounds = this.sounds.map((sound) => byId.get(sound.id) ?? sound);
-  };
-
   toggle = (sound: SoundscapeSound): void => {
     if (this.has(sound.id)) this.remove(sound.id);
     else {

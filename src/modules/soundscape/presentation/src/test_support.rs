@@ -72,7 +72,6 @@ impl CategoryRepository for FakeCategories {
         let category = SoundCategory {
             id: categories.iter().map(|c| c.id).max().unwrap_or(0) + 1,
             name: name.trim().into(),
-            name_tr: None,
             slug: name.trim().to_lowercase(),
         };
         categories.push(category.clone());
@@ -391,22 +390,21 @@ pub(super) fn app_with_cap(max_upload_bytes: usize) -> TestApp {
     state.categories.lock().unwrap().push(SoundCategory {
         id: 1,
         name: "Nature".into(),
-        name_tr: Some("Doğa".into()),
         slug: "nature".into(),
     });
-    let mut rain = Sound::new(
-        1,
-        "Rain",
-        1,
-        "audio/ogg",
-        42,
-        "soundscape/rain.opus",
-        60_000,
-        chrono::Utc::now(),
-    )
-    .unwrap();
-    rain.name_tr = Some("Yağmur".into());
-    state.sounds.lock().unwrap().push(rain);
+    state.sounds.lock().unwrap().push(
+        Sound::new(
+            1,
+            "Rain",
+            1,
+            "audio/ogg",
+            42,
+            "soundscape/rain.opus",
+            60_000,
+            chrono::Utc::now(),
+        )
+        .unwrap(),
+    );
     let categories: Arc<dyn CategoryRepository> = Arc::new(FakeCategories(state.clone()));
     let sounds: Arc<dyn SoundRepository> = Arc::new(FakeSounds(state.clone()));
     let mixes: Arc<dyn MixRepository> = Arc::new(FakeMixes(state.clone()));

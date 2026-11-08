@@ -25,6 +25,7 @@
   import { formatDuration } from "$lib/i18n/formatting/duration-format";
   import { locale } from "$lib/i18n/locale.svelte";
   import { t } from "$lib/i18n/translate";
+  import { categoryTitle, soundTitle } from "./builtin-titles";
   import { ROUTES } from "$lib/navigation/routes";
   import { session } from "$lib/session/session.svelte";
   import type { MixState } from "./mix-state.svelte";
@@ -61,7 +62,7 @@
     { value: ALL, label: t(m.allCategories) },
     ...groups.map((group) => ({
       value: String(group.category.id),
-      label: group.category.title,
+      label: categoryTitle(group.category.name),
     })),
   ]);
 
@@ -109,7 +110,7 @@
             id="soundscape-category-{group.category.id}"
             class="text-lg font-semibold break-words text-ink-strong"
           >
-            {group.category.title}
+            {categoryTitle(group.category.name)}
           </h3>
           <ul
             class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-3"
@@ -124,7 +125,7 @@
                   <SoundIcon {sound} categorySlug={group.category.slug} />
                   <div class="min-w-0 flex-1">
                     <p class="font-medium break-words text-ink-strong">
-                      {sound.title}
+                      {soundTitle(sound.name)}
                     </p>
                     <p class="text-sm text-ink-muted">
                       {formatDuration(sound.duration_ms, locale.current)}
@@ -144,7 +145,7 @@
                     variant={inMix ? "secondary" : "ghost"}
                     size="sm"
                     aria-label={t(inMix ? m.removeFromMix : m.addToMix, {
-                      name: sound.title,
+                      name: soundTitle(sound.name),
                     })}
                     onclick={() => mix.toggle(sound)}
                   >
@@ -152,11 +153,15 @@
                     {t(inMix ? actionMessages.remove : actionMessages.add)}
                   </Button>
                   <OverflowMenu
-                    label={t(m.moreActionsFor, { name: sound.title })}
+                    label={t(m.moreActionsFor, {
+                      name: soundTitle(sound.name),
+                    })}
                   >
                     <OverflowItem
                       icon="download-simple"
-                      label={t(m.downloadSound, { name: sound.title })}
+                      label={t(m.downloadSound, {
+                        name: soundTitle(sound.name),
+                      })}
                       onclick={() => downloadFile(soundDownloadUrl(sound.id))}
                     />
                   </OverflowMenu>

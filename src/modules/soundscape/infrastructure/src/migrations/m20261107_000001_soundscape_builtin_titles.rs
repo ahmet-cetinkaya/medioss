@@ -1,8 +1,9 @@
 use sea_orm_migration::prelude::*;
 
-/// Turkish titles for the built-in sounds and categories. `name` keeps the
-/// English stored name; `name_tr` is NULL for user content and for built-ins
-/// an admin renamed, and the seeder fills it from the manifest.
+/// Adds `name_tr` columns that nothing reads or writes any more. The titles
+/// moved to the web UI, but this migration shipped, so databases that applied
+/// it list it in the ledger and the migrator refuses to start without its file.
+/// It stays so those databases keep opening; the columns stay empty.
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 

@@ -11,7 +11,6 @@ import {
   type SoundscapeMix,
   type SoundscapeSound,
 } from "$lib/api/soundscape";
-import { locale } from "$lib/i18n/locale.svelte";
 import { readLastMixId } from "$lib/soundscape/last-mix";
 import { randomMix } from "$lib/soundscape/random-mix";
 import { MixState } from "../soundscape/mix-state.svelte";
@@ -23,26 +22,19 @@ export class PlayerMix {
   mixes = $state<SoundscapeMix[]>([]);
   loaded = $state(false);
   #loading: Promise<void> | null = null;
-  /** The interface language the loaded titles are in. */
-  #loadedLang: string | null = null;
 
-  /** Loads sounds, categories and saved mixes once, and the sounds and
-   *  categories again when the interface language changed since (built-in
-   *  titles come from the server per language). Never rejects. */
+  /** Loads sounds, categories and saved mixes once. Never rejects. */
   load = (): Promise<void> => {
-    const lang = locale.current;
-    if (this.loaded && this.#loadedLang === lang) return Promise.resolve();
+    if (this.loaded) return Promise.resolve();
     this.#loading ??= Promise.all([
-      fetchSounds(lang),
-      fetchSoundscapeCategories(lang),
-      this.loaded ? Promise.resolve(this.mixes) : fetchSoundscapeMixes(),
+      fetchSounds(),
+      fetchSoundscapeCategories(),
+      fetchSoundscapeMixes(),
     ])
       .then(([sounds, categories, mixes]) => {
         this.sounds = sounds;
         this.categories = categories;
         this.mixes = mixes;
-        this.state.retitle(sounds);
-        this.#loadedLang = lang;
         this.loaded = true;
       })
       .catch(() => {})
